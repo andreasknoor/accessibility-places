@@ -11,15 +11,26 @@ Always respond with valid JSON only — no explanation, no markdown.`
 const CATEGORY_HINTS: Record<Category, string[]> = {
   cafe:        ["cafe", "café", "kaffee", "kaffeehaus", "bistro", "coffee"],
   restaurant:  ["restaurant", "essen", "speiselokal", "gastronomie", "gastro", "lokal"],
-  bar:         ["bar", "pub", "kneipe", "biergarten", "bier"],
+  bar:         ["bar", "cocktail"],
+  pub:         ["pub", "kneipe"],
+  biergarten:  ["biergarten", "bier"],
   fast_food:   ["fast food", "fastfood", "imbiss", "döner", "burger", "pizza"],
-  hotel:       ["hotel", "motel", "hostel", "unterkunft", "übernachtung", "pension", "gästehaus", "lodge"],
+  hotel:       ["hotel", "motel", "unterkunft", "übernachtung", "pension", "gästehaus", "lodge"],
+  hostel:      ["hostel"],
+  apartment:   ["apartment", "ferienwohnung", "fewo"],
   museum:      ["museum", "museen"],
-  theater:     ["theater", "theatre", "kino", "oper", "cinema"],
+  theater:     ["theater", "theatre", "oper", "schauspiel"],
+  cinema:      ["kino", "cinema"],
   library:     ["bibliothek", "bücherei", "library"],
   gallery:     ["galerie", "gallery", "kunsthalle", "ausstellung"],
   attraction:  ["sehenswürdigkeit", "attraktion", "attraction", "freizeitpark", "zoo"],
 }
+
+const ALL_CATEGORIES: Category[] = [
+  "cafe","restaurant","bar","pub","biergarten","fast_food",
+  "hotel","hostel","apartment",
+  "museum","theater","cinema","library","gallery","attraction",
+]
 
 function normaliseForMatch(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "")
@@ -31,7 +42,7 @@ export function inferCategories(query: string): Category[] {
   for (const [cat, hints] of Object.entries(CATEGORY_HINTS) as [Category, string[]][]) {
     if (hints.some((h) => new RegExp(`\\b${normaliseForMatch(h)}\\b`, "i").test(lower))) found.push(cat)
   }
-  return found.length > 0 ? found : ["cafe", "restaurant", "bar", "fast_food", "hotel", "museum", "theater", "library", "gallery", "attraction"]
+  return found.length > 0 ? found : [...ALL_CATEGORIES]
 }
 
 // Extract first quoted string as an explicit name hint.
@@ -62,6 +73,8 @@ export async function parseQuery(userQuery: string): Promise<ParsedQuery> {
   // override whatever the LLM returns.
   const quotedName = extractQuotedName(userQuery)
 
+  const allCatsJson = JSON.stringify(ALL_CATEGORIES)
+
   const prompt = `Analyse this accessibility search query and extract structured fields.
 
 Rules:
@@ -69,12 +82,18 @@ Rules:
 - "nameHint": specific business name the user is asking about; empty string if searching by category only.
   IMPORTANT: treat unusual or abstract-sounding words as potential business names (e.g. "et cetera", "Zur Eiche", "No Name Bar").
 - "categories": infer from context; return ALL categories when nameHint is set and no category is explicit.
+  Allowed values: ${allCatsJson}.
+  Be specific — distinguish bar / pub / biergarten, theater / cinema, hotel / hostel / apartment.
 - "freeTextHint": extra context like dietary preferences, atmosphere, etc.
 
 Examples:
   - "Finde Restaurants in Spandau" → locationQuery:"Spandau", nameHint:"", categories:["restaurant"]
-  - "et cetera in Potsdam" → locationQuery:"Potsdam", nameHint:"et cetera", categories:["cafe","restaurant","bar","fast_food","hotel","museum","theater","library","gallery","attraction"]
-  - "Ist das Brauhaus Georgbräu in Berlin barrierefrei?" → locationQuery:"Berlin", nameHint:"Brauhaus Georgbräu", categories:["restaurant","bar"]
+  - "Biergärten in München" → locationQuery:"München", nameHint:"", categories:["biergarten"]
+  - "Kino in Berlin Mitte" → locationQuery:"Berlin Mitte", nameHint:"", categories:["cinema"]
+  - "Hostel in Hamburg" → locationQuery:"Hamburg", nameHint:"", categories:["hostel"]
+  - "Pubs in Köln" → locationQuery:"Köln", nameHint:"", categories:["pub"]
+  - "et cetera in Potsdam" → locationQuery:"Potsdam", nameHint:"et cetera", categories:${allCatsJson}
+  - "Ist das Brauhaus Georgbräu in Berlin barrierefrei?" → locationQuery:"Berlin", nameHint:"Brauhaus Georgbräu", categories:["restaurant","pub","biergarten"]
   - "Wilhelms Burger Gleimstraße Berlin" → locationQuery:"Berlin", nameHint:"Wilhelms Burger", categories:["fast_food","restaurant"]
   - "Rollstuhlgerechte Cafés in Berlin Mitte" → locationQuery:"Berlin Mitte", nameHint:"", categories:["cafe"]
   - "Barrierefreie Museen München" → locationQuery:"München", nameHint:"", categories:["museum"]
@@ -85,7 +104,7 @@ Return JSON:
 {
   "locationQuery": "<city or district only>",
   "nameHint": "<specific business name or empty string>",
-  "categories": ["cafe","restaurant","bar","fast_food","hotel","museum","theater","library","gallery","attraction"],
+  "categories": ${allCatsJson},
   "freeTextHint": "<extra context or empty string>"
 }`
 

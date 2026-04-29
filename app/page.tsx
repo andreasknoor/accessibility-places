@@ -18,7 +18,6 @@ const DEFAULT_FILTERS: SearchFilters = {
   toilet:        true,
   parking:       false,
   seating:       false,
-  allowsDogs:    false,
   acceptUnknown: false,
 }
 

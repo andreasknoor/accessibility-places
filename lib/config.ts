@@ -2,7 +2,7 @@ import type { SourceId, Category } from "./types"
 
 // User-visible app version, shown in the header next to the subtitle.
 // Bump on every meaningful release.
-export const APP_VERSION = "1.5"
+export const APP_VERSION = "1.7"
 
 export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
   reisen_fuer_alle:    1.00,
@@ -52,11 +52,16 @@ export const NOMINATIM_ENDPOINT = "https://nominatim.openstreetmap.org"
 export const CATEGORY_OSM_TAGS: Record<Category, { amenity?: readonly string[]; tourism?: readonly string[] }> = {
   cafe:        { amenity: ["cafe"] },
   restaurant:  { amenity: ["restaurant"] },
-  bar:         { amenity: ["bar", "pub", "biergarten"] },
+  bar:         { amenity: ["bar"] },
+  pub:         { amenity: ["pub"] },
+  biergarten:  { amenity: ["biergarten"] },
   fast_food:   { amenity: ["fast_food", "food_court"] },
-  hotel:       { tourism: ["hotel", "motel", "hostel", "guest_house", "apartment"] },
+  hotel:       { tourism: ["hotel", "motel", "guest_house"] },
+  hostel:      { tourism: ["hostel"] },
+  apartment:   { tourism: ["apartment"] },
   museum:      { tourism: ["museum"] },
-  theater:     { amenity: ["theatre", "cinema"] },
+  theater:     { amenity: ["theatre"] },
+  cinema:      { amenity: ["cinema"] },
   library:     { amenity: ["library"] },
   gallery:     { tourism: ["gallery"], amenity: ["arts_centre"] },
   attraction:  { tourism: ["attraction", "theme_park"] },

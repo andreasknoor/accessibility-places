@@ -126,18 +126,6 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
             </label>
           ))}
 
-          {/* Dogs allowed — bonus filter, sourced from OSM dog=* and A.Cloud animalPolicy */}
-          <label className="flex items-center gap-2.5 cursor-pointer">
-            <Checkbox
-              checked={filters.allowsDogs}
-              onCheckedChange={() => toggleFilter("allowsDogs")}
-              id="crit-allowsDogs"
-            />
-            <span className="text-sm text-muted-foreground leading-snug">
-              {t.filters.criteriaItems.allowsDogs}
-            </span>
-          </label>
-
           {/* Seating — optional, dimmed */}
           <label className="flex items-center gap-2.5 cursor-pointer">
             <Checkbox

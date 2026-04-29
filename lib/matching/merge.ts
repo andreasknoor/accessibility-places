@@ -287,7 +287,6 @@ export function passesFilters(
     toilet: boolean
     parking: boolean
     seating: boolean
-    allowsDogs?: boolean
     acceptUnknown: boolean
   },
 ): boolean {
@@ -301,12 +300,6 @@ export function passesFilters(
   if (filters.toilet   && !check(place.accessibility.toilet))   return false
   if (filters.parking  && !check(place.accessibility.parking))  return false
   if (filters.seating  && place.accessibility.seating && !check(place.accessibility.seating)) return false
-
-  // Dog-policy filter: place must allow dogs (or be unknown if user opts in).
-  if (filters.allowsDogs) {
-    if (place.allowsDogs === false)                                        return false
-    if (place.allowsDogs === undefined && !filters.acceptUnknown)          return false
-  }
 
   return true
 }

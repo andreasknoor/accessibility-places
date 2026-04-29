@@ -18,11 +18,19 @@ const BASE_URL = "https://places.googleapis.com/v1/places:searchNearby"
 const CATEGORY_TYPES: Record<Category, string[]> = {
   cafe:        ["cafe", "coffee_shop"],
   restaurant:  ["restaurant"],
-  bar:         ["bar", "pub"],
+  bar:         ["bar"],
+  pub:         ["pub"],
+  // Google Places has no `biergarten` type — fall back to bar+pub which is
+  // the closest functional match.
+  biergarten:  ["bar", "pub"],
   fast_food:   ["fast_food_restaurant", "food_court"],
-  hotel:       ["hotel", "motel", "lodging", "extended_stay_hotel"],
+  hotel:       ["hotel", "motel", "extended_stay_hotel"],
+  hostel:      ["hostel"],
+  // No specific apartment type — `lodging` is Google's umbrella for stays.
+  apartment:   ["lodging"],
   museum:      ["museum"],
-  theater:     ["performing_arts_theater", "movie_theater"],
+  theater:     ["performing_arts_theater"],
+  cinema:      ["movie_theater"],
   library:     ["library"],
   gallery:     ["art_gallery"],
   attraction:  ["tourist_attraction", "amusement_park"],

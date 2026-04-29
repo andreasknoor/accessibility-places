@@ -92,12 +92,20 @@ describe("inferCategories", () => {
     expect(inferCategories("Barrierefreies Museum")).toContain("museum")
   })
 
-  it("infers bar for 'kneipe'", () => {
-    expect(inferCategories("Kneipe in Hamburg")).toContain("bar")
+  it("infers pub for 'kneipe'", () => {
+    expect(inferCategories("Kneipe in Hamburg")).toContain("pub")
   })
 
-  it("infers theater for 'kino'", () => {
-    expect(inferCategories("Kino in München")).toContain("theater")
+  it("infers biergarten for 'biergarten'", () => {
+    expect(inferCategories("Biergarten in München")).toContain("biergarten")
+  })
+
+  it("infers cinema for 'kino'", () => {
+    expect(inferCategories("Kino in München")).toContain("cinema")
+  })
+
+  it("infers hostel for 'hostel'", () => {
+    expect(inferCategories("Günstiges Hostel in Hamburg")).toContain("hostel")
   })
 
   it("infers multiple categories", () => {

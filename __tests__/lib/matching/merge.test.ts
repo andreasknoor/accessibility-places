@@ -33,7 +33,7 @@ function makePlace(overrides: Partial<Place> = {}): Place {
 }
 
 const ALL_FILTERS: SearchFilters = {
-  entrance: true, toilet: true, parking: true, seating: false, allowsDogs: false, acceptUnknown: false,
+  entrance: true, toilet: true, parking: true, seating: false, acceptUnknown: false,
 }
 
 // ─── buildAttribute ──────────────────────────────────────────────────────────
@@ -312,45 +312,6 @@ describe("passesFilters", () => {
     const p = place(noAttr, noAttr, noAttr)
     const noFilters = { entrance: false, toilet: false, parking: false, seating: false, acceptUnknown: false }
     expect(passesFilters(p, noFilters)).toBe(true)
-  })
-
-  it("allowsDogs filter rejects place with allowsDogs=false", () => {
-    const p = makePlace({
-      accessibility: { entrance: yesAttr, toilet: yesAttr, parking: yesAttr },
-      allowsDogs: false,
-    })
-    expect(passesFilters(p, { ...ALL_FILTERS, allowsDogs: true })).toBe(false)
-  })
-
-  it("allowsDogs filter accepts place with allowsDogs=true", () => {
-    const p = makePlace({
-      accessibility: { entrance: yesAttr, toilet: yesAttr, parking: yesAttr },
-      allowsDogs: true,
-    })
-    expect(passesFilters(p, { ...ALL_FILTERS, allowsDogs: true })).toBe(true)
-  })
-
-  it("allowsDogs filter rejects unknown by default", () => {
-    const p = makePlace({
-      accessibility: { entrance: yesAttr, toilet: yesAttr, parking: yesAttr },
-      // allowsDogs undefined
-    })
-    expect(passesFilters(p, { ...ALL_FILTERS, allowsDogs: true })).toBe(false)
-  })
-
-  it("allowsDogs filter accepts unknown when acceptUnknown=true", () => {
-    const p = makePlace({
-      accessibility: { entrance: yesAttr, toilet: yesAttr, parking: yesAttr },
-    })
-    expect(passesFilters(p, { ...ALL_FILTERS, allowsDogs: true, acceptUnknown: true })).toBe(true)
-  })
-
-  it("allowsDogs=false on place is allowed when filter is OFF", () => {
-    const p = makePlace({
-      accessibility: { entrance: yesAttr, toilet: yesAttr, parking: yesAttr },
-      allowsDogs: false,
-    })
-    expect(passesFilters(p, ALL_FILTERS)).toBe(true)
   })
 
   it("'no' never passes even with acceptUnknown=true", () => {

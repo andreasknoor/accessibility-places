@@ -67,28 +67,19 @@ export function buildOverpassQuery(params: SearchParams): string {
     ? `[wheelchair~"^(yes|limited|designated)$"]`
     : ""
 
-  // Dog filter narrows the query to dog-tagged places only — without this,
-  // the handful of `dog=yes` restaurants in a city centre get displaced from
-  // the 100-result cap by hundreds of un-tagged ones.
-  const dog = filters.allowsDogs ? `[dog~"^(yes|leashed)$"]` : ""
-
   const clauses: string[] = []
   if (amenityVals.size > 0) {
     const vals = [...amenityVals].join("|")
-    clauses.push(`nwr(around:${r},${lat},${lon})[amenity~"^(${vals})$"]${wc}${dog};`)
+    clauses.push(`nwr(around:${r},${lat},${lon})[amenity~"^(${vals})$"]${wc};`)
   }
   if (tourismVals.size > 0) {
     const vals = [...tourismVals].join("|")
-    clauses.push(`nwr(around:${r},${lat},${lon})[tourism~"^(${vals})$"]${wc}${dog};`)
+    clauses.push(`nwr(around:${r},${lat},${lon})[tourism~"^(${vals})$"]${wc};`)
   }
 
   if (clauses.length === 0) return ""
 
-  // The dog filter narrows the result set so much (only ~5–30 dog-tagged
-  // places per dense city centre) that we can safely fetch more without
-  // pulling huge payloads. 300 covers the dog universe in any urban area.
-  const cap = filters.allowsDogs ? 300 : 100
-  return `[out:json][timeout:25];(${clauses.join("")});out ${cap} center tags;`
+  return `[out:json][timeout:25];(${clauses.join("")});out 100 center tags;`
 }
 
 // ─── OSM tag → A11yValue mapping ──────────────────────────────────────────
@@ -121,11 +112,16 @@ function osmCategory(tags: Record<string, string>): Category {
   const tourism = tags["tourism"] ?? ""
   if (amenity === "cafe")                                              return "cafe"
   if (amenity === "restaurant")                                        return "restaurant"
-  if (["bar","pub","biergarten"].includes(amenity))                    return "bar"
+  if (amenity === "bar")                                               return "bar"
+  if (amenity === "pub")                                               return "pub"
+  if (amenity === "biergarten")                                        return "biergarten"
   if (["fast_food","food_court"].includes(amenity))                    return "fast_food"
-  if (["hotel","motel","hostel","guest_house","apartment"].includes(tourism)) return "hotel"
+  if (["hotel","motel","guest_house"].includes(tourism))               return "hotel"
+  if (tourism === "hostel")                                            return "hostel"
+  if (tourism === "apartment")                                         return "apartment"
   if (tourism === "museum")                                            return "museum"
-  if (["theatre","cinema"].includes(amenity))                          return "theater"
+  if (amenity === "theatre")                                           return "theater"
+  if (amenity === "cinema")                                            return "cinema"
   if (amenity === "library")                                           return "library"
   if (tourism === "gallery" || amenity === "arts_centre")              return "gallery"
   return "attraction"

@@ -114,11 +114,16 @@ function mapCategory(props: any): Category {
   const cat = (props?.category ?? "").toLowerCase()
   if (cat.includes("cafe") || cat.includes("coffee") || cat.includes("kaffee")) return "cafe"
   if (cat.includes("restaurant"))                                                 return "restaurant"
-  if (cat.includes("bar") || cat.includes("pub") || cat.includes("kneipe"))      return "bar"
+  if (cat.includes("biergarten"))                                                 return "biergarten"
+  if (cat.includes("pub") || cat.includes("kneipe"))                              return "pub"
+  if (cat.includes("bar"))                                                         return "bar"
   if (cat.includes("fast_food") || cat.includes("fastfood") || cat.includes("food_court")) return "fast_food"
-  if (cat.includes("hotel") || cat.includes("hostel") || cat.includes("lodging") || cat.includes("motel")) return "hotel"
+  if (cat.includes("hostel"))                                                     return "hostel"
+  if (cat.includes("apartment") || cat.includes("ferienwohnung"))                 return "apartment"
+  if (cat.includes("hotel") || cat.includes("lodging") || cat.includes("motel") || cat.includes("guest_house")) return "hotel"
   if (cat.includes("museum"))                                                     return "museum"
-  if (cat.includes("theatre") || cat.includes("theater") || cat.includes("cinema")) return "theater"
+  if (cat.includes("cinema") || cat.includes("kino"))                             return "cinema"
+  if (cat.includes("theatre") || cat.includes("theater") || cat.includes("oper")) return "theater"
   if (cat.includes("library") || cat.includes("bibliothek"))                      return "library"
   if (cat.includes("gallery") || cat.includes("galerie"))                         return "gallery"
   return "attraction"
@@ -208,10 +213,7 @@ export async function fetchAccessibilityCloud(params: SearchParams): Promise<Pla
   url.searchParams.set("latitude",  String(params.location.lat))
   url.searchParams.set("longitude", String(params.location.lon))
   url.searchParams.set("radius",    String(params.radiusKm * 1000))
-  // With the dog filter on, Pfotenpiloten contributes the bulk of hits and
-  // we drop the wheelchair preset — fetch more so the dog-friendly universe
-  // for an urban area gets in (Pfotenpiloten covers 100s in Berlin centre).
-  url.searchParams.set("limit",     params.filters.allowsDogs ? "300" : "100")
+  url.searchParams.set("limit",     "100")
 
   if (params.nameHint) {
     // Name search: push the term server-side via the `q` parameter and skip
@@ -219,11 +221,8 @@ export async function fetchAccessibilityCloud(params: SearchParams): Promise<Pla
     // matching can run. (Verified empirically against the live API — other
     // parameter names like `searchQuery`, `text`, `name` are silently ignored.)
     url.searchParams.set("q", params.nameHint)
-  } else if (!params.filters.allowsDogs) {
+  } else {
     // Default: only return places with at least partial wheelchair access.
-    // When the dog filter is on, drop the preset so animalPolicy-bearing
-    // sources (Pfotenpiloten) come through and can merge into wheelchair
-    // places — or, if unmatched, survive as standalone dog-friendly hits.
     url.searchParams.set("accessibilityPreset", "at-least-partially-accessible-by-wheelchair")
   }
 

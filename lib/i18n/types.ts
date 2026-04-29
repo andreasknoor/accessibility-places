@@ -22,7 +22,6 @@ export interface Translations {
       toilet:     string
       parking:    string
       seating:    string
-      allowsDogs: string
     }
   }
   results: {
@@ -101,10 +100,15 @@ export interface Translations {
     cafe:        string
     restaurant:  string
     bar:         string
+    pub:         string
+    biergarten:  string
     fast_food:   string
     hotel:       string
+    hostel:      string
+    apartment:   string
     museum:      string
     theater:     string
+    cinema:      string
     library:     string
     gallery:     string
     attraction:  string

@@ -8,9 +8,9 @@ export type SourceId =
   | "google_places"
 
 export type Category =
-  | "cafe" | "restaurant" | "bar" | "fast_food"
-  | "hotel"
-  | "museum" | "theater" | "library" | "gallery" | "attraction"
+  | "cafe" | "restaurant" | "bar" | "pub" | "biergarten" | "fast_food"
+  | "hotel" | "hostel" | "apartment"
+  | "museum" | "theater" | "cinema" | "library" | "gallery" | "attraction"
 
 // ─── Sub-attributes per criterion ──────────────────────────────────────────
 
@@ -135,7 +135,6 @@ export interface SearchFilters {
   toilet: boolean
   parking: boolean
   seating: boolean
-  allowsDogs: boolean
   acceptUnknown: boolean
 }
 
