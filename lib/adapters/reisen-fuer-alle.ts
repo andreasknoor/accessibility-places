@@ -146,10 +146,11 @@ export async function fetchReisenFuerAlle(params: SearchParams): Promise<Place[]
   const apiKey  = process.env.REISEN_FUER_ALLE_API_KEY
   const apiBase = process.env.REISEN_FUER_ALLE_API_BASE
 
-  if (!apiKey || !apiBase) {
-    console.warn("[reisen-fuer-alle] No API key/base configured — skipping")
-    return []
-  }
+  // Skip silently when either value is missing or still a `your_…` placeholder.
+  // Without this guard the live fetch produces a noisy ENOTFOUND stack on every
+  // search since the public RfA API endpoint is not generally reachable.
+  const isPlaceholder = (v?: string) => !v || v.startsWith("your_")
+  if (isPlaceholder(apiKey) || isPlaceholder(apiBase)) return []
 
   const url = new URL(`${apiBase}/businesses`)
   url.searchParams.set("lat",    String(params.location.lat))

@@ -173,14 +173,23 @@ export async function fetchAccessibilityCloud(params: SearchParams): Promise<Pla
     return []
   }
 
-  const categoryPreset = "at-least-partially-accessible-by-wheelchair"
   const url = new URL(`${BASE_URL}/place-infos.json`)
-  url.searchParams.set("appToken",          apiKey)
-  url.searchParams.set("latitude",          String(params.location.lat))
-  url.searchParams.set("longitude",         String(params.location.lon))
-  url.searchParams.set("radius",            String(params.radiusKm * 1000))
-  url.searchParams.set("accessibilityPreset", categoryPreset)
-  url.searchParams.set("limit",             "100")
+  url.searchParams.set("appToken",  apiKey)
+  url.searchParams.set("latitude",  String(params.location.lat))
+  url.searchParams.set("longitude", String(params.location.lon))
+  url.searchParams.set("radius",    String(params.radiusKm * 1000))
+  url.searchParams.set("limit",     "100")
+
+  if (params.nameHint) {
+    // Name search: push the term server-side via the `q` parameter and skip
+    // the accessibility preset so the target isn't filtered out before name
+    // matching can run. (Verified empirically against the live API — other
+    // parameter names like `searchQuery`, `text`, `name` are silently ignored.)
+    url.searchParams.set("q", params.nameHint)
+  } else {
+    // Default: only return places with at least partial wheelchair access.
+    url.searchParams.set("accessibilityPreset", "at-least-partially-accessible-by-wheelchair")
+  }
 
   const res = await fetch(url.toString(), {
     headers: { Accept: "application/json" },

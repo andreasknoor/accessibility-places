@@ -18,7 +18,8 @@
       "Bash(node -e ' *)",
       "Bash(curl -s --max-time 15 -H 'User-Agent: AccessibleSpaces/1.0' --data '[out:json][timeout:25];nwr\\(around:500,52.3906,13.0645\\)[name~\"et cetera\",i];out center tags;' https://overpass-api.de/api/interpreter)",
       "Bash(python3 -m json.tool)",
-      "Bash(curl -s --max-time 20 -H 'User-Agent: AccessibleSpaces/1.0' --data '[out:json][timeout:25];nwr\\(around:3000,52.3906,13.0645\\)[name~\"et cetera\",i];out center tags;' https://overpass-api.de/api/interpreter)"
+      "Bash(curl -s --max-time 20 -H 'User-Agent: AccessibleSpaces/1.0' --data '[out:json][timeout:25];nwr\\(around:3000,52.3906,13.0645\\)[name~\"et cetera\",i];out center tags;' https://overpass-api.de/api/interpreter)",
+      "Bash(node *)"
     ]
   }
 }

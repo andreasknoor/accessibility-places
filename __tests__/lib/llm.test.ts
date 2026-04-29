@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest"
-import { extractLocationFallback, inferCategories } from "@/lib/llm"
+import { extractLocationFallback, extractQuotedName, inferCategories } from "@/lib/llm"
 
 // ─── extractLocationFallback ──────────────────────────────────────────────────
 
@@ -25,6 +25,46 @@ describe("extractLocationFallback", () => {
   it("stops at 'mit' connector", () => {
     const result = extractLocationFallback("Restaurants in Wien mit Rollstuhltoilette")
     expect(result).toBe("Wien")
+  })
+})
+
+// ─── extractQuotedName ───────────────────────────────────────────────────────
+
+describe("extractQuotedName", () => {
+  it("extracts straight double-quoted name", () => {
+    expect(extractQuotedName('Suche nach "Georgbräu" in Berlin')).toBe("Georgbräu")
+  })
+
+  it("extracts straight single-quoted name", () => {
+    expect(extractQuotedName("Restaurant 'Zur Eiche' in Hamburg")).toBe("Zur Eiche")
+  })
+
+  it("extracts German typographic „…“ pair", () => {
+    expect(extractQuotedName("Cafe „et cetera“ in Potsdam")).toBe("et cetera")
+  })
+
+  it("extracts curly “…” pair", () => {
+    expect(extractQuotedName("the “Brauhaus” in Berlin")).toBe("Brauhaus")
+  })
+
+  it("extracts French «…» guillemets", () => {
+    expect(extractQuotedName("le «Bistro» à Berlin")).toBe("Bistro")
+  })
+
+  it("returns empty string when no quotes present", () => {
+    expect(extractQuotedName("Restaurants in Berlin Mitte")).toBe("")
+  })
+
+  it("returns first match when multiple quoted strings", () => {
+    expect(extractQuotedName('"Foo" and "Bar"')).toBe("Foo")
+  })
+
+  it("trims whitespace inside quotes", () => {
+    expect(extractQuotedName('"  spaced  "')).toBe("spaced")
+  })
+
+  it("returns empty string for empty quoted content", () => {
+    expect(extractQuotedName('Restaurants in ""')).toBe("")
   })
 })
 

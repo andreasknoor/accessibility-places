@@ -136,6 +136,10 @@ export interface SearchParams {
   categories: Category[]
   filters: SearchFilters
   sources: ActiveSources
+  // Set when the user is searching for a specific business by name.
+  // Adapters use it to push name filtering server-side and to skip
+  // accessibility pre-filters that would otherwise discard the target.
+  nameHint?: string
 }
 
 // ─── LLM query parse result ────────────────────────────────────────────────
@@ -145,6 +149,17 @@ export interface ParsedQuery {
   categories: Category[]
   freeTextHint: string
   nameHint: string
+}
+
+// ─── Per-source live state (emitted incrementally during streaming search) ─
+
+export type SourceStatus = "loading" | "ok" | "error"
+
+export interface SourceState {
+  status: SourceStatus
+  count?: number
+  error?: string
+  durationMs?: number
 }
 
 // ─── API response ──────────────────────────────────────────────────────────

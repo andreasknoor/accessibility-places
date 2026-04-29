@@ -13,12 +13,40 @@ import { nanoid } from "../utils"
 
 // ─── Overpass query builder ────────────────────────────────────────────────
 
+// Build a case-insensitive Overpass regex for the user-supplied name hint.
+// We do NOT use Overpass' `,i` flag: empirically, on overpass-api.de the flag
+// silently returns zero results when combined with the multi-alternation
+// amenity/tourism filter we use. Building a `[aA][bB][cC]` character-class
+// regex is portable and behaves identically across Overpass mirrors.
+// ASCII letters are case-paired; non-ASCII passes through (rare in OSM keys).
+function buildOverpassNameRegex(hint: string): string {
+  const escaped = hint.replace(/[\\^$.*+?()[\]{}|"]/g, "\\$&")
+  return Array.from(escaped).map((ch) =>
+    /[a-zA-Z]/.test(ch) ? `[${ch.toLowerCase()}${ch.toUpperCase()}]` : ch,
+  ).join("")
+}
+
 export function buildOverpassQuery(params: SearchParams): string {
-  const { location, radiusKm, categories, filters } = params
+  const { location, radiusKm, categories, filters, nameHint } = params
   const r   = radiusKm * 1000
   const lat = location.lat
   const lon = location.lon
 
+  // ── Name-targeted query ──────────────────────────────────────────────────
+  // When the user is searching for a specific named place, skip the heavy
+  // multi-alternation amenity/tourism filter and let Overpass use its name
+  // index. Constrain to features that carry a POI key so streets and address
+  // points named "Meiereiweg" etc. don't pollute results.
+  if (nameHint) {
+    const nm = `[name~"${buildOverpassNameRegex(nameHint)}"]`
+    const poiKeys = ["amenity", "tourism", "shop", "craft", "leisure"] as const
+    const clauses = poiKeys.map(
+      (k) => `nwr(around:${r},${lat},${lon})${nm}[${k}];`,
+    )
+    return `[out:json][timeout:25];(${clauses.join("")});out 100 center tags;`
+  }
+
+  // ── Default category-driven query ────────────────────────────────────────
   // Collect all amenity and tourism values across requested categories
   const amenityVals = new Set<string>()
   const tourismVals = new Set<string>()

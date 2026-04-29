@@ -1,11 +1,13 @@
 "use client"
 
+import { Loader2, AlertTriangle } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Slider }   from "@/components/ui/slider"
 import { Separator } from "@/components/ui/separator"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS } from "@/lib/config"
-import type { SearchFilters, ActiveSources, SourceId } from "@/lib/types"
+import type { SearchFilters, ActiveSources, SourceId, SourceState } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 interface Props {
@@ -15,7 +17,34 @@ interface Props {
   onFilters:     (f: SearchFilters)   => void
   onSources:     (s: ActiveSources)   => void
   onRadius:      (r: number)          => void
-  sourceCounts?: Partial<Record<SourceId, number>>
+  sourceStates?: Partial<Record<SourceId, SourceState>>
+}
+
+function SourceIndicator({ state }: { state?: SourceState }) {
+  if (!state) return null
+  if (state.status === "loading") {
+    return <Loader2 className="w-3 h-3 animate-spin text-muted-foreground shrink-0" aria-label="Lädt …" />
+  }
+  if (state.status === "error") {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex items-center gap-1 shrink-0 text-amber-600">
+            <span className="text-xs font-medium tabular-nums">0</span>
+            <AlertTriangle className="w-3 h-3" />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="max-w-xs text-xs">
+          {state.error || "Netzwerkfehler"}
+        </TooltipContent>
+      </Tooltip>
+    )
+  }
+  return (
+    <span className="text-xs font-medium tabular-nums text-foreground/60 shrink-0">
+      {state.count ?? 0}
+    </span>
+  )
 }
 
 const SOURCE_ORDER: SourceId[] = [
@@ -36,7 +65,7 @@ const SOURCE_DISABLED: Partial<Record<SourceId, true>> = {
   reisen_fuer_alle: true,
 }
 
-export default function FilterPanel({ filters, sources, radiusKm, onFilters, onSources, onRadius, sourceCounts }: Props) {
+export default function FilterPanel({ filters, sources, radiusKm, onFilters, onSources, onRadius, sourceStates }: Props) {
   const t = useTranslations()
 
   function toggleSource(id: SourceId) {
@@ -68,11 +97,7 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
                 <span className={cn("w-2 h-2 rounded-full shrink-0", SOURCE_RELIABILITY[id])} />
                 <span className="text-sm text-muted-foreground leading-snug flex items-center gap-1.5 min-w-0">
                   <span className="truncate">{SOURCE_LABELS[id]}</span>
-                  {!disabled && sourceCounts?.[id] !== undefined && (
-                    <span className="text-xs font-medium tabular-nums text-foreground/60 shrink-0">
-                      {sourceCounts[id]}
-                    </span>
-                  )}
+                  {!disabled && <SourceIndicator state={sourceStates?.[id]} />}
                 </span>
               </label>
             )

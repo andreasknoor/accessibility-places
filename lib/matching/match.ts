@@ -94,10 +94,22 @@ function matchScore(a: Place, b: Place): number {
   const nameScore = trigramSimilarity(a.name, b.name)
   const addrScore = addressSimilarity(a, b)
 
-  // If name similarity is very low, it's probably a different place
-  if (nameScore < NAME_SIMILARITY_THRESHOLD && dist > 20) return 0
+  // Containment boost: if one normalised name is a full substring of the
+  // other AND the points are nearby, treat the names as effectively matching.
+  // Catches OSM duplicates like "Meierei" (node, fast_food kiosk) vs
+  // "Meierei - Brauerei Potsdam" (way, the brewery building) at the same spot.
+  // The geo guard prevents false positives like "Sushi" vs "Sushi Bar" in a
+  // food court.
+  const nameA = normaliseString(a.name)
+  const nameB = normaliseString(b.name)
+  const containment = nameA && nameB && (nameA.includes(nameB) || nameB.includes(nameA))
+  const containmentClose = containment && dist <= GEO_MATCH_RADIUS_M
+  const effectiveName    = containmentClose ? Math.max(nameScore, 0.9) : nameScore
 
-  return nameScore * 0.5 + addrScore * 0.3 + geoScore * 0.2
+  // If name similarity is very low, it's probably a different place
+  if (!containmentClose && nameScore < NAME_SIMILARITY_THRESHOLD && dist > 20) return 0
+
+  return effectiveName * 0.5 + addrScore * 0.3 + geoScore * 0.2
 }
 
 // ─── Name-hint filter (used by search route and tests) ────────────────────
@@ -111,7 +123,7 @@ export function filterByNameHint(places: Place[], nameHint: string): Place[] {
   const hint = normaliseForNameSearch(nameHint)
   return places.filter((p) => {
     const name = normaliseForNameSearch(p.name)
-    return name.includes(hint) || trigramSimilarity(name, hint) >= 0.45
+    return name.includes(hint) || trigramSimilarity(name, hint) >= 0.6
   })
 }
 

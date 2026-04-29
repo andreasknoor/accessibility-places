@@ -34,6 +34,15 @@ export function inferCategories(query: string): Category[] {
   return found.length > 0 ? found : ["cafe", "restaurant", "bar", "fast_food", "hotel", "museum", "theater", "library", "gallery", "attraction"]
 }
 
+// Extract first quoted string as an explicit name hint.
+// Supports straight, curly, German typographic and guillemet quote styles.
+// User's quotes are an unambiguous "treat this as a name" signal —
+// used to override the LLM's nameHint deterministically.
+export function extractQuotedName(query: string): string {
+  const m = query.match(/["'„“”‟"«»‹›]([^"'„“”‟"«»‹›]+)["'„“”‟"«»‹›]/u)
+  return m ? m[1].trim() : ""
+}
+
 // Regex fallback: extract "in <Location>" from query
 export function extractLocationFallback(query: string): string {
   // Match "in <City>" or "in <City District>" patterns (German/English)
@@ -49,6 +58,10 @@ export function extractLocationFallback(query: string): string {
 }
 
 export async function parseQuery(userQuery: string): Promise<ParsedQuery> {
+  // User-quoted strings are an explicit "this is a name" signal —
+  // override whatever the LLM returns.
+  const quotedName = extractQuotedName(userQuery)
+
   const prompt = `Analyse this accessibility search query and extract structured fields.
 
 Rules:
@@ -94,14 +107,14 @@ Return JSON:
     const cats = parsed.categories
     return {
       locationQuery: locationQuery || extractLocationFallback(userQuery),
-      nameHint:      (parsed.nameHint ?? "").trim(),
+      nameHint:      quotedName || (parsed.nameHint ?? "").trim(),
       categories:    Array.isArray(cats) && cats.length > 0 ? cats : inferCategories(userQuery),
       freeTextHint:  parsed.freeTextHint ?? "",
     }
   } catch {
     return {
       locationQuery: extractLocationFallback(userQuery),
-      nameHint:      "",
+      nameHint:      quotedName,
       categories:    inferCategories(userQuery),
       freeTextHint:  "",
     }

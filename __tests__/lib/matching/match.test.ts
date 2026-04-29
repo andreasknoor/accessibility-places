@@ -167,6 +167,28 @@ describe("findMatch", () => {
     expect(findMatch([existing], incoming)).toBe(0)
   })
 
+  it("matches name-containment duplicates within geo radius", () => {
+    // Real-world case: OSM lists the same business twice — once as a node
+    // ("Meierei") and once as the building way ("Meierei - Brauerei Potsdam"),
+    // ~18m apart. Trigram similarity alone is too low to merge them.
+    const node = makePlace({
+      name: "Meierei",
+      coordinates: { lat: 52.4222322, lon: 13.0695422 },
+    })
+    const way = makePlace({
+      name: "Meierei - Brauerei Potsdam",
+      coordinates: { lat: 52.4220840, lon: 13.0696526 },
+    })
+    expect(findMatch([node], way)).toBe(0)
+  })
+
+  it("does not merge name-containment when geo distance is large", () => {
+    // "Sushi" 200m away from "Sushi Bar" should remain separate.
+    const a = makePlace({ name: "Sushi",     coordinates: { lat: 52.5200, lon: 13.4050 } })
+    const b = makePlace({ name: "Sushi Bar", coordinates: { lat: 52.5218, lon: 13.4050 } })
+    expect(findMatch([a], b)).toBe(-1)
+  })
+
   it("returns index of best match when multiple candidates", () => {
     const a = makePlace({ name: "Sushi Bar", coordinates: { lat: 52.5200, lon: 13.4050 } })
     const b = makePlace({ name: "Pizza Roma", coordinates: { lat: 52.5200, lon: 13.4050 } })

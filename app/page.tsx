@@ -5,9 +5,10 @@ import dynamic from "next/dynamic"
 import ChatPanel    from "@/components/chat/ChatPanel"
 import FilterPanel  from "@/components/filters/FilterPanel"
 import ResultsList  from "@/components/results/ResultsList"
+import LanguageSwitcher from "@/components/LanguageSwitcher"
 import { useTranslations } from "@/lib/i18n"
 import { DEFAULT_RADIUS_KM } from "@/lib/config"
-import type { Place, SearchFilters, ActiveSources, SearchResult, SourceId } from "@/lib/types"
+import type { Place, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState } from "@/lib/types"
 
 // Leaflet must not run on server
 const MapView = dynamic(() => import("@/components/map/MapView"), { ssr: false })
@@ -41,7 +42,7 @@ export default function Home() {
   const [showMap,       setShowMap]      = useState(true)
   const [isFullscreen,  setIsFullscreen] = useState(false)
   const [error,         setError]        = useState<string | undefined>()
-  const [sourceStats,   setSourceStats]  = useState<Record<SourceId, number> | undefined>()
+  const [sourceStates,  setSourceStates] = useState<Partial<Record<SourceId, SourceState>>>({})
   const [resultsWidth,  setResultsWidth] = useState(420)
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
@@ -52,6 +53,14 @@ export default function Home() {
     setPlaces([])
     setSummary(undefined)
     setSelectedId(undefined)
+
+    // Initialise per-source loading state for each active source so the
+    // FilterPanel renders spinners immediately.
+    const initial: Partial<Record<SourceId, SourceState>> = {}
+    for (const id of Object.keys(sources) as SourceId[]) {
+      if (sources[id]) initial[id] = { status: "loading" }
+    }
+    setSourceStates(initial)
 
     try {
       const locale =
@@ -65,16 +74,44 @@ export default function Home() {
         body:    JSON.stringify({ userQuery: query, radiusKm, filters, sources, locale }),
       })
 
-      if (!res.ok) {
+      if (!res.ok || !res.body) {
         const err = await res.json().catch(() => ({}))
         throw new Error(err.error ?? "Search failed")
       }
 
-      const data: SearchResult = await res.json()
-      setPlaces(data.places)
-      setSummary(data.summary)
-      setSearchCenter(data.location)
-      setSourceStats(data.sourceStats)
+      // Parse NDJSON stream: one JSON object per `\n`-terminated line.
+      const reader  = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer    = ""
+
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split("\n")
+        buffer = lines.pop() ?? ""
+        for (const line of lines) {
+          if (!line.trim()) continue
+          let event: { type: string; [k: string]: unknown }
+          try { event = JSON.parse(line) } catch { continue }
+
+          if (event.type === "source") {
+            const sid = event.sourceId as SourceId
+            const update: SourceState = event.status === "ok"
+              ? { status: "ok",    count: event.count as number, durationMs: event.durationMs as number }
+              : { status: "error", error: event.error as string,  durationMs: event.durationMs as number }
+            setSourceStates((prev) => ({ ...prev, [sid]: update }))
+          } else if (event.type === "result") {
+            const data = event.payload as SearchResult
+            setPlaces(data.places)
+            setSummary(data.summary)
+            setSearchCenter(data.location)
+          } else if (event.type === "fatal") {
+            throw new Error(event.error as string)
+          }
+        }
+      }
     } catch (err) {
       setError(t.chat.errorGeneric)
       console.error(err)
@@ -132,12 +169,15 @@ export default function Home() {
             <p className="text-xs text-muted-foreground mt-0.5">{t.app.subtitle}</p>
           </div>
         </div>
-        <button
-          onClick={() => setShowMap((v) => !v)}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-md hover:bg-muted"
-        >
-          {showMap ? t.results.hideMap : t.results.showMap}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowMap((v) => !v)}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-md hover:bg-muted"
+          >
+            {showMap ? t.results.hideMap : t.results.showMap}
+          </button>
+          <LanguageSwitcher />
+        </div>
       </header>
 
       {/* ── Chat / search bar ── */}
@@ -159,7 +199,7 @@ export default function Home() {
           onFilters={setFilters}
           onSources={setSources}
           onRadius={setRadiusKm}
-          sourceCounts={sourceStats}
+          sourceStates={sourceStates}
         />
 
         <div
