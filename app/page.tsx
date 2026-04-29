@@ -7,7 +7,7 @@ import FilterPanel  from "@/components/filters/FilterPanel"
 import ResultsList  from "@/components/results/ResultsList"
 import LanguageSwitcher from "@/components/LanguageSwitcher"
 import { useTranslations } from "@/lib/i18n"
-import { DEFAULT_RADIUS_KM } from "@/lib/config"
+import { DEFAULT_RADIUS_KM, APP_VERSION } from "@/lib/config"
 import type { Place, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState } from "@/lib/types"
 
 // Leaflet must not run on server
@@ -167,7 +167,9 @@ export default function Home() {
           <span className="text-xl" aria-hidden>♿</span>
           <div>
             <h1 className="font-bold text-base leading-none">{t.app.title}</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">{t.app.subtitle}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {t.app.subtitle} <span className="tabular-nums">(v{APP_VERSION})</span>
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
