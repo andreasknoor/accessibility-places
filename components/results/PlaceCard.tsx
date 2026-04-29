@@ -1,0 +1,173 @@
+"use client"
+
+import { useState } from "react"
+import { createPortal } from "react-dom"
+import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Info } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import ConfidenceBadge  from "./ConfidenceBadge"
+import A11yAttribute    from "./A11yAttribute"
+import PlaceDebugSheet  from "./PlaceDebugSheet"
+import { useTranslations } from "@/lib/i18n"
+import { SOURCE_LABELS }   from "@/lib/config"
+import { cn } from "@/lib/utils"
+import type { Place, SearchFilters } from "@/lib/types"
+
+interface Props {
+  place:      Place
+  filters?:   SearchFilters
+  isSelected?: boolean
+  onClick?:   () => void
+}
+
+const CATEGORY_ICONS: Record<string, string> = {
+  cafe:        "☕",
+  restaurant:  "🍽",
+  bar:         "🍺",
+  fast_food:   "🍔",
+  hotel:       "🏨",
+  museum:      "🏛",
+  theater:     "🎭",
+  library:     "📚",
+  gallery:     "🎨",
+  attraction:  "🎡",
+}
+
+export default function PlaceCard({ place, filters, isSelected, onClick }: Props) {
+  const t = useTranslations()
+  const [expanded,  setExpanded]  = useState(false)
+  const [showDebug, setShowDebug] = useState(false)
+
+  const addr = [place.address.street, place.address.houseNumber, place.address.city]
+    .filter(Boolean).join(" ")
+
+  const criteriaKeys = ["entrance", "toilet", "parking"] as const
+  const criteriaLabels = [t.criteria.entrance, t.criteria.toilet, t.criteria.parking]
+
+  const allAttrs = [
+    place.accessibility.entrance,
+    place.accessibility.toilet,
+    place.accessibility.parking,
+    ...(place.accessibility.seating ? [place.accessibility.seating] : []),
+  ]
+  const hasAnyDetails = allAttrs.some((attr) =>
+    Object.values(attr.details).some((v) => v != null),
+  )
+
+  return (
+    <Card
+      className={cn(
+        "cursor-pointer transition-all hover:shadow-md border",
+        isSelected ? "border-primary ring-1 ring-primary" : "border-border",
+      )}
+      onClick={onClick}
+    >
+      <CardContent className="p-3 flex flex-col gap-2">
+        {/* ── Header ── */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start gap-2 min-w-0">
+            <span className="text-base shrink-0" aria-hidden>
+              {CATEGORY_ICONS[place.category] ?? "📍"}
+            </span>
+            <div className="min-w-0">
+              <h3 className="font-semibold text-sm leading-snug truncate">
+                {place.name}
+              </h3>
+              {addr && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                  <MapPin className="w-3 h-3 shrink-0" />
+                  <span className="truncate">{addr}</span>
+                </p>
+              )}
+            </div>
+          </div>
+          <ConfidenceBadge confidence={place.overallConfidence} place={place} filters={filters} className="shrink-0" />
+        </div>
+
+        {/* ── Source badge ── */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-xs text-muted-foreground">{t.results.primarySource}:</span>
+          <Badge variant="secondary" className="text-xs px-1.5 py-0">
+            {SOURCE_LABELS[place.primarySource]}
+          </Badge>
+          {place.sourceRecords.length > 1 && (
+            <span className="text-xs text-muted-foreground">
+              +{place.sourceRecords.length - 1}
+            </span>
+          )}
+        </div>
+
+        {/* ── Accessibility attributes ── */}
+        <div className="flex flex-col gap-1.5">
+          {criteriaKeys.map((key, i) => (
+            <A11yAttribute
+              key={key}
+              label={criteriaLabels[i]}
+              attr={place.accessibility[key]}
+              detailType={key}
+              showDetails={expanded}
+            />
+          ))}
+          {place.accessibility.seating && (
+            <A11yAttribute
+              label={t.criteria.seating}
+              attr={place.accessibility.seating}
+              detailType="seating"
+              showDetails={expanded}
+            />
+          )}
+        </div>
+
+        {/* ── Expand / contact ── */}
+        <div className="flex items-center justify-between mt-0.5">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowDebug(true) }}
+              aria-label="Rohdaten anzeigen"
+              title="Rohdaten anzeigen"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Info className="w-3.5 h-3.5" />
+            </button>
+            {place.website && (
+              <a
+                href={place.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Website"
+                onClick={(e) => e.stopPropagation()}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Globe className="w-3.5 h-3.5" />
+              </a>
+            )}
+            {place.phone && (
+              <a
+                href={`tel:${place.phone}`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Phone className="w-3.5 h-3.5" />
+              </a>
+            )}
+          </div>
+
+          {hasAnyDetails && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              {expanded ? "Weniger" : "Details"}
+            </button>
+          )}
+        </div>
+      </CardContent>
+
+      {showDebug && createPortal(
+        <PlaceDebugSheet place={place} onClose={() => setShowDebug(false)} />,
+        document.body,
+      )}
+    </Card>
+  )
+}

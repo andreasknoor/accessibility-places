@@ -1,0 +1,357 @@
+import { describe, it, expect } from "vitest"
+import {
+  buildAttribute,
+  emptyAttribute,
+  mergePlaces,
+  passesFilters,
+  confidenceLabel,
+  finalisePlaceConfidence,
+  computeFilteredConfidence,
+} from "@/lib/matching/merge"
+import { RELIABILITY_WEIGHTS } from "@/lib/config"
+import type { Place, SearchFilters } from "@/lib/types"
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function makePlace(overrides: Partial<Place> = {}): Place {
+  return {
+    id: "p1",
+    name: "Test Place",
+    category: "restaurant",
+    address: { street: "Hauptstr.", houseNumber: "1", postalCode: "10115", city: "Berlin", country: "DE" },
+    coordinates: { lat: 52.52, lon: 13.405 },
+    accessibility: {
+      entrance: emptyAttribute(),
+      toilet:   emptyAttribute(),
+      parking:  emptyAttribute(),
+    },
+    overallConfidence: 0,
+    primarySource: "osm",
+    sourceRecords: [],
+    ...overrides,
+  }
+}
+
+const ALL_FILTERS: SearchFilters = {
+  entrance: true, toilet: true, parking: true, seating: false, acceptUnknown: false,
+}
+
+// ─── buildAttribute ──────────────────────────────────────────────────────────
+
+describe("buildAttribute", () => {
+  it("creates attribute with correct value", () => {
+    const attr = buildAttribute("osm", "yes", "yes", {})
+    expect(attr.value).toBe("yes")
+  })
+
+  it("confidence equals reliability weight for known values", () => {
+    const attr = buildAttribute("reisen_fuer_alle", "yes", "yes", {})
+    expect(attr.confidence).toBeCloseTo(RELIABILITY_WEIGHTS.reisen_fuer_alle)
+  })
+
+  it("confidence is 0 for unknown", () => {
+    const attr = buildAttribute("osm", "unknown", "", {})
+    expect(attr.confidence).toBe(0)
+  })
+
+  it("records one source attribution", () => {
+    const attr = buildAttribute("google_places", "no", "false", {})
+    expect(attr.sources).toHaveLength(1)
+    expect(attr.sources[0].sourceId).toBe("google_places")
+    expect(attr.sources[0].value).toBe("no")
+  })
+
+  it("sets confidence to 1.0 when toilet hasGrabBars is true", () => {
+    const attr = buildAttribute("osm", "yes", "yes", { hasGrabBars: true })
+    expect(attr.confidence).toBe(1.0)
+  })
+
+  it("does not boost confidence when hasGrabBars is false", () => {
+    const attr = buildAttribute("osm", "yes", "yes", { hasGrabBars: false })
+    expect(attr.confidence).toBeCloseTo(RELIABILITY_WEIGHTS.osm)
+  })
+
+  it("applies OSM overall weight factor for entrance proxy", () => {
+    const normal = buildAttribute("osm", "yes", "yes", {}, false)
+    const overall = buildAttribute("osm", "yes", "yes", {}, true)
+    expect(overall.confidence).toBeLessThan(normal.confidence)
+  })
+
+  it("stores details", () => {
+    const details = { isLevel: true, hasRamp: false }
+    const attr = buildAttribute("accessibility_cloud", "yes", "yes", details)
+    expect(attr.details).toEqual(details)
+  })
+})
+
+// ─── emptyAttribute ──────────────────────────────────────────────────────────
+
+describe("emptyAttribute", () => {
+  it("returns unknown value with zero confidence", () => {
+    const attr = emptyAttribute()
+    expect(attr.value).toBe("unknown")
+    expect(attr.confidence).toBe(0)
+    expect(attr.conflict).toBe(false)
+    expect(attr.sources).toHaveLength(0)
+  })
+})
+
+// ─── mergePlaces ─────────────────────────────────────────────────────────────
+
+describe("mergePlaces", () => {
+  it("merges two agreeing sources → higher confidence, no conflict", () => {
+    const a = makePlace({
+      id: "a",
+      accessibility: {
+        entrance: buildAttribute("osm", "yes", "yes", {}),
+        toilet:   emptyAttribute(),
+        parking:  emptyAttribute(),
+      },
+      sourceRecords: [{ sourceId: "osm", externalId: "1", fetchedAt: "", raw: {} }],
+    })
+    const b = makePlace({
+      id: "b",
+      accessibility: {
+        entrance: buildAttribute("accessibility_cloud", "yes", "yes", {}),
+        toilet:   emptyAttribute(),
+        parking:  emptyAttribute(),
+      },
+      sourceRecords: [{ sourceId: "accessibility_cloud", externalId: "2", fetchedAt: "", raw: {} }],
+    })
+
+    const merged = mergePlaces(a, b)
+    expect(merged.accessibility.entrance.value).toBe("yes")
+    expect(merged.accessibility.entrance.conflict).toBe(false)
+    expect(merged.accessibility.entrance.sources).toHaveLength(2)
+    expect(merged.overallConfidence).toBeGreaterThan(0)
+  })
+
+  it("detects conflict when sources disagree", () => {
+    // accessibility_cloud(0.75) vs osm(0.60): ratio = 0.60/0.75 = 0.80 > 0.5 → conflict
+    const a = makePlace({
+      id: "a",
+      accessibility: {
+        entrance: buildAttribute("accessibility_cloud", "yes", "yes", {}),
+        toilet:   emptyAttribute(),
+        parking:  emptyAttribute(),
+      },
+      sourceRecords: [{ sourceId: "accessibility_cloud", externalId: "1", fetchedAt: "", raw: {} }],
+    })
+    const b = makePlace({
+      id: "b",
+      accessibility: {
+        entrance: buildAttribute("osm", "no", "no", {}),
+        toilet:   emptyAttribute(),
+        parking:  emptyAttribute(),
+      },
+      sourceRecords: [{ sourceId: "osm", externalId: "2", fetchedAt: "", raw: {} }],
+    })
+
+    const merged = mergePlaces(a, b)
+    expect(merged.accessibility.entrance.conflict).toBe(true)
+    // accessibility_cloud (weight 0.75) wins over osm (weight 0.60)
+    expect(merged.accessibility.entrance.value).toBe("yes")
+  })
+
+  it("primarySource is most reliable source present", () => {
+    const a = makePlace({
+      sourceRecords: [{ sourceId: "reisen_fuer_alle", externalId: "1", fetchedAt: "", raw: {} }],
+    })
+    const b = makePlace({
+      sourceRecords: [{ sourceId: "google_places", externalId: "2", fetchedAt: "", raw: {} }],
+    })
+    const merged = mergePlaces(a, b)
+    expect(merged.primarySource).toBe("reisen_fuer_alle")
+  })
+
+  it("does not duplicate source records from same source", () => {
+    const a = makePlace({
+      sourceRecords: [{ sourceId: "osm", externalId: "1", fetchedAt: "", raw: {} }],
+    })
+    const b = makePlace({
+      sourceRecords: [{ sourceId: "osm", externalId: "1", fetchedAt: "", raw: {} }],
+    })
+    // Same sourceId → should not duplicate
+    const merged = mergePlaces(a, b)
+    const osmRecords = merged.sourceRecords.filter((r) => r.sourceId === "osm")
+    expect(osmRecords).toHaveLength(1)
+  })
+
+  it("inherits missing metadata (website, phone) from incoming", () => {
+    const a = makePlace({ website: undefined, phone: undefined })
+    const b = makePlace({ website: "https://example.com", phone: "+49123" })
+    const merged = mergePlaces(a, b)
+    expect(merged.website).toBe("https://example.com")
+    expect(merged.phone).toBe("+49123")
+  })
+
+  it("does not overwrite existing metadata", () => {
+    const a = makePlace({ website: "https://original.com" })
+    const b = makePlace({ website: "https://new.com" })
+    const merged = mergePlaces(a, b)
+    expect(merged.website).toBe("https://original.com")
+  })
+})
+
+// ─── passesFilters ───────────────────────────────────────────────────────────
+
+describe("passesFilters", () => {
+  const yesAttr  = buildAttribute("osm", "yes",     "yes",     {})
+  const noAttr   = buildAttribute("osm", "no",      "no",      {})
+  const limAttr  = buildAttribute("osm", "limited", "limited", {})
+  const unknAttr = emptyAttribute()
+
+  function place(entrance = unknAttr, toilet = unknAttr, parking = unknAttr): Place {
+    return makePlace({ accessibility: { entrance, toilet, parking } })
+  }
+
+  it("passes when all criteria match", () => {
+    const p = place(yesAttr, yesAttr, yesAttr)
+    expect(passesFilters(p, ALL_FILTERS)).toBe(true)
+  })
+
+  it("passes with limited when filter is active", () => {
+    const p = place(limAttr, limAttr, limAttr)
+    expect(passesFilters(p, ALL_FILTERS)).toBe(true)
+  })
+
+  it("fails when entrance is 'no' and entrance filter active", () => {
+    const p = place(noAttr, yesAttr, yesAttr)
+    expect(passesFilters(p, ALL_FILTERS)).toBe(false)
+  })
+
+  it("fails when toilet is 'no' and toilet filter active", () => {
+    const p = place(yesAttr, noAttr, yesAttr)
+    expect(passesFilters(p, ALL_FILTERS)).toBe(false)
+  })
+
+  it("fails for unknown by default (acceptUnknown=false)", () => {
+    const p = place(unknAttr, yesAttr, yesAttr)
+    expect(passesFilters(p, ALL_FILTERS)).toBe(false)
+  })
+
+  it("passes for unknown when acceptUnknown=true", () => {
+    const p = place(unknAttr, yesAttr, yesAttr)
+    expect(passesFilters(p, { ...ALL_FILTERS, acceptUnknown: true })).toBe(true)
+  })
+
+  it("ignores inactive filters", () => {
+    const p = place(noAttr, noAttr, noAttr)
+    const noFilters = { entrance: false, toilet: false, parking: false, seating: false, acceptUnknown: false }
+    expect(passesFilters(p, noFilters)).toBe(true)
+  })
+
+  it("'no' never passes even with acceptUnknown=true", () => {
+    const p = place(noAttr, yesAttr, yesAttr)
+    expect(passesFilters(p, { ...ALL_FILTERS, acceptUnknown: true })).toBe(false)
+  })
+})
+
+// ─── finalisePlaceConfidence ──────────────────────────────────────────────────
+
+describe("finalisePlaceConfidence", () => {
+  it("computes overallConfidence for a single-source place (was always 0 before)", () => {
+    const place = makePlace({
+      accessibility: {
+        entrance: buildAttribute("accessibility_cloud", "yes", "yes", {}),
+        toilet:   buildAttribute("accessibility_cloud", "yes", "yes", {}),
+        parking:  emptyAttribute(),
+      },
+    })
+    // Adapters emit overallConfidence: 0 — finalisePlaceConfidence must fix it
+    expect(place.overallConfidence).toBe(0)
+    const finalised = finalisePlaceConfidence(place)
+    // entrance(0.75) + toilet(0.75) / 2 known attrs = 0.75
+    expect(finalised.overallConfidence).toBeCloseTo(0.75)
+  })
+
+  it("ignores unknown attributes in the average", () => {
+    const place = makePlace({
+      accessibility: {
+        entrance: buildAttribute("osm", "yes", "yes", {}),
+        toilet:   emptyAttribute(),   // unknown → excluded
+        parking:  emptyAttribute(),   // unknown → excluded
+      },
+    })
+    const finalised = finalisePlaceConfidence(place)
+    expect(finalised.overallConfidence).toBeCloseTo(RELIABILITY_WEIGHTS.osm)
+  })
+
+  it("returns 0 when all criteria are unknown", () => {
+    const place = makePlace()
+    const finalised = finalisePlaceConfidence(place)
+    expect(finalised.overallConfidence).toBe(0)
+  })
+})
+
+// ─── computeFilteredConfidence ────────────────────────────────────────────────
+
+describe("computeFilteredConfidence", () => {
+  const filtersEntranceToilet = { entrance: true, toilet: true, parking: false, seating: false }
+  const filtersAll            = { entrance: true, toilet: true, parking: true,  seating: false }
+  const filtersNone           = { entrance: false, toilet: false, parking: false, seating: false }
+
+  it("only averages active filter criteria", () => {
+    const place = makePlace({
+      accessibility: {
+        entrance: buildAttribute("accessibility_cloud", "yes", "yes", {}), // 0.75
+        toilet:   buildAttribute("accessibility_cloud", "yes", "yes", {}), // 0.75
+        parking:  buildAttribute("osm", "no", "no", {}),                  // 0.60 — inactive
+      },
+    })
+    // parking is inactive → excluded; (0.75 + 0.75) / 2 = 0.75
+    expect(computeFilteredConfidence(place, filtersEntranceToilet)).toBeCloseTo(0.75)
+  })
+
+  it("inactive criteria with low value do not drag score down", () => {
+    const place = makePlace({
+      accessibility: {
+        entrance: buildAttribute("accessibility_cloud", "yes", "yes", {}), // 0.75
+        toilet:   buildAttribute("accessibility_cloud", "yes", "yes", {}), // 0.75
+        parking:  buildAttribute("google_places", "no", "no", {}),         // 0.35 — inactive
+      },
+    })
+    const withParking    = computeFilteredConfidence(place, filtersAll)
+    const withoutParking = computeFilteredConfidence(place, filtersEntranceToilet)
+    expect(withoutParking).toBeGreaterThan(withParking)
+    expect(withoutParking).toBeCloseTo(0.75)
+  })
+
+  it("falls back to all known criteria when no filter is active", () => {
+    const place = makePlace({
+      accessibility: {
+        entrance: buildAttribute("osm", "yes", "yes", {}),
+        toilet:   emptyAttribute(),
+        parking:  emptyAttribute(),
+      },
+    })
+    const score = computeFilteredConfidence(place, filtersNone)
+    expect(score).toBeCloseTo(RELIABILITY_WEIGHTS.osm)
+  })
+
+  it("returns 0 when all active criteria are unknown", () => {
+    const place = makePlace()
+    expect(computeFilteredConfidence(place, filtersAll)).toBe(0)
+  })
+})
+
+// ─── confidenceLabel ─────────────────────────────────────────────────────────
+
+describe("confidenceLabel", () => {
+  it("returns high for ≥ 0.70", () => {
+    expect(confidenceLabel(0.70)).toBe("high")
+    expect(confidenceLabel(1.00)).toBe("high")
+    expect(confidenceLabel(0.85)).toBe("high")
+  })
+
+  it("returns medium for 0.40–0.69", () => {
+    expect(confidenceLabel(0.40)).toBe("medium")
+    expect(confidenceLabel(0.55)).toBe("medium")
+    expect(confidenceLabel(0.69)).toBe("medium")
+  })
+
+  it("returns low for < 0.40", () => {
+    expect(confidenceLabel(0.00)).toBe("low")
+    expect(confidenceLabel(0.39)).toBe("low")
+  })
+})

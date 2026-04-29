@@ -1,0 +1,112 @@
+import type { Translations } from "./types"
+
+const en: Translations = {
+  app: {
+    title: "Accessible Spaces",
+    subtitle: "Find wheelchair-accessible places",
+  },
+  chat: {
+    placeholder: 'e.g. "Wheelchair-accessible restaurants in Berlin Mitte"',
+    send: "Search",
+    thinking: "Searching …",
+    noResults: "No matching places found.",
+    errorGeneric: "An error occurred. Please try again.",
+  },
+  filters: {
+    title: "Filters",
+    sources: "Data Sources",
+    criteria: "Accessibility Criteria",
+    radius: "Search Radius",
+    radiusLabel: (km: number) => `${km} km`,
+    acceptUnknown: "Show places with unclear information",
+    criteriaItems: {
+      entrance: "Wheelchair-accessible entrance",
+      toilet:   "Wheelchair-accessible toilet",
+      parking:  "Wheelchair-accessible parking",
+      seating:  "Wheelchair-accessible seating",
+    },
+  },
+  results: {
+    title: "Results",
+    count: (n: number) => `${n} place${n !== 1 ? "s" : ""} found`,
+    showMap: "Show map",
+    hideMap: "Hide map",
+    confidence: {
+      high:   "Reliable",
+      medium: "Moderate",
+      low:    "Uncertain",
+    },
+    conflict: "Sources disagree",
+    primarySource: "Best source",
+    noData: "No data",
+  },
+  a11y: {
+    yes:     "Yes",
+    limited: "Limited",
+    no:      "No",
+    unknown: "Unknown",
+  },
+  criteria: {
+    entrance: "Entrance",
+    toilet:   "Toilet",
+    parking:  "Parking",
+    seating:  "Seating",
+  },
+  details: {
+    entrance: {
+      isLevel:          "Step-free",
+      hasRamp:          "Ramp available",
+      rampSlopePercent: "Ramp slope",
+      doorWidthCm:      "Door width",
+      stepCount:        "Number of steps",
+      stepHeightCm:     "Step height",
+      hasAutomaticDoor: "Automatic door",
+      hasHoist:         "Wheelchair lift",
+      description:      "Description",
+    },
+    toilet: {
+      isDesignated:          "Designated wheelchair toilet",
+      hasGrabBars:           "Grab bars",
+      grabBarsOnBothSides:   "Grab bars on both sides",
+      grabBarsFoldable:      "Foldable grab bars",
+      turningRadiusCm:       "Turning space",
+      doorWidthCm:           "Door width",
+      hasEmergencyPullstring:"Emergency pull cord",
+      isInside:              "On-site accessible toilet",
+    },
+    parking: {
+      hasWheelchairSpaces:   "Disabled parking available",
+      spaceCount:            "Number of spaces",
+      distanceToEntranceM:   "Distance to entrance",
+    },
+    seating: {
+      isAccessible: "Wheelchair-accessible seating",
+    },
+    units: {
+      cm:      "cm",
+      m:       "m",
+      percent: "%",
+    },
+  },
+  map: {
+    fullscreen:    "Fullscreen",
+    exitFullscreen:"Exit fullscreen",
+    source:        "Source",
+    confidence:    "Reliability",
+  },
+  categories: {
+    cafe:        "Café",
+    restaurant:  "Restaurant",
+    bar:         "Bar / Pub",
+    fast_food:   "Fast Food",
+    hotel:       "Hotel",
+    museum:      "Museum",
+    theater:     "Theater / Cinema",
+    library:     "Library",
+    gallery:     "Gallery",
+    attraction:  "Attraction",
+  },
+} as const
+
+export default en
+export type { Translations }

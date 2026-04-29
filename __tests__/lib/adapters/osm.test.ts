@@ -1,0 +1,243 @@
+import { describe, it, expect, vi, beforeEach } from "vitest"
+import {
+  buildOverpassQuery,
+  osmWheelchair,
+  osmToilet,
+  osmParking,
+  fetchOsm,
+} from "@/lib/adapters/osm"
+import type { SearchParams } from "@/lib/types"
+
+const BASE_PARAMS: SearchParams = {
+  query: "restaurants in Berlin",
+  location: { lat: 52.52, lon: 13.405 },
+  radiusKm: 5,
+  categories: ["restaurant"],
+  filters: { entrance: true, toilet: true, parking: true, seating: false, acceptUnknown: false },
+  sources: { accessibility_cloud: true, osm: true, reisen_fuer_alle: true, google_places: true },
+}
+
+// ─── buildOverpassQuery ───────────────────────────────────────────────────────
+
+describe("buildOverpassQuery", () => {
+  it("returns empty string when no categories match", () => {
+    const params = { ...BASE_PARAMS, categories: [] as never[] }
+    expect(buildOverpassQuery(params as unknown as SearchParams)).toBe("")
+  })
+
+  it("includes radius in metres", () => {
+    const q = buildOverpassQuery(BASE_PARAMS)
+    expect(q).toContain("5000")
+  })
+
+  it("includes coordinates", () => {
+    const q = buildOverpassQuery(BASE_PARAMS)
+    expect(q).toContain("52.52")
+    expect(q).toContain("13.405")
+  })
+
+  it("uses regex filter for amenity values", () => {
+    const q = buildOverpassQuery(BASE_PARAMS)
+    expect(q).toContain("amenity~")
+    expect(q).toContain("restaurant")
+  })
+
+  it("includes tourism filter for hotel category", () => {
+    const q = buildOverpassQuery({ ...BASE_PARAMS, categories: ["hotel"] })
+    expect(q).toContain("tourism~")
+    expect(q).toContain("hotel")
+  })
+
+  it("includes tourism filter for museum category", () => {
+    const q = buildOverpassQuery({ ...BASE_PARAMS, categories: ["museum"] })
+    expect(q).toContain("tourism~")
+    expect(q).toContain("museum")
+  })
+
+  it("includes amenity filter for theater category", () => {
+    const q = buildOverpassQuery({ ...BASE_PARAMS, categories: ["theater"] })
+    expect(q).toContain("amenity~")
+    expect(q).toContain("theatre")
+  })
+
+  it("includes both amenity and tourism for gallery", () => {
+    const q = buildOverpassQuery({ ...BASE_PARAMS, categories: ["gallery"] })
+    expect(q).toContain("gallery")
+    expect(q).toContain("arts_centre")
+  })
+
+  it("deduplicates overlapping tag values across categories", () => {
+    const q = buildOverpassQuery({ ...BASE_PARAMS, categories: ["cafe", "restaurant", "hotel"] })
+    // Should be a single amenity filter, not multiple
+    const amenityMatches = q.match(/amenity~/g) ?? []
+    expect(amenityMatches).toHaveLength(1)
+  })
+
+  it("produces valid Overpass QL structure", () => {
+    const q = buildOverpassQuery(BASE_PARAMS)
+    expect(q).toMatch(/^\[out:json\]/)
+    expect(q).toContain("out")
+    expect(q).toContain("center")
+    expect(q).toContain("tags")
+  })
+
+  it("adds wheelchair pre-filter when accessibility filters active and acceptUnknown=false", () => {
+    const q = buildOverpassQuery(BASE_PARAMS)
+    expect(q).toContain(`wheelchair~"^(yes|limited|designated)$"`)
+  })
+
+  it("omits wheelchair pre-filter when acceptUnknown=true", () => {
+    const q = buildOverpassQuery({ ...BASE_PARAMS, filters: { ...BASE_PARAMS.filters, acceptUnknown: true } })
+    expect(q).not.toContain("wheelchair~")
+  })
+
+  it("omits wheelchair pre-filter when all accessibility filters are inactive", () => {
+    const noFilters = { entrance: false, toilet: false, parking: false, seating: false, acceptUnknown: false }
+    const q = buildOverpassQuery({ ...BASE_PARAMS, filters: noFilters })
+    expect(q).not.toContain("wheelchair~")
+  })
+})
+
+// ─── osmWheelchair ────────────────────────────────────────────────────────────
+
+describe("osmWheelchair", () => {
+  it.each([
+    [{ wheelchair: "yes" },        "yes"],
+    [{ wheelchair: "designated" }, "yes"],
+    [{ wheelchair: "limited" },    "limited"],
+    [{ wheelchair: "no" },         "no"],
+    [{ wheelchair: "unknown" },    "unknown"],
+    [{},                           "unknown"],
+  ])("maps %o → %s", (tags, expected) => {
+    expect(osmWheelchair(tags as Record<string, string>)).toBe(expected)
+  })
+})
+
+// ─── osmToilet ────────────────────────────────────────────────────────────────
+
+describe("osmToilet", () => {
+  it.each([
+    [{ "toilets:wheelchair": "yes" },        "yes"],
+    [{ "toilets:wheelchair": "designated" }, "yes"],
+    [{ "toilets:wheelchair": "limited" },    "limited"],
+    [{ "toilets:wheelchair": "no" },         "no"],
+    [{},                                     "unknown"],
+  ])("maps %o → %s", (tags, expected) => {
+    expect(osmToilet(tags as Record<string, string>)).toBe(expected)
+  })
+})
+
+// ─── osmParking ───────────────────────────────────────────────────────────────
+
+describe("osmParking", () => {
+  it("returns yes when capacity:disabled > 0", () => {
+    expect(osmParking({ "capacity:disabled": "3" })).toBe("yes")
+  })
+
+  it("returns yes when parking_space=disabled", () => {
+    expect(osmParking({ parking_space: "disabled" })).toBe("yes")
+  })
+
+  it("returns yes for capacity:wheelchair > 0", () => {
+    expect(osmParking({ "capacity:wheelchair": "2" })).toBe("yes")
+  })
+
+  it("returns unknown when no parking tags present", () => {
+    expect(osmParking({})).toBe("unknown")
+  })
+
+  it("returns unknown when capacity:disabled is 0", () => {
+    expect(osmParking({ "capacity:disabled": "0" })).toBe("unknown")
+  })
+})
+
+// ─── fetchOsm (integration with mocked fetch) ─────────────────────────────────
+
+describe("fetchOsm", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it("returns empty array when query is empty (no categories)", async () => {
+    const result = await fetchOsm({ ...BASE_PARAMS, categories: [] as never[] } as unknown as SearchParams)
+    expect(result).toEqual([])
+  })
+
+  it("returns empty array when Overpass returns no elements", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ elements: [] }),
+    }))
+    const result = await fetchOsm(BASE_PARAMS)
+    expect(result).toEqual([])
+  })
+
+  it("throws immediately on non-retryable status (400)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 400 }))
+    await expect(fetchOsm(BASE_PARAMS)).rejects.toThrow("Overpass API error: 400")
+  })
+
+  it("throws after all endpoints are rate-limited (429)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 429 }))
+    await expect(fetchOsm(BASE_PARAMS)).rejects.toThrow(/429/)
+  })
+
+  it("parses a restaurant node correctly", async () => {
+    const element = {
+      id: 123,
+      lat: 52.521,
+      lon: 13.406,
+      tags: {
+        name: "Café am See",
+        amenity: "restaurant",
+        wheelchair: "yes",
+        "toilets:wheelchair": "yes",
+        "capacity:disabled": "2",
+        "addr:street": "Seestraße",
+        "addr:housenumber": "5",
+        "addr:postcode": "13355",
+        "addr:city": "Berlin",
+      },
+    }
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ elements: [element] }),
+    }))
+
+    const result = await fetchOsm(BASE_PARAMS)
+    expect(result).toHaveLength(1)
+    const place = result[0]
+    expect(place.name).toBe("Café am See")
+    expect(place.category).toBe("restaurant")
+    expect(place.accessibility.toilet.value).toBe("yes")
+    expect(place.accessibility.parking.value).toBe("yes")
+    expect(place.address.city).toBe("Berlin")
+    expect(place.coordinates.lat).toBe(52.521)
+  })
+
+  it("skips elements without a name", async () => {
+    const element = { id: 1, lat: 52.52, lon: 13.4, tags: { amenity: "restaurant" } }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ elements: [element] }),
+    }))
+    const result = await fetchOsm(BASE_PARAMS)
+    expect(result).toHaveLength(0)
+  })
+
+  it("uses center coordinates for way elements", async () => {
+    const element = {
+      id: 456,
+      type: "way",
+      center: { lat: 52.530, lon: 13.410 },
+      tags: { name: "Hotel Zentrum", tourism: "hotel" },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ elements: [element] }),
+    }))
+    const result = await fetchOsm({ ...BASE_PARAMS, categories: ["hotel"] })
+    expect(result[0].coordinates.lat).toBe(52.530)
+  })
+})

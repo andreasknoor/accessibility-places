@@ -1,0 +1,111 @@
+import type { Translations } from "./types"
+
+const de: Translations = {
+  app: {
+    title: "Accessible Spaces",
+    subtitle: "Barrierefreie Orte finden",
+  },
+  chat: {
+    placeholder: 'z. B. „Rollstuhlgerechte Restaurants in Berlin Mitte"',
+    send: "Suchen",
+    thinking: "Suche läuft …",
+    noResults: "Keine passenden Orte gefunden.",
+    errorGeneric: "Ein Fehler ist aufgetreten. Bitte erneut versuchen.",
+  },
+  filters: {
+    title: "Filter",
+    sources: "Datenquellen",
+    criteria: "Barrierefreiheits-Kriterien",
+    radius: "Suchradius",
+    radiusLabel: (km: number) => `${km} km`,
+    acceptUnknown: "Orte mit unklaren Informationen anzeigen",
+    criteriaItems: {
+      entrance: "Rollstuhlgerechter Eingang",
+      toilet:   "Rollstuhlgerechte Toilette",
+      parking:  "Rollstuhlgerechter Parkplatz",
+      seating:  "Rollstuhlgerechte Sitzplätze",
+    },
+  },
+  results: {
+    title: "Ergebnisse",
+    count: (n: number) => `${n} Ort${n !== 1 ? "e" : ""} gefunden`,
+    showMap: "Karte anzeigen",
+    hideMap: "Karte ausblenden",
+    confidence: {
+      high:    "Verlässlich",
+      medium:  "Mittel",
+      low:     "Unsicher",
+    },
+    conflict: "Quellen widersprechen sich",
+    primarySource: "Beste Quelle",
+    noData: "Keine Daten",
+  },
+  a11y: {
+    yes:     "Ja",
+    limited: "Eingeschränkt",
+    no:      "Nein",
+    unknown: "Unbekannt",
+  },
+  criteria: {
+    entrance: "Eingang",
+    toilet:   "Toilette",
+    parking:  "Parkplatz",
+    seating:  "Sitzplätze",
+  },
+  details: {
+    entrance: {
+      isLevel:          "Stufenlos",
+      hasRamp:          "Rampe vorhanden",
+      rampSlopePercent: "Rampenneigung",
+      doorWidthCm:      "Türbreite",
+      stepCount:        "Stufenanzahl",
+      stepHeightCm:     "Stufenhöhe",
+      hasAutomaticDoor: "Automatiktür",
+      hasHoist:         "Hublift vorhanden",
+      description:      "Beschreibung",
+    },
+    toilet: {
+      isDesignated:          "Ausgewiesene Rollstuhl-Toilette",
+      hasGrabBars:           "Haltegriffe",
+      grabBarsOnBothSides:   "Beidseitige Haltegriffe",
+      grabBarsFoldable:      "Klappbare Haltegriffe",
+      turningRadiusCm:       "Bewegungsfläche",
+      doorWidthCm:           "Türbreite",
+      hasEmergencyPullstring:"Notrufkette",
+      isInside:              "WC im Betrieb vorhanden",
+    },
+    parking: {
+      hasWheelchairSpaces:   "Behindertenparkplätze vorhanden",
+      spaceCount:            "Anzahl Plätze",
+      distanceToEntranceM:   "Abstand zum Eingang",
+    },
+    seating: {
+      isAccessible: "Rollstuhlgerechte Sitzplätze",
+    },
+    units: {
+      cm: "cm",
+      m:  "m",
+      percent: "%",
+    },
+  },
+  map: {
+    fullscreen:    "Vollbild",
+    exitFullscreen:"Vollbild beenden",
+    source:        "Quelle",
+    confidence:    "Verlässlichkeit",
+  },
+  categories: {
+    cafe:        "Café",
+    restaurant:  "Restaurant",
+    bar:         "Bar / Kneipe",
+    fast_food:   "Imbiss / Fast Food",
+    hotel:       "Hotel / Unterkunft",
+    museum:      "Museum",
+    theater:     "Theater / Kino",
+    library:     "Bibliothek",
+    gallery:     "Galerie",
+    attraction:  "Sehenswürdigkeit",
+  },
+}
+
+export default de
