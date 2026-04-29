@@ -18,10 +18,11 @@ export interface Translations {
     radiusLabel:   (km: number) => string
     acceptUnknown: string
     criteriaItems: {
-      entrance: string
-      toilet:   string
-      parking:  string
-      seating:  string
+      entrance:   string
+      toilet:     string
+      parking:    string
+      seating:    string
+      allowsDogs: string
     }
   }
   results: {
@@ -34,9 +35,13 @@ export interface Translations {
       medium: string
       low:    string
     }
-    conflict:      string
-    primarySource: string
-    noData:        string
+    conflict:          string
+    primarySource:     string
+    noData:            string
+    wheelmapLink:      string
+    verifiedRecently:  string
+    allowsDogs:        string
+    noDogs:            string
   }
   a11y: {
     yes:     string

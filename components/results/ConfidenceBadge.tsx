@@ -1,5 +1,6 @@
 "use client"
 
+import { Accessibility, Check } from "lucide-react"
 import {
   Tooltip,
   TooltipContent,
@@ -102,26 +103,55 @@ function ScoreTooltip({ place, filters }: { place: Place; filters: SearchFilters
   )
 }
 
+function isUserVerified(place: Place): boolean {
+  const attrs = [
+    place.accessibility.entrance,
+    place.accessibility.toilet,
+    place.accessibility.parking,
+    ...(place.accessibility.seating ? [place.accessibility.seating] : []),
+  ]
+  return attrs.some((a) => a.sources.some((s) => s.verifiedRecently))
+}
+
 export default function ConfidenceBadge({ confidence, place, filters, className }: Props) {
   const t     = useTranslations()
   const level = confidenceLabel(confidence)
   const pct   = Math.round(confidence * 100)
+  const verified = place ? isUserVerified(place) : false
+
+  const verifiedIcon = verified && (
+    <span
+      role="img"
+      aria-label={t.results.verifiedRecently}
+      title={t.results.verifiedRecently}
+      className="inline-flex items-center text-emerald-600"
+    >
+      <Check className="w-3 h-3" />
+      <Accessibility className="w-3.5 h-3.5 -ml-0.5" />
+    </span>
+  )
 
   const badge = (
     <span className={cn(
       "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-default",
       COLORS[level],
-      className,
     )}>
       {pct}% · {t.results.confidence[level]}
     </span>
   )
 
-  if (!place || !filters) return badge
+  const composed = (
+    <span className={cn("inline-flex items-center gap-1.5", className)}>
+      {verifiedIcon}
+      {badge}
+    </span>
+  )
+
+  if (!place || !filters) return composed
 
   return (
     <Tooltip>
-      <TooltipTrigger asChild>{badge}</TooltipTrigger>
+      <TooltipTrigger asChild>{composed}</TooltipTrigger>
       <TooltipContent side="left" className="bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-700 shadow-lg p-3 max-w-none w-[32rem]">
         <ScoreTooltip place={place} filters={filters} />
       </TooltipContent>

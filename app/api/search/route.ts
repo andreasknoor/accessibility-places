@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
         // pre-filters don't discard untagged-but-real matches. The name itself
         // is pushed server-side via params.nameHint.
         const ALL_CATEGORIES: Category[] = ["cafe","restaurant","bar","fast_food","hotel","museum","theater","library","gallery","attraction"]
-        const PERMISSIVE_FILTERS: SearchFilters = { entrance: false, toilet: false, parking: false, seating: false, acceptUnknown: true }
+        const PERMISSIVE_FILTERS: SearchFilters = { entrance: false, toilet: false, parking: false, seating: false, allowsDogs: false, acceptUnknown: true }
         const nameHint = parsed.nameHint ?? ""
 
         const params: SearchParams = {
@@ -124,8 +124,16 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        // ── 5b. Drop supplementary-only records (e.g. Pfotenpiloten places
+        //   that never matched a wheelchair-data source). They contribute
+        //   `allowsDogs` info via the merge but shouldn't appear standalone —
+        //   *unless* the user explicitly searches for dog-friendly places.
+        const wheelchairCanonical = body.filters.allowsDogs
+          ? canonical
+          : canonical.filter((p) => !p.dogPolicyOnly)
+
         // ── 6. Name filter ───────────────────────────────────────────────────
-        const nameFiltered = filterByNameHint(canonical, nameHint)
+        const nameFiltered = filterByNameHint(wheelchairCanonical, nameHint)
 
         // ── 7. Filtered confidence + filter/sort ─────────────────────────────
         const withScore = nameFiltered.map((p) => ({

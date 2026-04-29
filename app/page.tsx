@@ -18,6 +18,7 @@ const DEFAULT_FILTERS: SearchFilters = {
   toilet:        true,
   parking:       false,
   seating:       false,
+  allowsDogs:    false,
   acceptUnknown: false,
 }
 
@@ -43,7 +44,7 @@ export default function Home() {
   const [isFullscreen,  setIsFullscreen] = useState(false)
   const [error,         setError]        = useState<string | undefined>()
   const [sourceStates,  setSourceStates] = useState<Partial<Record<SourceId, SourceState>>>({})
-  const [resultsWidth,  setResultsWidth] = useState(420)
+  const [resultsWidth,  setResultsWidth] = useState(504)
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
 

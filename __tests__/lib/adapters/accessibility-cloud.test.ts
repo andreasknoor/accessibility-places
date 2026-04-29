@@ -149,6 +149,89 @@ describe("fetchAccessibilityCloud", () => {
     expect(result).toHaveLength(0)
   })
 
+  it("captures wheelmapUrl when infoPageUrl points to wheelmap.org", async () => {
+    const feature = {
+      _id: "wm1",
+      geometry: { type: "Point", coordinates: [13.0, 52.0] },
+      properties: {
+        name: "Wheelmap Place",
+        category: "restaurant",
+        address: {},
+        infoPageUrl: "https://wheelmap.org/nodes/12345",
+        accessibility: { accessibleWith: { wheelchair: true } },
+      },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ features: [feature] }),
+    }))
+    const [p] = await fetchAccessibilityCloud(BASE_PARAMS)
+    expect(p.wheelmapUrl).toBe("https://wheelmap.org/nodes/12345")
+  })
+
+  it("captures allowsDogs and flags supplementary-only records", async () => {
+    const feature = {
+      _id: "pp1",
+      geometry: { type: "Point", coordinates: [13.0, 52.0] },
+      properties: {
+        name: "Pfotenpiloten Cafe",
+        category: "cafe",
+        address: {},
+        accessibility: { animalPolicy: { allowsDogs: true } },
+      },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ features: [feature] }),
+    }))
+    const [p] = await fetchAccessibilityCloud(BASE_PARAMS)
+    expect(p.allowsDogs).toBe(true)
+    expect(p.dogPolicyOnly).toBe(true)
+  })
+
+  it("does NOT flag dogPolicyOnly when wheelchair data is present alongside animalPolicy", async () => {
+    const feature = {
+      _id: "wm-dogs",
+      geometry: { type: "Point", coordinates: [13.0, 52.0] },
+      properties: {
+        name: "Cafe Both",
+        category: "cafe",
+        address: {},
+        accessibility: {
+          accessibleWith: { wheelchair: true },
+          animalPolicy:   { allowsDogs: true },
+        },
+      },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ features: [feature] }),
+    }))
+    const [p] = await fetchAccessibilityCloud(BASE_PARAMS)
+    expect(p.allowsDogs).toBe(true)
+    expect(p.dogPolicyOnly).toBeUndefined()
+  })
+
+  it("ignores infoPageUrl from non-wheelmap hosts", async () => {
+    const feature = {
+      _id: "pp1",
+      geometry: { type: "Point", coordinates: [13.0, 52.0] },
+      properties: {
+        name: "Pfotenpiloten Place",
+        category: "restaurant",
+        address: {},
+        infoPageUrl: "https://map.pfotenpiloten.org/?place_id=42",
+        accessibility: { accessibleWith: { wheelchair: true } },
+      },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ features: [feature] }),
+    }))
+    const [p] = await fetchAccessibilityCloud(BASE_PARAMS)
+    expect(p.wheelmapUrl).toBeUndefined()
+  })
+
   it("handles toilet details with grab bars", async () => {
     const feature = {
       _id: "t1",

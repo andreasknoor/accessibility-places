@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { createPortal } from "react-dom"
-import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Info } from "lucide-react"
+import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Info, Accessibility, PawPrint } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import ConfidenceBadge  from "./ConfidenceBadge"
@@ -54,6 +54,20 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
     Object.values(attr.details).some((v) => v != null),
   )
 
+  // Wheelmap deep-link priority:
+  //   1. authoritative URL from accessibility.cloud (`infoPageUrl`)
+  //   2. constructed URL from an OSM node id
+  //   3. coordinate-centred map view that always works
+  const wheelmapHref = (() => {
+    if (place.wheelmapUrl) return place.wheelmapUrl
+    const osm = place.sourceRecords.find((r) => r.sourceId === "osm")
+    if (osm) {
+      const [type, id] = osm.externalId.split("/")
+      if (type === "node" && id) return `https://wheelmap.org/nodes/${id}`
+    }
+    return `https://wheelmap.org/?lat=${place.coordinates.lat}&lon=${place.coordinates.lon}&zoom=19`
+  })()
+
   return (
     <Card
       className={cn(
@@ -93,6 +107,19 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
           {place.sourceRecords.length > 1 && (
             <span className="text-xs text-muted-foreground">
               +{place.sourceRecords.length - 1}
+            </span>
+          )}
+          {place.allowsDogs !== undefined && (
+            <span
+              className={cn(
+                "inline-flex items-center gap-0.5 text-xs",
+                place.allowsDogs ? "text-amber-700" : "text-muted-foreground line-through",
+              )}
+              title={place.allowsDogs ? t.results.allowsDogs : t.results.noDogs}
+              aria-label={place.allowsDogs ? t.results.allowsDogs : t.results.noDogs}
+            >
+              <PawPrint className="w-3 h-3" />
+              <span>{place.allowsDogs ? t.results.allowsDogs : t.results.noDogs}</span>
             </span>
           )}
         </div>
@@ -150,6 +177,17 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
                 <Phone className="w-3.5 h-3.5" />
               </a>
             )}
+            <a
+              href={wheelmapHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={t.results.wheelmapLink}
+              title={t.results.wheelmapLink}
+              onClick={(e) => e.stopPropagation()}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Accessibility className="w-3.5 h-3.5" />
+            </a>
           </div>
 
           {hasAnyDetails && (

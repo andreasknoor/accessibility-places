@@ -33,7 +33,7 @@ function makePlace(overrides: Partial<Place> = {}): Place {
 }
 
 const ALL_FILTERS: SearchFilters = {
-  entrance: true, toilet: true, parking: true, seating: false, acceptUnknown: false,
+  entrance: true, toilet: true, parking: true, seating: false, allowsDogs: false, acceptUnknown: false,
 }
 
 // ─── buildAttribute ──────────────────────────────────────────────────────────
@@ -185,6 +185,79 @@ describe("mergePlaces", () => {
     expect(merged.phone).toBe("+49123")
   })
 
+  it("toilet confidence stays capped at 0.9 when OSM (yes-only, no designated) merges with Google's bare wheelchairAccessibleRestroom flag", () => {
+    // Regression: Peter Pane Potsdam — OSM `toilets:wheelchair=yes` (no
+    // `designated`, no `toilets=yes`) plus Google `wheelchairAccessibleRestroom:
+    // true`. Source weights sum to 1.05 → capped baseConf = 1.0. Without
+    // looking at source-level details the merged details collapsed to {} and
+    // the 0.9 cap was bypassed, yielding a misleading 100 %.
+    const osm = makePlace({
+      id: "osm",
+      accessibility: {
+        entrance: emptyAttribute(),
+        toilet:   buildAttribute("osm", "yes", "yes", { isDesignated: undefined, hasGrabBars: undefined, isInside: undefined }),
+        parking:  emptyAttribute(),
+      },
+      sourceRecords: [{ sourceId: "osm", externalId: "1", fetchedAt: "", raw: {} }],
+    })
+    const google = makePlace({
+      id: "google",
+      accessibility: {
+        entrance: emptyAttribute(),
+        toilet:   buildAttribute("google_places", "yes", "true", {}),
+        parking:  emptyAttribute(),
+      },
+      sourceRecords: [{ sourceId: "google_places", externalId: "2", fetchedAt: "", raw: {} }],
+    })
+
+    const merged = mergePlaces(osm, google)
+    expect(merged.accessibility.toilet.value).toBe("yes")
+    expect(merged.accessibility.toilet.confidence).toBeLessThanOrEqual(0.9)
+    expect(merged.accessibility.toilet.confidence).toBeGreaterThan(0.7)
+  })
+
+  it("merge clears dogPolicyOnly when wheelchair-data side joins", () => {
+    const dogOnly = makePlace({
+      id: "dog",
+      allowsDogs: true,
+      dogPolicyOnly: true,
+      sourceRecords: [{ sourceId: "accessibility_cloud", externalId: "1", fetchedAt: "", raw: {} }],
+    })
+    const wheelchair = makePlace({
+      id: "wm",
+      accessibility: {
+        entrance: buildAttribute("osm", "yes", "yes", {}),
+        toilet:   emptyAttribute(),
+        parking:  emptyAttribute(),
+      },
+      sourceRecords: [{ sourceId: "osm", externalId: "node/1", fetchedAt: "", raw: {} }],
+    })
+    const merged = mergePlaces(dogOnly, wheelchair)
+    expect(merged.allowsDogs).toBe(true)
+    expect(merged.dogPolicyOnly).toBeUndefined()
+  })
+
+  it("merge keeps allowsDogs from incoming when existing has none", () => {
+    const wheelchair = makePlace({
+      id: "wm",
+      accessibility: {
+        entrance: buildAttribute("osm", "yes", "yes", {}),
+        toilet:   emptyAttribute(),
+        parking:  emptyAttribute(),
+      },
+      sourceRecords: [{ sourceId: "osm", externalId: "node/1", fetchedAt: "", raw: {} }],
+    })
+    const dogOnly = makePlace({
+      id: "dog",
+      allowsDogs: false,
+      dogPolicyOnly: true,
+      sourceRecords: [{ sourceId: "accessibility_cloud", externalId: "1", fetchedAt: "", raw: {} }],
+    })
+    const merged = mergePlaces(wheelchair, dogOnly)
+    expect(merged.allowsDogs).toBe(false)
+    expect(merged.dogPolicyOnly).toBeUndefined()
+  })
+
   it("does not overwrite existing metadata", () => {
     const a = makePlace({ website: "https://original.com" })
     const b = makePlace({ website: "https://new.com" })
@@ -239,6 +312,45 @@ describe("passesFilters", () => {
     const p = place(noAttr, noAttr, noAttr)
     const noFilters = { entrance: false, toilet: false, parking: false, seating: false, acceptUnknown: false }
     expect(passesFilters(p, noFilters)).toBe(true)
+  })
+
+  it("allowsDogs filter rejects place with allowsDogs=false", () => {
+    const p = makePlace({
+      accessibility: { entrance: yesAttr, toilet: yesAttr, parking: yesAttr },
+      allowsDogs: false,
+    })
+    expect(passesFilters(p, { ...ALL_FILTERS, allowsDogs: true })).toBe(false)
+  })
+
+  it("allowsDogs filter accepts place with allowsDogs=true", () => {
+    const p = makePlace({
+      accessibility: { entrance: yesAttr, toilet: yesAttr, parking: yesAttr },
+      allowsDogs: true,
+    })
+    expect(passesFilters(p, { ...ALL_FILTERS, allowsDogs: true })).toBe(true)
+  })
+
+  it("allowsDogs filter rejects unknown by default", () => {
+    const p = makePlace({
+      accessibility: { entrance: yesAttr, toilet: yesAttr, parking: yesAttr },
+      // allowsDogs undefined
+    })
+    expect(passesFilters(p, { ...ALL_FILTERS, allowsDogs: true })).toBe(false)
+  })
+
+  it("allowsDogs filter accepts unknown when acceptUnknown=true", () => {
+    const p = makePlace({
+      accessibility: { entrance: yesAttr, toilet: yesAttr, parking: yesAttr },
+    })
+    expect(passesFilters(p, { ...ALL_FILTERS, allowsDogs: true, acceptUnknown: true })).toBe(true)
+  })
+
+  it("allowsDogs=false on place is allowed when filter is OFF", () => {
+    const p = makePlace({
+      accessibility: { entrance: yesAttr, toilet: yesAttr, parking: yesAttr },
+      allowsDogs: false,
+    })
+    expect(passesFilters(p, ALL_FILTERS)).toBe(true)
   })
 
   it("'no' never passes even with acceptUnknown=true", () => {

@@ -55,6 +55,10 @@ export interface SourceAttribution {
   rawValue: string
   reliabilityWeight: number
   details?: EntranceDetails | ToiletDetails | ParkingDetails | SeatingDetails
+  // Set when this source was confidence-boosted because the underlying record
+  // carries a recent user-verification marker (e.g. OSM `check_date:wheelchair`
+  // written by Wheelmap surveys). Drives the verified badge in the UI.
+  verifiedRecently?: boolean
 }
 
 export interface AccessibilityAttribute {
@@ -96,6 +100,18 @@ export interface Place {
   coordinates: { lat: number; lon: number }
   website?: string
   phone?: string
+  // Authoritative Wheelmap.org page URL when at least one source (typically
+  // accessibility.cloud's `infoPageUrl` for Wheelmap-derived places) hands one
+  // back. Used in preference to a manually constructed Wheelmap link.
+  wheelmapUrl?: string
+
+  // Bonus info from supplementary A.Cloud datasets (e.g. Pfotenpiloten):
+  // does the place welcome dogs? `undefined` = unknown.
+  allowsDogs?: boolean
+  // Internal flag — true when this Place was constructed solely from a
+  // supplementary dog-policy record (no wheelchair data). The route drops
+  // such records unless they merged with a real wheelchair-data source.
+  dogPolicyOnly?: boolean
 
   accessibility: {
     entrance: AccessibilityAttribute
@@ -119,6 +135,7 @@ export interface SearchFilters {
   toilet: boolean
   parking: boolean
   seating: boolean
+  allowsDogs: boolean
   acceptUnknown: boolean
 }
 

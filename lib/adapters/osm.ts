@@ -67,19 +67,28 @@ export function buildOverpassQuery(params: SearchParams): string {
     ? `[wheelchair~"^(yes|limited|designated)$"]`
     : ""
 
+  // Dog filter narrows the query to dog-tagged places only — without this,
+  // the handful of `dog=yes` restaurants in a city centre get displaced from
+  // the 100-result cap by hundreds of un-tagged ones.
+  const dog = filters.allowsDogs ? `[dog~"^(yes|leashed)$"]` : ""
+
   const clauses: string[] = []
   if (amenityVals.size > 0) {
     const vals = [...amenityVals].join("|")
-    clauses.push(`nwr(around:${r},${lat},${lon})[amenity~"^(${vals})$"]${wc};`)
+    clauses.push(`nwr(around:${r},${lat},${lon})[amenity~"^(${vals})$"]${wc}${dog};`)
   }
   if (tourismVals.size > 0) {
     const vals = [...tourismVals].join("|")
-    clauses.push(`nwr(around:${r},${lat},${lon})[tourism~"^(${vals})$"]${wc};`)
+    clauses.push(`nwr(around:${r},${lat},${lon})[tourism~"^(${vals})$"]${wc}${dog};`)
   }
 
   if (clauses.length === 0) return ""
 
-  return `[out:json][timeout:25];(${clauses.join("")});out 100 center tags;`
+  // The dog filter narrows the result set so much (only ~5–30 dog-tagged
+  // places per dense city centre) that we can safely fetch more without
+  // pulling huge payloads. 300 covers the dog universe in any urban area.
+  const cap = filters.allowsDogs ? 300 : 100
+  return `[out:json][timeout:25];(${clauses.join("")});out ${cap} center tags;`
 }
 
 // ─── OSM tag → A11yValue mapping ──────────────────────────────────────────
@@ -146,12 +155,40 @@ function osmToiletDetails(tags: Record<string, string>): ToiletDetails {
   }
 }
 
+// OSM `dog=*` convention: yes / no / leashed / outside / unknown.
+// We map this to "may I bring my dog INSIDE the venue?". `outside` means dogs
+// are tolerated only on the terrace/garden, which doesn't help when the user
+// wants to actually sit indoors with their dog → treated as false.
+export function osmAllowsDogs(tags: Record<string, string>): boolean | undefined {
+  const v = (tags["dog"] ?? tags["dogs"] ?? "").toLowerCase()
+  if (v === "yes" || v === "leashed") return true
+  if (v === "no"  || v === "outside") return false
+  return undefined
+}
+
 function osmParkingDetails(tags: Record<string, string>): ParkingDetails {
   const count = parseInt(tags["capacity:disabled"] ?? tags["capacity:wheelchair"] ?? "0", 10)
   return {
     hasWheelchairSpaces: count > 0 || tags["parking_space"] === "disabled" ? true : undefined,
     spaceCount: count > 0 ? count : undefined,
   }
+}
+
+// ─── User-verified freshness boost ────────────────────────────────────────
+// Wheelmap.org users (and OSM editors generally) write `check_date:wheelchair`
+// when they confirm a wheelchair tag on-site. A recent date is a strong
+// "this was actually verified" signal — boost the OSM weight 1.2× when the
+// confirmation is < 2 years old. The buildAttribute helper caps the final
+// weight at 1.0, so this only matters when the base weight isn't already there.
+
+const RECENT_VERIFICATION_BOOST = 1.2
+const TWO_YEARS_MS = 2 * 365 * 24 * 60 * 60 * 1000
+
+export function isRecentlyVerified(checkDate: string | undefined, now: number = Date.now()): boolean {
+  if (!checkDate) return false
+  const t = Date.parse(checkDate)
+  if (Number.isNaN(t)) return false
+  return now - t < TWO_YEARS_MS
 }
 
 // ─── Parse Overpass element → Place ───────────────────────────────────────
@@ -173,10 +210,17 @@ function elementToPlace(el: any): Place | null {
   const toiletDetails    = osmToiletDetails(tags)
   const parkingDetails   = osmParkingDetails(tags)
 
+  // Per-attribute Wheelmap/OSM verification: prefer the attribute-specific
+  // check_date tag, fall back to the generic check_date covering the whole node.
+  const entranceBoost = isRecentlyVerified(tags["check_date:wheelchair"]          ?? tags["check_date"]) ? RECENT_VERIFICATION_BOOST : 1.0
+  const toiletBoost   = isRecentlyVerified(tags["check_date:toilets:wheelchair"]  ?? tags["check_date"]) ? RECENT_VERIFICATION_BOOST : 1.0
+
   // OSM wheelchair= is a whole-place proxy → lower weight for entrance
-  const entrance = buildAttribute("osm", wheelchairVal, tags["wheelchair"] ?? "", entranceDetails, true)
-  const toilet   = buildAttribute("osm", toiletVal,     tags["toilets:wheelchair"] ?? "", toiletDetails)
+  const entrance = buildAttribute("osm", wheelchairVal, tags["wheelchair"] ?? "", entranceDetails, true,  entranceBoost)
+  const toilet   = buildAttribute("osm", toiletVal,     tags["toilets:wheelchair"] ?? "", toiletDetails, false, toiletBoost)
   const parking  = buildAttribute("osm", parkingVal,    tags["capacity:disabled"] ?? tags["parking_space"] ?? "", parkingDetails)
+
+  const allowsDogs = osmAllowsDogs(tags)
 
   return {
     id: nanoid(),
@@ -193,6 +237,7 @@ function elementToPlace(el: any): Place | null {
     coordinates: { lat, lon },
     website: tags["website"] ?? tags["contact:website"] ?? undefined,
     phone:   tags["phone"]   ?? tags["contact:phone"]   ?? undefined,
+    ...(allowsDogs !== undefined ? { allowsDogs } : {}),
     accessibility: {
       entrance,
       toilet,
@@ -203,7 +248,9 @@ function elementToPlace(el: any): Place | null {
     osmWheelchairIsOverall: wheelchairVal !== "unknown",
     sourceRecords: [{
       sourceId:   "osm",
-      externalId: String(el.id),
+      // OSM-style "type/id" so consumers (e.g. Wheelmap deep-link) can
+      // distinguish nodes/ways/relations.
+      externalId: `${el.type ?? "node"}/${el.id}`,
       fetchedAt:  new Date().toISOString(),
       raw:        tags,
     }],

@@ -4,7 +4,9 @@ import {
   osmWheelchair,
   osmToilet,
   osmParking,
+  osmAllowsDogs,
   fetchOsm,
+  isRecentlyVerified,
 } from "@/lib/adapters/osm"
 import type { SearchParams } from "@/lib/types"
 
@@ -127,6 +129,54 @@ describe("osmToilet", () => {
   })
 })
 
+// ─── osmAllowsDogs ────────────────────────────────────────────────────────────
+
+describe("osmAllowsDogs", () => {
+  it.each([
+    [{ dog: "yes" },     true],
+    [{ dog: "leashed" }, true],
+    [{ dog: "outside" }, false],   // outdoor-only doesn't help inside seating
+    [{ dog: "no" },      false],
+    [{ dogs: "yes" },    true],     // tolerate plural variant
+    [{ dog: "unknown" }, undefined],
+    [{},                 undefined],
+  ])("maps %o → %s", (tags, expected) => {
+    expect(osmAllowsDogs(tags as Record<string, string>)).toBe(expected)
+  })
+
+  it("OSM element with dog=yes → place.allowsDogs=true", async () => {
+    const element = {
+      id: 555, type: "node", lat: 52.52, lon: 13.405,
+      tags: { name: "Hundefreundliches Café", amenity: "cafe", dog: "yes" },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ elements: [element] }) }))
+    const [p] = await fetchOsm(BASE_PARAMS)
+    expect(p.allowsDogs).toBe(true)
+  })
+})
+
+// ─── isRecentlyVerified ───────────────────────────────────────────────────────
+
+describe("isRecentlyVerified", () => {
+  const NOW = Date.parse("2026-04-29")
+
+  it("returns false for undefined / empty / malformed", () => {
+    expect(isRecentlyVerified(undefined, NOW)).toBe(false)
+    expect(isRecentlyVerified("",        NOW)).toBe(false)
+    expect(isRecentlyVerified("not-a-date", NOW)).toBe(false)
+  })
+
+  it("returns true for dates within 2 years", () => {
+    expect(isRecentlyVerified("2025-06-01", NOW)).toBe(true)
+    expect(isRecentlyVerified("2026-04-01", NOW)).toBe(true)
+  })
+
+  it("returns false for dates older than 2 years", () => {
+    expect(isRecentlyVerified("2023-01-01", NOW)).toBe(false)
+    expect(isRecentlyVerified("2020-01-01", NOW)).toBe(false)
+  })
+})
+
 // ─── osmParking ───────────────────────────────────────────────────────────────
 
 describe("osmParking", () => {
@@ -224,6 +274,39 @@ describe("fetchOsm", () => {
     }))
     const result = await fetchOsm(BASE_PARAMS)
     expect(result).toHaveLength(0)
+  })
+
+  it("boosts entrance weight when check_date:wheelchair is recent", async () => {
+    const recent = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10) // 30 days ago
+    const element = {
+      id: 1, type: "node", lat: 52.52, lon: 13.405,
+      tags: { name: "Recent", amenity: "restaurant", wheelchair: "yes", "check_date:wheelchair": recent },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ elements: [element] }) }))
+    const [boosted] = await fetchOsm(BASE_PARAMS)
+    const w = boosted.accessibility.entrance.sources[0].reliabilityWeight
+    // base 0.7, isOsmOverall ×0.85, boost ×1.2 → 0.714, capped <= 1.0
+    expect(w).toBeGreaterThan(0.7 * 0.85)
+    expect(w).toBeLessThanOrEqual(1.0)
+  })
+
+  it("does NOT boost when check_date is older than 2 years", async () => {
+    const old = new Date(Date.now() - 3 * 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    const element = {
+      id: 2, type: "node", lat: 52.52, lon: 13.405,
+      tags: { name: "Old", amenity: "restaurant", wheelchair: "yes", "check_date:wheelchair": old },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ elements: [element] }) }))
+    const [unboosted] = await fetchOsm(BASE_PARAMS)
+    const w = unboosted.accessibility.entrance.sources[0].reliabilityWeight
+    expect(w).toBeCloseTo(0.7 * 0.85, 5) // base × isOsmOverall, no boost
+  })
+
+  it("encodes OSM type into externalId so consumers can build deep links", async () => {
+    const node = { id: 99, type: "node", lat: 52.52, lon: 13.405, tags: { name: "X", amenity: "cafe" } }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ elements: [node] }) }))
+    const [p] = await fetchOsm(BASE_PARAMS)
+    expect(p.sourceRecords[0].externalId).toBe("node/99")
   })
 
   it("uses center coordinates for way elements", async () => {

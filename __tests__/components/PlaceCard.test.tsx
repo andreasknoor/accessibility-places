@@ -82,6 +82,84 @@ describe("PlaceCard", () => {
     expect(screen.getByText(/Google Places/i)).toBeInTheDocument()
   })
 
+  it("expanding details shows hasGrabBars + isDesignated for OSM designated toilet", () => {
+    // Mirror lib/adapters/osm.ts:osmToiletDetails for toilets:wheelchair=designated
+    const toilet = buildAttribute("osm", "yes", "designated", {
+      isDesignated: true,
+      hasGrabBars:  true,
+      isInside:     true,
+    })
+    const place = makePlace({ accessibility: { entrance: emptyAttribute(), toilet, parking: emptyAttribute() } })
+
+    render(<PlaceCard place={place} />)
+    fireEvent.click(screen.getByText(/Details/))
+
+    expect(screen.getByText(/Haltegriffe|Grab bars/i)).toBeInTheDocument()
+    expect(screen.getByText(/Ausgewiesene Rollstuhl-Toilette|Designated wheelchair toilet/i)).toBeInTheDocument()
+  })
+
+  it("expanding details shows hasGrabBars when A.Cloud reports grabBars present", () => {
+    // Mirror lib/adapters/accessibility-cloud.ts:toiletDetails when restrooms[0].grabBars exists
+    const toilet = buildAttribute("accessibility_cloud", "yes", "a11y-cloud", {
+      hasGrabBars:         true,
+      grabBarsOnBothSides: true,
+      grabBarsFoldable:    false,
+      isInside:            true,
+    })
+    const place = makePlace({ accessibility: { entrance: emptyAttribute(), toilet, parking: emptyAttribute() } })
+
+    render(<PlaceCard place={place} />)
+    fireEvent.click(screen.getByText(/Details/))
+
+    expect(screen.getByText(/^Haltegriffe$|^Grab bars$/i)).toBeInTheDocument()
+    expect(screen.getByText(/Beidseitige Haltegriffe|Grab bars on both sides/i)).toBeInTheDocument()
+  })
+
+  it("renders Wheelmap deep-link to the OSM node when sourceRecord is OSM", () => {
+    const place = makePlace({
+      sourceRecords: [{ sourceId: "osm", externalId: "node/12345", fetchedAt: "", raw: {} }],
+    })
+    render(<PlaceCard place={place} />)
+    const link = screen.getByRole("link", { name: /Wheelmap/i })
+    expect(link).toHaveAttribute("href", "https://wheelmap.org/nodes/12345")
+  })
+
+  it("prefers place.wheelmapUrl over OSM-id constructed URL when present", () => {
+    const place = makePlace({
+      wheelmapUrl: "https://wheelmap.org/nodes/777?from=acloud",
+      sourceRecords: [{ sourceId: "osm", externalId: "node/12345", fetchedAt: "", raw: {} }],
+    })
+    render(<PlaceCard place={place} />)
+    const link = screen.getByRole("link", { name: /Wheelmap/i })
+    expect(link).toHaveAttribute("href", "https://wheelmap.org/nodes/777?from=acloud")
+  })
+
+  it("falls back to coordinate-based Wheelmap link when no OSM node id", () => {
+    const place = makePlace({
+      sourceRecords: [{ sourceId: "google_places", externalId: "ChIJ123", fetchedAt: "", raw: {} }],
+      coordinates:   { lat: 52.52, lon: 13.405 },
+    })
+    render(<PlaceCard place={place} />)
+    const link = screen.getByRole("link", { name: /Wheelmap/i })
+    expect(link.getAttribute("href")).toMatch(/lat=52\.52/)
+    expect(link.getAttribute("href")).toMatch(/lon=13\.405/)
+  })
+
+  it("shows dog-friendly badge when allowsDogs is true", () => {
+    render(<PlaceCard place={makePlace({ allowsDogs: true })} />)
+    expect(screen.getByLabelText(/Hunde willkommen|Dogs welcome/i)).toBeInTheDocument()
+  })
+
+  it("shows no-dogs indicator when allowsDogs is false", () => {
+    render(<PlaceCard place={makePlace({ allowsDogs: false })} />)
+    expect(screen.getByLabelText(/Keine Hunde|No dogs/i)).toBeInTheDocument()
+  })
+
+  it("renders nothing dog-related when allowsDogs is undefined", () => {
+    render(<PlaceCard place={makePlace()} />)
+    expect(screen.queryByLabelText(/Hunde|Dogs/i)).not.toBeInTheDocument()
+  })
+
   it("shows source count badge when multiple sources", () => {
     const place = makePlace({
       sourceRecords: [

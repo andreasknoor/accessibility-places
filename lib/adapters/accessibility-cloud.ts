@@ -9,6 +9,12 @@ import { nanoid } from "../utils"
 
 const BASE_URL = "https://accessibility-cloud-v2.freetls.fastly.net"
 
+// Safe URL host extractor — returns "" when the input isn't a parseable URL
+// so the caller doesn't have to wrap each access in a try/catch.
+function safeHost(u: string): string {
+  try { return new URL(u).host } catch { return "" }
+}
+
 // ─── LocalizedString helper ────────────────────────────────────────────────
 // A11yJSON fields can be plain strings OR { de: "...", en: "..." } objects
 
@@ -133,6 +139,27 @@ function toPlace(feature: any): Place | null {
   if (!name) return null
   const addr = props.address ?? {}
 
+  // Use A.Cloud's authoritative back-link to Wheelmap when present. The same
+  // field can also point to other partner systems (Pfotenpiloten, etc.); we
+  // only adopt it when the host is wheelmap.org.
+  const infoPage = typeof props.infoPageUrl === "string" ? props.infoPageUrl : undefined
+  const wheelmapUrl = infoPage && /(^|\.)wheelmap\.org$/i.test(safeHost(infoPage)) ? infoPage : undefined
+
+  // Pull animal-policy info from any A.Cloud source that exposes it
+  // (Pfotenpiloten is the main one). Attached as enrichment to the merged
+  // place — does not get a top-level filter or source toggle.
+  const a = props.accessibility ?? {}
+  const allowsDogsRaw = a.animalPolicy?.allowsDogs
+  const allowsDogs = allowsDogsRaw === true ? true : allowsDogsRaw === false ? false : undefined
+
+  const hasWheelchairData =
+    a.accessibleWith?.wheelchair          !== undefined ||
+    a.partiallyAccessibleWith?.wheelchair !== undefined ||
+    a.entrances?.[0]                      !== undefined ||
+    a.restrooms?.[0]                      !== undefined ||
+    a.parking                             !== undefined
+  const dogPolicyOnly = allowsDogs !== undefined && !hasWheelchairData
+
   return {
     id: nanoid(),
     name,
@@ -148,6 +175,9 @@ function toPlace(feature: any): Place | null {
     coordinates: { lat, lon },
     website: props.placeWebsiteUrl ?? undefined,
     phone:   props.phoneNumber     ?? undefined,
+    wheelmapUrl,
+    ...(allowsDogs    !== undefined ? { allowsDogs }    : {}),
+    ...(dogPolicyOnly                ? { dogPolicyOnly } : {}),
     accessibility: {
       entrance: buildAttribute("accessibility_cloud", a11yValue(props),        "a11y-cloud", entranceDetails(props)),
       toilet:   buildAttribute("accessibility_cloud", a11yToiletValue(props),  "a11y-cloud", toiletDetails(props)),
@@ -178,7 +208,10 @@ export async function fetchAccessibilityCloud(params: SearchParams): Promise<Pla
   url.searchParams.set("latitude",  String(params.location.lat))
   url.searchParams.set("longitude", String(params.location.lon))
   url.searchParams.set("radius",    String(params.radiusKm * 1000))
-  url.searchParams.set("limit",     "100")
+  // With the dog filter on, Pfotenpiloten contributes the bulk of hits and
+  // we drop the wheelchair preset — fetch more so the dog-friendly universe
+  // for an urban area gets in (Pfotenpiloten covers 100s in Berlin centre).
+  url.searchParams.set("limit",     params.filters.allowsDogs ? "300" : "100")
 
   if (params.nameHint) {
     // Name search: push the term server-side via the `q` parameter and skip
@@ -186,8 +219,11 @@ export async function fetchAccessibilityCloud(params: SearchParams): Promise<Pla
     // matching can run. (Verified empirically against the live API — other
     // parameter names like `searchQuery`, `text`, `name` are silently ignored.)
     url.searchParams.set("q", params.nameHint)
-  } else {
+  } else if (!params.filters.allowsDogs) {
     // Default: only return places with at least partial wheelchair access.
+    // When the dog filter is on, drop the preset so animalPolicy-bearing
+    // sources (Pfotenpiloten) come through and can merge into wheelchair
+    // places — or, if unmatched, survive as standalone dog-friendly hits.
     url.searchParams.set("accessibilityPreset", "at-least-partially-accessible-by-wheelchair")
   }
 

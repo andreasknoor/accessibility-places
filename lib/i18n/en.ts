@@ -20,10 +20,11 @@ const en: Translations = {
     radiusLabel: (km: number) => `${km} km`,
     acceptUnknown: "Show places with unclear information",
     criteriaItems: {
-      entrance: "Wheelchair-accessible entrance",
-      toilet:   "Wheelchair-accessible toilet",
-      parking:  "Wheelchair-accessible parking",
-      seating:  "Wheelchair-accessible seating",
+      entrance:   "Wheelchair-accessible entrance",
+      toilet:     "Wheelchair-accessible toilet",
+      parking:    "Wheelchair-accessible parking",
+      seating:    "Wheelchair-accessible seating",
+      allowsDogs: "Dogs allowed",
     },
   },
   results: {
@@ -39,6 +40,10 @@ const en: Translations = {
     conflict: "Sources disagree",
     primarySource: "Best source",
     noData: "No data",
+    wheelmapLink: "Check on Wheelmap.org",
+    verifiedRecently: "Recently user-verified (Wheelmap/OSM, ≤ 2 years)",
+    allowsDogs: "Dogs welcome",
+    noDogs: "No dogs",
   },
   a11y: {
     yes:     "Yes",

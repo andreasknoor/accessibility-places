@@ -20,10 +20,11 @@ const de: Translations = {
     radiusLabel: (km: number) => `${km} km`,
     acceptUnknown: "Orte mit unklaren Informationen anzeigen",
     criteriaItems: {
-      entrance: "Rollstuhlgerechter Eingang",
-      toilet:   "Rollstuhlgerechte Toilette",
-      parking:  "Rollstuhlgerechter Parkplatz",
-      seating:  "Rollstuhlgerechte Sitzplätze",
+      entrance:   "Rollstuhlgerechter Eingang",
+      toilet:     "Rollstuhlgerechte Toilette",
+      parking:    "Rollstuhlgerechter Parkplatz",
+      seating:    "Rollstuhlgerechte Sitzplätze",
+      allowsDogs: "Hunde erlaubt",
     },
   },
   results: {
@@ -39,6 +40,10 @@ const de: Translations = {
     conflict: "Quellen widersprechen sich",
     primarySource: "Beste Quelle",
     noData: "Keine Daten",
+    wheelmapLink: "Auf Wheelmap.org prüfen",
+    verifiedRecently: "Vor Ort verifiziert (Wheelmap/OSM, ≤ 2 Jahre)",
+    allowsDogs: "Hunde willkommen",
+    noDogs: "Keine Hunde",
   },
   a11y: {
     yes:     "Ja",

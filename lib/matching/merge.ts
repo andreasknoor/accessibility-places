@@ -51,7 +51,7 @@ function computeAttribute(
   )
   const baseConf   = Math.min(scores[winner], 1.0)
   const confidence = winner === "yes" || winner === "limited"
-    ? toiletConfidence(details, baseConf)
+    ? toiletConfidence(details, baseConf, sources)
     : baseConf
 
   // Conflict: runner-up has more than half the winner's weight
@@ -119,8 +119,16 @@ export function mergePlaces(existing: Place, incoming: Place): Place {
   }
 
   // Fill in missing metadata from incoming if existing lacks it
-  if (!merged.website && incoming.website) merged.website = incoming.website
-  if (!merged.phone   && incoming.phone)   merged.phone   = incoming.phone
+  if (!merged.website     && incoming.website)     merged.website     = incoming.website
+  if (!merged.phone       && incoming.phone)       merged.phone       = incoming.phone
+  if (!merged.wheelmapUrl && incoming.wheelmapUrl) merged.wheelmapUrl = incoming.wheelmapUrl
+  if (merged.allowsDogs === undefined && incoming.allowsDogs !== undefined) {
+    merged.allowsDogs = incoming.allowsDogs
+  }
+  // dogPolicyOnly is sticky-FALSE: once a real wheelchair-data source merges
+  // in, the place is no longer "supplementary only" and survives the route
+  // post-filter.
+  if (merged.dogPolicyOnly && !incoming.dogPolicyOnly) merged.dogPolicyOnly = undefined
 
   // Recompute overall confidence and primary source
   merged.overallConfidence = computeOverallConfidence(merged)
@@ -200,21 +208,34 @@ function findPrimarySource(place: Place): SourceId {
 // ─── Detect toilet details by presence of toilet-specific keys ────────────
 // Used to apply toilet-specific confidence rules without passing an explicit type.
 
-function isToiletDetails(d: AccessibilityAttribute["details"]): boolean {
+const TOILET_KEYS = [
+  "isDesignated","hasGrabBars","grabBarsOnBothSides","grabBarsFoldable",
+  "turningRadiusCm","hasEmergencyPullstring","isInside",
+] as const
+
+function hasToiletShape(d: AccessibilityAttribute["details"] | undefined): boolean {
   if (!d) return false
-  return Object.keys(d).some((k) =>
-    ["isDesignated","hasGrabBars","grabBarsOnBothSides","grabBarsFoldable",
-     "turningRadiusCm","hasEmergencyPullstring","isInside"].includes(k),
-  )
+  return Object.keys(d).some((k) => TOILET_KEYS.includes(k as typeof TOILET_KEYS[number]))
 }
 
+// Cap toilet confidence at 0.9 when only weak signals are present so that
+// merging several modest sources (e.g. OSM toilet=yes + Google's bare
+// wheelchairAccessibleRestroom flag) cannot accidentally claim 100 %. Only
+// `isDesignated` or `hasGrabBars` evidence promotes the score to 1.0.
+//
+// We also inspect each source's own details — `mergeDetails` drops keys whose
+// values are all `undefined`, so a sibling source with empty `{}` (Google
+// Places) can otherwise wipe out the toilet shape from the merged object.
 function toiletConfidence(
   details: AccessibilityAttribute["details"],
   base: number,
+  sources?: SourceAttribution[],
 ): number {
   const d = details as ToiletDetails
   if (d.isDesignated === true || d.hasGrabBars === true) return 1.0
-  if (isToiletDetails(details)) return Math.min(base, 0.9)
+
+  const isToilet = hasToiletShape(details) || (sources?.some((s) => hasToiletShape(s.details)) ?? false)
+  if (isToilet) return Math.min(base, 0.9)
   return base
 }
 
@@ -226,9 +247,11 @@ export function buildAttribute(
   rawValue: string,
   details: AccessibilityAttribute["details"],
   isOsmOverall = false,
+  weightMultiplier = 1.0,
 ): AccessibilityAttribute {
   const baseWeight = RELIABILITY_WEIGHTS[sourceId]
-  const weight = isOsmOverall ? baseWeight * OSM_ENTRANCE_WEIGHT_FACTOR : baseWeight
+  const overallAdj = isOsmOverall ? OSM_ENTRANCE_WEIGHT_FACTOR : 1.0
+  const weight     = Math.min(baseWeight * overallAdj * weightMultiplier, 1.0)
 
   const src: SourceAttribution = {
     sourceId,
@@ -236,9 +259,10 @@ export function buildAttribute(
     rawValue,
     reliabilityWeight: weight,
     details,
+    ...(weightMultiplier > 1.0 ? { verifiedRecently: true } : {}),
   }
 
-  const confidence = value === "unknown" ? 0 : toiletConfidence(details, weight)
+  const confidence = value === "unknown" ? 0 : toiletConfidence(details, weight, [src])
   return {
     value,
     confidence,
@@ -263,6 +287,7 @@ export function passesFilters(
     toilet: boolean
     parking: boolean
     seating: boolean
+    allowsDogs?: boolean
     acceptUnknown: boolean
   },
 ): boolean {
@@ -276,6 +301,12 @@ export function passesFilters(
   if (filters.toilet   && !check(place.accessibility.toilet))   return false
   if (filters.parking  && !check(place.accessibility.parking))  return false
   if (filters.seating  && place.accessibility.seating && !check(place.accessibility.seating)) return false
+
+  // Dog-policy filter: place must allow dogs (or be unknown if user opts in).
+  if (filters.allowsDogs) {
+    if (place.allowsDogs === false)                                        return false
+    if (place.allowsDogs === undefined && !filters.acceptUnknown)          return false
+  }
 
   return true
 }
