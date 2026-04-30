@@ -20,10 +20,11 @@ const de: Translations = {
     radiusLabel: (km: number) => `${km} km`,
     acceptUnknown: "Orte mit unklaren Informationen anzeigen",
     criteriaItems: {
-      entrance:   "Rollstuhlgerechter Eingang",
-      toilet:     "Rollstuhlgerechte Toilette",
-      parking:    "Rollstuhlgerechter Parkplatz",
-      seating:    "Rollstuhlgerechte Sitzplätze",
+      entrance:     "Rollstuhlgerechter Eingang",
+      toilet:       "Rollstuhlgerechte Toilette",
+      parking:      "Rollstuhlgerechter Parkplatz",
+      seating:      "Rollstuhlgerechte Sitzplätze",
+      onlyVerified: "Nur manuell verifizierte Orte",
     },
   },
   results: {

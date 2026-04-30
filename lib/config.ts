@@ -2,7 +2,7 @@ import type { SourceId, Category } from "./types"
 
 // User-visible app version, shown in the header next to the subtitle.
 // Bump on every meaningful release.
-export const APP_VERSION = "1.16"
+export const APP_VERSION = "1.19"
 
 export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
   reisen_fuer_alle:    1.00,
@@ -43,7 +43,9 @@ export const SOURCE_LABELS: Record<SourceId, string> = {
 export const OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
-  "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+  // Replaced maps.mail.ru with the Swiss community mirror — better latency
+  // from DACH and not subject to EU↔RU routing instability.
+  "https://overpass.osm.ch/api/interpreter",
 ]
 export const OVERPASS_ENDPOINT = OVERPASS_ENDPOINTS[0]
 export const NOMINATIM_ENDPOINT = "https://nominatim.openstreetmap.org"

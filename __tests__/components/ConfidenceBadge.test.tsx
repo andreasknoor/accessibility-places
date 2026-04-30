@@ -29,7 +29,7 @@ function makePlace(overrides: Partial<Place> = {}): Place {
 }
 
 const FILTERS: SearchFilters = {
-  entrance: true, toilet: true, parking: true, seating: false, acceptUnknown: false,
+  entrance: true, toilet: true, parking: true, seating: false, onlyVerified: false, acceptUnknown: false,
 }
 
 describe("ConfidenceBadge", () => {

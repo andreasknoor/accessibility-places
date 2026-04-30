@@ -145,6 +145,9 @@ export interface SearchFilters {
   toilet: boolean
   parking: boolean
   seating: boolean
+  // Restrict results to places where at least one source attribution is
+  // marked `verifiedRecently` (= a check_date:wheelchair tag within 2 years).
+  onlyVerified: boolean
   acceptUnknown: boolean
 }
 
@@ -186,6 +189,11 @@ export interface SourceState {
   count?: number
   error?: string
   durationMs?: number
+  // Mid-fetch progress for adapters with fallback endpoints. Currently only
+  // OSM uses this — `attempt` is the 1-based index of the endpoint currently
+  // being tried out of `of` total.
+  attempt?: number
+  of?: number
 }
 
 // ─── API response ──────────────────────────────────────────────────────────

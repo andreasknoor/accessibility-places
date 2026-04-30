@@ -166,7 +166,7 @@ describe('Namenssuche E2E – "et cetera in Potsdam"', () => {
       location:   geo!,
       radiusKm:   5,
       categories: parsed.categories,
-      filters:    { entrance: false, toilet: false, parking: false, seating: false, acceptUnknown: true },
+      filters:    { entrance: false, toilet: false, parking: false, seating: false, onlyVerified: false, acceptUnknown: true },
       sources:    { accessibility_cloud: false, osm: true, reisen_fuer_alle: false, google_places: false },
     }
     const places = await fetchOsm(params)

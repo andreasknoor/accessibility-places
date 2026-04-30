@@ -16,7 +16,7 @@ const BASE_PARAMS: SearchParams = {
   location: { lat: 52.52, lon: 13.405 },
   radiusKm: 5,
   categories: ["restaurant"],
-  filters: { entrance: true, toilet: true, parking: true, seating: false, acceptUnknown: false },
+  filters: { entrance: true, toilet: true, parking: true, seating: false, onlyVerified: false, acceptUnknown: false },
   sources: { accessibility_cloud: true, osm: true, reisen_fuer_alle: true, google_places: true },
 }
 
@@ -95,9 +95,25 @@ describe("buildOverpassQuery", () => {
   })
 
   it("omits wheelchair pre-filter when all accessibility filters are inactive", () => {
-    const noFilters = { entrance: false, toilet: false, parking: false, seating: false, acceptUnknown: false }
+    const noFilters = { entrance: false, toilet: false, parking: false, seating: false, acceptUnknown: false, onlyVerified: false }
     const q = buildOverpassQuery({ ...BASE_PARAMS, filters: noFilters })
     expect(q).not.toContain("wheelchair~")
+  })
+
+  it("adds [~^check_date~] regex-on-key clause when onlyVerified is true", () => {
+    const q = buildOverpassQuery({
+      ...BASE_PARAMS,
+      filters: { ...BASE_PARAMS.filters, onlyVerified: true },
+    })
+    expect(q).toContain(`[~"^check_date"~"."]`)
+  })
+
+  it("omits the check_date clause when onlyVerified is false", () => {
+    const q = buildOverpassQuery({
+      ...BASE_PARAMS,
+      filters: { ...BASE_PARAMS.filters, onlyVerified: false },
+    })
+    expect(q).not.toContain("check_date")
   })
 })
 
@@ -370,6 +386,32 @@ describe("fetchOsm", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ elements: [node] }) }))
     const [p] = await fetchOsm(BASE_PARAMS)
     expect(p.sourceRecords[0].externalId).toBe("node/99")
+  })
+
+  it("calls onAttempt before each endpoint try", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ elements: [] }) }))
+    const onAttempt = vi.fn()
+    await fetchOsm(BASE_PARAMS, onAttempt)
+    // First endpoint succeeds → only one attempt reported
+    expect(onAttempt).toHaveBeenCalledTimes(1)
+    expect(onAttempt).toHaveBeenCalledWith(1, 3)
+  })
+
+  it("falls back to next endpoint on TimeoutError (regression: this used to abort after first timeout)", async () => {
+    let calls = 0
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(() => {
+      calls++
+      if (calls < 3) {
+        const err = new Error("The operation was aborted due to timeout")
+        err.name = "TimeoutError"
+        return Promise.reject(err)
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ elements: [] }) })
+    }))
+    const onAttempt = vi.fn()
+    await fetchOsm(BASE_PARAMS, onAttempt)
+    expect(onAttempt).toHaveBeenCalledTimes(3)
+    expect(onAttempt.mock.calls.map((c) => c[0])).toEqual([1, 2, 3])
   })
 
   it("uses center coordinates for way elements", async () => {

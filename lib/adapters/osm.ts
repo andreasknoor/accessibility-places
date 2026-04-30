@@ -67,14 +67,23 @@ export function buildOverpassQuery(params: SearchParams): string {
     ? `[wheelchair~"^(yes|limited|designated)$"]`
     : ""
 
+  // onlyVerified narrows the query to places that carry *any* check_date tag
+  // (`check_date`, `check_date:wheelchair`, `check_date:toilets:wheelchair`, …).
+  // The regex-on-key syntax matches all variants in one clause; the post-fetch
+  // adapter logic then validates the actual ≤ 2 years-old constraint and
+  // discards places whose only check_date is on an unrelated tag (e.g.
+  // `check_date:opening_hours`). Net effect: the 100-result cap fills with
+  // ~2× as many genuinely verified places.
+  const verified = filters.onlyVerified ? `[~"^check_date"~"."]` : ""
+
   const clauses: string[] = []
   if (amenityVals.size > 0) {
     const vals = [...amenityVals].join("|")
-    clauses.push(`nwr(around:${r},${lat},${lon})[amenity~"^(${vals})$"]${wc};`)
+    clauses.push(`nwr(around:${r},${lat},${lon})[amenity~"^(${vals})$"]${wc}${verified};`)
   }
   if (tourismVals.size > 0) {
     const vals = [...tourismVals].join("|")
-    clauses.push(`nwr(around:${r},${lat},${lon})[tourism~"^(${vals})$"]${wc};`)
+    clauses.push(`nwr(around:${r},${lat},${lon})[tourism~"^(${vals})$"]${wc}${verified};`)
   }
 
   if (clauses.length === 0) return ""
@@ -285,7 +294,10 @@ function elementToPlace(el: any): Place | null {
 
 // ─── Public adapter function ───────────────────────────────────────────────
 
-export async function fetchOsm(params: SearchParams): Promise<Place[]> {
+export async function fetchOsm(
+  params: SearchParams,
+  onAttempt?: (attempt: number, of: number) => void,
+): Promise<Place[]> {
   const query = buildOverpassQuery(params)
   if (!query) return []
 
@@ -294,9 +306,12 @@ export async function fetchOsm(params: SearchParams): Promise<Place[]> {
     "User-Agent":   "AccessibleSpaces/1.0 (accessibility search app)",
   }
   const body = `data=${encodeURIComponent(query)}`
+  const total = OVERPASS_ENDPOINTS.length
 
   let lastError: Error | null = null
-  for (const endpoint of OVERPASS_ENDPOINTS) {
+  for (let i = 0; i < total; i++) {
+    const endpoint = OVERPASS_ENDPOINTS[i]
+    onAttempt?.(i + 1, total)
     try {
       const res = await fetch(endpoint, {
         method: "POST",
@@ -317,8 +332,21 @@ export async function fetchOsm(params: SearchParams): Promise<Place[]> {
       }
       return places
     } catch (err) {
-      if ((err as Error).message?.includes("Overpass") && (err as Error).message?.includes("returned")) {
-        lastError = err as Error
+      const e   = err as Error
+      const msg = e.message ?? ""
+      const name = e.name    ?? ""
+      // Retry on transient failures: timeouts, aborted fetches, network blips,
+      // or the 429/5xx error above. Permanent errors (4xx other than 429,
+      // malformed JSON, …) still propagate immediately.
+      const transient =
+        name === "TimeoutError"        ||
+        name === "AbortError"          ||
+        msg.includes("aborted")        ||
+        msg.includes("fetch failed")   ||
+        msg.includes("network")        ||
+        (msg.includes("Overpass") && msg.includes("returned"))
+      if (transient) {
+        lastError = e
         continue
       }
       throw err

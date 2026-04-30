@@ -18,10 +18,11 @@ export interface Translations {
     radiusLabel:   (km: number) => string
     acceptUnknown: string
     criteriaItems: {
-      entrance:   string
-      toilet:     string
-      parking:    string
-      seating:    string
+      entrance:     string
+      toilet:       string
+      parking:      string
+      seating:      string
+      onlyVerified: string
     }
   }
   results: {

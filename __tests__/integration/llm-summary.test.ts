@@ -171,7 +171,7 @@ describe(`Summary-Prompt mit echten Suchergebnissen (kein Guard) — Query: "${E
       location:   geo!,
       radiusKm:   2,
       categories: parsed.categories,
-      filters:    { entrance: true, toilet: true, parking: false, seating: false, acceptUnknown: false },
+      filters:    { entrance: true, toilet: true, parking: false, seating: false, onlyVerified: false, acceptUnknown: false },
       sources:    { accessibility_cloud: true, osm: true, reisen_fuer_alle: true, google_places: true },
     }
     const adapterResults = await fetchAllSources(params)

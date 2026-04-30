@@ -4,7 +4,7 @@ import FilterPanel from "@/components/filters/FilterPanel"
 import type { SearchFilters, ActiveSources } from "@/lib/types"
 
 const DEFAULT_FILTERS: SearchFilters = {
-  entrance: true, toilet: true, parking: true, seating: false, acceptUnknown: false,
+  entrance: true, toilet: true, parking: true, seating: false, onlyVerified: false, acceptUnknown: false,
 }
 const DEFAULT_SOURCES: ActiveSources = {
   accessibility_cloud: true, osm: true, reisen_fuer_alle: true, google_places: true,

@@ -1,5 +1,6 @@
 "use client"
 
+import { Loader2 } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import PlaceCard from "./PlaceCard"
 import { useTranslations } from "@/lib/i18n"
@@ -22,7 +23,12 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
       {/* Header */}
       <div className="px-4 py-3 border-b border-border shrink-0">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-sm">{t.results.title}</h2>
+          <h2 className="font-semibold text-sm flex items-center gap-2">
+            {t.results.title}
+            {isLoading && (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" aria-label={t.chat.thinking} />
+            )}
+          </h2>
           {!isLoading && places.length > 0 && (
             <span className="text-xs text-muted-foreground">
               {t.results.count(places.length)}

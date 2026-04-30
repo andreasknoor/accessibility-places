@@ -37,6 +37,7 @@ async function geocode(
 //   { type: "fatal",  error }
 
 type StreamEvent =
+  | { type: "source-progress"; sourceId: SourceId; attempt: number; of: number }
   | { type: "source"; sourceId: SourceId; status: "ok" | "error"; count?: number; error?: string; durationMs: number }
   | { type: "result"; payload: SearchResult }
   | { type: "fatal";  error: string }
@@ -88,7 +89,7 @@ export async function POST(req: NextRequest) {
         // pre-filters don't discard untagged-but-real matches. The name itself
         // is pushed server-side via params.nameHint.
         const ALL_CATEGORIES: Category[] = ["cafe","restaurant","bar","pub","biergarten","fast_food","hotel","hostel","apartment","museum","theater","cinema","library","gallery","attraction"]
-        const PERMISSIVE_FILTERS: SearchFilters = { entrance: false, toilet: false, parking: false, seating: false, acceptUnknown: true }
+        const PERMISSIVE_FILTERS: SearchFilters = { entrance: false, toilet: false, parking: false, seating: false, onlyVerified: false, acceptUnknown: true }
         const nameHint = parsed.nameHint ?? ""
 
         const params: SearchParams = {
@@ -102,7 +103,9 @@ export async function POST(req: NextRequest) {
         }
 
         // ── 4. Fire all adapters; emit a `source` event as each finishes ─────
-        const tasks = startAdapterTasks(params)
+        const tasks = startAdapterTasks(params, (sourceId, attempt, of) => {
+          emit({ type: "source-progress", sourceId, attempt, of })
+        })
         const wrapped = tasks.map(({ sourceId, promise }) =>
           promise.then((r) => {
             const event: StreamEvent = r.error

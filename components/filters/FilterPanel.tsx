@@ -23,7 +23,16 @@ interface Props {
 function SourceIndicator({ state }: { state?: SourceState }) {
   if (!state) return null
   if (state.status === "loading") {
-    return <Loader2 className="w-3 h-3 animate-spin text-muted-foreground shrink-0" aria-label="Lädt …" />
+    return (
+      <span className="inline-flex items-center gap-1 shrink-0">
+        <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" aria-label="Lädt …" />
+        {state.attempt && state.of && state.of > 1 && (
+          <span className="text-[10px] tabular-nums text-muted-foreground">
+            {state.attempt}/{state.of}
+          </span>
+        )}
+      </span>
+    )
   }
   if (state.status === "error") {
     return (
@@ -125,6 +134,20 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
               </span>
             </label>
           ))}
+
+          {/* Only manually verified — data-quality filter that requires at least
+              one source attribution with `verifiedRecently=true` (e.g. OSM
+              check_date:wheelchair within 2 years). */}
+          <label className="flex items-center gap-2.5 cursor-pointer">
+            <Checkbox
+              checked={filters.onlyVerified}
+              onCheckedChange={() => toggleFilter("onlyVerified")}
+              id="crit-onlyVerified"
+            />
+            <span className="text-sm text-muted-foreground leading-snug">
+              {t.filters.criteriaItems.onlyVerified}
+            </span>
+          </label>
 
           {/* Seating — optional, dimmed */}
           <label className="flex items-center gap-2.5 cursor-pointer">

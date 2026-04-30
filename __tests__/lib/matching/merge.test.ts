@@ -33,7 +33,7 @@ function makePlace(overrides: Partial<Place> = {}): Place {
 }
 
 const ALL_FILTERS: SearchFilters = {
-  entrance: true, toilet: true, parking: true, seating: false, acceptUnknown: false,
+  entrance: true, toilet: true, parking: true, seating: false, onlyVerified: false, acceptUnknown: false,
 }
 
 // ─── buildAttribute ──────────────────────────────────────────────────────────
@@ -328,8 +328,41 @@ describe("passesFilters", () => {
 
   it("ignores inactive filters", () => {
     const p = place(noAttr, noAttr, noAttr)
-    const noFilters = { entrance: false, toilet: false, parking: false, seating: false, acceptUnknown: false }
+    const noFilters = { entrance: false, toilet: false, parking: false, seating: false, onlyVerified: false, acceptUnknown: false }
     expect(passesFilters(p, noFilters)).toBe(true)
+  })
+
+  it("onlyVerified rejects places without any verifiedRecently source", () => {
+    const p = makePlace({
+      accessibility: {
+        entrance: buildAttribute("osm", "yes", "yes", {}),  // no boost → no verifiedRecently
+        toilet:   yesAttr,
+        parking:  yesAttr,
+      },
+    })
+    expect(passesFilters(p, { ...ALL_FILTERS, onlyVerified: true })).toBe(false)
+  })
+
+  it("onlyVerified accepts places with at least one verifiedRecently source", () => {
+    const p = makePlace({
+      accessibility: {
+        entrance: buildAttribute("osm", "yes", "yes", {}, true, 1.2),  // boosted → verifiedRecently
+        toilet:   yesAttr,
+        parking:  yesAttr,
+      },
+    })
+    expect(passesFilters(p, { ...ALL_FILTERS, onlyVerified: true })).toBe(true)
+  })
+
+  it("onlyVerified=false ignores verification status", () => {
+    const p = makePlace({
+      accessibility: {
+        entrance: buildAttribute("osm", "yes", "yes", {}),
+        toilet:   yesAttr,
+        parking:  yesAttr,
+      },
+    })
+    expect(passesFilters(p, { ...ALL_FILTERS, onlyVerified: false })).toBe(true)
   })
 
   it("'no' never passes even with acceptUnknown=true", () => {

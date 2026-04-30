@@ -299,6 +299,7 @@ export function passesFilters(
     toilet: boolean
     parking: boolean
     seating: boolean
+    onlyVerified?: boolean
     acceptUnknown: boolean
   },
 ): boolean {
@@ -312,6 +313,19 @@ export function passesFilters(
   if (filters.toilet   && !check(place.accessibility.toilet))   return false
   if (filters.parking  && !check(place.accessibility.parking))  return false
   if (filters.seating  && place.accessibility.seating && !check(place.accessibility.seating)) return false
+
+  // "Only manually verified" — require at least one source attribution that
+  // carries the recently-verified flag (today: OSM `check_date:wheelchair`
+  // ≤ 2 years old).
+  if (filters.onlyVerified) {
+    const attrs = [
+      place.accessibility.entrance,
+      place.accessibility.toilet,
+      place.accessibility.parking,
+      ...(place.accessibility.seating ? [place.accessibility.seating] : []),
+    ]
+    if (!attrs.some((a) => a.sources.some((s) => s.verifiedRecently))) return false
+  }
 
   return true
 }

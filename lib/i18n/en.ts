@@ -20,10 +20,11 @@ const en: Translations = {
     radiusLabel: (km: number) => `${km} km`,
     acceptUnknown: "Show places with unclear information",
     criteriaItems: {
-      entrance:   "Wheelchair-accessible entrance",
-      toilet:     "Wheelchair-accessible toilet",
-      parking:    "Wheelchair-accessible parking",
-      seating:    "Wheelchair-accessible seating",
+      entrance:     "Wheelchair-accessible entrance",
+      toilet:       "Wheelchair-accessible toilet",
+      parking:      "Wheelchair-accessible parking",
+      seating:      "Wheelchair-accessible seating",
+      onlyVerified: "Only manually verified places",
     },
   },
   results: {
