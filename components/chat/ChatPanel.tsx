@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useRef, useEffect, useMemo } from "react"
+import { useState, useRef, useMemo } from "react"
 import { Send, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useTranslations } from "@/lib/i18n"
+import { useTranslations, useLocale } from "@/lib/i18n"
 
 interface Props {
   onSearch:  (query: string) => void
@@ -30,16 +30,13 @@ const EXAMPLES_EN = [
 
 export default function ChatPanel({ onSearch, isLoading }: Props) {
   const t = useTranslations()
+  const { locale } = useLocale()
   const [value, setValue]   = useState("")
-  const [mounted, setMounted] = useState(false)
   const textareaRef           = useRef<HTMLTextAreaElement>(null)
 
-  useEffect(() => { setMounted(true) }, [])
-
   const examples = useMemo(() => {
-    if (!mounted) return EXAMPLES_DE   // matches server render
-    return navigator.language?.startsWith("de") ? EXAMPLES_DE : EXAMPLES_EN
-  }, [mounted])
+    return locale === "de" ? EXAMPLES_DE : EXAMPLES_EN
+  }, [locale])
 
   function submit() {
     const q = value.trim()
