@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable:        true,
     statusBarStyle: "default",
-    title:          "A11y Spaces",
+    title:          "Accessible Spaces",
   },
   other: {
     "mobile-web-app-capable": "yes",

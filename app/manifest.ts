@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next"
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name:             "Accessible Spaces",
-    short_name:       "A11y Spaces",
+    short_name:       "AccessibleSpaces",
     description:      "Rollstuhlgerechte Orte in der DACH-Region finden",
     start_url:        "/",
     display:          "standalone",
