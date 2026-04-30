@@ -11,17 +11,21 @@ interface Props {
 }
 
 const EXAMPLES_DE = [
-  "Rollstuhlgerechte Restaurants in Berlin Mitte",
-  "Hotels mit behindertengerechtem Eingang in München",
-  "Barrierefreie Museen in Wien",
-  "Restaurants in Hamburg Altona mit rollstuhlgerechter Toilette",
+  "Restaurants in Berlin Mitte",
+  "Hotels in München",
+  "Museen in Frankfurt",
+  "Cafés in Hamburg",
+  "Kinos in Köln",
+  "Theater in Dresden",
 ]
 
 const EXAMPLES_EN = [
-  "Wheelchair-accessible restaurants in Berlin Mitte",
-  "Hotels with accessible entrance in Munich",
-  "Barrier-free museums in Vienna",
-  "Restaurants in Hamburg with wheelchair-accessible restroom",
+  "Restaurants in Berlin Mitte",
+  "Hotels in Munich",
+  "Museums in Frankfurt",
+  "Cafés in Hamburg",
+  "Cinemas in Cologne",
+  "Theaters in Dresden",
 ]
 
 export default function ChatPanel({ onSearch, isLoading }: Props) {

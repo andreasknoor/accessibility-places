@@ -6,7 +6,7 @@ const de: Translations = {
     subtitle: "Barrierefreie Orte finden",
   },
   chat: {
-    placeholder: 'z. B. „Rollstuhlgerechte Restaurants in Berlin Mitte"',
+    placeholder: 'z.B. "Restaurants in Berlin Mitte"',
     send: "Suchen",
     thinking: "Suche läuft …",
     noResults: "Keine passenden Orte gefunden.",
@@ -45,9 +45,15 @@ const de: Translations = {
       const d = new Date(date)
       if (Number.isNaN(d.getTime())) return "Manuell verifiziert"
       const days = Math.max(0, Math.floor((Date.now() - d.getTime()) / 86_400_000))
-      if (days === 0) return "Heute manuell verifiziert"
-      if (days === 1) return "Manuell verifiziert vor 1 Tag"
-      return `Manuell verifiziert vor ${days} Tagen`
+      if (days === 0)   return "Heute manuell verifiziert"
+      if (days === 1)   return "Manuell verifiziert vor 1 Tag"
+      if (days < 30)    return `Manuell verifiziert vor ${days} Tagen`
+      if (days < 365) {
+        const months = Math.floor(days / 30)
+        return months === 1 ? "Manuell verifiziert vor 1 Monat" : `Manuell verifiziert vor ${months} Monaten`
+      }
+      const years = Math.floor(days / 365)
+      return years === 1 ? "Manuell verifiziert vor 1 Jahr" : `Manuell verifiziert vor ${years} Jahren`
     },
     allowsDogs: "Hunde willkommen",
     noDogs: "Keine Hunde",

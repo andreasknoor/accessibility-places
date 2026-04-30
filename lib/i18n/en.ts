@@ -6,7 +6,7 @@ const en: Translations = {
     subtitle: "Find wheelchair-accessible places",
   },
   chat: {
-    placeholder: 'e.g. "Wheelchair-accessible restaurants in Berlin Mitte"',
+    placeholder: 'e.g. "Restaurants in Berlin Mitte"',
     send: "Search",
     thinking: "Searching …",
     noResults: "No matching places found.",
@@ -45,9 +45,15 @@ const en: Translations = {
       const d = new Date(date)
       if (Number.isNaN(d.getTime())) return "Manually verified"
       const days = Math.max(0, Math.floor((Date.now() - d.getTime()) / 86_400_000))
-      if (days === 0) return "Manually verified today"
-      if (days === 1) return "Manually verified 1 day ago"
-      return `Manually verified ${days} days ago`
+      if (days === 0)   return "Manually verified today"
+      if (days === 1)   return "Manually verified 1 day ago"
+      if (days < 30)    return `Manually verified ${days} days ago`
+      if (days < 365) {
+        const months = Math.floor(days / 30)
+        return months === 1 ? "Manually verified 1 month ago" : `Manually verified ${months} months ago`
+      }
+      const years = Math.floor(days / 365)
+      return years === 1 ? "Manually verified 1 year ago" : `Manually verified ${years} years ago`
     },
     allowsDogs: "Dogs welcome",
     noDogs: "No dogs",
