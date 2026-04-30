@@ -81,9 +81,10 @@ Rules:
 - "locationQuery": ONLY the city, district, or address — no category words, no "in", no "barrierefreie"
 - "nameHint": specific business name the user is asking about; empty string if searching by category only.
   IMPORTANT: treat unusual or abstract-sounding words as potential business names (e.g. "et cetera", "Zur Eiche", "No Name Bar").
-- "categories": infer from context; return ALL categories when nameHint is set and no category is explicit.
+- "categories": infer from context. Be specific — distinguish bar / pub / biergarten, theater / cinema, hotel / hostel / apartment.
+  For named places (nameHint set), make a best guess from the name (e.g. "Brauhaus X" → ["pub","biergarten"], "Café X" → ["cafe"], "Hotel X" → ["hotel"]).
+  Only return ALL categories if the name gives absolutely no hint about its type.
   Allowed values: ${allCatsJson}.
-  Be specific — distinguish bar / pub / biergarten, theater / cinema, hotel / hostel / apartment.
 - "freeTextHint": extra context like dietary preferences, atmosphere, etc.
 
 Examples:

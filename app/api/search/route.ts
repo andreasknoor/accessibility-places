@@ -83,12 +83,10 @@ export async function POST(req: NextRequest) {
         }
 
         // ── 3. Build per-source params ───────────────────────────────────────
-        // When the user is searching for a specific named place, expand the query
-        // at the adapter boundary: force all categories so a category-mismatch
-        // can't hide the target, and neutralise accessibility filters so adapter
-        // pre-filters don't discard untagged-but-real matches. The name itself
-        // is pushed server-side via params.nameHint.
-        const ALL_CATEGORIES: Category[] = ["cafe","restaurant","bar","pub","biergarten","fast_food","hotel","hostel","apartment","museum","theater","cinema","library","gallery","attraction"]
+        // For named-place searches: neutralise accessibility filters so pre-filters
+        // don't discard untagged-but-real matches. Categories come from the LLM
+        // (which now infers even for named searches) — no longer forcing all 15,
+        // which was the main driver of excess Google Places API cost.
         const PERMISSIVE_FILTERS: SearchFilters = { entrance: false, toilet: false, parking: false, seating: false, onlyVerified: false, acceptUnknown: true }
         const nameHint = parsed.nameHint ?? ""
 
@@ -96,7 +94,7 @@ export async function POST(req: NextRequest) {
           query:      body.userQuery,
           location:   { lat: geo.lat, lon: geo.lon },
           radiusKm:   body.radiusKm,
-          categories: nameHint ? ALL_CATEGORIES : parsed.categories,
+          categories: parsed.categories,
           filters:    nameHint ? PERMISSIVE_FILTERS : body.filters,
           sources:    body.sources,
           nameHint:   nameHint || undefined,

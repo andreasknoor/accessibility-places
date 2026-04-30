@@ -5,6 +5,7 @@ import dynamic from "next/dynamic"
 import { Map, List, SlidersHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTranslations } from "@/lib/i18n"
+import { APP_VERSION } from "@/lib/config"
 import ChatPanel       from "@/components/chat/ChatPanel"
 import FilterPanel     from "@/components/filters/FilterPanel"
 import ResultsList     from "@/components/results/ResultsList"
@@ -64,7 +65,9 @@ export default function MobileLayout({
           <span className="text-xl" aria-hidden>♿</span>
           <div>
             <h1 className="font-bold text-sm leading-none">{t.app.title}</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">{t.app.subtitle}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {t.app.subtitle} <span className="tabular-nums">(v{APP_VERSION})</span>
+            </p>
           </div>
         </div>
         <LanguageSwitcher />
