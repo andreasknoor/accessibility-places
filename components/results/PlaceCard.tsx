@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { createPortal } from "react-dom"
-import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Info, Accessibility, PawPrint, Salad, Leaf } from "lucide-react"
+import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Info, Accessibility, PawPrint, Salad, Leaf, Map } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import ConfidenceBadge  from "./ConfidenceBadge"
@@ -63,6 +63,15 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
   //   1. authoritative URL from accessibility.cloud (`infoPageUrl`)
   //   2. constructed URL from an OSM node id
   //   3. coordinate-centred map view that always works
+  const googleMapsHref = (() => {
+    const gRecord = place.sourceRecords.find((r) => r.sourceId === "google_places")
+    if (gRecord?.externalId) {
+      return `https://www.google.com/maps/place/?q=place_id:${gRecord.externalId}`
+    }
+    const query = [place.name, place.address.city].filter(Boolean).join(" ")
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
+  })()
+
   const wheelmapHref = (() => {
     if (place.wheelmapUrl) return place.wheelmapUrl
     const osm = place.sourceRecords.find((r) => r.sourceId === "osm")
@@ -212,6 +221,17 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
               <Accessibility className="w-3.5 h-3.5" />
+            </a>
+            <a
+              href={googleMapsHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Google Maps"
+              title="Google Maps"
+              onClick={(e) => e.stopPropagation()}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Map className="w-3.5 h-3.5" />
             </a>
           </div>
 
