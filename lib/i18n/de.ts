@@ -43,6 +43,8 @@ const de: Translations = {
     verifiedRecently: "Vor Ort verifiziert (Wheelmap/OSM, ≤ 2 Jahre)",
     allowsDogs: "Hunde willkommen",
     noDogs: "Keine Hunde",
+    vegetarian: "Vegetarisch",
+    vegan: "Vegan",
   },
   a11y: {
     yes:     "Ja",

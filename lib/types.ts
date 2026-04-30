@@ -113,6 +113,13 @@ export interface Place {
   // such records unless they merged with a real wheelchair-data source.
   dogPolicyOnly?: boolean
 
+  // Diet flags. Set when a source explicitly signals vegetarian/vegan
+  // friendliness — OSM `diet:vegetarian|vegan` (yes / only) or Google Places
+  // type `vegetarian_restaurant` / `vegan_restaurant`. `undefined` = unknown.
+  // `vegan === true` implies `vegetarian === true` (set automatically).
+  isVegetarianFriendly?: boolean
+  isVeganFriendly?: boolean
+
   accessibility: {
     entrance: AccessibilityAttribute
     toilet: AccessibilityAttribute

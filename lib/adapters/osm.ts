@@ -162,6 +162,29 @@ export function osmAllowsDogs(tags: Record<string, string>): boolean | undefined
   return undefined
 }
 
+// OSM diet:* convention: `yes` (has options), `only` (exclusively that diet),
+// `no` (none). We treat both `yes` and `only` as friendly. Vegan implies
+// vegetarian-friendly even when `diet:vegetarian` isn't tagged separately.
+export function osmDiet(tags: Record<string, string>): {
+  isVegetarianFriendly?: boolean
+  isVeganFriendly?: boolean
+} {
+  const parse = (v: string | undefined): boolean | undefined => {
+    if (!v) return undefined
+    const s = v.toLowerCase()
+    if (s === "yes" || s === "only") return true
+    if (s === "no") return false
+    return undefined
+  }
+  const vegan = parse(tags["diet:vegan"])
+  let vegetarian = parse(tags["diet:vegetarian"])
+  if (vegan === true) vegetarian = true
+  return {
+    isVegetarianFriendly: vegetarian,
+    isVeganFriendly:      vegan,
+  }
+}
+
 function osmParkingDetails(tags: Record<string, string>): ParkingDetails {
   const count = parseInt(tags["capacity:disabled"] ?? tags["capacity:wheelchair"] ?? "0", 10)
   return {
@@ -217,6 +240,7 @@ function elementToPlace(el: any): Place | null {
   const parking  = buildAttribute("osm", parkingVal,    tags["capacity:disabled"] ?? tags["parking_space"] ?? "", parkingDetails)
 
   const allowsDogs = osmAllowsDogs(tags)
+  const diet       = osmDiet(tags)
 
   return {
     id: nanoid(),
@@ -234,6 +258,8 @@ function elementToPlace(el: any): Place | null {
     website: tags["website"] ?? tags["contact:website"] ?? undefined,
     phone:   tags["phone"]   ?? tags["contact:phone"]   ?? undefined,
     ...(allowsDogs !== undefined ? { allowsDogs } : {}),
+    ...(diet.isVegetarianFriendly !== undefined ? { isVegetarianFriendly: diet.isVegetarianFriendly } : {}),
+    ...(diet.isVeganFriendly      !== undefined ? { isVeganFriendly:      diet.isVeganFriendly }      : {}),
     accessibility: {
       entrance,
       toilet,

@@ -50,8 +50,15 @@ function toPlace(item: any, category: Category): Place | null {
   const loc = item.location
   if (!loc?.latitude || !loc?.longitude) return null
 
-  const a11y = item.accessibilityOptions ?? {}
-  const addr = item.formattedAddress ?? ""
+  const a11y  = item.accessibilityOptions ?? {}
+  const addr  = item.formattedAddress ?? ""
+  const types: string[] = [
+    ...(Array.isArray(item.types) ? item.types : []),
+    item.primaryType ?? "",
+  ].filter(Boolean)
+  const isVegan = types.includes("vegan_restaurant") ? true : undefined
+  // vegan_restaurant implies vegetarian-friendly even when not separately listed
+  const isVegetarian = isVegan === true || types.includes("vegetarian_restaurant") ? true : undefined
   // Parse address components
   const components = item.addressComponents ?? []
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -89,6 +96,8 @@ function toPlace(item: any, category: Category): Place | null {
     },
     overallConfidence: 0,
     primarySource: "google_places",
+    ...(isVegetarian !== undefined ? { isVegetarianFriendly: isVegetarian } : {}),
+    ...(isVegan      !== undefined ? { isVeganFriendly:      isVegan }      : {}),
     sourceRecords: [{
       sourceId:   "google_places",
       externalId: item.id ?? item.name ?? "",
@@ -137,6 +146,8 @@ export async function fetchGooglePlaces(params: SearchParams): Promise<Place[]> 
           "places.accessibilityOptions",
           "places.websiteUri",
           "places.nationalPhoneNumber",
+          "places.types",
+          "places.primaryType",
         ].join(","),
       },
       body:    JSON.stringify(body),

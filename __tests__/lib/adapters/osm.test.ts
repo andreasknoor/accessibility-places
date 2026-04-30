@@ -5,6 +5,7 @@ import {
   osmToilet,
   osmParking,
   osmAllowsDogs,
+  osmDiet,
   fetchOsm,
   isRecentlyVerified,
 } from "@/lib/adapters/osm"
@@ -152,6 +153,55 @@ describe("osmAllowsDogs", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ elements: [element] }) }))
     const [p] = await fetchOsm(BASE_PARAMS)
     expect(p.allowsDogs).toBe(true)
+  })
+})
+
+// ─── osmDiet ──────────────────────────────────────────────────────────────────
+
+describe("osmDiet", () => {
+  it("yes → vegetarian friendly", () => {
+    expect(osmDiet({ "diet:vegetarian": "yes" }))
+      .toEqual({ isVegetarianFriendly: true,  isVeganFriendly: undefined })
+  })
+
+  it("only → vegetarian friendly", () => {
+    expect(osmDiet({ "diet:vegetarian": "only" }))
+      .toEqual({ isVegetarianFriendly: true,  isVeganFriendly: undefined })
+  })
+
+  it("no → not vegetarian friendly", () => {
+    expect(osmDiet({ "diet:vegetarian": "no" }))
+      .toEqual({ isVegetarianFriendly: false, isVeganFriendly: undefined })
+  })
+
+  it("vegan=yes implies vegetarian=true", () => {
+    expect(osmDiet({ "diet:vegan": "yes" }))
+      .toEqual({ isVegetarianFriendly: true,  isVeganFriendly: true })
+  })
+
+  it("vegan=only implies vegetarian=true", () => {
+    expect(osmDiet({ "diet:vegan": "only" }))
+      .toEqual({ isVegetarianFriendly: true,  isVeganFriendly: true })
+  })
+
+  it("vegan=no leaves vegetarian unchanged when not tagged", () => {
+    expect(osmDiet({ "diet:vegan": "no" }))
+      .toEqual({ isVegetarianFriendly: undefined, isVeganFriendly: false })
+  })
+
+  it("returns undefined when no diet tags", () => {
+    expect(osmDiet({})).toEqual({ isVegetarianFriendly: undefined, isVeganFriendly: undefined })
+  })
+
+  it("OSM element with diet tags surfaces flags on the place", async () => {
+    const element = {
+      id: 777, type: "node", lat: 52.52, lon: 13.405,
+      tags: { name: "Veg Café", amenity: "cafe", "diet:vegetarian": "only", "diet:vegan": "yes" },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ elements: [element] }) }))
+    const [p] = await fetchOsm(BASE_PARAMS)
+    expect(p.isVegetarianFriendly).toBe(true)
+    expect(p.isVeganFriendly).toBe(true)
   })
 })
 

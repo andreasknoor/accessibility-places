@@ -237,6 +237,24 @@ describe("mergePlaces", () => {
     expect(merged.dogPolicyOnly).toBeUndefined()
   })
 
+  it("diet flags propagate from incoming when existing has none", () => {
+    const a = makePlace({ id: "a" })
+    const b = makePlace({ id: "b", isVegetarianFriendly: true, isVeganFriendly: true })
+    const merged = mergePlaces(a, b)
+    expect(merged.isVegetarianFriendly).toBe(true)
+    expect(merged.isVeganFriendly).toBe(true)
+  })
+
+  it("vegan=true forces vegetarian=true even after merge", () => {
+    const a = makePlace({ id: "a", isVegetarianFriendly: false })
+    const b = makePlace({ id: "b", isVeganFriendly: true })
+    const merged = mergePlaces(a, b)
+    // a's `false` was kept (existing wins for already-defined values), but
+    // because vegan is now true, vegetarian gets forced back to true.
+    expect(merged.isVeganFriendly).toBe(true)
+    expect(merged.isVegetarianFriendly).toBe(true)
+  })
+
   it("merge keeps allowsDogs from incoming when existing has none", () => {
     const wheelchair = makePlace({
       id: "wm",

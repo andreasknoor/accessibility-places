@@ -160,6 +160,22 @@ describe("PlaceCard", () => {
     expect(screen.queryByLabelText(/Hunde|Dogs/i)).not.toBeInTheDocument()
   })
 
+  it("shows vegetarian badge when isVegetarianFriendly=true", () => {
+    render(<PlaceCard place={makePlace({ isVegetarianFriendly: true })} />)
+    expect(screen.getByLabelText(/Vegetarisch|Vegetarian/i)).toBeInTheDocument()
+  })
+
+  it("shows vegan badge when isVeganFriendly=true", () => {
+    render(<PlaceCard place={makePlace({ isVeganFriendly: true, isVegetarianFriendly: true })} />)
+    expect(screen.getByLabelText(/Vegan/i)).toBeInTheDocument()
+  })
+
+  it("renders no diet badges when both flags are undefined", () => {
+    render(<PlaceCard place={makePlace()} />)
+    expect(screen.queryByLabelText(/Vegetarisch|Vegetarian/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/^Vegan$/i)).not.toBeInTheDocument()
+  })
+
   it("shows source count badge when multiple sources", () => {
     const place = makePlace({
       sourceRecords: [

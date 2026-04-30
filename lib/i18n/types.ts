@@ -41,6 +41,8 @@ export interface Translations {
     verifiedRecently:  string
     allowsDogs:        string
     noDogs:            string
+    vegetarian:        string
+    vegan:             string
   }
   a11y: {
     yes:     string

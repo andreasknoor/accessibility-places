@@ -130,6 +130,16 @@ export function mergePlaces(existing: Place, incoming: Place): Place {
   // post-filter.
   if (merged.dogPolicyOnly && !incoming.dogPolicyOnly) merged.dogPolicyOnly = undefined
 
+  // Diet flags — first non-undefined value wins, with vegan implying vegetarian
+  if (merged.isVegetarianFriendly === undefined && incoming.isVegetarianFriendly !== undefined) {
+    merged.isVegetarianFriendly = incoming.isVegetarianFriendly
+  }
+  if (merged.isVeganFriendly === undefined && incoming.isVeganFriendly !== undefined) {
+    merged.isVeganFriendly = incoming.isVeganFriendly
+  }
+  // After both flags settle, ensure vegan implies vegetarian
+  if (merged.isVeganFriendly === true) merged.isVegetarianFriendly = true
+
   // Recompute overall confidence and primary source
   merged.overallConfidence = computeOverallConfidence(merged)
   merged.primarySource     = findPrimarySource(merged)

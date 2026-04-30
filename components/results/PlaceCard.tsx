@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { createPortal } from "react-dom"
-import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Info, Accessibility, PawPrint } from "lucide-react"
+import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Info, Accessibility, PawPrint, Salad, Leaf } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import ConfidenceBadge  from "./ConfidenceBadge"
@@ -125,6 +125,26 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
             >
               <PawPrint className="w-3 h-3" />
               <span>{place.allowsDogs ? t.results.allowsDogs : t.results.noDogs}</span>
+            </span>
+          )}
+          {place.isVegetarianFriendly === true && (
+            <span
+              className="inline-flex items-center gap-0.5 text-xs text-emerald-700"
+              title={t.results.vegetarian}
+              aria-label={t.results.vegetarian}
+            >
+              <Salad className="w-3 h-3" />
+              <span>{t.results.vegetarian}</span>
+            </span>
+          )}
+          {place.isVeganFriendly === true && (
+            <span
+              className="inline-flex items-center gap-0.5 text-xs text-green-700"
+              title={t.results.vegan}
+              aria-label={t.results.vegan}
+            >
+              <Leaf className="w-3 h-3" />
+              <span>{t.results.vegan}</span>
             </span>
           )}
         </div>

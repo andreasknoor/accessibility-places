@@ -117,6 +117,36 @@ describe("fetchGooglePlaces", () => {
     expect(result).toHaveLength(0)
   })
 
+  it("flags vegetarian_restaurant primary type as vegetarian-friendly", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ places: [makeGooglePlace({ primaryType: "vegetarian_restaurant", types: ["vegetarian_restaurant","restaurant"] })] }),
+    }))
+    const [p] = await fetchGooglePlaces(BASE_PARAMS)
+    expect(p.isVegetarianFriendly).toBe(true)
+    expect(p.isVeganFriendly).toBeUndefined()
+  })
+
+  it("vegan_restaurant type implies both vegan and vegetarian friendly", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ places: [makeGooglePlace({ primaryType: "vegan_restaurant", types: ["vegan_restaurant","restaurant"] })] }),
+    }))
+    const [p] = await fetchGooglePlaces(BASE_PARAMS)
+    expect(p.isVeganFriendly).toBe(true)
+    expect(p.isVegetarianFriendly).toBe(true)
+  })
+
+  it("regular restaurant has no diet flags", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ places: [makeGooglePlace({ primaryType: "restaurant", types: ["restaurant"] })] }),
+    }))
+    const [p] = await fetchGooglePlaces(BASE_PARAMS)
+    expect(p.isVegetarianFriendly).toBeUndefined()
+    expect(p.isVeganFriendly).toBeUndefined()
+  })
+
   it("uses google_places reliability weight (0.35)", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: true,
