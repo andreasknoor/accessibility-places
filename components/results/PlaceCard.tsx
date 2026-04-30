@@ -55,8 +55,9 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
     place.accessibility.parking,
     ...(place.accessibility.seating ? [place.accessibility.seating] : []),
   ]
+  const HIDDEN_DETAIL_KEYS = new Set(["isInside"])
   const hasAnyDetails = allAttrs.some((attr) =>
-    Object.values(attr.details).some((v) => v != null),
+    Object.entries(attr.details).some(([k, v]) => v != null && !HIDDEN_DETAIL_KEYS.has(k)),
   )
 
   // Wheelmap deep-link priority:
