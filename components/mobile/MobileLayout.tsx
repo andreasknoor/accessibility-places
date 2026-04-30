@@ -40,6 +40,7 @@ export default function MobileLayout({
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>("results")
   const [mapMounted,  setMapMounted]  = useState(false)
+  const [panTrigger,  setPanTrigger]  = useState(0)
   const t = useTranslations()
 
   // Mount the map only when first activated — Leaflet must initialize in a
@@ -88,7 +89,7 @@ export default function MobileLayout({
             places={places}
             filters={filters}
             selectedId={selectedId}
-            onSelect={(p) => { onSelect(p); setActiveTab("map") }}
+            onSelect={(p) => { onSelect(p); setPanTrigger((n) => n + 1); setActiveTab("map") }}
             isLoading={isLoading}
             summary={summary}
             collapsibleSummary
@@ -102,6 +103,7 @@ export default function MobileLayout({
               places={places}
               center={searchCenter}
               selectedId={selectedId}
+              panTrigger={panTrigger}
               onSelect={onSelect}
               isFullscreen={false}
               onToggleFullscreen={() => {}}

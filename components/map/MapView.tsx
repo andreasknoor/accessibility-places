@@ -15,6 +15,7 @@ interface Props {
   places:        Place[]
   center?:       { lat: number; lon: number }
   selectedId?:   string
+  panTrigger?:   number
   onSelect:      (place: Place) => void
   isFullscreen:  boolean
   onToggleFullscreen: () => void
@@ -44,6 +45,7 @@ export default function MapView({
   places,
   center,
   selectedId,
+  panTrigger,
   onSelect,
   isFullscreen,
   onToggleFullscreen,
@@ -168,7 +170,8 @@ export default function MapView({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [places, selectedId, mapReady])
 
-  // Pan to selected
+  // Pan to selected — also re-fires when panTrigger increments so that
+  // clicking the same result after manually panning the map still re-centers.
   useEffect(() => {
     if (!mapInst.current || !selectedId) return
     const place = places.find((p) => p.id === selectedId)
@@ -176,7 +179,7 @@ export default function MapView({
     mapInst.current.panTo([place.coordinates.lat, place.coordinates.lon])
     markers.current.get(selectedId)?.openPopup()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId, mapReady])
+  }, [selectedId, panTrigger, mapReady])
 
   // Pan to center
   useEffect(() => {
