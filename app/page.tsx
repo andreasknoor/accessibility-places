@@ -8,7 +8,7 @@ import ResultsList  from "@/components/results/ResultsList"
 import LanguageSwitcher from "@/components/LanguageSwitcher"
 import MobileLayout from "@/components/mobile/MobileLayout"
 import { useIsMobile } from "@/hooks/useIsMobile"
-import { useTranslations } from "@/lib/i18n"
+import { useTranslations, useLocale } from "@/lib/i18n"
 import { DEFAULT_RADIUS_KM, APP_VERSION } from "@/lib/config"
 import type { Place, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState } from "@/lib/types"
 
@@ -33,6 +33,7 @@ const DEFAULT_SOURCES: ActiveSources = {
 
 export default function Home() {
   const t        = useTranslations()
+  const { locale } = useLocale()
   const isMobile = useIsMobile()
 
   const [filters,       setFilters]      = useState<SearchFilters>(DEFAULT_FILTERS)
@@ -67,11 +68,6 @@ export default function Home() {
     setSourceStates(initial)
 
     try {
-      const locale =
-        typeof navigator !== "undefined"
-          ? (navigator.language?.slice(0, 2) ?? "de")
-          : "de"
-
       const res = await fetch("/api/search", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
