@@ -59,6 +59,9 @@ export interface SourceAttribution {
   // carries a recent user-verification marker (e.g. OSM `check_date:wheelchair`
   // written by Wheelmap surveys). Drives the verified badge in the UI.
   verifiedRecently?: boolean
+  // ISO date string (YYYY-MM-DD) of the verification when known. Surfaced in
+  // the verified-badge tooltip ("manuell verifiziert am …").
+  verifiedAt?: string
 }
 
 export interface AccessibilityAttribute {

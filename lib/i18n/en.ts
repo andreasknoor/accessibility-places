@@ -41,6 +41,14 @@ const en: Translations = {
     noData: "No data",
     wheelmapLink: "Check on Wheelmap.org",
     verifiedRecently: "Recently user-verified (Wheelmap/OSM, ≤ 2 years)",
+    verifiedAt: (date: string) => {
+      const d = new Date(date)
+      if (Number.isNaN(d.getTime())) return "Manually verified"
+      const days = Math.max(0, Math.floor((Date.now() - d.getTime()) / 86_400_000))
+      if (days === 0) return "Manually verified today"
+      if (days === 1) return "Manually verified 1 day ago"
+      return `Manually verified ${days} days ago`
+    },
     allowsDogs: "Dogs welcome",
     noDogs: "No dogs",
     vegetarian: "Vegetarian",

@@ -103,32 +103,47 @@ function ScoreTooltip({ place, filters }: { place: Place; filters: SearchFilters
   )
 }
 
-function isUserVerified(place: Place): boolean {
-  const attrs = [
+function collectVerifiedSources(place: Place) {
+  return [
     place.accessibility.entrance,
     place.accessibility.toilet,
     place.accessibility.parking,
     ...(place.accessibility.seating ? [place.accessibility.seating] : []),
-  ]
-  return attrs.some((a) => a.sources.some((s) => s.verifiedRecently))
+  ].flatMap((a) => a.sources.filter((s) => s.verifiedRecently))
+}
+
+function latestVerifiedAt(place: Place): string | undefined {
+  const dates = collectVerifiedSources(place)
+    .map((s) => s.verifiedAt)
+    .filter((d): d is string => Boolean(d))
+  if (dates.length === 0) return undefined
+  // ISO date strings sort lexically — last is the most recent
+  return dates.slice().sort().pop()
 }
 
 export default function ConfidenceBadge({ confidence, place, filters, className }: Props) {
   const t     = useTranslations()
   const level = confidenceLabel(confidence)
   const pct   = Math.round(confidence * 100)
-  const verified = place ? isUserVerified(place) : false
+  const verified     = place ? collectVerifiedSources(place).length > 0 : false
+  const verifiedDate = place && verified ? latestVerifiedAt(place) : undefined
 
   const verifiedIcon = verified && (
-    <span
-      role="img"
-      aria-label={t.results.verifiedRecently}
-      title={t.results.verifiedRecently}
-      className="inline-flex items-center text-emerald-600"
-    >
-      <Check className="w-3 h-3" />
-      <Accessibility className="w-3.5 h-3.5 -ml-0.5" />
-    </span>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          role="img"
+          aria-label={t.results.verifiedRecently}
+          className="inline-flex items-center text-emerald-600 cursor-default"
+        >
+          <Check className="w-3 h-3" />
+          <Accessibility className="w-3.5 h-3.5 -ml-0.5" />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="text-xs">
+        {verifiedDate ? t.results.verifiedAt(verifiedDate) : t.results.verifiedRecently}
+      </TooltipContent>
+    </Tooltip>
   )
 
   const badge = (
@@ -140,21 +155,19 @@ export default function ConfidenceBadge({ confidence, place, filters, className 
     </span>
   )
 
-  const composed = (
-    <span className={cn("inline-flex items-center gap-1.5", className)}>
-      {verifiedIcon}
-      {badge}
-    </span>
-  )
-
-  if (!place || !filters) return composed
-
-  return (
+  const badgeWithTooltip = place && filters ? (
     <Tooltip>
-      <TooltipTrigger asChild>{composed}</TooltipTrigger>
+      <TooltipTrigger asChild>{badge}</TooltipTrigger>
       <TooltipContent side="left" className="bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-700 shadow-lg p-3 max-w-none w-[32rem]">
         <ScoreTooltip place={place} filters={filters} />
       </TooltipContent>
     </Tooltip>
+  ) : badge
+
+  return (
+    <span className={cn("inline-flex items-center gap-1.5", className)}>
+      {verifiedIcon}
+      {badgeWithTooltip}
+    </span>
   )
 }

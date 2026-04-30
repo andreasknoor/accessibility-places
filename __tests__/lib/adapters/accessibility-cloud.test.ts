@@ -232,6 +232,41 @@ describe("fetchAccessibilityCloud", () => {
     expect(p.wheelmapUrl).toBeUndefined()
   })
 
+  it("drops records with off-topic categories like government_office", async () => {
+    const features = [
+      {
+        _id: "office", geometry: { type: "Point", coordinates: [13.0, 52.0] },
+        properties: { name: "Bürgerbüro", category: "government_office", address: {} },
+      },
+      {
+        _id: "atm", geometry: { type: "Point", coordinates: [13.0, 52.0] },
+        properties: { name: "Sparkasse ATM", category: "atm", address: {} },
+      },
+      {
+        _id: "stop", geometry: { type: "Point", coordinates: [13.0, 52.0] },
+        properties: { name: "Hauptstraße", category: "bus_stop", address: {} },
+      },
+      {
+        _id: "real", geometry: { type: "Point", coordinates: [13.0, 52.0] },
+        properties: { name: "Café Wagner", category: "cafe", address: {} },
+      },
+    ]
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ features }) }))
+    const result = await fetchAccessibilityCloud(BASE_PARAMS)
+    expect(result.map((p) => p.name)).toEqual(["Café Wagner"])
+  })
+
+  it("keeps records with attraction-like categories", async () => {
+    const feature = {
+      _id: "zoo1",
+      geometry: { type: "Point", coordinates: [13.0, 52.0] },
+      properties: { name: "Tierpark", category: "zoo", address: {} },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ features: [feature] }) }))
+    const [p] = await fetchAccessibilityCloud(BASE_PARAMS)
+    expect(p.category).toBe("attraction")
+  })
+
   it("handles toilet details with grab bars", async () => {
     const feature = {
       _id: "t1",

@@ -258,6 +258,7 @@ export function buildAttribute(
   details: AccessibilityAttribute["details"],
   isOsmOverall = false,
   weightMultiplier = 1.0,
+  verifiedAt?: string,
 ): AccessibilityAttribute {
   const baseWeight = RELIABILITY_WEIGHTS[sourceId]
   const overallAdj = isOsmOverall ? OSM_ENTRANCE_WEIGHT_FACTOR : 1.0
@@ -270,6 +271,7 @@ export function buildAttribute(
     reliabilityWeight: weight,
     details,
     ...(weightMultiplier > 1.0 ? { verifiedRecently: true } : {}),
+    ...(verifiedAt ? { verifiedAt } : {}),
   }
 
   const confidence = value === "unknown" ? 0 : toiletConfidence(details, weight, [src])

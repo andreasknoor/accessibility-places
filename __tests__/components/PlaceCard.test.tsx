@@ -98,6 +98,22 @@ describe("PlaceCard", () => {
     expect(screen.getByText(/Ausgewiesene Rollstuhl-Toilette|Designated wheelchair toilet/i)).toBeInTheDocument()
   })
 
+  it("hides isInside (`WC im Betrieb vorhanden`) from the toilet detail list", () => {
+    // isInside is the sole reason for expanding details — but we hide it.
+    // Adding another field so the details panel renders at all.
+    const toilet = buildAttribute("osm", "yes", "designated", {
+      isDesignated: true,
+      isInside:     true,
+    })
+    const place = makePlace({ accessibility: { entrance: emptyAttribute(), toilet, parking: emptyAttribute() } })
+
+    render(<PlaceCard place={place} />)
+    fireEvent.click(screen.getByText(/Details/))
+
+    expect(screen.queryByText(/WC im Betrieb vorhanden|On-site accessible toilet/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/Ausgewiesene Rollstuhl-Toilette|Designated wheelchair toilet/i)).toBeInTheDocument()
+  })
+
   it("expanding details shows hasGrabBars when A.Cloud reports grabBars present", () => {
     // Mirror lib/adapters/accessibility-cloud.ts:toiletDetails when restrooms[0].grabBars exists
     const toilet = buildAttribute("accessibility_cloud", "yes", "a11y-cloud", {

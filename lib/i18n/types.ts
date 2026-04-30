@@ -39,6 +39,7 @@ export interface Translations {
     noData:            string
     wheelmapLink:      string
     verifiedRecently:  string
+    verifiedAt:        (date: string) => string
     allowsDogs:        string
     noDogs:            string
     vegetarian:        string

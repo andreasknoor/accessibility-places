@@ -59,7 +59,15 @@ export default function A11yAttribute({ label, attr, detailType, showDetails }: 
 
       {/* Details (shown in expanded view) */}
       {showDetails && (() => {
-        const entries = Object.entries(attr.details).filter(([, v]) => v != null)
+        // `isInside` only carries a positive signal ("toilet on premises"); its
+        // absence isn't meaningful (most places just don't tag it), and the
+        // info doesn't help the wheelchair-accessibility judgement enough to
+        // justify the row. Hidden from the detail list. The key is still in
+        // attr.details so the toilet-shape detection in merge.ts keeps working.
+        const HIDDEN_DETAIL_KEYS = new Set(["isInside"])
+        const entries = Object.entries(attr.details).filter(
+          ([k, v]) => v != null && !HIDDEN_DETAIL_KEYS.has(k),
+        )
         if (entries.length === 0) return null
         return (
           <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 pl-5 mt-0.5">

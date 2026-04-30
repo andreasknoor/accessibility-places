@@ -231,12 +231,16 @@ function elementToPlace(el: any): Place | null {
 
   // Per-attribute Wheelmap/OSM verification: prefer the attribute-specific
   // check_date tag, fall back to the generic check_date covering the whole node.
-  const entranceBoost = isRecentlyVerified(tags["check_date:wheelchair"]          ?? tags["check_date"]) ? RECENT_VERIFICATION_BOOST : 1.0
-  const toiletBoost   = isRecentlyVerified(tags["check_date:toilets:wheelchair"]  ?? tags["check_date"]) ? RECENT_VERIFICATION_BOOST : 1.0
+  const entranceCheckDate = tags["check_date:wheelchair"]         ?? tags["check_date"]
+  const toiletCheckDate   = tags["check_date:toilets:wheelchair"] ?? tags["check_date"]
+  const entranceVerified  = isRecentlyVerified(entranceCheckDate)
+  const toiletVerified    = isRecentlyVerified(toiletCheckDate)
+  const entranceBoost     = entranceVerified ? RECENT_VERIFICATION_BOOST : 1.0
+  const toiletBoost       = toiletVerified   ? RECENT_VERIFICATION_BOOST : 1.0
 
   // OSM wheelchair= is a whole-place proxy → lower weight for entrance
-  const entrance = buildAttribute("osm", wheelchairVal, tags["wheelchair"] ?? "", entranceDetails, true,  entranceBoost)
-  const toilet   = buildAttribute("osm", toiletVal,     tags["toilets:wheelchair"] ?? "", toiletDetails, false, toiletBoost)
+  const entrance = buildAttribute("osm", wheelchairVal, tags["wheelchair"] ?? "", entranceDetails, true,  entranceBoost, entranceVerified ? entranceCheckDate : undefined)
+  const toilet   = buildAttribute("osm", toiletVal,     tags["toilets:wheelchair"] ?? "", toiletDetails, false, toiletBoost,   toiletVerified   ? toiletCheckDate   : undefined)
   const parking  = buildAttribute("osm", parkingVal,    tags["capacity:disabled"] ?? tags["parking_space"] ?? "", parkingDetails)
 
   const allowsDogs = osmAllowsDogs(tags)

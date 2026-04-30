@@ -326,6 +326,19 @@ describe("fetchOsm", () => {
     expect(result).toHaveLength(0)
   })
 
+  it("captures the actual check_date on the verified source attribution", async () => {
+    const recent = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    const element = {
+      id: 11, type: "node", lat: 52.52, lon: 13.405,
+      tags: { name: "X", amenity: "restaurant", wheelchair: "yes", "check_date:wheelchair": recent },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ elements: [element] }) }))
+    const [p] = await fetchOsm(BASE_PARAMS)
+    const src = p.accessibility.entrance.sources[0]
+    expect(src.verifiedRecently).toBe(true)
+    expect(src.verifiedAt).toBe(recent)
+  })
+
   it("boosts entrance weight when check_date:wheelchair is recent", async () => {
     const recent = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10) // 30 days ago
     const element = {

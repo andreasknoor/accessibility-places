@@ -109,8 +109,12 @@ function parkingDetails(props: any): ParkingDetails {
   }
 }
 
+// A.Cloud aggregates ~170 datasets, many of which describe non-venues
+// (government offices, ATMs, bus stops, public toilets, …). We only adopt
+// records whose category maps to one of our known venue Categories — others
+// return `undefined` and the caller drops them entirely.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapCategory(props: any): Category {
+function mapCategory(props: any): Category | undefined {
   const cat = (props?.category ?? "").toLowerCase()
   if (cat.includes("cafe") || cat.includes("coffee") || cat.includes("kaffee")) return "cafe"
   if (cat.includes("restaurant"))                                                 return "restaurant"
@@ -126,7 +130,8 @@ function mapCategory(props: any): Category {
   if (cat.includes("theatre") || cat.includes("theater") || cat.includes("oper")) return "theater"
   if (cat.includes("library") || cat.includes("bibliothek"))                      return "library"
   if (cat.includes("gallery") || cat.includes("galerie"))                         return "gallery"
-  return "attraction"
+  if (cat.includes("attraction") || cat.includes("theme_park") || cat.includes("zoo")) return "attraction"
+  return undefined
 }
 
 // ─── Parse one place from API response ────────────────────────────────────
@@ -142,6 +147,10 @@ function toPlace(feature: any): Place | null {
 
   const name = localStr(props.name)
   if (!name) return null
+
+  const category = mapCategory(props)
+  if (!category) return null   // unknown / off-topic A.Cloud category — drop the record
+
   const addr = props.address ?? {}
 
   // Use A.Cloud's authoritative back-link to Wheelmap when present. The same
@@ -168,7 +177,7 @@ function toPlace(feature: any): Place | null {
   return {
     id: nanoid(),
     name,
-    category: mapCategory(props),
+    category,
     address: {
       street:      localStr(addr.street),
       houseNumber: localStr(addr.housenumber),
