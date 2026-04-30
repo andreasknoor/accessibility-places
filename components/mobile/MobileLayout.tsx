@@ -5,9 +5,10 @@ import dynamic from "next/dynamic"
 import { Map, List, SlidersHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTranslations } from "@/lib/i18n"
-import ChatPanel    from "@/components/chat/ChatPanel"
-import FilterPanel  from "@/components/filters/FilterPanel"
-import ResultsList  from "@/components/results/ResultsList"
+import ChatPanel       from "@/components/chat/ChatPanel"
+import FilterPanel     from "@/components/filters/FilterPanel"
+import ResultsList     from "@/components/results/ResultsList"
+import LanguageSwitcher from "@/components/LanguageSwitcher"
 import type { Place, SearchFilters, ActiveSources, SourceId, SourceState } from "@/lib/types"
 
 const MapView = dynamic(() => import("@/components/map/MapView"), { ssr: false })
@@ -57,12 +58,15 @@ export default function MobileLayout({
     <div className="flex flex-col h-svh overflow-hidden bg-background text-foreground">
 
       {/* ── Header ── */}
-      <header className="flex items-center gap-2.5 px-4 py-3 border-b border-border bg-card shrink-0">
-        <span className="text-xl" aria-hidden>♿</span>
-        <div>
-          <h1 className="font-bold text-sm leading-none">{t.app.title}</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">{t.app.subtitle}</p>
+      <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card shrink-0">
+        <div className="flex items-center gap-2.5">
+          <span className="text-xl" aria-hidden>♿</span>
+          <div>
+            <h1 className="font-bold text-sm leading-none">{t.app.title}</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">{t.app.subtitle}</p>
+          </div>
         </div>
+        <LanguageSwitcher />
       </header>
 
       {/* ── Search bar (always visible) ── */}
