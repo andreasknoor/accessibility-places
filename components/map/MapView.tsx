@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Maximize2, Minimize2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTranslations } from "@/lib/i18n"
@@ -48,12 +48,13 @@ export default function MapView({
   isFullscreen,
   onToggleFullscreen,
 }: Props) {
-  const t       = useTranslations()
-  const mapRef  = useRef<HTMLDivElement>(null)
+  const t        = useTranslations()
+  const mapRef   = useRef<HTMLDivElement>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mapInst = useRef<any>(null)
+  const mapInst  = useRef<any>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const markers = useRef<Map<string, any>>(new Map())
+  const markers  = useRef<Map<string, any>>(new Map())
+  const [mapReady, setMapReady] = useState(false)
 
   // Init map once
   useEffect(() => {
@@ -81,6 +82,7 @@ export default function MapView({
       }).addTo(map)
 
       mapInst.current = map
+      setMapReady(true)
     }
     init()
 
@@ -164,7 +166,7 @@ export default function MapView({
       mapInst.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [places, selectedId])
+  }, [places, selectedId, mapReady])
 
   // Pan to selected
   useEffect(() => {
@@ -174,13 +176,14 @@ export default function MapView({
     mapInst.current.panTo([place.coordinates.lat, place.coordinates.lon])
     markers.current.get(selectedId)?.openPopup()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId])
+  }, [selectedId, mapReady])
 
   // Pan to center
   useEffect(() => {
     if (!mapInst.current || !center) return
     mapInst.current.setView([center.lat, center.lon], 13)
-  }, [center])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [center, mapReady])
 
   // Resize map when fullscreen toggles
   useEffect(() => {

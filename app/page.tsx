@@ -6,6 +6,8 @@ import ChatPanel    from "@/components/chat/ChatPanel"
 import FilterPanel  from "@/components/filters/FilterPanel"
 import ResultsList  from "@/components/results/ResultsList"
 import LanguageSwitcher from "@/components/LanguageSwitcher"
+import MobileLayout from "@/components/mobile/MobileLayout"
+import { useIsMobile } from "@/hooks/useIsMobile"
 import { useTranslations } from "@/lib/i18n"
 import { DEFAULT_RADIUS_KM, APP_VERSION } from "@/lib/config"
 import type { Place, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState } from "@/lib/types"
@@ -30,7 +32,8 @@ const DEFAULT_SOURCES: ActiveSources = {
 }
 
 export default function Home() {
-  const t = useTranslations()
+  const t        = useTranslations()
+  const isMobile = useIsMobile()
 
   const [filters,       setFilters]      = useState<SearchFilters>(DEFAULT_FILTERS)
   const [sources,       setSources]      = useState<ActiveSources>(DEFAULT_SOURCES)
@@ -153,6 +156,29 @@ export default function Home() {
       window.removeEventListener("mouseup",   onUp)
     }
   }, [])
+
+  // Mobile layout
+  if (isMobile) {
+    return (
+      <MobileLayout
+        places={places}
+        selectedId={selectedId}
+        onSelect={(p) => setSelectedId(p.id)}
+        isLoading={isLoading}
+        summary={summary}
+        filters={filters}
+        sources={sources}
+        radiusKm={radiusKm}
+        onFilters={setFilters}
+        onSources={setSources}
+        onRadius={setRadiusKm}
+        sourceStates={sourceStates}
+        searchCenter={searchCenter}
+        onSearch={handleSearch}
+        error={error}
+      />
+    )
+  }
 
   // Fullscreen map overlay
   if (isFullscreen) {

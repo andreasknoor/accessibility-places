@@ -56,6 +56,15 @@ const de: Translations = {
       const years = Math.floor(days / 365)
       return years === 1 ? "Manuell verifiziert vor 1 Jahr" : `Manuell verifiziert vor ${years} Jahren`
     },
+    verifiedAge: (date: string) => {
+      const d = new Date(date)
+      if (Number.isNaN(d.getTime())) return ""
+      const days = Math.max(0, Math.floor((Date.now() - d.getTime()) / 86_400_000))
+      if (days < 7)   return `(${days === 0 ? "heute" : `${days}T`})`
+      if (days < 28)  return `(${Math.floor(days / 7)}W)`
+      if (days < 365) return `(${Math.floor(days / 30)}M)`
+      return `(${Math.floor(days / 365)}J)`
+    },
     allowsDogs: "Hunde willkommen",
     noDogs: "Keine Hunde",
     vegetarian: "Vegetarisch",
