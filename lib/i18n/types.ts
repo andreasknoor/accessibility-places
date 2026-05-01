@@ -40,6 +40,7 @@ export interface Translations {
       medium: string
       low:    string
     }
+    rerun:             string
     conflict:          string
     primarySource:     string
     noData:            string

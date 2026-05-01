@@ -49,10 +49,12 @@ export default function Home() {
   const [error,         setError]        = useState<string | undefined>()
   const [sourceStates,  setSourceStates] = useState<Partial<Record<SourceId, SourceState>>>({})
   const [resultsWidth,  setResultsWidth] = useState(504)
+  const [lastQuery,     setLastQuery]    = useState<string | undefined>()
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
 
   const handleSearch = useCallback(async (query: string) => {
+    setLastQuery(query)
     setIsLoading(true)
     setError(undefined)
     setPlaces([])
@@ -171,6 +173,7 @@ export default function Home() {
         sourceStates={sourceStates}
         searchCenter={searchCenter}
         onSearch={handleSearch}
+        onRerun={lastQuery ? () => handleSearch(lastQuery) : undefined}
         error={error}
       />
     )
@@ -236,6 +239,7 @@ export default function Home() {
           onSources={setSources}
           onRadius={setRadiusKm}
           sourceStates={sourceStates}
+          onRerun={lastQuery ? () => handleSearch(lastQuery) : undefined}
         />
 
         <div
@@ -251,6 +255,7 @@ export default function Home() {
             onSelect={(p) => setSelectedId(p.id)}
             isLoading={isLoading}
             summary={summary}
+            onRerun={lastQuery ? () => handleSearch(lastQuery) : undefined}
           />
         </div>
 

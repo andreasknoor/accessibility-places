@@ -1,6 +1,6 @@
 "use client"
 
-import { Loader2, AlertTriangle } from "lucide-react"
+import { Loader2, AlertTriangle, RefreshCw } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Slider }   from "@/components/ui/slider"
 import { Separator } from "@/components/ui/separator"
@@ -18,6 +18,7 @@ interface Props {
   onSources:     (s: ActiveSources)   => void
   onRadius:      (r: number)          => void
   sourceStates?: Partial<Record<SourceId, SourceState>>
+  onRerun?:      () => void
 }
 
 function SourceIndicator({ state }: { state?: SourceState }) {
@@ -74,7 +75,7 @@ const SOURCE_DISABLED: Partial<Record<SourceId, true>> = {
   reisen_fuer_alle: true,
 }
 
-export default function FilterPanel({ filters, sources, radiusKm, onFilters, onSources, onRadius, sourceStates }: Props) {
+export default function FilterPanel({ filters, sources, radiusKm, onFilters, onSources, onRadius, sourceStates, onRerun }: Props) {
   const t = useTranslations()
 
   function toggleSource(id: SourceId) {
@@ -87,6 +88,18 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
 
   return (
     <aside className="flex flex-col gap-5 w-64 shrink-0 p-4 border-r border-border bg-card overflow-y-auto">
+      {/* ── Rerun button ── */}
+      {onRerun && (
+        <button
+          onClick={onRerun}
+          className="flex items-center justify-center gap-2 w-full rounded-md border border-border
+                     py-2 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/30
+                     transition-colors"
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+          {t.results.rerun}
+        </button>
+      )}
       {/* ── Data sources ── */}
       <section>
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">

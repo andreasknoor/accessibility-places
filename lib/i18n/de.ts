@@ -42,6 +42,7 @@ const de: Translations = {
       medium:  "Mittel",
       low:     "Unsicher",
     },
+    rerun:    "Erneut suchen",
     conflict: "Quellen widersprechen sich",
     primarySource: "Beste Quelle",
     noData: "Keine Daten",

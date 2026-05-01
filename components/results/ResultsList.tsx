@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Loader2, ChevronDown } from "lucide-react"
+import { Loader2, ChevronDown, RefreshCw } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import PlaceCard from "./PlaceCard"
 import { useTranslations } from "@/lib/i18n"
@@ -16,9 +16,10 @@ interface Props {
   isLoading:   boolean
   summary?:    string
   collapsibleSummary?: boolean
+  onRerun?:    () => void
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, summary, collapsibleSummary = false }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, summary, collapsibleSummary = false, onRerun }: Props) {
   const t = useTranslations()
   const [summaryOpen, setSummaryOpen] = useState(false)
 
@@ -33,11 +34,23 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
               <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" aria-label={t.chat.thinking} />
             )}
           </h2>
-          {!isLoading && places.length > 0 && (
-            <span className="text-xs text-muted-foreground">
-              {t.results.count(places.length)}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {!isLoading && places.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {t.results.count(places.length)}
+              </span>
+            )}
+            {onRerun && !isLoading && (
+              <button
+                onClick={onRerun}
+                title={t.results.rerun}
+                aria-label={t.results.rerun}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
         {summary && !collapsibleSummary && (
           <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{summary}</p>

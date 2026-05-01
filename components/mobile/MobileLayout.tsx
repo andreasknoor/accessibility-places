@@ -31,17 +31,21 @@ interface Props {
   sourceStates?: Partial<Record<SourceId, SourceState>>
   searchCenter?: { lat: number; lon: number }
   onSearch:      (query: string) => void
+  onRerun?:      () => void
   error?:        string
 }
 
 export default function MobileLayout({
   places, selectedId, onSelect, isLoading, summary,
   filters, sources, radiusKm, onFilters, onSources, onRadius,
-  sourceStates, searchCenter, onSearch, error,
+  sourceStates, searchCenter, onSearch, onRerun, error,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>("results")
   const [mapMounted,  setMapMounted]  = useState(false)
   const [panTrigger,  setPanTrigger]  = useState(0)
+
+  // Wrap onRerun to also switch to the results tab
+  const handleRerun = onRerun ? () => { setActiveTab("results"); onRerun() } : undefined
   const t = useTranslations()
 
   // Mount the map only when first activated — Leaflet must initialize in a
@@ -96,6 +100,7 @@ export default function MobileLayout({
             isLoading={isLoading}
             summary={summary}
             collapsibleSummary
+            onRerun={handleRerun}
           />
         </div>
 
@@ -124,6 +129,7 @@ export default function MobileLayout({
             onSources={onSources}
             onRadius={onRadius}
             sourceStates={sourceStates}
+            onRerun={handleRerun}
           />
         </div>
 
