@@ -43,7 +43,7 @@ export function buildOverpassQuery(params: SearchParams): string {
     const clauses = poiKeys.map(
       (k) => `nwr(around:${r},${lat},${lon})${nm}[${k}];`,
     )
-    return `[out:json][timeout:25];(${clauses.join("")});out 100 center tags;`
+    return `[out:json][timeout:25];(${clauses.join("")});out 200 center tags;`
   }
 
   // ── Default category-driven query ────────────────────────────────────────
@@ -88,7 +88,7 @@ export function buildOverpassQuery(params: SearchParams): string {
 
   if (clauses.length === 0) return ""
 
-  return `[out:json][timeout:25];(${clauses.join("")});out 100 center tags;`
+  return `[out:json][timeout:25];(${clauses.join("")});out 200 center tags;`
 }
 
 // ─── OSM tag → A11yValue mapping ──────────────────────────────────────────
