@@ -13,7 +13,7 @@ export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
 
 // OSM wheelchair= main tag is a whole-place proxy, not entrance-specific
 // → reduce its effective weight for entrance criterion
-export const OSM_ENTRANCE_WEIGHT_FACTOR = 0.85
+export const OSM_ENTRANCE_WEIGHT_FACTOR = 0.90
 
 export const CONFIDENCE_THRESHOLDS = {
   high:   0.70,
