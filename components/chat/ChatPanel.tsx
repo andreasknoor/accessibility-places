@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useRef, useEffect, useMemo } from "react"
-import { Send, Loader2, LocateFixed } from "lucide-react"
+import { Send, Loader2, LocateFixed, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTranslations, useLocale } from "@/lib/i18n"
+import { cn } from "@/lib/utils"
 
 interface Props {
   onSearch:  (query: string) => void
@@ -37,11 +38,8 @@ const NEARBY_CHIPS = [
   { icon: "🎬", de: "Kinos",       en: "Cinemas"     },
 ]
 
-type NearbyState =
-  | { phase: "idle" }
-  | { phase: "locating" }
-  | { phase: "ready"; district: string }
-  | { phase: "error" }
+type Mode        = "text" | "nearby"
+type NearbyPhase = "idle" | "locating" | { district: string } | "error"
 
 async function reverseGeocode(lat: number, lon: number): Promise<string> {
   const res = await fetch(
@@ -56,11 +54,18 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
 export default function ChatPanel({ onSearch, isLoading }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
-  const [value,  setValue]  = useState("")
-  const [nearby, setNearby] = useState<NearbyState>({ phase: "idle" })
+  const [mode,        setMode]        = useState<Mode>("text")
+  const [nearbyPhase, setNearbyPhase] = useState<NearbyPhase>("idle")
+  const [value,       setValue]       = useState("")
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const examples = useMemo(() => locale === "de" ? EXAMPLES_DE : EXAMPLES_EN, [locale])
+
+  // Reset nearby state when switching away from nearby tab
+  function switchMode(next: Mode) {
+    setMode(next)
+    if (next === "text") setNearbyPhase("idle")
+  }
 
   function submit() {
     const q = value.trim()
@@ -83,116 +88,158 @@ export default function ChatPanel({ onSearch, isLoading }: Props) {
   }, [value])
 
   function handleLocate() {
-    if (!("geolocation" in navigator)) { setNearby({ phase: "error" }); return }
-    setNearby({ phase: "locating" })
+    if (!("geolocation" in navigator)) { setNearbyPhase("error"); return }
+    setNearbyPhase("locating")
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
           const district = await reverseGeocode(pos.coords.latitude, pos.coords.longitude)
-          setNearby({ phase: "ready", district })
+          setNearbyPhase({ district })
         } catch {
-          setNearby({ phase: "error" })
+          setNearbyPhase("error")
         }
       },
-      () => setNearby({ phase: "error" }),
+      () => setNearbyPhase("error"),
       { timeout: 10_000, enableHighAccuracy: false },
     )
   }
 
   function handleNearbyChip(chip: typeof NEARBY_CHIPS[0]) {
-    const district = nearby.phase === "ready" ? nearby.district : ""
+    const district = typeof nearbyPhase === "object" ? nearbyPhase.district : ""
     const label    = locale === "de" ? chip.de : chip.en
     onSearch(district ? `${label} in ${district}` : label)
   }
 
+  const district = typeof nearbyPhase === "object" ? nearbyPhase.district : null
+
   return (
     <div className="flex flex-col gap-3 p-4 border-b border-border bg-card">
 
-      {/* Input row */}
-      <div className="flex gap-2 items-end">
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder={t.chat.placeholder}
-          rows={1}
-          disabled={isLoading}
-          className="flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm
-                     placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1
-                     focus-visible:ring-ring disabled:opacity-50 min-h-[38px] leading-snug"
-        />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleLocate}
-          disabled={isLoading || nearby.phase === "locating"}
-          title={t.chat.nearbyButton}
-          aria-label={t.chat.nearbyButton}
-          className="shrink-0 px-2.5"
-        >
-          {nearby.phase === "locating"
-            ? <Loader2 className="w-4 h-4 animate-spin" />
-            : <LocateFixed className="w-4 h-4" />
-          }
-        </Button>
-        <Button
-          onClick={submit}
-          disabled={!value.trim() || isLoading}
-          size="sm"
-          className="shrink-0"
-        >
-          {isLoading
-            ? <Loader2 className="w-4 h-4 animate-spin" />
-            : <Send className="w-4 h-4" />
-          }
-          <span className="ml-1.5">{isLoading ? t.chat.thinking : t.chat.send}</span>
-        </Button>
+      {/* ── Segmented control ── */}
+      <div className="flex rounded-lg border border-border bg-muted p-0.5 gap-0.5">
+        {(["text", "nearby"] as Mode[]).map((m) => (
+          <button
+            key={m}
+            onClick={() => switchMode(m)}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 rounded-md py-1.5 text-sm font-medium transition-colors",
+              mode === m
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {m === "text"
+              ? <><Send className="w-3.5 h-3.5" />{t.chat.modeText}</>
+              : <><MapPin className="w-3.5 h-3.5" />{t.chat.modeNearby}</>
+            }
+          </button>
+        ))}
       </div>
 
-      {/* Nearby chips — shown after successful location lookup */}
-      {nearby.phase === "ready" && (
-        <div className="flex flex-col gap-1.5">
-          <p className="text-xs text-muted-foreground flex items-center gap-1">
-            <LocateFixed className="w-3 h-3 shrink-0" />
-            {t.chat.nearbyIn(nearby.district)}
-          </p>
+      {/* ── Text search mode ── */}
+      {mode === "text" && (
+        <>
+          <div className="flex gap-2 items-end">
+            <textarea
+              ref={textareaRef}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={onKeyDown}
+              placeholder={t.chat.placeholder}
+              rows={1}
+              disabled={isLoading}
+              className="flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm
+                         placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1
+                         focus-visible:ring-ring disabled:opacity-50 min-h-[38px] leading-snug"
+            />
+            <Button
+              onClick={submit}
+              disabled={!value.trim() || isLoading}
+              size="sm"
+              className="shrink-0"
+            >
+              {isLoading
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <Send className="w-4 h-4" />
+              }
+              <span className="ml-1.5">{isLoading ? t.chat.thinking : t.chat.send}</span>
+            </Button>
+          </div>
+
           <div className="flex flex-wrap gap-1.5">
-            {NEARBY_CHIPS.map((chip) => (
+            {examples.map((ex) => (
               <button
-                key={chip.de}
-                onClick={() => handleNearbyChip(chip)}
+                key={ex}
+                onClick={() => { setValue(ex); textareaRef.current?.focus() }}
                 disabled={isLoading}
-                className="text-xs px-2 py-1 rounded-full bg-primary/10 hover:bg-primary/20 text-primary
-                           transition-colors disabled:opacity-40"
+                className="text-xs px-2 py-1 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground
+                           hover:text-foreground transition-colors disabled:opacity-40 text-left leading-snug"
               >
-                {chip.icon} {locale === "de" ? chip.de : chip.en}
+                {ex}
               </button>
             ))}
           </div>
-        </div>
+        </>
       )}
 
-      {/* Location error */}
-      {nearby.phase === "error" && (
-        <p className="text-xs text-destructive">{t.chat.locationError}</p>
-      )}
-
-      {/* Example chips — shown when nearby is not active */}
-      {nearby.phase !== "ready" && (
-        <div className="flex flex-wrap gap-1.5">
-          {examples.map((ex) => (
-            <button
-              key={ex}
-              onClick={() => { setValue(ex); textareaRef.current?.focus() }}
+      {/* ── Nearby mode ── */}
+      {mode === "nearby" && (
+        <>
+          {/* idle: prominent locate button */}
+          {nearbyPhase === "idle" && (
+            <Button
+              onClick={handleLocate}
               disabled={isLoading}
-              className="text-xs px-2 py-1 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground
-                         hover:text-foreground transition-colors disabled:opacity-40 text-left leading-snug"
+              variant="outline"
+              className="w-full gap-2"
             >
-              {ex}
-            </button>
-          ))}
-        </div>
+              <LocateFixed className="w-4 h-4" />
+              {t.chat.locateButton}
+            </Button>
+          )}
+
+          {/* locating: spinner */}
+          {nearbyPhase === "locating" && (
+            <div className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              {t.chat.locateButton} …
+            </div>
+          )}
+
+          {/* error: message + retry */}
+          {nearbyPhase === "error" && (
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-sm text-destructive">{t.chat.locationError}</p>
+              <Button variant="outline" size="sm" onClick={handleLocate}>
+                <LocateFixed className="w-3.5 h-3.5 mr-1.5" />
+                {t.chat.locateButton}
+              </Button>
+            </div>
+          )}
+
+          {/* ready: district label + chips */}
+          {district !== null && (
+            <div className="flex flex-col gap-2">
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <LocateFixed className="w-3 h-3 shrink-0 text-primary" />
+                <span className="text-primary font-medium">{t.chat.nearbyIn(district)}</span>
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {NEARBY_CHIPS.map((chip) => (
+                  <button
+                    key={chip.de}
+                    onClick={() => handleNearbyChip(chip)}
+                    disabled={isLoading}
+                    className="text-xs px-2.5 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20
+                               text-primary font-medium transition-colors disabled:opacity-40"
+                  >
+                    {chip.icon} {locale === "de" ? chip.de : chip.en}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
     </div>

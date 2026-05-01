@@ -9,7 +9,9 @@ export interface Translations {
     thinking:      string
     noResults:     string
     errorGeneric:  string
-    nearbyButton:  string
+    modeText:      string
+    modeNearby:    string
+    locateButton:  string
     locationError: string
     nearbyIn:      (district: string) => string
   }
