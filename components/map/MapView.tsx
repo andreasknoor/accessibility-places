@@ -160,8 +160,8 @@ export default function MapView({
       }
     }
 
-    // Fit bounds if we have places
-    if (places.length > 0 && !center) {
+    // Always fit bounds to show all results when places are present
+    if (places.length > 0) {
       const bounds = L!.latLngBounds(
         places.map((p) => [p.coordinates.lat, p.coordinates.lon] as [number, number]),
       )
@@ -181,9 +181,9 @@ export default function MapView({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, panTrigger, mapReady])
 
-  // Pan to center
+  // Pan to center — only when no results (e.g. failed search or initial state)
   useEffect(() => {
-    if (!mapInst.current || !center) return
+    if (!mapInst.current || !center || places.length > 0) return
     mapInst.current.setView([center.lat, center.lon], 13)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [center, mapReady])
