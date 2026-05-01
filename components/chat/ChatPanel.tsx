@@ -61,10 +61,9 @@ export default function ChatPanel({ onSearch, isLoading }: Props) {
 
   const examples = useMemo(() => locale === "de" ? EXAMPLES_DE : EXAMPLES_EN, [locale])
 
-  // Reset nearby state when switching away from nearby tab
   function switchMode(next: Mode) {
     setMode(next)
-    if (next === "text") setNearbyPhase("idle")
+    if (next === "nearby" && nearbyPhase === "idle") handleLocate()
   }
 
   function submit() {
