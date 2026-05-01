@@ -10,7 +10,10 @@ const en: Translations = {
     send: "Search",
     thinking: "Searching …",
     noResults: "No matching places found.",
-    errorGeneric: "An error occurred. Please try again.",
+    errorGeneric:  "An error occurred. Please try again.",
+    nearbyButton:  "Search nearby",
+    locationError: "Location could not be determined.",
+    nearbyIn:      (d: string) => `Near ${d}`,
   },
   filters: {
     title: "Filters",

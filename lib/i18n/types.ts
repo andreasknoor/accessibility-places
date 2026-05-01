@@ -4,11 +4,14 @@ export interface Translations {
     subtitle: string
   }
   chat: {
-    placeholder:  string
-    send:         string
-    thinking:     string
-    noResults:    string
-    errorGeneric: string
+    placeholder:   string
+    send:          string
+    thinking:      string
+    noResults:     string
+    errorGeneric:  string
+    nearbyButton:  string
+    locationError: string
+    nearbyIn:      (district: string) => string
   }
   filters: {
     title:         string

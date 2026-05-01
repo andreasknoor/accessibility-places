@@ -10,7 +10,10 @@ const de: Translations = {
     send: "Suchen",
     thinking: "Suche läuft …",
     noResults: "Keine passenden Orte gefunden.",
-    errorGeneric: "Ein Fehler ist aufgetreten. Bitte erneut versuchen.",
+    errorGeneric:  "Ein Fehler ist aufgetreten. Bitte erneut versuchen.",
+    nearbyButton:  "In der Nähe suchen",
+    locationError: "Standort konnte nicht ermittelt werden.",
+    nearbyIn:      (d: string) => `In der Nähe von ${d}`,
   },
   filters: {
     title: "Filter",
