@@ -256,6 +256,7 @@ export default function Home() {
             isLoading={isLoading}
             summary={summary}
             onRerun={lastQuery ? () => handleSearch(lastQuery) : undefined}
+            radiusKm={radiusKm}
           />
         </div>
 

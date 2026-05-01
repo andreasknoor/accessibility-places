@@ -17,9 +17,10 @@ interface Props {
   summary?:    string
   collapsibleSummary?: boolean
   onRerun?:    () => void
+  radiusKm?:   number
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, summary, collapsibleSummary = false, onRerun }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, summary, collapsibleSummary = false, onRerun, radiusKm }: Props) {
   const t = useTranslations()
   const [summaryOpen, setSummaryOpen] = useState(false)
 
@@ -37,7 +38,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
           <div className="flex items-center gap-2">
             {!isLoading && places.length > 0 && (
               <span className="text-xs text-muted-foreground">
-                {t.results.count(places.length)}
+                {t.results.count(places.length, radiusKm)}
               </span>
             )}
             {onRerun && !isLoading && (

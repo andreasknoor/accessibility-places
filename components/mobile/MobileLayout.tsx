@@ -101,6 +101,7 @@ export default function MobileLayout({
             summary={summary}
             collapsibleSummary
             onRerun={handleRerun}
+            radiusKm={radiusKm}
           />
         </div>
 

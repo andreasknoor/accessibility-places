@@ -17,7 +17,6 @@ const EXAMPLES_DE = [
   "Museen in Frankfurt",
   "Cafés in Hamburg",
   "Kinos in Köln",
-  "Theater in Dresden",
 ]
 
 const EXAMPLES_EN = [
@@ -26,7 +25,6 @@ const EXAMPLES_EN = [
   "Museums in Frankfurt",
   "Cafés in Hamburg",
   "Cinemas in Cologne",
-  "Theaters in Dresden",
 ]
 
 const NEARBY_CHIPS = [
