@@ -92,9 +92,9 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
       {onRerun && (
         <button
           onClick={onRerun}
-          className="flex items-center justify-center gap-2 w-full rounded-md border border-border
-                     py-2 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/30
-                     transition-colors"
+          className="flex items-center justify-center gap-2 w-full rounded-md
+                     py-2 text-sm font-medium bg-primary text-primary-foreground
+                     hover:bg-primary/90 transition-colors"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           {t.results.rerun}
