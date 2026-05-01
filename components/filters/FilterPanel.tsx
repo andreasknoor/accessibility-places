@@ -100,6 +100,30 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
           {t.results.rerun}
         </button>
       )}
+      {/* ── Radius ── */}
+      <section>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          {t.filters.radius}
+        </h2>
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-between text-sm text-muted-foreground">
+            <span>1 km</span>
+            <span className="font-medium text-foreground">{t.filters.radiusLabel(radiusKm)}</span>
+            <span>50 km</span>
+          </div>
+          <Slider
+            min={1}
+            max={50}
+            step={1}
+            value={[radiusKm]}
+            onValueChange={([v]) => onRadius(v)}
+            className="w-full"
+          />
+        </div>
+      </section>
+
+      <Separator />
+
       {/* ── Data sources ── */}
       <section>
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
@@ -174,30 +198,6 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
               <span className="ml-1 text-xs opacity-60">(Google)</span>
             </span>
           </label>
-        </div>
-      </section>
-
-      <Separator />
-
-      {/* ── Radius ── */}
-      <section>
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-          {t.filters.radius}
-        </h2>
-        <div className="flex flex-col gap-3">
-          <div className="flex justify-between text-sm text-muted-foreground">
-            <span>1 km</span>
-            <span className="font-medium text-foreground">{t.filters.radiusLabel(radiusKm)}</span>
-            <span>50 km</span>
-          </div>
-          <Slider
-            min={1}
-            max={50}
-            step={1}
-            value={[radiusKm]}
-            onValueChange={([v]) => onRadius(v)}
-            className="w-full"
-          />
         </div>
       </section>
 
