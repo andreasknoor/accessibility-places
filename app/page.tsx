@@ -240,6 +240,7 @@ export default function Home() {
           onRadius={setRadiusKm}
           sourceStates={sourceStates}
           onRerun={lastQuery ? () => handleSearch(lastQuery) : undefined}
+          isLoading={isLoading}
         />
 
         <div

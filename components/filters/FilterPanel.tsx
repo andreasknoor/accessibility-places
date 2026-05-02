@@ -19,6 +19,7 @@ interface Props {
   onRadius:      (r: number)          => void
   sourceStates?: Partial<Record<SourceId, SourceState>>
   onRerun?:      () => void
+  isLoading?:    boolean
 }
 
 function SourceIndicator({ state }: { state?: SourceState }) {
@@ -75,7 +76,7 @@ const SOURCE_DISABLED: Partial<Record<SourceId, true>> = {
   reisen_fuer_alle: true,
 }
 
-export default function FilterPanel({ filters, sources, radiusKm, onFilters, onSources, onRadius, sourceStates, onRerun }: Props) {
+export default function FilterPanel({ filters, sources, radiusKm, onFilters, onSources, onRadius, sourceStates, onRerun, isLoading }: Props) {
   const t = useTranslations()
 
   function toggleSource(id: SourceId) {
@@ -92,12 +93,14 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
       {onRerun && (
         <button
           onClick={onRerun}
-          className="flex items-center justify-center gap-2 w-full rounded-md
-                     py-2 text-sm font-medium bg-primary text-primary-foreground
-                     hover:bg-primary/90 transition-colors"
+          className={cn(
+            "flex items-center justify-center gap-2 w-full rounded-md relative overflow-hidden",
+            "py-2 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors",
+            isLoading && "btn-progress-fill",
+          )}
         >
-          <RefreshCw className="w-3.5 h-3.5" />
-          {t.results.rerun}
+          <RefreshCw className="w-3.5 h-3.5 relative z-10" />
+          <span className="relative z-10">{t.results.rerun}</span>
         </button>
       )}
       {/* ── Radius ── */}

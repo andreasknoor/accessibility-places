@@ -131,6 +131,7 @@ export default function MobileLayout({
             onRadius={onRadius}
             sourceStates={sourceStates}
             onRerun={handleRerun}
+            isLoading={isLoading}
           />
         </div>
 
