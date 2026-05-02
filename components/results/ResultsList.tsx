@@ -16,11 +16,12 @@ interface Props {
   isLoading:   boolean
   summary?:    string
   collapsibleSummary?: boolean
-  onRerun?:    () => void
-  radiusKm?:   number
+  onRerun?:         () => void
+  onExpandRadius?:  () => void
+  radiusKm?:        number
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, summary, collapsibleSummary = false, onRerun, radiusKm }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, summary, collapsibleSummary = false, onRerun, onExpandRadius, radiusKm }: Props) {
   const t = useTranslations()
   const [summaryOpen, setSummaryOpen] = useState(false)
 
@@ -82,9 +83,23 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
           )}
 
           {!isLoading && places.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              {t.chat.noResults}
-            </p>
+            <div className="flex flex-col items-center gap-3 py-8">
+              <p className="text-sm text-muted-foreground text-center">
+                {t.chat.noResults}
+              </p>
+              {onExpandRadius && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">{t.results.expandRadius}</span>
+                  <button
+                    onClick={onExpandRadius}
+                    className="px-3 py-1 rounded-md bg-primary text-primary-foreground text-sm font-medium
+                               hover:bg-primary/90 transition-colors"
+                  >
+                    {t.results.expandRadiusYes}
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
           {!isLoading && places.map((place) => (

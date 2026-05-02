@@ -9,7 +9,7 @@ import LanguageSwitcher from "@/components/LanguageSwitcher"
 import MobileLayout from "@/components/mobile/MobileLayout"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { useTranslations, useLocale } from "@/lib/i18n"
-import { DEFAULT_RADIUS_KM, APP_VERSION } from "@/lib/config"
+import { DEFAULT_RADIUS_KM, RADIUS_MAX_KM, APP_VERSION } from "@/lib/config"
 import type { Place, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState } from "@/lib/types"
 
 // Leaflet must not run on server
@@ -53,7 +53,7 @@ export default function Home() {
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
 
-  const handleSearch = useCallback(async (query: string) => {
+  const handleSearch = useCallback(async (query: string, radiusKmOverride?: number) => {
     setLastQuery(query)
     setIsLoading(true)
     setError(undefined)
@@ -73,7 +73,7 @@ export default function Home() {
       const res = await fetch("/api/search", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ userQuery: query, radiusKm, filters, sources, locale }),
+        body:    JSON.stringify({ userQuery: query, radiusKm: radiusKmOverride ?? radiusKm, filters, sources, locale }),
       })
 
       if (!res.ok || !res.body) {
@@ -133,6 +133,13 @@ export default function Home() {
     }
   }, [filters, sources, radiusKm, t])
 
+  const handleExpandRadius = useCallback(() => {
+    if (!lastQuery) return
+    const newRadius = Math.min(Math.round(radiusKm * 1.5), RADIUS_MAX_KM)
+    setRadiusKm(newRadius)
+    handleSearch(lastQuery, newRadius)
+  }, [lastQuery, radiusKm, handleSearch])
+
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     isDragging.current = true
     dragStart.current  = { x: e.clientX, width: resultsWidth }
@@ -174,6 +181,7 @@ export default function Home() {
         searchCenter={searchCenter}
         onSearch={handleSearch}
         onRerun={lastQuery ? () => handleSearch(lastQuery) : undefined}
+        onExpandRadius={lastQuery ? handleExpandRadius : undefined}
         error={error}
       />
     )
@@ -257,6 +265,7 @@ export default function Home() {
             isLoading={isLoading}
             summary={summary}
             onRerun={lastQuery ? () => handleSearch(lastQuery) : undefined}
+            onExpandRadius={lastQuery ? handleExpandRadius : undefined}
             radiusKm={radiusKm}
           />
         </div>

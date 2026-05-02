@@ -41,6 +41,8 @@ export interface Translations {
       low:    string
     }
     rerun:             string
+    expandRadius:      string
+    expandRadiusYes:   string
     conflict:          string
     primarySource:     string
     noData:            string
