@@ -136,7 +136,7 @@ export default function Home() {
 
   const handleExpandRadius = useCallback(() => {
     if (!lastQuery) return
-    const newRadius = Math.min(Math.round(radiusKm * 1.5), RADIUS_MAX_KM)
+    const newRadius = Math.min(radiusKm * 2, RADIUS_MAX_KM)
     setRadiusKm(newRadius)
     handleSearch(lastQuery, newRadius)
   }, [lastQuery, radiusKm, handleSearch])
@@ -183,6 +183,7 @@ export default function Home() {
         onSearch={handleSearch}
         onRerun={lastQuery ? () => handleSearch(lastQuery) : undefined}
         onExpandRadius={lastQuery ? handleExpandRadius : undefined}
+        hasSearched={!!lastQuery}
         error={error}
       />
     )
@@ -268,6 +269,7 @@ export default function Home() {
             onRerun={lastQuery ? () => handleSearch(lastQuery) : undefined}
             onExpandRadius={lastQuery ? handleExpandRadius : undefined}
             radiusKm={radiusKm}
+            hasSearched={!!lastQuery}
           />
         </div>
 

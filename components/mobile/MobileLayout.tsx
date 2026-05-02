@@ -33,13 +33,14 @@ interface Props {
   onSearch:      (query: string) => void
   onRerun?:         () => void
   onExpandRadius?:  () => void
+  hasSearched?:     boolean
   error?:           string
 }
 
 export default function MobileLayout({
   places, selectedId, onSelect, isLoading, summary,
   filters, sources, radiusKm, onFilters, onSources, onRadius,
-  sourceStates, searchCenter, onSearch, onRerun, onExpandRadius, error,
+  sourceStates, searchCenter, onSearch, onRerun, onExpandRadius, hasSearched, error,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>("results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -106,6 +107,7 @@ export default function MobileLayout({
             onRerun={handleRerun}
             onExpandRadius={handleExpandRadius}
             radiusKm={radiusKm}
+            hasSearched={hasSearched}
           />
         </div>
 

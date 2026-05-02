@@ -8,6 +8,7 @@ export interface Translations {
     send:          string
     thinking:      string
     noResults:     string
+    noSearchYet:   string
     errorGeneric:  string
     modeText:      string
     modeNearby:    string

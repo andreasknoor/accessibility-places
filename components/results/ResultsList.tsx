@@ -19,9 +19,10 @@ interface Props {
   onRerun?:         () => void
   onExpandRadius?:  () => void
   radiusKm?:        number
+  hasSearched?:     boolean
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, summary, collapsibleSummary = false, onRerun, onExpandRadius, radiusKm }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, summary, collapsibleSummary = false, onRerun, onExpandRadius, radiusKm, hasSearched }: Props) {
   const t = useTranslations()
   const [summaryOpen, setSummaryOpen] = useState(false)
 
@@ -82,7 +83,13 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
             </div>
           )}
 
-          {!isLoading && places.length === 0 && (
+          {!isLoading && places.length === 0 && !hasSearched && (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              {t.chat.noSearchYet}
+            </p>
+          )}
+
+          {!isLoading && places.length === 0 && hasSearched && (
             <div className="flex flex-col items-center gap-3 py-8">
               <p className="text-sm text-muted-foreground text-center">
                 {t.chat.noResults}
