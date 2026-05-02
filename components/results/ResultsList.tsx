@@ -2,7 +2,6 @@
 
 
 import { Loader2, RefreshCw } from "lucide-react"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import PlaceCard from "./PlaceCard"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
@@ -56,7 +55,10 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
       </div>
 
       {/* List */}
-      <ScrollArea className="flex-1 min-h-0">
+      {/* Plain overflow-y-auto avoids Radix ScrollArea's internal display:table wrapper,
+          which causes horizontal width inflation in iOS Safari when any child has
+          white-space:nowrap content wider than the viewport. */}
+      <div className="flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
         <div className="p-3 flex flex-col gap-2">
           {isLoading && (
             <div className="flex flex-col gap-2">
@@ -102,7 +104,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
             />
           ))}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   )
 }

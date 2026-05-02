@@ -105,7 +105,7 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
               {addr && (
                 <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                   <MapPin className="w-3 h-3 shrink-0" />
-                  <span className="truncate">{addr}</span>
+                  <span className="truncate min-w-0">{addr}</span>
                 </p>
               )}
             </div>
