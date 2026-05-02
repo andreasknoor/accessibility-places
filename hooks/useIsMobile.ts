@@ -6,7 +6,7 @@ export function useIsMobile(): boolean {
   const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
-    const mq = window.matchMedia("(pointer: coarse)")
+    const mq = window.matchMedia("(pointer: coarse), (max-width: 767px)")
     setIsMobile(mq.matches)
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
     mq.addEventListener("change", handler)
