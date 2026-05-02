@@ -10,6 +10,7 @@ interface Props {
   onSearch:      (query: string) => void
   isLoading:     boolean
   onModeChange?: (mode: "text" | "nearby") => void
+  autoFocus?:    boolean
 }
 
 const CHIPS = [
@@ -36,7 +37,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
   return a.suburb ?? a.city_district ?? a.city ?? a.town ?? a.village ?? ""
 }
 
-export default function ChatPanel({ onSearch, isLoading, onModeChange }: Props) {
+export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
   const [mode,        setMode]        = useState<Mode>("text")
@@ -141,6 +142,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange }: Props) 
             onKeyDown={(e) => e.key === "Enter" && submit()}
             placeholder={t.chat.locationPlaceholder}
             disabled={isLoading}
+            autoFocus={autoFocus}
             className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]
                        placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1
                        focus-visible:ring-ring disabled:opacity-50"

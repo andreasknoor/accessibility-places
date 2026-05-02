@@ -226,7 +226,7 @@ export default function Home() {
       </header>
 
       {/* ── Chat / search bar ── */}
-      <ChatPanel onSearch={handleSearch} isLoading={isLoading} onModeChange={setChatMode} />
+      <ChatPanel onSearch={handleSearch} isLoading={isLoading} onModeChange={setChatMode} autoFocus />
 
       {/* ── Error banner ── */}
       {error && (
