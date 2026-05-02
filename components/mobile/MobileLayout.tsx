@@ -44,6 +44,7 @@ export default function MobileLayout({
   const [activeTab,   setActiveTab]   = useState<Tab>("results")
   const [mapMounted,  setMapMounted]  = useState(false)
   const [panTrigger,  setPanTrigger]  = useState(0)
+  const [chatMode,    setChatMode]    = useState<"text" | "nearby">("text")
 
   // Wrap onRerun / onExpandRadius to also switch to the results tab
   const handleRerun = onRerun ? () => { setActiveTab("results"); onRerun() } : undefined
@@ -80,7 +81,7 @@ export default function MobileLayout({
       </header>
 
       {/* ── Search bar (always visible) ── */}
-      <ChatPanel onSearch={onSearch} isLoading={isLoading} />
+      <ChatPanel onSearch={onSearch} isLoading={isLoading} onModeChange={setChatMode} />
 
       {/* ── Error banner ── */}
       {error && (
@@ -133,7 +134,7 @@ export default function MobileLayout({
             onSources={onSources}
             onRadius={onRadius}
             sourceStates={sourceStates}
-            onRerun={handleRerun}
+            onRerun={chatMode === "nearby" ? handleRerun : undefined}
             isLoading={isLoading}
           />
         </div>

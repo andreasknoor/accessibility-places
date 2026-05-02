@@ -95,7 +95,11 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
                      hover:bg-primary/90 transition-colors"
         >
           {isLoading && (
-            <span className="btn-progress-inner absolute inset-y-0 left-0 w-0 bg-white/40 pointer-events-none" aria-hidden />
+            <span
+              className="absolute inset-y-0 left-0 pointer-events-none"
+              style={{ width: 0, background: "rgba(255,255,255,0.45)", animation: "btn-progress 30s linear forwards" }}
+              aria-hidden
+            />
           )}
           <span className="relative z-10 flex items-center gap-2">
             <RefreshCw className="w-3.5 h-3.5" />

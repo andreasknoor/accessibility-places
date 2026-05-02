@@ -50,6 +50,7 @@ export default function Home() {
   const [sourceStates,  setSourceStates] = useState<Partial<Record<SourceId, SourceState>>>({})
   const [resultsWidth,  setResultsWidth] = useState(504)
   const [lastQuery,     setLastQuery]    = useState<string | undefined>()
+  const [chatMode,      setChatMode]     = useState<"text" | "nearby">("text")
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
 
@@ -228,7 +229,7 @@ export default function Home() {
       </header>
 
       {/* ── Chat / search bar ── */}
-      <ChatPanel onSearch={handleSearch} isLoading={isLoading} />
+      <ChatPanel onSearch={handleSearch} isLoading={isLoading} onModeChange={setChatMode} />
 
       {/* ── Error banner ── */}
       {error && (
@@ -247,7 +248,7 @@ export default function Home() {
           onSources={setSources}
           onRadius={setRadiusKm}
           sourceStates={sourceStates}
-          onRerun={lastQuery ? () => handleSearch(lastQuery) : undefined}
+          onRerun={chatMode === "nearby" && lastQuery ? () => handleSearch(lastQuery) : undefined}
           isLoading={isLoading}
         />
 

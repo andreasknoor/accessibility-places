@@ -7,8 +7,9 @@ import { useTranslations, useLocale } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 interface Props {
-  onSearch:  (query: string) => void
-  isLoading: boolean
+  onSearch:      (query: string) => void
+  isLoading:     boolean
+  onModeChange?: (mode: "text" | "nearby") => void
 }
 
 const EXAMPLES_DE = [
@@ -49,7 +50,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
   return a.suburb ?? a.city_district ?? a.city ?? a.town ?? a.village ?? ""
 }
 
-export default function ChatPanel({ onSearch, isLoading }: Props) {
+export default function ChatPanel({ onSearch, isLoading, onModeChange }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
   const [mode,        setMode]        = useState<Mode>("text")
@@ -61,6 +62,7 @@ export default function ChatPanel({ onSearch, isLoading }: Props) {
 
   function switchMode(next: Mode) {
     setMode(next)
+    onModeChange?.(next)
     if (next === "nearby" && nearbyPhase === "idle") handleLocate()
   }
 
@@ -156,7 +158,11 @@ export default function ChatPanel({ onSearch, isLoading }: Props) {
               className="shrink-0 relative overflow-hidden"
             >
               {isLoading && (
-                <span className="btn-progress-inner absolute inset-y-0 left-0 w-0 bg-white/40 pointer-events-none" aria-hidden />
+                <span
+                  className="absolute inset-y-0 left-0 pointer-events-none"
+                  style={{ width: 0, background: "rgba(255,255,255,0.45)", animation: "btn-progress 30s linear forwards" }}
+                  aria-hidden
+                />
               )}
               <span className="relative z-10 inline-flex items-center gap-1.5">
                 {isLoading
