@@ -94,7 +94,7 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
       <CardContent className="p-3 flex flex-col gap-2">
         {/* ── Header ── */}
         <div className="flex items-start justify-between gap-2">
-          <div className="flex items-start gap-2 min-w-0">
+          <div className="flex items-start gap-2 min-w-0 flex-1">
             <span className="text-base shrink-0" aria-hidden>
               {CATEGORY_ICONS[place.category] ?? "📍"}
             </span>

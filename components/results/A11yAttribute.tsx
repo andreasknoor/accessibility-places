@@ -70,13 +70,13 @@ export default function A11yAttribute({ label, attr, detailType, showDetails }: 
         )
         if (entries.length === 0) return null
         return (
-          <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 pl-5 mt-0.5">
+          <dl className="grid grid-cols-[minmax(0,auto)_minmax(0,1fr)] gap-x-2 gap-y-0.5 pl-5 mt-0.5">
             {entries.map(([k, v]) => {
               const val = typeof v === "boolean" ? (v ? "✓" : "✗") : String(v)
               return (
                 <Fragment key={k}>
-                  <dt className="text-xs text-muted-foreground whitespace-nowrap">{detailLabel(k)}</dt>
-                  <dd className="text-xs text-foreground">{val}</dd>
+                  <dt className="text-xs text-muted-foreground break-words">{detailLabel(k)}</dt>
+                  <dd className="text-xs text-foreground break-words">{val}</dd>
                 </Fragment>
               )
             })}
