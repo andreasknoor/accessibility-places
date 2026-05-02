@@ -147,7 +147,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange }: Props) 
           />
           <Button
             onClick={submit}
-            disabled={isLoading}
+            disabled={isLoading || !location.trim()}
             size="sm"
             className="shrink-0 relative overflow-hidden"
           >
