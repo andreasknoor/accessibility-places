@@ -47,7 +47,8 @@ export default function MobileLayout({
   const [panTrigger,  setPanTrigger]  = useState(0)
   const [chatMode,    setChatMode]    = useState<"text" | "nearby">("text")
 
-  // Wrap onRerun / onExpandRadius to also switch to the results tab
+  // All search-triggering actions switch to the results tab
+  const handleSearch = (query: string) => { setActiveTab("results"); onSearch(query) }
   const handleRerun = onRerun ? () => { setActiveTab("results"); onRerun() } : undefined
   const handleExpandRadius = onExpandRadius ? () => { setActiveTab("results"); onExpandRadius() } : undefined
   const t = useTranslations()
@@ -82,7 +83,7 @@ export default function MobileLayout({
       </header>
 
       {/* ── Search bar (always visible) ── */}
-      <ChatPanel onSearch={onSearch} isLoading={isLoading} onModeChange={setChatMode} />
+      <ChatPanel onSearch={handleSearch} isLoading={isLoading} onModeChange={setChatMode} />
 
       {/* ── Error banner ── */}
       {error && (
