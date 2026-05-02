@@ -206,7 +206,7 @@ export default function Home() {
       {/* ── Top bar ── */}
       <header className="flex items-center justify-between px-5 py-3 border-b border-border bg-card shrink-0">
         <div className="flex items-center gap-2.5">
-          <span className="text-xl" aria-hidden>♿</span>
+          <img src="/icons/icon-preview.svg" className="w-7 h-7 rounded-lg" alt="" aria-hidden />
           <div>
             <h1 className="font-bold text-base leading-none">{t.app.title}</h1>
             <p className="text-xs text-muted-foreground mt-0.5">
