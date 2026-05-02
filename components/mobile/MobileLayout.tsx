@@ -21,7 +21,6 @@ interface Props {
   selectedId?:   string
   onSelect:      (place: Place) => void
   isLoading:     boolean
-  summary?:      string
   filters:       SearchFilters
   sources:       ActiveSources
   radiusKm:      number
@@ -38,7 +37,7 @@ interface Props {
 }
 
 export default function MobileLayout({
-  places, selectedId, onSelect, isLoading, summary,
+  places, selectedId, onSelect, isLoading,
   filters, sources, radiusKm, onFilters, onSources, onRadius,
   sourceStates, searchCenter, onSearch, onRerun, onExpandRadius, hasSearched, error,
 }: Props) {
@@ -103,8 +102,7 @@ export default function MobileLayout({
             selectedId={selectedId}
             onSelect={(p) => { onSelect(p); setPanTrigger((n) => n + 1); setActiveTab("map") }}
             isLoading={isLoading}
-            summary={summary}
-            collapsibleSummary
+
             onRerun={handleRerun}
             onExpandRadius={handleExpandRadius}
             radiusKm={radiusKm}

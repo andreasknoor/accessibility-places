@@ -42,7 +42,6 @@ export default function Home() {
   const [places,        setPlaces]       = useState<Place[]>([])
   const [selectedId,    setSelectedId]   = useState<string | undefined>()
   const [isLoading,     setIsLoading]    = useState(false)
-  const [summary,       setSummary]      = useState<string | undefined>()
   const [searchCenter,  setSearchCenter] = useState<{ lat: number; lon: number } | undefined>()
   const [showMap,       setShowMap]      = useState(true)
   const [isFullscreen,  setIsFullscreen] = useState(false)
@@ -59,7 +58,6 @@ export default function Home() {
     setIsLoading(true)
     setError(undefined)
     setPlaces([])
-    setSummary(undefined)
     setSelectedId(undefined)
 
     // Initialise per-source loading state for each active source so the
@@ -119,7 +117,6 @@ export default function Home() {
           } else if (event.type === "result") {
             const data = event.payload as SearchResult
             setPlaces(data.places)
-            setSummary(data.summary)
             setSearchCenter(data.location)
           } else if (event.type === "fatal") {
             throw new Error(event.error as string)
@@ -171,7 +168,6 @@ export default function Home() {
         selectedId={selectedId}
         onSelect={(p) => setSelectedId(p.id)}
         isLoading={isLoading}
-        summary={summary}
         filters={filters}
         sources={sources}
         radiusKm={radiusKm}
@@ -265,7 +261,6 @@ export default function Home() {
             selectedId={selectedId}
             onSelect={(p) => setSelectedId(p.id)}
             isLoading={isLoading}
-            summary={summary}
             onRerun={lastQuery ? () => handleSearch(lastQuery) : undefined}
             onExpandRadius={lastQuery ? handleExpandRadius : undefined}
             radiusKm={radiusKm}

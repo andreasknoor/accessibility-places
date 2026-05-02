@@ -3,7 +3,7 @@ import type { SearchParams, SearchResult, SourceId, FilterDebug, A11yValue, Cate
 import { startAdapterTasks }            from "@/lib/adapters"
 import { findMatch, filterByNameHint }  from "@/lib/matching/match"
 import { mergePlaces, passesFilters, finalisePlaceConfidence, computeFilteredConfidence } from "@/lib/matching/merge"
-import { parseQuery, summariseResults } from "@/lib/llm"
+import { parseQuery } from "@/lib/llm"
 import { NOMINATIM_ENDPOINT }           from "@/lib/config"
 
 // ─── Internal geocoding (LLM-extracted location string → coordinates) ──────
@@ -162,17 +162,14 @@ export async function POST(req: NextRequest) {
           : withScore.filter((p) => passesFilters(p, body.filters))
                     .sort((a, b) => b.overallConfidence - a.overallConfidence)
 
-        // ── 8. Stats + summary ───────────────────────────────────────────────
+        // ── 8. Stats ─────────────────────────────────────────────────────────
         const sourceStats = {} as Record<SourceId, number>
         for (const r of adapterResults) sourceStats[r.sourceId] = r.places.length
-
-        const summary = await summariseResults(filtered, body.locale ?? "de")
 
         emit({
           type: "result",
           payload: {
             places:        filtered,
-            summary,
             durationMs:    Date.now() - t0,
             nameHint:      nameHint || undefined,
             sourceStats,

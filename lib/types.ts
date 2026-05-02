@@ -212,7 +212,6 @@ export interface FilterDebug {
 
 export interface SearchResult {
   places: Place[]
-  summary: string
   durationMs: number
   sourceStats: Record<SourceId, number>
   location: { lat: number; lon: number }

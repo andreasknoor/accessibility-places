@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Loader2, ChevronDown, RefreshCw } from "lucide-react"
+
+import { Loader2, RefreshCw } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import PlaceCard from "./PlaceCard"
 import { useTranslations } from "@/lib/i18n"
@@ -14,17 +14,15 @@ interface Props {
   selectedId?: string
   onSelect:    (place: Place) => void
   isLoading:   boolean
-  summary?:    string
-  collapsibleSummary?: boolean
+
   onRerun?:         () => void
   onExpandRadius?:  () => void
   radiusKm?:        number
   hasSearched?:     boolean
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, summary, collapsibleSummary = false, onRerun, onExpandRadius, radiusKm, hasSearched }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, hasSearched }: Props) {
   const t = useTranslations()
-  const [summaryOpen, setSummaryOpen] = useState(false)
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -55,21 +53,6 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
             )}
           </div>
         </div>
-        {summary && !collapsibleSummary && (
-          <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{summary}</p>
-        )}
-        {summary && collapsibleSummary && (
-          <button
-            onClick={() => setSummaryOpen((v) => !v)}
-            className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-full text-left"
-          >
-            <ChevronDown className={cn("w-3.5 h-3.5 shrink-0 transition-transform", summaryOpen && "rotate-180")} />
-            {summaryOpen ? "Zusammenfassung ausblenden" : "Zusammenfassung anzeigen"}
-          </button>
-        )}
-        {summary && collapsibleSummary && summaryOpen && (
-          <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{summary}</p>
-        )}
       </div>
 
       {/* List */}
