@@ -4,7 +4,7 @@ export interface Translations {
     subtitle: string
   }
   chat: {
-    placeholder:   string
+    locationPlaceholder: string
     send:          string
     thinking:      string
     noResults:     string

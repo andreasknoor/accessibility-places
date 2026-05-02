@@ -6,7 +6,7 @@ const en: Translations = {
     subtitle: "Find wheelchair-accessible places",
   },
   chat: {
-    placeholder: 'e.g. "Restaurants in Berlin Mitte"',
+    locationPlaceholder: "e.g. Berlin Mitte",
     send: "Search",
     thinking: "Searching …",
     noResults:   "No matching places found.",
