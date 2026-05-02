@@ -62,7 +62,6 @@ const SOURCE_ORDER: SourceId[] = [
   "osm",
   "accessibility_cloud",
   "google_places",
-  "reisen_fuer_alle",
 ]
 
 const SOURCE_RELIABILITY: Record<SourceId, string> = {
@@ -72,9 +71,7 @@ const SOURCE_RELIABILITY: Record<SourceId, string> = {
   reisen_fuer_alle:    "bg-green-500",
 }
 
-const SOURCE_DISABLED: Partial<Record<SourceId, true>> = {
-  reisen_fuer_alle: true,
-}
+const SOURCE_DISABLED: Partial<Record<SourceId, true>> = {}
 
 export default function FilterPanel({ filters, sources, radiusKm, onFilters, onSources, onRadius, sourceStates, onRerun, isLoading }: Props) {
   const t = useTranslations()
@@ -93,14 +90,17 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
       {onRerun && (
         <button
           onClick={onRerun}
-          className={cn(
-            "flex items-center justify-center gap-2 w-full rounded-md relative overflow-hidden",
-            "py-2 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors",
-            isLoading && "btn-progress-fill",
-          )}
+          className="flex items-center justify-center w-full rounded-md relative overflow-hidden
+                     py-2 text-sm font-medium bg-primary text-primary-foreground
+                     hover:bg-primary/90 transition-colors"
         >
-          <RefreshCw className="w-3.5 h-3.5 relative z-10" />
-          <span className="relative z-10">{t.results.rerun}</span>
+          {isLoading && (
+            <span className="btn-progress-inner absolute inset-y-0 left-0 w-0 bg-white/40 pointer-events-none" aria-hidden />
+          )}
+          <span className="relative z-10 flex items-center gap-2">
+            <RefreshCw className="w-3.5 h-3.5" />
+            {t.results.rerun}
+          </span>
         </button>
       )}
       {/* ── Radius ── */}

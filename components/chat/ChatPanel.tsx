@@ -153,13 +153,18 @@ export default function ChatPanel({ onSearch, isLoading }: Props) {
               onClick={submit}
               disabled={!value.trim() || isLoading}
               size="sm"
-              className="shrink-0"
+              className="shrink-0 relative overflow-hidden"
             >
-              {isLoading
-                ? <Loader2 className="w-4 h-4 animate-spin" />
-                : <Send className="w-4 h-4" />
-              }
-              <span className="ml-1.5">{isLoading ? t.chat.thinking : t.chat.send}</span>
+              {isLoading && (
+                <span className="btn-progress-inner absolute inset-y-0 left-0 w-0 bg-white/40 pointer-events-none" aria-hidden />
+              )}
+              <span className="relative z-10 inline-flex items-center gap-1.5">
+                {isLoading
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <Send className="w-4 h-4" />
+                }
+                {isLoading ? t.chat.thinking : t.chat.send}
+              </span>
             </Button>
           </div>
 
