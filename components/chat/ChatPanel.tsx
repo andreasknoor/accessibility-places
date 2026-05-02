@@ -15,9 +15,9 @@ interface Props {
 const CHIPS = [
   { icon: "🍽", de: "Restaurants", en: "Restaurants"  },
   { icon: "☕", de: "Cafés",       en: "Cafés"         },
-  { icon: "🍺", de: "Kneipen",     en: "Pubs"          },
-  { icon: "🍻", de: "Biergärten",  en: "Beer Gardens"  },
   { icon: "🏨", de: "Hotels",      en: "Hotels"        },
+  { icon: "🍻", de: "Biergärten",  en: "Beer Gardens"  },
+  { icon: "🍺", de: "Kneipen",     en: "Pubs"          },
   { icon: "🏛", de: "Museen",      en: "Museums"       },
   { icon: "🎭", de: "Theater",     en: "Theaters"      },
   { icon: "🎬", de: "Kinos",       en: "Cinemas"       },
