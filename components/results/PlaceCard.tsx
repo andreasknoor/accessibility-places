@@ -66,10 +66,13 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
   //   3. coordinate-centred map view that always works
   const googleMapsHref = (() => {
     const gRecord = place.sourceRecords.find((r) => r.sourceId === "google_places")
-    if (gRecord?.externalId) {
-      return `https://www.google.com/maps/place/?q=place_id:${gRecord.externalId}`
-    }
     const query = [place.name, place.address.city].filter(Boolean).join(" ")
+    if (gRecord?.externalId) {
+      // search/?api=1 is the documented cross-platform URL scheme; it works in both
+      // the Google Maps web app and the native iOS app. The undocumented
+      // /maps/place/?q=place_id:... format works on desktop but fails on iOS.
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}&query_place_id=${gRecord.externalId}`
+    }
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
   })()
 
