@@ -86,7 +86,7 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
   return (
     <Card
       className={cn(
-        "cursor-pointer transition-all hover:shadow-md border",
+        "cursor-pointer transition-all hover:shadow-md border overflow-hidden",
         isSelected ? "border-primary ring-1 ring-primary" : "border-border",
       )}
       onClick={onClick}
@@ -98,7 +98,7 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
             <span className="text-base shrink-0" aria-hidden>
               {CATEGORY_ICONS[place.category] ?? "📍"}
             </span>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <h3 className="font-semibold text-sm leading-snug truncate">
                 {place.name}
               </h3>

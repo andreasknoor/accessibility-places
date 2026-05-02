@@ -37,8 +37,8 @@ export default function A11yAttribute({ label, attr, detailType, showDetails }: 
       {/* Header row */}
       <div className="flex items-center gap-1.5">
         <Icon className={cn("w-3.5 h-3.5 shrink-0", style.color)} />
-        <span className="text-xs font-medium text-foreground">{label}</span>
-        <span className={cn("text-xs ml-auto", style.color)}>
+        <span className="text-xs font-medium text-foreground min-w-0 flex-1 truncate">{label}</span>
+        <span className={cn("text-xs shrink-0", style.color)}>
           {t.a11y[attr.value]}
         </span>
         {attr.conflict && (
