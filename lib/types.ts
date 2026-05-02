@@ -90,7 +90,7 @@ export interface SourceRecord {
   externalId: string
   fetchedAt: string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  raw: any
+  raw?: any
 }
 
 // ─── Canonical place ───────────────────────────────────────────────────────
@@ -165,10 +165,8 @@ export interface SearchParams {
   categories: Category[]
   filters: SearchFilters
   sources: ActiveSources
-  // Set when the user is searching for a specific business by name.
-  // Adapters use it to push name filtering server-side and to skip
-  // accessibility pre-filters that would otherwise discard the target.
   nameHint?: string
+  signal?: AbortSignal
 }
 
 // ─── LLM query parse result ────────────────────────────────────────────────

@@ -378,7 +378,7 @@ describe("fetchOsm", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ elements: [element] }) }))
     const [unboosted] = await fetchOsm(BASE_PARAMS)
     const w = unboosted.accessibility.entrance.sources[0].reliabilityWeight
-    expect(w).toBeCloseTo(0.7 * 0.85, 5) // base × isOsmOverall, no boost
+    expect(w).toBeCloseTo(0.7 * 0.90, 5) // base × OSM_ENTRANCE_WEIGHT_FACTOR (0.90), no boost
   })
 
   it("encodes OSM type into externalId so consumers can build deep links", async () => {

@@ -28,13 +28,10 @@ type Mode        = "text" | "nearby"
 type NearbyPhase = "idle" | "locating" | { district: string } | "error"
 
 async function reverseGeocode(lat: number, lon: number): Promise<string> {
-  const res = await fetch(
-    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=14`,
-  )
+  const res = await fetch(`/api/geocode/reverse?lat=${lat}&lon=${lon}`)
   if (!res.ok) throw new Error("reverse geocode failed")
   const data = await res.json()
-  const a = data.address ?? {}
-  return a.suburb ?? a.city_district ?? a.city ?? a.town ?? a.village ?? ""
+  return data.district ?? ""
 }
 
 export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus }: Props) {

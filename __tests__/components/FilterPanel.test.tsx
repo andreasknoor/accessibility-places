@@ -31,12 +31,13 @@ function renderPanel(
 }
 
 describe("FilterPanel", () => {
-  it("renders all 4 data source checkboxes", () => {
+  it("renders the 3 visible data source checkboxes", () => {
+    // reisen_fuer_alle is active but intentionally hidden from the UI (not in SOURCE_ORDER)
     renderPanel()
-    expect(screen.getByLabelText(/Reisen für Alle/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/accessibility\.cloud/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/OpenStreetMap/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/Google Places/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/Reisen für Alle/i)).not.toBeInTheDocument()
   })
 
   it("renders 4 criteria checkboxes", () => {

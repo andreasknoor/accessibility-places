@@ -116,55 +116,59 @@ export async function fetchGooglePlaces(params: SearchParams): Promise<Place[]> 
     return []
   }
 
-  const places: Place[] = []
+  const FIELD_MASK = [
+    "places.id",
+    "places.displayName",
+    "places.location",
+    "places.formattedAddress",
+    "places.addressComponents",
+    "places.accessibilityOptions",
+    "places.websiteUri",
+    "places.nationalPhoneNumber",
+    "places.types",
+    "places.primaryType",
+  ].join(",")
 
-  for (const category of params.categories) {
-    const includedTypes = CATEGORY_TYPES[category]
-
-    const body = {
-      includedTypes,
-      maxResultCount: 20,
-      locationRestriction: {
-        circle: {
-          center: { latitude: params.location.lat, longitude: params.location.lon },
-          radius: params.radiusKm * 1000,
+  const results = await Promise.all(
+    params.categories.map(async (category) => {
+      const body = {
+        includedTypes:       CATEGORY_TYPES[category],
+        maxResultCount:      20,
+        locationRestriction: {
+          circle: {
+            center: { latitude: params.location.lat, longitude: params.location.lon },
+            radius: params.radiusKm * 1000,
+          },
         },
-      },
-    }
+      }
 
-    const res = await fetch(BASE_URL, {
-      method:  "POST",
-      headers: {
-        "Content-Type":      "application/json",
-        "X-Goog-Api-Key":    apiKey,
-        "X-Goog-FieldMask":  [
-          "places.id",
-          "places.displayName",
-          "places.location",
-          "places.formattedAddress",
-          "places.addressComponents",
-          "places.accessibilityOptions",
-          "places.websiteUri",
-          "places.nationalPhoneNumber",
-          "places.types",
-          "places.primaryType",
-        ].join(","),
-      },
-      body:    JSON.stringify(body),
-      signal:  AbortSignal.timeout(15_000),
-    })
+      try {
+        const res = await fetch(BASE_URL, {
+          method:  "POST",
+          headers: {
+            "Content-Type":     "application/json",
+            "X-Goog-Api-Key":   apiKey,
+            "X-Goog-FieldMask": FIELD_MASK,
+          },
+          body:   JSON.stringify(body),
+          signal: params.signal ?? AbortSignal.timeout(15_000),
+        })
 
-    if (!res.ok) {
-      console.error(`[google-places] Error ${res.status} for category ${category}`)
-      continue
-    }
+        if (!res.ok) {
+          console.error(`[google-places] Error ${res.status} for category ${category}`)
+          return [] as Place[]
+        }
 
-    const json = await res.json()
-    for (const item of json.places ?? []) {
-      const place = toPlace(item, category)
-      if (place) places.push(place)
-    }
-  }
+        const json = await res.json()
+        return (json.places ?? []).flatMap((item: unknown) => {
+          const place = toPlace(item, category)
+          return place ? [place] : []
+        }) as Place[]
+      } catch {
+        return [] as Place[]
+      }
+    }),
+  )
 
-  return places
+  return results.flat()
 }

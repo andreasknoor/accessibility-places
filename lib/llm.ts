@@ -99,7 +99,7 @@ Examples:
   - "Rollstuhlgerechte Cafés in Berlin Mitte" → locationQuery:"Berlin Mitte", nameHint:"", categories:["cafe"]
   - "Barrierefreie Museen München" → locationQuery:"München", nameHint:"", categories:["museum"]
 
-Query: "${userQuery}"
+Query: ${JSON.stringify(userQuery)}
 
 Return JSON:
 {
