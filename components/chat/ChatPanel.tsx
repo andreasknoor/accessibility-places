@@ -46,14 +46,21 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
   const [suggestions,    setSuggestions]    = useState<Suggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [highlightedIdx, setHighlightedIdx] = useState(-1)
-  const selectedIdxRef  = useRef(0)
-  const debounceRef     = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const suggestAbortRef = useRef<AbortController>(undefined)
+  const selectedIdxRef    = useRef(0)
+  const debounceRef       = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const suggestAbortRef   = useRef<AbortController>(undefined)
+  const skipSuggestRef    = useRef(false)
 
   const district = typeof nearbyPhase === "object" ? nearbyPhase.district : null
 
   // Fetch location autocomplete suggestions (Photon via backend proxy)
   useEffect(() => {
+    // Skip fetch when location was set by selecting a suggestion (not by the user typing)
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false
+      return
+    }
+
     // Autocomplete on the non-quoted part of the input
     const query = location.replace(/["'„""‟"«»‹›][^"'„""‟"«»‹›]*["'„""‟"«»‹›]?/gu, "").trim()
 
@@ -115,6 +122,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
     // Preserve any quoted nameHint the user typed; replace the location part
     const quotedPart = location.match(/["'„""‟"«»‹›][^"'„""‟"«»‹›]+["'„""‟"«»‹›]/u)?.[0] ?? ""
     const newLocation = quotedPart ? `${quotedPart} ${s.display}` : s.display
+    skipSuggestRef.current = true  // setLocation below will trigger useEffect — skip the fetch
     setLocation(newLocation)
     setSuggestions([])
     setShowSuggestions(false)

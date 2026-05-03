@@ -233,6 +233,20 @@ describe("ChatPanel autocomplete — selection", () => {
     fireEvent.mouseDown(screen.getByRole("option", { name: "Berlin" }))
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
   })
+
+  it("does not re-open the dropdown after selection even after debounce fires", async () => {
+    // Regression: selecting a suggestion triggers setLocation which used to re-fetch
+    // and call setShowSuggestions(true) 300 ms later (visible bug on iPhone).
+    mockFetch([{ display: "Berlin", name: "Berlin" }])
+    renderPanel()
+    fireEvent.change(getInput(), { target: { value: "Ber" } })
+    await act(() => vi.runAllTimersAsync())
+
+    fireEvent.mouseDown(screen.getByRole("option", { name: "Berlin" }))
+    // Advance past debounce — must NOT re-open
+    await act(() => vi.advanceTimersByTimeAsync(500))
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+  })
 })
 
 // ─── Quoted-name stripping ───────────────────────────────────────────────────
