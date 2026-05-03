@@ -61,6 +61,21 @@ export default function RootLayout({
     >
       <head>
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type":    "WebApplication",
+            "name":     "Accessible Places",
+            "url":      "https://accessible-places.org",
+            "description": DESCRIPTION,
+            "applicationCategory": "TravelApplication",
+            "operatingSystem": "Web",
+            "inLanguage": ["de", "en"],
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+            "author": { "@type": "Person", "name": "Andreas Knoor" },
+          })}}
+        />
       </head>
       <body className="min-h-full flex flex-col">
         <LocaleProvider>
