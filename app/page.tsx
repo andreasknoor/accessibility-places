@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react"
 import dynamic from "next/dynamic"
+import Link from "next/link"
 import ChatPanel    from "@/components/chat/ChatPanel"
 import FilterPanel  from "@/components/filters/FilterPanel"
 import ResultsList  from "@/components/results/ResultsList"
@@ -287,6 +288,11 @@ export default function Home() {
             radiusKm={radiusKm}
             hasSearched={!!lastQuery}
           />
+          <div className="shrink-0 border-t border-border px-4 py-2 flex justify-end">
+            <Link href="/impressum" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              {t.impressum.linkLabel}
+            </Link>
+          </div>
         </div>
 
         {showMap && (

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import dynamic from "next/dynamic"
+import Link from "next/link"
 import { Map, List, SlidersHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTranslations } from "@/lib/i18n"
@@ -148,6 +149,13 @@ export default function MobileLayout({
           />
         </div>
 
+      </div>
+
+      {/* ── Impressum footer ── */}
+      <div className="flex justify-center border-t border-border bg-card px-4 py-1.5 shrink-0">
+        <Link href="/impressum" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+          {t.impressum.linkLabel}
+        </Link>
       </div>
 
       {/* ── Bottom tab bar ── */}

@@ -154,6 +154,14 @@ const de: Translations = {
     gallery:     "Galerie",
     attraction:  "Sehenswürdigkeit",
   },
+  impressum: {
+    title:      "Impressum",
+    back:       "Zurück",
+    operator:   "Betreiber",
+    contact:    "Kontakt",
+    disclaimer: "Dieses Projekt ist ein privates, nicht-kommerzielles Hobby-Projekt. Für die Vollständigkeit, Richtigkeit und Aktualität der angezeigten Barrierefreiheitsinformationen wird keine Haftung übernommen.",
+    linkLabel:  "Impressum",
+  },
 }
 
 export default de

@@ -131,4 +131,12 @@ export interface Translations {
     gallery:     string
     attraction:  string
   }
+  impressum: {
+    title:      string
+    back:       string
+    operator:   string
+    contact:    string
+    disclaimer: string
+    linkLabel:  string
+  }
 }
