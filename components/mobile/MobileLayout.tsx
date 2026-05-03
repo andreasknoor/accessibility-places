@@ -121,6 +121,7 @@ export default function MobileLayout({
               onSelect={onSelect}
               isFullscreen={false}
               onToggleFullscreen={() => {}}
+              visible={activeTab === "map"}
             />
           )}
         </div>

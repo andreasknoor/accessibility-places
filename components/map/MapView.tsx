@@ -19,6 +19,7 @@ interface Props {
   onSelect:      (place: Place) => void
   isFullscreen:  boolean
   onToggleFullscreen: () => void
+  visible?:      boolean
 }
 
 const CONFIDENCE_COLORS = {
@@ -49,6 +50,7 @@ export default function MapView({
   onSelect,
   isFullscreen,
   onToggleFullscreen,
+  visible,
 }: Props) {
   const t        = useTranslations()
   const mapRef   = useRef<HTMLDivElement>(null)
@@ -188,10 +190,29 @@ export default function MapView({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [center, mapReady])
 
-  // Resize map when fullscreen toggles
+  // Re-measure and re-center whenever the map container becomes visible.
+  // Called for both tab reveals and fullscreen toggles — both change the
+  // container dimensions from Leaflet's perspective.
+  // We wait one frame for the browser to apply the CSS class, then call
+  // invalidateSize so Leaflet knows the real container bounds, then
+  // re-apply fitBounds/setView so the second search centers correctly.
   useEffect(() => {
-    setTimeout(() => mapInst.current?.invalidateSize(), 50)
-  }, [isFullscreen])
+    const isVisible = visible !== false  // default true for non-tab contexts
+    if (!isVisible || !mapInst.current || !L) return
+    const id = setTimeout(() => {
+      mapInst.current?.invalidateSize()
+      if (places.length > 0) {
+        const bounds = L!.latLngBounds(
+          places.map((p) => [p.coordinates.lat, p.coordinates.lon] as [number, number]),
+        )
+        mapInst.current?.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 })
+      } else if (center) {
+        mapInst.current?.setView([center.lat, center.lon], 13)
+      }
+    }, 50)
+    return () => clearTimeout(id)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, isFullscreen])
 
   return (
     <div className="relative w-full h-full">
