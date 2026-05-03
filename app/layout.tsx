@@ -14,9 +14,22 @@ const geistMono = Geist_Mono({
   subsets:  ["latin"],
 })
 
+const DESCRIPTION =
+  "Barrierefreie Orte in Deutschland, Österreich und der Schweiz finden — " +
+  "Restaurants, Hotels, Museen und mehr mit geprüften Rollstuhl-Informationen."
+
 export const metadata: Metadata = {
   title:       "Accessible Places",
-  description: "Find wheelchair-accessible restaurants, hotels and cultural venues in the DACH region.",
+  description: DESCRIPTION,
+  metadataBase: new URL("https://accessible-places.andreasknoor.com"),
+  openGraph: {
+    type:        "website",
+    url:         "https://accessible-places.andreasknoor.com",
+    title:       "Accessible Places",
+    description: DESCRIPTION,
+    locale:      "de_DE",
+    siteName:    "Accessible Places",
+  },
   appleWebApp: {
     capable:        true,
     statusBarStyle: "default",
