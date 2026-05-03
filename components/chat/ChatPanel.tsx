@@ -47,8 +47,8 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [highlightedIdx, setHighlightedIdx] = useState(-1)
   const selectedIdxRef  = useRef(0)
-  const debounceRef     = useRef<ReturnType<typeof setTimeout>>()
-  const suggestAbortRef = useRef<AbortController>()
+  const debounceRef     = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const suggestAbortRef = useRef<AbortController>(undefined)
 
   const district = typeof nearbyPhase === "object" ? nearbyPhase.district : null
 
