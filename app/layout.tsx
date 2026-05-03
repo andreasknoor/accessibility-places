@@ -22,10 +22,10 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   title:       "Accessible Places",
   description: DESCRIPTION,
-  metadataBase: new URL("https://accessible-places.andreasknoor.com"),
+  metadataBase: new URL("https://accessible-places.org"),
   openGraph: {
     type:        "website",
-    url:         "https://accessible-places.andreasknoor.com",
+    url:         "https://accessible-places.org",
     title:       "Accessible Places",
     description: DESCRIPTION,
     locale:      "de_DE",

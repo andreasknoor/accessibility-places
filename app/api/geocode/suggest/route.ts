@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const res = await fetch(url, {
-      headers: { "User-Agent": "AccessiblePlaces/1.0 (contact@accessible-places.andreasknoor.com)" },
+      headers: { "User-Agent": "AccessiblePlaces/1.0 (contact@accessible-places.org)" },
       signal:  AbortSignal.timeout(3_000),
     })
     if (!res.ok) return NextResponse.json([])
