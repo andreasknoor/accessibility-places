@@ -188,14 +188,14 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
 
         {/* ── Expand / contact ── */}
         <div className="flex items-center justify-between mt-0.5">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               onClick={(e) => { e.stopPropagation(); setShowDebug(true) }}
               aria-label="Rohdaten anzeigen"
               title="Rohdaten anzeigen"
               className="p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
             >
-              <Info className="w-4 h-4" />
+              <Info className="w-[1.1rem] h-[1.1rem]" />
             </button>
             {place.website && (
               <a
@@ -206,7 +206,7 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
                 onClick={(e) => e.stopPropagation()}
                 className="p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
               >
-                <Globe className="w-4 h-4" />
+                <Globe className="w-[1.1rem] h-[1.1rem]" />
               </a>
             )}
             {place.phone && (
@@ -215,7 +215,7 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
                 onClick={(e) => e.stopPropagation()}
                 className="p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
               >
-                <Phone className="w-4 h-4" />
+                <Phone className="w-[1.1rem] h-[1.1rem]" />
               </a>
             )}
             <a
@@ -227,7 +227,7 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
               onClick={(e) => e.stopPropagation()}
               className="p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
             >
-              <Accessibility className="w-4 h-4" />
+              <Accessibility className="w-[1.1rem] h-[1.1rem]" />
             </a>
             <a
               href={googleMapsHref}
@@ -238,12 +238,12 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
               onClick={(e) => e.stopPropagation()}
               className="p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
             >
-              <Map className="w-4 h-4" />
+              <Map className="w-[1.1rem] h-[1.1rem]" />
             </a>
             {/* ── Map CTA inline (option A) — set SHOW_MAP_FOOTER=false above to revert ── */}
             {SHOW_MAP_FOOTER && onClick && (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground ml-1 pl-1.5 border-l border-border">
-                <MapPin className="w-3.5 h-3.5 shrink-0 text-primary" />
+              <span className="flex items-center gap-1 text-xs text-muted-foreground ml-1 pl-2 border-l border-border">
+                <MapPin className="w-[1.1rem] h-[1.1rem] shrink-0 text-primary" />
                 {t.results.showOnMap}
               </span>
             )}
@@ -254,7 +254,7 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
               onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
-              {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              {expanded ? <ChevronUp className="w-[1.1rem] h-[1.1rem]" /> : <ChevronDown className="w-[1.1rem] h-[1.1rem]" />}
               {expanded ? "Weniger" : "Details"}
             </button>
           )}
