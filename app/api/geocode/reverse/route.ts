@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const url = `${NOMINATIM_ENDPOINT}/reverse?lat=${latN}&lon=${lonN}&format=json&zoom=14`
   try {
     const res = await fetch(url, {
-      headers: { "User-Agent": "AccessibleSpaces/1.0 (contact@accessible-spaces.app)" },
+      headers: { "User-Agent": "AccessiblePlaces/1.0 (contact@accessible-places.app)" },
       signal:  AbortSignal.timeout(8_000),
     })
     if (!res.ok) return NextResponse.json({ error: "Reverse geocoding failed" }, { status: 502 })

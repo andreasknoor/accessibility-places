@@ -1,4 +1,4 @@
-# Accessible Spaces
+# Accessible Places
 
 A web app that finds wheelchair-accessible cafés, restaurants, hotels, museums and more across Germany, Austria and Switzerland. The app aggregates accessibility data from multiple sources, deduplicates places across them, attaches a per-criterion confidence score, and surfaces user-verified entries with a dedicated badge.
 

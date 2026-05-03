@@ -15,12 +15,12 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title:       "Accessible Spaces",
+  title:       "Accessible Places",
   description: "Find wheelchair-accessible restaurants, hotels and cultural venues in the DACH region.",
   appleWebApp: {
     capable:        true,
     statusBarStyle: "default",
-    title:          "Accessible Spaces",
+    title:          "Accessible Places",
   },
   other: {
     "mobile-web-app-capable": "yes",

@@ -58,7 +58,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
 
   // Show attention pulse only on the very first page visit
   useEffect(() => {
-    const key = "as_first_visit"
+    const key = "ap_first_visit"
     if (!localStorage.getItem(key)) {
       localStorage.setItem(key, "1")
       setInputPulse(true)

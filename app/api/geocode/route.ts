@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   const url = `${NOMINATIM_ENDPOINT}/search?q=${encodeURIComponent(q)}&format=json&limit=1&countrycodes=de,at,ch`
 
   const res = await fetch(url, {
-    headers: { "User-Agent": "AccessibleSpaces/1.0 (contact@accessible-spaces.app)" },
+    headers: { "User-Agent": "AccessiblePlaces/1.0 (contact@accessible-places.app)" },
     signal:  AbortSignal.timeout(8_000),
   })
 

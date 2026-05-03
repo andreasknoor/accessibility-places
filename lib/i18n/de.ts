@@ -2,7 +2,7 @@ import type { Translations } from "./types"
 
 const de: Translations = {
   app: {
-    title: "Accessible Spaces",
+    title: "Accessible Places",
     subtitle: "Barrierefreie Orte finden",
   },
   chat: {

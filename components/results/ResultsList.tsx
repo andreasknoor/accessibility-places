@@ -23,19 +23,19 @@ interface Props {
 export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, hasSearched }: Props) {
   const t = useTranslations()
   const [mapHintSeen, setMapHintSeen] = useState(() =>
-    typeof window !== "undefined" && !!localStorage.getItem("as_map_hint_seen")
+    typeof window !== "undefined" && !!localStorage.getItem("ap_map_hint_seen")
   )
 
   function handleSelect(place: Place) {
     if (!mapHintSeen) {
-      localStorage.setItem("as_map_hint_seen", "1")
+      localStorage.setItem("ap_map_hint_seen", "1")
       setMapHintSeen(true)
     }
     onSelect(place)
   }
 
   function dismissHint() {
-    localStorage.setItem("as_map_hint_seen", "1")
+    localStorage.setItem("ap_map_hint_seen", "1")
     setMapHintSeen(true)
   }
 
