@@ -55,9 +55,9 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
 
   const district = typeof nearbyPhase === "object" ? nearbyPhase.district : null
 
-  // One-shot attention pulse on the input: ring fades out after 1.8 s
+  // One-shot attention pulse on the input: pulsing ring disappears after 2.5 s
   useEffect(() => {
-    const t = setTimeout(() => setInputPulse(false), 1800)
+    const t = setTimeout(() => setInputPulse(false), 2500)
     return () => clearTimeout(t)
   }, [])
 
@@ -232,6 +232,12 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
       {mode === "text" && (
         <div className="flex gap-2 items-center">
           <div className="relative flex-1">
+            {inputPulse && (
+              <span
+                className="absolute inset-0 rounded-md ring-2 ring-primary animate-pulse pointer-events-none"
+                aria-hidden
+              />
+            )}
             <input
               ref={inputRef}
               value={location}
@@ -246,8 +252,6 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
                 "w-full rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]",
                 "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
                 "focus-visible:ring-ring disabled:opacity-50",
-                "transition-shadow duration-700",
-                inputPulse && "ring-2 ring-primary/50",
                 location && "pr-7",
               )}
             />
