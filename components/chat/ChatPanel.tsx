@@ -106,7 +106,14 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
   function switchMode(next: Mode) {
     setMode(next)
     onModeChange?.(next)
-    if (next === "nearby" && nearbyPhase === "idle") handleLocate()
+    if (next !== "nearby") return
+    if (nearbyPhase === "idle") {
+      handleLocate()
+    } else if (district) {
+      // District already known — re-run search with the currently selected chip
+      const label = locale === "de" ? CHIPS[selectedIdx].de : CHIPS[selectedIdx].en
+      onSearch(`${label} in ${district}`)
+    }
   }
 
   function selectChip(idx: number) {
