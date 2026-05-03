@@ -14,10 +14,10 @@ function photonResponse(features: object[]): Response {
   })
 }
 
-function feature(name: string, city?: string) {
+function feature(name: string, opts: { city?: string; countrycode?: string } = {}) {
   return {
     type: "Feature",
-    properties: { name, ...(city ? { city } : {}) },
+    properties: { name, ...opts },
     geometry: { type: "Point", coordinates: [0, 0] },
   }
 }
@@ -67,43 +67,59 @@ describe("GET /api/geocode/suggest", () => {
 
   it("uses name alone when no city present", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      photonResponse([feature("Berlin")]),
+      photonResponse([feature("Berlin", { countrycode: "DE" })]),
     ))
     const data = await (await GET(makeReq("Berlin"))).json()
-    expect(data).toEqual([{ display: "Berlin", name: "Berlin" }])
+    expect(data).toEqual([{ display: "Berlin (DE)", name: "Berlin" }])
   })
 
-  it("uses 'name, city' display when city differs from name", async () => {
+  it("appends country code in parentheses", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      photonResponse([feature("Mitte", "Berlin")]),
+      photonResponse([feature("Zürich", { countrycode: "ch" })]),
+    ))
+    const data = await (await GET(makeReq("Zürich"))).json()
+    expect(data[0].display).toBe("Zürich (CH)")
+  })
+
+  it("uses 'name, city (CC)' display when city differs from name", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      photonResponse([feature("Mitte", { city: "Berlin", countrycode: "DE" })]),
     ))
     const data = await (await GET(makeReq("Mitte"))).json()
-    expect(data).toEqual([{ display: "Mitte, Berlin", name: "Mitte" }])
+    expect(data).toEqual([{ display: "Mitte, Berlin (DE)", name: "Mitte" }])
   })
 
   it("omits city from display when city equals name", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      photonResponse([feature("Berlin", "Berlin")]),
+      photonResponse([feature("Berlin", { city: "Berlin", countrycode: "DE" })]),
     ))
     const data = await (await GET(makeReq("Berlin"))).json()
-    expect(data).toEqual([{ display: "Berlin", name: "Berlin" }])
+    expect(data).toEqual([{ display: "Berlin (DE)", name: "Berlin" }])
   })
 
   it("falls back to county when city is absent", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
       photonResponse([{
         type: "Feature",
-        properties: { name: "Kleinstadt", county: "Musterkreis" },
+        properties: { name: "Kleinstadt", county: "Musterkreis", countrycode: "DE" },
         geometry: { type: "Point", coordinates: [0, 0] },
       }]),
     ))
     const data = await (await GET(makeReq("Kleinstadt"))).json()
-    expect(data[0].display).toBe("Kleinstadt, Musterkreis")
+    expect(data[0].display).toBe("Kleinstadt, Musterkreis (DE)")
+  })
+
+  it("omits country suffix when countrycode is absent", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      photonResponse([feature("Berlin")]),
+    ))
+    const data = await (await GET(makeReq("Berlin"))).json()
+    expect(data[0].display).toBe("Berlin")
   })
 
   it("filters out features with empty name", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      photonResponse([feature(""), feature("Berlin")]),
+      photonResponse([feature(""), feature("Berlin", { countrycode: "DE" })]),
     ))
     const data = await (await GET(makeReq("Berlin"))).json()
     expect(data).toHaveLength(1)
@@ -112,11 +128,15 @@ describe("GET /api/geocode/suggest", () => {
 
   it("deduplicates identical display strings", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      photonResponse([feature("Berlin"), feature("Berlin"), feature("Hamburg")]),
+      photonResponse([
+        feature("Berlin", { countrycode: "DE" }),
+        feature("Berlin", { countrycode: "DE" }),
+        feature("Hamburg", { countrycode: "DE" }),
+      ]),
     ))
     const data = await (await GET(makeReq("Berlin"))).json()
     const displays = data.map((d: { display: string }) => d.display)
-    expect(displays).toEqual(["Berlin", "Hamburg"])
+    expect(displays).toEqual(["Berlin (DE)", "Hamburg (DE)"])
   })
 
   // ── Query forwarding ────────────────────────────────────────────────────────

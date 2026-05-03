@@ -32,7 +32,9 @@ export async function GET(req: NextRequest) {
         const p       = f.properties ?? {}
         const name    = (p.name ?? "").trim()
         const city    = (p.city ?? p.county ?? "").trim()
-        const display = city && city !== name ? `${name}, ${city}` : name
+        const cc      = (p.countrycode ?? "").toUpperCase()
+        const base    = city && city !== name ? `${name}, ${city}` : name
+        const display = cc ? `${base} (${cc})` : base
         return { display, name }
       })
       .filter(({ display }) => {
