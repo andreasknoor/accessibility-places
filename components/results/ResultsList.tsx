@@ -30,6 +30,11 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-sm flex items-center gap-2">
             {t.results.title}
+            {radiusKm !== undefined && (
+              <span className="text-xs font-normal text-muted-foreground">
+                {t.results.titleRadius(radiusKm)}
+              </span>
+            )}
             {isLoading && (
               <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" aria-label={t.chat.thinking} />
             )}
@@ -37,7 +42,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
           <div className="flex items-center gap-2">
             {!isLoading && places.length > 0 && (
               <span className="text-xs text-muted-foreground">
-                {t.results.count(places.length, radiusKm)}
+                {t.results.count(places.length)}
               </span>
             )}
             {onRerun && !isLoading && (

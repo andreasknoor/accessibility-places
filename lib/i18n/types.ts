@@ -33,7 +33,8 @@ export interface Translations {
   }
   results: {
     title:       string
-    count:       (n: number, radiusKm?: number) => string
+    titleRadius: (km: number) => string
+    count:       (n: number) => string
     showMap:     string
     hideMap:     string
     confidence: {

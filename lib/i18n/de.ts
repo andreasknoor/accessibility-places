@@ -35,7 +35,8 @@ const de: Translations = {
   },
   results: {
     title: "Ergebnisse",
-    count: (n: number, radiusKm?: number) => `${n} Ort${n !== 1 ? "e" : ""} gefunden${radiusKm ? ` (${radiusKm} km Radius)` : ""}`,
+    titleRadius: (km: number) => `(${km} km Radius)`,
+    count: (n: number) => `${n} Ort${n !== 1 ? "e" : ""} gefunden`,
     showMap: "Karte anzeigen",
     hideMap: "Karte ausblenden",
     confidence: {
