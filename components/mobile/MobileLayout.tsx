@@ -159,6 +159,14 @@ export default function MobileLayout({
         <Link href="/impressum" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
           {t.impressum.linkLabel}
         </Link>
+        <a
+          href="https://github.com/andreasknoor/accessibility-places/issues/new"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {t.faq.feedbackLabel}
+        </a>
       </div>
 
       {/* ── Bottom tab bar ── */}

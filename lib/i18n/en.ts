@@ -155,9 +155,10 @@ const en: Translations = {
     attraction:  "Attraction",
   },
   faq: {
-    title:     "Frequently Asked Questions",
-    back:      "Back",
-    linkLabel: "FAQ",
+    title:         "Frequently Asked Questions",
+    back:          "Back",
+    linkLabel:     "FAQ",
+    feedbackLabel: "Feedback",
   },
   impressum: {
     title:      "Legal Notice",

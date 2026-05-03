@@ -37,6 +37,10 @@ const FAQ_DE = [
     q: "Gibt es Accessible Places auch als App fürs Smartphone?",
     a: 'Ja — Accessible Places kann als App auf dem Smartphone installiert werden, ohne App Store oder Play Store. Auf iPhone/iPad: Safari öffnen → Teilen-Symbol antippen → "Zum Home-Bildschirm" wählen. Auf Android: Chrome öffnen → Menü (drei Punkte) → "App installieren" oder "Zum Startbildschirm hinzufügen". Die App funktioniert danach wie eine native App — mit eigenem Icon, Vollbild und ohne Browser-Leiste.',
   },
+  {
+    q: "Wie kann ich Feedback geben oder einen Fehler melden?",
+    a: 'Über den "Feedback"-Link am unteren Rand der Seite kannst du direkt ein GitHub-Issue erstellen. Dafür benötigst du einen kostenlosen GitHub-Account.',
+  },
 ]
 
 const FAQ_EN = [
@@ -71,6 +75,10 @@ const FAQ_EN = [
   {
     q: "Is Accessible Places available as a smartphone app?",
     a: "Yes — Accessible Places can be installed as an app on your phone without the App Store or Play Store. On iPhone/iPad: open Safari → tap the Share icon → select \"Add to Home Screen\". On Android: open Chrome → tap the menu (three dots) → \"Install app\" or \"Add to home screen\". Once installed it behaves like a native app — with its own icon, full screen and no browser bar.",
+  },
+  {
+    q: "How can I give feedback or report a bug?",
+    a: 'Use the "Feedback" link at the bottom of the page to open a GitHub issue directly. You\'ll need a free GitHub account to submit.',
   },
 ]
 

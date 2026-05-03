@@ -140,8 +140,9 @@ export interface Translations {
     linkLabel:  string
   }
   faq: {
-    title:     string
-    back:      string
-    linkLabel: string
+    title:         string
+    back:          string
+    linkLabel:     string
+    feedbackLabel: string
   }
 }

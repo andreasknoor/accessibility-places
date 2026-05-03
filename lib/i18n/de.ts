@@ -155,9 +155,10 @@ const de: Translations = {
     attraction:  "Sehenswürdigkeit",
   },
   faq: {
-    title:     "Häufige Fragen",
-    back:      "Zurück",
-    linkLabel: "FAQ",
+    title:         "Häufige Fragen",
+    back:          "Zurück",
+    linkLabel:     "FAQ",
+    feedbackLabel: "Feedback",
   },
   impressum: {
     title:      "Impressum",
