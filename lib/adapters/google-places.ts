@@ -34,6 +34,8 @@ const CATEGORY_TYPES: Record<Category, string[]> = {
   library:     ["library"],
   gallery:     ["art_gallery"],
   attraction:  ["tourist_attraction", "amusement_park"],
+  // Google Places has no dedicated ice_cream type — ice_cream_shop is the closest.
+  ice_cream:   ["ice_cream_shop"],
 }
 
 // ─── Boolean option → A11yValue ────────────────────────────────────────────
