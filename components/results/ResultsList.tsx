@@ -1,7 +1,7 @@
 "use client"
 
 
-import { Loader2, RefreshCw } from "lucide-react"
+import { Loader2, RefreshCw, MapPin } from "lucide-react"
 import PlaceCard from "./PlaceCard"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
@@ -74,9 +74,15 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
           )}
 
           {!isLoading && places.length === 0 && !hasSearched && (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              {t.chat.noSearchYet}
-            </p>
+            <div className="flex flex-col items-center gap-4 py-14 px-6 text-center">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                <MapPin className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <p className="font-semibold text-foreground">{t.chat.noSearchYetTitle}</p>
+                <p className="text-sm text-muted-foreground">{t.chat.noSearchYet}</p>
+              </div>
+            </div>
           )}
 
           {!isLoading && places.length === 0 && hasSearched && (

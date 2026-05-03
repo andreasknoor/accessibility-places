@@ -46,6 +46,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
   const [suggestions,    setSuggestions]    = useState<Suggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [highlightedIdx, setHighlightedIdx] = useState(-1)
+  const [inputPulse,     setInputPulse]     = useState(true)
   const selectedIdxRef    = useRef(0)
   const debounceRef       = useRef<ReturnType<typeof setTimeout>>(undefined)
   const suggestAbortRef   = useRef<AbortController>(undefined)
@@ -53,6 +54,12 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
   const inputRef          = useRef<HTMLInputElement>(null)
 
   const district = typeof nearbyPhase === "object" ? nearbyPhase.district : null
+
+  // One-shot attention pulse on the input: ring fades out after 1.8 s
+  useEffect(() => {
+    const t = setTimeout(() => setInputPulse(false), 1800)
+    return () => clearTimeout(t)
+  }, [])
 
   // Fetch location autocomplete suggestions (Photon via backend proxy)
   useEffect(() => {
@@ -239,6 +246,8 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
                 "w-full rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]",
                 "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
                 "focus-visible:ring-ring disabled:opacity-50",
+                "transition-shadow duration-700",
+                inputPulse && "ring-2 ring-primary/50",
                 location && "pr-7",
               )}
             />

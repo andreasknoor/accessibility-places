@@ -7,8 +7,9 @@ export interface Translations {
     locationPlaceholder: string
     send:          string
     thinking:      string
-    noResults:     string
-    noSearchYet:   string
+    noResults:        string
+    noSearchYetTitle: string
+    noSearchYet:      string
     errorGeneric:  string
     modeText:      string
     modeNearby:    string
