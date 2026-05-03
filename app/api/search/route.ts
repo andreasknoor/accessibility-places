@@ -6,22 +6,34 @@ import { mergePlaces, passesFilters, finalisePlaceConfidence, computeFilteredCon
 import { parseQuery } from "@/lib/llm"
 import { NOMINATIM_ENDPOINT, RADIUS_MIN_KM, RADIUS_MAX_KM } from "@/lib/config"
 
-// ─── In-memory rate limiter (sliding-window, per IP) ────────────────────────
-// NOTE: this resets on each serverless cold start. For multi-instance
+// ─── In-memory rate limiters (sliding-window, per IP) ───────────────────────
+// NOTE: these reset on each serverless cold start. For multi-instance
 // deployments a shared store (Redis/Upstash) would be required.
 
-const RATE_LIMIT_WINDOW_MS   = 60_000  // 1 minute
-const RATE_LIMIT_MAX_REQUESTS = 10
+const RATE_LIMIT_WINDOW_MS      = 60_000  // 1 minute
+const RATE_LIMIT_MAX_REQUESTS   = 10      // general: max 10 searches/min per IP
+const RATE_LIMIT_GP_MAX         = 3       // Google Places: max 3 searches/min per IP
+                                          // (each search fans out to N category calls)
 
-const ipWindows = new Map<string, number[]>()
+const ipWindows   = new Map<string, number[]>()
+const ipGpWindows = new Map<string, number[]>()
 
-function isRateLimited(ip: string): boolean {
+function slidingCount(map: Map<string, number[]>, ip: string, push = true): number {
   const now    = Date.now()
   const cutoff = now - RATE_LIMIT_WINDOW_MS
-  const times  = (ipWindows.get(ip) ?? []).filter((t) => t > cutoff)
-  times.push(now)
-  ipWindows.set(ip, times)
-  return times.length > RATE_LIMIT_MAX_REQUESTS
+  const times  = (map.get(ip) ?? []).filter((t) => t > cutoff)
+  if (push) times.push(now)
+  map.set(ip, times)
+  return times.length
+}
+
+function isRateLimited(ip: string): boolean {
+  return slidingCount(ipWindows, ip) > RATE_LIMIT_MAX_REQUESTS
+}
+
+function isGooglePlacesRateLimited(ip: string, requested: boolean): boolean {
+  if (!requested) return false
+  return slidingCount(ipGpWindows, ip) > RATE_LIMIT_GP_MAX
 }
 
 // ─── Internal geocoding ──────────────────────────────────────────────────────
@@ -125,6 +137,13 @@ export async function POST(req: NextRequest) {
     osm:                 Boolean(rawSources && typeof rawSources === "object" && (rawSources as Record<string, unknown>).osm),
     reisen_fuer_alle:    Boolean(rawSources && typeof rawSources === "object" && (rawSources as Record<string, unknown>).reisen_fuer_alle),
     google_places:       Boolean(rawSources && typeof rawSources === "object" && (rawSources as Record<string, unknown>).google_places),
+  }
+
+  if (isGooglePlacesRateLimited(ip, sources.google_places)) {
+    return new Response(JSON.stringify({ error: "Too many Google Places requests. Please wait a minute." }), {
+      status:  429,
+      headers: { "Content-Type": "application/json", "Retry-After": "60" },
+    })
   }
 
   const encoder = new TextEncoder()
