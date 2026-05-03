@@ -154,6 +154,11 @@ const en: Translations = {
     gallery:     "Gallery",
     attraction:  "Attraction",
   },
+  faq: {
+    title:     "Frequently Asked Questions",
+    back:      "Back",
+    linkLabel: "FAQ",
+  },
   impressum: {
     title:      "Legal Notice",
     back:       "Back",

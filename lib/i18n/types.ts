@@ -139,4 +139,9 @@ export interface Translations {
     disclaimer: string
     linkLabel:  string
   }
+  faq: {
+    title:     string
+    back:      string
+    linkLabel: string
+  }
 }

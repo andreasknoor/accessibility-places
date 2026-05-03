@@ -151,8 +151,11 @@ export default function MobileLayout({
 
       </div>
 
-      {/* ── Impressum footer ── */}
-      <div className="flex justify-center border-t border-border bg-card px-4 py-1.5 shrink-0">
+      {/* ── Footer links ── */}
+      <div className="flex justify-center gap-5 border-t border-border bg-card px-4 py-1.5 shrink-0">
+        <Link href="/faq" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+          {t.faq.linkLabel}
+        </Link>
         <Link href="/impressum" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
           {t.impressum.linkLabel}
         </Link>

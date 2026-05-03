@@ -1,0 +1,33 @@
+# Accessible Places
+
+> A free web app that helps people with wheelchairs or limited mobility find accessible venues in Germany, Austria and Switzerland (DACH region).
+
+## About
+
+Accessible Places aggregates wheelchair accessibility data from multiple open data sources, deduplicates and merges records, assigns a per-criterion confidence score, and presents results on an interactive map and list view.
+
+The app is a private, non-commercial hobby project by Andreas Knoor.
+
+## Supported countries
+
+Germany (Deutschland), Austria (Österreich), Switzerland (Schweiz)
+
+## Supported categories
+
+Restaurants, cafés, hotels, beer gardens, pubs, museums, theatres, cinemas, ice cream shops
+
+## Data sources
+
+- OpenStreetMap (OSM) — community-maintained open map data
+- accessibility.cloud — aggregated accessibility data from ~170 datasets
+- Wheelmap.org — crowd-sourced wheelchair accessibility ratings
+
+## Languages
+
+German (Deutsch), English
+
+## Key pages
+
+- /: Main search interface
+- /faq: Frequently asked questions (DE + EN)
+- /impressum: Legal notice / Impressum

@@ -154,6 +154,11 @@ const de: Translations = {
     gallery:     "Galerie",
     attraction:  "Sehenswürdigkeit",
   },
+  faq: {
+    title:     "Häufige Fragen",
+    back:      "Zurück",
+    linkLabel: "FAQ",
+  },
   impressum: {
     title:      "Impressum",
     back:       "Zurück",
