@@ -131,35 +131,6 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
 
       <Separator />
 
-      {/* ── Data sources ── */}
-      <section>
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-          {t.filters.sources}
-        </h2>
-        <div className="flex flex-col gap-2.5">
-          {SOURCE_ORDER.map((id) => {
-            const disabled = SOURCE_DISABLED[id] ?? false
-            return (
-              <label key={id} className={cn("flex items-center gap-2.5 group", disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer")}>
-                <Checkbox
-                  checked={sources[id]}
-                  onCheckedChange={() => !disabled && toggleSource(id)}
-                  id={`src-${id}`}
-                  disabled={disabled}
-                />
-                <span className={cn("w-2 h-2 rounded-full shrink-0", SOURCE_RELIABILITY[id])} />
-                <span className="text-sm text-muted-foreground leading-snug flex items-center gap-1.5 min-w-0">
-                  <span className="truncate">{SOURCE_LABELS[id]}</span>
-                  {!disabled && <SourceIndicator state={sourceStates?.[id]} />}
-                </span>
-              </label>
-            )
-          })}
-        </div>
-      </section>
-
-      <Separator />
-
       {/* ── Criteria ── */}
       <section>
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
@@ -205,6 +176,35 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
               <span className="ml-1 text-xs opacity-60">(Google)</span>
             </span>
           </label>
+        </div>
+      </section>
+
+      <Separator />
+
+      {/* ── Data sources ── */}
+      <section>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          {t.filters.sources}
+        </h2>
+        <div className="flex flex-col gap-2.5">
+          {SOURCE_ORDER.map((id) => {
+            const disabled = SOURCE_DISABLED[id] ?? false
+            return (
+              <label key={id} className={cn("flex items-center gap-2.5 group", disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer")}>
+                <Checkbox
+                  checked={sources[id]}
+                  onCheckedChange={() => !disabled && toggleSource(id)}
+                  id={`src-${id}`}
+                  disabled={disabled}
+                />
+                <span className={cn("w-2 h-2 rounded-full shrink-0", SOURCE_RELIABILITY[id])} />
+                <span className="text-sm text-muted-foreground leading-snug flex items-center gap-1.5 min-w-0">
+                  <span className="truncate">{SOURCE_LABELS[id]}</span>
+                  {!disabled && <SourceIndicator state={sourceStates?.[id]} />}
+                </span>
+              </label>
+            )
+          })}
         </div>
       </section>
 
