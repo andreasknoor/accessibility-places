@@ -216,8 +216,16 @@ export async function POST(req: NextRequest) {
 
         const wheelchairCanonical = canonical.filter((p) => !p.dogPolicyOnly)
 
+        // ── 5b. Category filter ──────────────────────────────────────────────
+        // Adapters like A.Cloud have no server-side category filter and return
+        // all accessible places in the radius. Post-filter here so a search for
+        // "ice_cream" doesn't surface cafés, restaurants, etc.
+        const categoryFiltered = params.categories?.length
+          ? wheelchairCanonical.filter((p) => params.categories!.includes(p.category))
+          : wheelchairCanonical
+
         // ── 6. Name filter ───────────────────────────────────────────────────
-        const nameFiltered = filterByNameHint(wheelchairCanonical, nameHint)
+        const nameFiltered = filterByNameHint(categoryFiltered, nameHint)
 
         // ── 7. Filtered confidence + sort ────────────────────────────────────
         const withScore = nameFiltered.map((p) => ({

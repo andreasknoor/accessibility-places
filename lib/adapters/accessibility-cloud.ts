@@ -116,6 +116,7 @@ function parkingDetails(props: any): ParkingDetails {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapCategory(props: any): Category | undefined {
   const cat = (props?.category ?? "").toLowerCase()
+  if (cat.includes("ice_cream") || cat.includes("eisdiele") || cat.includes("gelato")) return "ice_cream"
   if (cat.includes("cafe") || cat.includes("coffee") || cat.includes("kaffee")) return "cafe"
   if (cat.includes("restaurant"))                                                 return "restaurant"
   if (cat.includes("biergarten"))                                                 return "biergarten"
