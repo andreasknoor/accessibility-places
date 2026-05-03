@@ -50,6 +50,7 @@ export default function Home() {
   const [resultsWidth,  setResultsWidth] = useState(504)
   const [lastQuery,     setLastQuery]    = useState<string | undefined>()
   const [chatMode,      setChatMode]     = useState<"text" | "nearby">("text")
+  const [resetKey,      setResetKey]     = useState(0)
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
 
@@ -131,6 +132,20 @@ export default function Home() {
     }
   }, [filters, sources, radiusKm, t])
 
+  const handleReset = useCallback(() => {
+    setFilters(DEFAULT_FILTERS)
+    setSources(DEFAULT_SOURCES)
+    setRadiusKm(DEFAULT_RADIUS_KM)
+    setPlaces([])
+    setSelectedId(undefined)
+    setLastQuery(undefined)
+    setSearchCenter(undefined)
+    setError(undefined)
+    setSourceStates({})
+    setChatMode("text")
+    setResetKey((k) => k + 1)
+  }, [])
+
   const handleExpandRadius = useCallback(() => {
     if (!lastQuery) return
     const newRadius = Math.min(radiusKm * 2, RADIUS_MAX_KM)
@@ -181,6 +196,8 @@ export default function Home() {
         onExpandRadius={lastQuery ? handleExpandRadius : undefined}
         hasSearched={!!lastQuery}
         error={error}
+        onReset={handleReset}
+        resetKey={resetKey}
       />
     )
   }
@@ -205,15 +222,19 @@ export default function Home() {
     <div className="flex flex-col h-screen overflow-hidden bg-background text-foreground">
       {/* ── Top bar ── */}
       <header className="flex items-center justify-between px-5 py-3 border-b border-border bg-card shrink-0">
-        <div className="flex items-center gap-2.5">
+        <button
+          onClick={handleReset}
+          className="flex items-center gap-2.5 hover:opacity-75 transition-opacity"
+          title="Reset"
+        >
           <img src="/icons/icon-preview.svg" className="w-7 h-7 rounded-lg" alt="" aria-hidden />
-          <div>
+          <div className="text-left">
             <h1 className="font-bold text-base leading-none">{t.app.title}</h1>
             <p className="text-xs text-muted-foreground mt-0.5">
               {t.app.subtitle} <span className="tabular-nums">(v{APP_VERSION})</span>
             </p>
           </div>
-        </div>
+        </button>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowMap((v) => !v)}
@@ -226,7 +247,7 @@ export default function Home() {
       </header>
 
       {/* ── Chat / search bar ── */}
-      <ChatPanel onSearch={handleSearch} isLoading={isLoading} onModeChange={setChatMode} autoFocus />
+      <ChatPanel key={resetKey} onSearch={handleSearch} isLoading={isLoading} onModeChange={setChatMode} autoFocus />
 
       {/* ── Error banner ── */}
       {error && (

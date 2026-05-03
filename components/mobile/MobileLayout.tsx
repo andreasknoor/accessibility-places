@@ -34,12 +34,15 @@ interface Props {
   onExpandRadius?:  () => void
   hasSearched?:     boolean
   error?:           string
+  onReset?:         () => void
+  resetKey?:        number
 }
 
 export default function MobileLayout({
   places, selectedId, onSelect, isLoading,
   filters, sources, radiusKm, onFilters, onSources, onRadius,
   sourceStates, searchCenter, onSearch, onRerun, onExpandRadius, hasSearched, error,
+  onReset, resetKey,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>("results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -69,20 +72,24 @@ export default function MobileLayout({
 
       {/* ── Header ── */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card shrink-0">
-        <div className="flex items-center gap-2.5">
+        <button
+          onClick={onReset}
+          className="flex items-center gap-2.5 hover:opacity-75 transition-opacity"
+          title="Reset"
+        >
           <img src="/icons/icon-preview.svg" className="w-7 h-7 rounded-lg" alt="" aria-hidden />
-          <div>
+          <div className="text-left">
             <h1 className="font-bold text-sm leading-none">{t.app.title}</h1>
             <p className="text-xs text-muted-foreground mt-0.5">
               {t.app.subtitle} <span className="tabular-nums">(v{APP_VERSION})</span>
             </p>
           </div>
-        </div>
+        </button>
         <LanguageSwitcher />
       </header>
 
       {/* ── Search bar (always visible) ── */}
-      <ChatPanel onSearch={handleSearch} isLoading={isLoading} onModeChange={setChatMode} />
+      <ChatPanel key={resetKey} onSearch={handleSearch} isLoading={isLoading} onModeChange={setChatMode} />
 
       {/* ── Error banner ── */}
       {error && (
