@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Send, Loader2, LocateFixed, MapPin } from "lucide-react"
+import { Send, Loader2, LocateFixed, MapPin, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
@@ -50,6 +50,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
   const debounceRef       = useRef<ReturnType<typeof setTimeout>>(undefined)
   const suggestAbortRef   = useRef<AbortController>(undefined)
   const skipSuggestRef    = useRef(false)
+  const inputRef          = useRef<HTMLInputElement>(null)
 
   const district = typeof nearbyPhase === "object" ? nearbyPhase.district : null
 
@@ -225,6 +226,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
         <div className="flex gap-2 items-center">
           <div className="relative flex-1">
             <input
+              ref={inputRef}
               value={location}
               onChange={(e) => { setLocation(e.target.value); setHighlightedIdx(-1) }}
               onKeyDown={handleKeyDown}
@@ -233,10 +235,29 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
               placeholder={t.chat.locationPlaceholder}
               disabled={isLoading}
               autoFocus={autoFocus}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]
-                         placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1
-                         focus-visible:ring-ring disabled:opacity-50"
+              className={cn(
+                "w-full rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]",
+                "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
+                "focus-visible:ring-ring disabled:opacity-50",
+                location && "pr-7",
+              )}
             />
+            {location && (
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  setLocation("")
+                  setSuggestions([])
+                  setShowSuggestions(false)
+                  inputRef.current?.focus()
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Clear"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
 
             {/* Autocomplete dropdown */}
             {showSuggestions && suggestions.length > 0 && (

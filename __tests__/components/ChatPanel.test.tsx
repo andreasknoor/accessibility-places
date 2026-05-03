@@ -249,6 +249,33 @@ describe("ChatPanel autocomplete — selection", () => {
   })
 })
 
+// ─── Clear button ────────────────────────────────────────────────────────────
+
+describe("ChatPanel clear button", () => {
+  it("is hidden when input is empty", () => {
+    renderPanel()
+    expect(screen.queryByRole("button", { name: /clear/i })).not.toBeInTheDocument()
+  })
+
+  it("appears when input has text", () => {
+    renderPanel()
+    fireEvent.change(getInput(), { target: { value: "Berlin" } })
+    expect(screen.getByRole("button", { name: /clear/i })).toBeInTheDocument()
+  })
+
+  it("clears the input and closes the dropdown on click", async () => {
+    mockFetch([{ display: "Berlin", name: "Berlin" }])
+    renderPanel()
+    fireEvent.change(getInput(), { target: { value: "Berlin" } })
+    await act(() => vi.runAllTimersAsync())
+
+    fireEvent.mouseDown(screen.getByRole("button", { name: /clear/i }))
+    expect(getInput().value).toBe("")
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /clear/i })).not.toBeInTheDocument()
+  })
+})
+
 // ─── Quoted-name stripping ───────────────────────────────────────────────────
 
 describe("ChatPanel autocomplete — quote stripping", () => {
