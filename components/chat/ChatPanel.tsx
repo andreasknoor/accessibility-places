@@ -46,7 +46,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
   const [suggestions,    setSuggestions]    = useState<Suggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [highlightedIdx, setHighlightedIdx] = useState(-1)
-  const [inputPulse,     setInputPulse]     = useState(true)
+  const [inputPulse,     setInputPulse]     = useState(false)
   const selectedIdxRef    = useRef(0)
   const debounceRef       = useRef<ReturnType<typeof setTimeout>>(undefined)
   const suggestAbortRef   = useRef<AbortController>(undefined)
@@ -55,10 +55,13 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
 
   const district = typeof nearbyPhase === "object" ? nearbyPhase.district : null
 
-  // One-shot attention pulse on the input: pulsing ring disappears after 2.5 s
+  // Show attention pulse only on the very first page visit
   useEffect(() => {
-    const t = setTimeout(() => setInputPulse(false), 2500)
-    return () => clearTimeout(t)
+    const key = "as_first_visit"
+    if (!localStorage.getItem(key)) {
+      localStorage.setItem(key, "1")
+      setInputPulse(true)
+    }
   }, [])
 
   // Fetch location autocomplete suggestions (Photon via backend proxy)
@@ -235,6 +238,8 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
             {inputPulse && (
               <span
                 className="absolute inset-0 rounded-md ring-2 ring-primary animate-pulse pointer-events-none"
+                style={{ animationIterationCount: 2 }}
+                onAnimationEnd={() => setInputPulse(false)}
                 aria-hidden
               />
             )}
