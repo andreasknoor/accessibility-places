@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const url =
     `${PHOTON_URL}?q=${encodeURIComponent(q)}&limit=6&lang=${lang}` +
     `&bbox=${DACH_BBOX}` +
-    `&layer=city&layer=suburb&layer=district&layer=locality`
+    `&layer=city&layer=district&layer=locality`
 
   try {
     const res = await fetch(url, {
