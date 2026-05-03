@@ -141,8 +141,8 @@ export async function POST(req: NextRequest) {
       }
 
       try {
-        // ── 1. Parse query ────────────────────────────────────────────────────
-        const parsed = await parseQuery(userQuery)
+        // ── 1. Parse query (deterministic, no LLM) ───────────────────────────
+        const parsed = parseQuery(userQuery)
         if (signal.aborted) { controller.close(); return }
 
         // ── 2. Geocode the extracted location ────────────────────────────────

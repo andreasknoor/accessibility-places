@@ -1,12 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk"
-import type { Category, ParsedQuery, Place } from "./types"
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
-const SYSTEM_PROMPT = `You are a search assistant for an accessibility mapping application.
-Your job is to extract structured search parameters from a user's natural-language query.
-The application searches for wheelchair-accessible places in the DACH region (Germany, Austria, Switzerland).
-Always respond with valid JSON only — no explanation, no markdown.`
+import type { Category, ParsedQuery } from "./types"
 
 const CATEGORY_HINTS: Record<Category, string[]> = {
   cafe:        ["cafe", "café", "kaffee", "kaffeehaus", "bistro", "coffee"],
@@ -45,99 +37,53 @@ export function inferCategories(query: string): Category[] {
   return found.length > 0 ? found : [...ALL_CATEGORIES]
 }
 
-// Extract first quoted string as an explicit name hint.
 // Supports straight, curly, German typographic and guillemet quote styles.
-// User's quotes are an unambiguous "treat this as a name" signal —
-// used to override the LLM's nameHint deterministically.
+// Character class uses Unicode code-point escapes to avoid encoding issues.
+// “ U+0022  ' U+0027  „ U+201E  “ U+201C  “ U+201D  ‟ U+201F  « U+00AB  » U+00BB  ‹ U+2039  › U+203A
+const QUOTE_CLASS = '[\\u0022\\u0027\\u201E\\u201C\\u201D\\u201F\\u00AB\\u00BB\\u2039\\u203A]'
+const QUOTE_INNER = '[^\\u0022\\u0027\\u201E\\u201C\\u201D\\u201F\\u00AB\\u00BB\\u2039\\u203A]'
+const QUOTE_RE    = new RegExp(`${QUOTE_CLASS}(${QUOTE_INNER}+)${QUOTE_CLASS}`, 'u')
+
 export function extractQuotedName(query: string): string {
-  const m = query.match(/["'„“”‟"«»‹›]([^"'„“”‟"«»‹›]+)["'„“”‟"«»‹›]/u)
-  return m ? m[1].trim() : ""
+  const m = query.match(QUOTE_RE)
+  return m ? m[1].trim() : ''
 }
 
-// Regex fallback: extract "in <Location>" from query
 export function extractLocationFallback(query: string): string {
-  // Match "in <City>" or "in <City District>" patterns (German/English)
   const match = query.match(
-    /\bin\s+([A-ZÄÖÜ][a-zA-ZäöüÄÖÜß\s\-]+?)(?:\s*$|\s+(?:und|oder|mit|für|nahe|near|and|or|with)\b)/i,
+    /\bin\s+([A-ZÄÖÜ][a-zA-ZäöüÄÖÜß\s\-,]+?)(?:\s*$|\s+(?:und|oder|mit|für|nahe|near|and|or|with)\b)/i,
   )
   if (match) return match[1].trim()
 
-  // Last resort: return last 1-2 capitalised words (likely a city name)
   const words = query.split(/\s+/)
   const capitalised = words.filter((w) => /^[A-ZÄÖÜ]/.test(w))
   return capitalised.slice(-2).join(" ") || query
 }
 
-export async function parseQuery(userQuery: string): Promise<ParsedQuery> {
-  // User-quoted strings are an explicit "this is a name" signal —
-  // override whatever the LLM returns.
-  const quotedName = extractQuotedName(userQuery)
+/**
+ * Deterministic query parser — no LLM involved.
+ *
+ * The UI always sends: "<ChipLabel> in <LocationInput>"
+ * where <LocationInput> may contain a quoted name like "Goldener Löwe".
+ *
+ * Rules:
+ *   - Quoted text → nameHint (signals a named-place search)
+ *   - Remaining text after stripping quotes → location for Nominatim
+ *   - Categories inferred from chip label via CATEGORY_HINTS regex
+ */
+export function parseQuery(userQuery: string): ParsedQuery {
+  const nameHint = extractQuotedName(userQuery)
 
-  const allCatsJson = JSON.stringify(ALL_CATEGORIES)
+  const withoutName = nameHint
+    ? userQuery.replace(QUOTE_RE, "").replace(/\s+/g, " ").trim()
+    : userQuery
 
-  const prompt = `Analyse this accessibility search query and extract structured fields.
+  const locationQuery = extractLocationFallback(withoutName).trim() || withoutName.trim()
 
-Rules:
-- "locationQuery": ONLY the city, district, or address — no category words, no "in", no "barrierefreie"
-- "nameHint": specific business name the user is asking about; empty string if searching by category only.
-  IMPORTANT: treat unusual or abstract-sounding words as potential business names (e.g. "et cetera", "Zur Eiche", "No Name Bar").
-- "categories": infer from context. Be specific — distinguish bar / pub / biergarten, theater / cinema, hotel / hostel / apartment.
-  For named places (nameHint set), make a best guess from the name (e.g. "Brauhaus X" → ["pub","biergarten"], "Café X" → ["cafe"], "Hotel X" → ["hotel"]).
-  Only return ALL categories if the name gives absolutely no hint about its type.
-  Allowed values: ${allCatsJson}.
-- "freeTextHint": extra context like dietary preferences, atmosphere, etc.
-
-Examples:
-  - "Finde Restaurants in Spandau" → locationQuery:"Spandau", nameHint:"", categories:["restaurant"]
-  - "Biergärten in München" → locationQuery:"München", nameHint:"", categories:["biergarten"]
-  - "Kino in Berlin Mitte" → locationQuery:"Berlin Mitte", nameHint:"", categories:["cinema"]
-  - "Hostel in Hamburg" → locationQuery:"Hamburg", nameHint:"", categories:["hostel"]
-  - "Pubs in Köln" → locationQuery:"Köln", nameHint:"", categories:["pub"]
-  - "et cetera in Potsdam" → locationQuery:"Potsdam", nameHint:"et cetera", categories:${allCatsJson}
-  - "Ist das Brauhaus Georgbräu in Berlin barrierefrei?" → locationQuery:"Berlin", nameHint:"Brauhaus Georgbräu", categories:["restaurant","pub","biergarten"]
-  - "Wilhelms Burger Gleimstraße Berlin" → locationQuery:"Berlin", nameHint:"Wilhelms Burger", categories:["fast_food","restaurant"]
-  - "Rollstuhlgerechte Cafés in Berlin Mitte" → locationQuery:"Berlin Mitte", nameHint:"", categories:["cafe"]
-  - "Barrierefreie Museen München" → locationQuery:"München", nameHint:"", categories:["museum"]
-
-Query: ${JSON.stringify(userQuery)}
-
-Return JSON:
-{
-  "locationQuery": "<city or district only>",
-  "nameHint": "<specific business name or empty string>",
-  "categories": ${allCatsJson},
-  "freeTextHint": "<extra context or empty string>"
-}`
-
-  try {
-    const msg = await client.messages.create({
-      model:      "claude-haiku-4-5-20251001",
-      max_tokens: 350,
-      system:     SYSTEM_PROMPT,
-      messages:   [{ role: "user", content: prompt }],
-    })
-
-    const text = msg.content[0].type === "text" ? msg.content[0].text.trim() : "{}"
-    // Strip markdown code fences if present
-    const json = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")
-    const parsed = JSON.parse(json)
-
-    const locationQuery = (parsed.locationQuery ?? "").trim()
-
-    const cats = parsed.categories
-    return {
-      locationQuery: locationQuery || extractLocationFallback(userQuery),
-      nameHint:      quotedName || (parsed.nameHint ?? "").trim(),
-      categories:    Array.isArray(cats) && cats.length > 0 ? cats : inferCategories(userQuery),
-      freeTextHint:  parsed.freeTextHint ?? "",
-    }
-  } catch {
-    return {
-      locationQuery: extractLocationFallback(userQuery),
-      nameHint:      quotedName,
-      categories:    inferCategories(userQuery),
-      freeTextHint:  "",
-    }
+  return {
+    locationQuery,
+    nameHint,
+    categories: inferCategories(userQuery),
+    freeTextHint: "",
   }
 }
-

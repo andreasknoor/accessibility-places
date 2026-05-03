@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest"
-import { extractLocationFallback, extractQuotedName, inferCategories } from "@/lib/llm"
+import { extractLocationFallback, extractQuotedName, inferCategories, parseQuery } from "@/lib/llm"
 
 // ─── extractLocationFallback ──────────────────────────────────────────────────
 
@@ -127,5 +127,51 @@ describe("inferCategories", () => {
 
   it("infers hotel for 'unterkunft'", () => {
     expect(inferCategories("Unterkunft Wien")).toContain("hotel")
+  })
+})
+
+// ─── parseQuery (deterministic, sync) ────────────────────────────────────────
+
+describe("parseQuery", () => {
+  it("extracts location from standard chip+location query", () => {
+    const r = parseQuery("Restaurants in Berlin Mitte")
+    expect(r.locationQuery).toBe("Berlin Mitte")
+    expect(r.nameHint).toBe("")
+    expect(r.categories).toContain("restaurant")
+  })
+
+  it("extracts nameHint from quoted name before location", () => {
+    const r = parseQuery('Restaurants in "Goldener Löwe" Berlin')
+    expect(r.nameHint).toBe("Goldener Löwe")
+    expect(r.locationQuery).toBe("Berlin")
+  })
+
+  it("extracts nameHint from quoted name after location", () => {
+    const r = parseQuery('Cafés in Berlin "Café et cetera"')
+    expect(r.nameHint).toBe("Café et cetera")
+    expect(r.locationQuery).toBe("Berlin")
+  })
+
+  it("handles compound location with nameHint", () => {
+    const r = parseQuery('Restaurants in "Goldener Löwe" Berlin Mitte')
+    expect(r.nameHint).toBe("Goldener Löwe")
+    expect(r.locationQuery).toBe("Berlin Mitte")
+  })
+
+  it("handles Photon-style display name with comma", () => {
+    const r = parseQuery("Restaurants in Schöneberg, Berlin")
+    expect(r.locationQuery).toBe("Schöneberg, Berlin")
+    expect(r.nameHint).toBe("")
+  })
+
+  it("returns all categories when no chip label matches", () => {
+    const r = parseQuery("Orte in Wien")
+    expect(r.categories.length).toBeGreaterThan(5)
+  })
+
+  it("preserves category from chip label through to categories array", () => {
+    expect(parseQuery("Museen in München").categories).toContain("museum")
+    expect(parseQuery("Kinos in Hamburg").categories).toContain("cinema")
+    expect(parseQuery("Hotels in Wien").categories).toContain("hotel")
   })
 })

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Send, Loader2, LocateFixed, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTranslations, useLocale } from "@/lib/i18n"
@@ -27,6 +27,8 @@ const CHIPS = [
 type Mode        = "text" | "nearby"
 type NearbyPhase = "idle" | "locating" | { district: string } | "error"
 
+type Suggestion = { display: string; name: string }
+
 async function reverseGeocode(lat: number, lon: number): Promise<string> {
   const res = await fetch(`/api/geocode/reverse?lat=${lat}&lon=${lon}`)
   if (!res.ok) throw new Error("reverse geocode failed")
@@ -37,13 +39,50 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
 export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
-  const [mode,        setMode]        = useState<Mode>("text")
-  const [nearbyPhase, setNearbyPhase] = useState<NearbyPhase>("idle")
-  const [location,    setLocation]    = useState("")
-  const [selectedIdx, setSelectedIdx] = useState(0)
-  const selectedIdxRef = useRef(0) // stable ref for async GPS callback
+  const [mode,           setMode]           = useState<Mode>("text")
+  const [nearbyPhase,    setNearbyPhase]    = useState<NearbyPhase>("idle")
+  const [location,       setLocation]       = useState("")
+  const [selectedIdx,    setSelectedIdx]    = useState(0)
+  const [suggestions,    setSuggestions]    = useState<Suggestion[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [highlightedIdx, setHighlightedIdx] = useState(-1)
+  const selectedIdxRef  = useRef(0)
+  const debounceRef     = useRef<ReturnType<typeof setTimeout>>()
+  const suggestAbortRef = useRef<AbortController>()
 
   const district = typeof nearbyPhase === "object" ? nearbyPhase.district : null
+
+  // Fetch location autocomplete suggestions (Photon via backend proxy)
+  useEffect(() => {
+    // Autocomplete on the non-quoted part of the input
+    const query = location.replace(/["'„""‟"«»‹›][^"'„""‟"«»‹›]*["'„""‟"«»‹›]?/gu, "").trim()
+
+    if (query.length < 2) {
+      setSuggestions([])
+      setShowSuggestions(false)
+      return
+    }
+
+    clearTimeout(debounceRef.current)
+    suggestAbortRef.current?.abort()
+    debounceRef.current = setTimeout(async () => {
+      const ac = new AbortController()
+      suggestAbortRef.current = ac
+      try {
+        const res = await fetch(`/api/geocode/suggest?q=${encodeURIComponent(query)}&lang=${locale}`, { signal: ac.signal })
+        if (!res.ok) return
+        const data: Suggestion[] = await res.json()
+        setSuggestions(data)
+        setShowSuggestions(data.length > 0)
+        setHighlightedIdx(-1)
+      } catch { /* ignore — covers AbortError and network errors */ }
+    }, 300)
+
+    return () => {
+      clearTimeout(debounceRef.current)
+      suggestAbortRef.current?.abort()
+    }
+  }, [location, locale])
 
   function switchMode(next: Mode) {
     setMode(next)
@@ -60,11 +99,54 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
     }
   }
 
+  function buildQuery(loc: string) {
+    const label = locale === "de" ? CHIPS[selectedIdx].de : CHIPS[selectedIdx].en
+    return loc.trim() ? `${label} in ${loc.trim()}` : label
+  }
+
   function submit() {
     if (isLoading) return
-    const label = locale === "de" ? CHIPS[selectedIdx].de : CHIPS[selectedIdx].en
-    const q = location.trim() ? `${label} in ${location.trim()}` : label
-    onSearch(q)
+    setSuggestions([])
+    setShowSuggestions(false)
+    onSearch(buildQuery(location))
+  }
+
+  function selectSuggestion(s: Suggestion) {
+    // Preserve any quoted nameHint the user typed; replace the location part
+    const quotedPart = location.match(/["'„""‟"«»‹›][^"'„""‟"«»‹›]+["'„""‟"«»‹›]/u)?.[0] ?? ""
+    const newLocation = quotedPart ? `${quotedPart} ${s.display}` : s.display
+    setLocation(newLocation)
+    setSuggestions([])
+    setShowSuggestions(false)
+    setHighlightedIdx(-1)
+    onSearch(buildQuery(newLocation))
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (showSuggestions && suggestions.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault()
+        setHighlightedIdx((i) => Math.min(i + 1, suggestions.length - 1))
+        return
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault()
+        setHighlightedIdx((i) => Math.max(i - 1, -1))
+        return
+      }
+      if (e.key === "Enter") {
+        e.preventDefault()
+        if (highlightedIdx >= 0) selectSuggestion(suggestions[highlightedIdx])
+        else submit()
+        return
+      }
+      if (e.key === "Escape") {
+        setShowSuggestions(false)
+        setHighlightedIdx(-1)
+        return
+      }
+    }
+    if (e.key === "Enter") submit()
   }
 
   function handleLocate() {
@@ -133,17 +215,47 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
       {/* ── Text search mode ── */}
       {mode === "text" && (
         <div className="flex gap-2 items-center">
-          <input
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && submit()}
-            placeholder={t.chat.locationPlaceholder}
-            disabled={isLoading}
-            autoFocus={autoFocus}
-            className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]
-                       placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1
-                       focus-visible:ring-ring disabled:opacity-50"
-          />
+          <div className="relative flex-1">
+            <input
+              value={location}
+              onChange={(e) => { setLocation(e.target.value); setHighlightedIdx(-1) }}
+              onKeyDown={handleKeyDown}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+              placeholder={t.chat.locationPlaceholder}
+              disabled={isLoading}
+              autoFocus={autoFocus}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]
+                         placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1
+                         focus-visible:ring-ring disabled:opacity-50"
+            />
+
+            {/* Autocomplete dropdown */}
+            {showSuggestions && suggestions.length > 0 && (
+              <ul
+                role="listbox"
+                className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg overflow-hidden"
+              >
+                {suggestions.map((s, i) => (
+                  <li
+                    key={s.display}
+                    role="option"
+                    aria-selected={i === highlightedIdx}
+                    onMouseDown={(e) => { e.preventDefault(); selectSuggestion(s) }}
+                    className={cn(
+                      "px-3 py-2 text-sm cursor-pointer transition-colors",
+                      i === highlightedIdx
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted",
+                    )}
+                  >
+                    {s.display}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           <Button
             onClick={submit}
             disabled={isLoading || !location.trim()}
