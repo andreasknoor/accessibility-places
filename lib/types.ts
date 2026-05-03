@@ -11,6 +11,7 @@ export type Category =
   | "cafe" | "restaurant" | "bar" | "pub" | "biergarten" | "fast_food"
   | "hotel" | "hostel" | "apartment"
   | "museum" | "theater" | "cinema" | "library" | "gallery" | "attraction"
+  | "ice_cream"
 
 // ─── Sub-attributes per criterion ──────────────────────────────────────────
 

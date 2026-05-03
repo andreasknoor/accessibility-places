@@ -16,12 +16,13 @@ const CATEGORY_HINTS: Record<Category, string[]> = {
   library:     ["bibliothek", "bücherei", "library"],
   gallery:     ["galerie", "gallery", "kunsthalle", "ausstellung"],
   attraction:  ["sehenswürdigkeit", "attraktion", "attraction", "freizeitpark", "zoo"],
+  ice_cream:   ["eisdiele", "eisdielen", "eis", "gelato", "gelateria", "ice cream", "icecream"],
 }
 
 const ALL_CATEGORIES: Category[] = [
   "cafe","restaurant","bar","pub","biergarten","fast_food",
   "hotel","hostel","apartment",
-  "museum","theater","cinema","library","gallery","attraction",
+  "museum","theater","cinema","library","gallery","attraction","ice_cream",
 ]
 
 function normaliseForMatch(s: string): string {

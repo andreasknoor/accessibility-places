@@ -22,6 +22,7 @@ const CHIPS = [
   { icon: "🏛", de: "Museen",      en: "Museums"       },
   { icon: "🎭", de: "Theater",     en: "Theaters"      },
   { icon: "🎬", de: "Kinos",       en: "Cinemas"       },
+  { icon: "🍦", de: "Eisdielen",   en: "Ice Cream"     },
 ]
 
 type Mode        = "text" | "nearby"

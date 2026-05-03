@@ -67,4 +67,5 @@ export const CATEGORY_OSM_TAGS: Record<Category, { amenity?: readonly string[]; 
   library:     { amenity: ["library"] },
   gallery:     { tourism: ["gallery"], amenity: ["arts_centre"] },
   attraction:  { tourism: ["attraction", "theme_park"] },
+  ice_cream:   { amenity: ["ice_cream"] },
 }

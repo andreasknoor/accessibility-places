@@ -133,6 +133,7 @@ function osmCategory(tags: Record<string, string>): Category {
   if (amenity === "cinema")                                            return "cinema"
   if (amenity === "library")                                           return "library"
   if (tourism === "gallery" || amenity === "arts_centre")              return "gallery"
+  if (amenity === "ice_cream")                                         return "ice_cream"
   return "attraction"
 }
 
