@@ -38,6 +38,9 @@ const CATEGORY_ICONS: Record<string, string> = {
   attraction:  "🎡",
 }
 
+/** Set to false (or delete the footer block below) to revert option A */
+const SHOW_MAP_FOOTER = true
+
 export default function PlaceCard({ place, filters, isSelected, onClick }: Props) {
   const t = useTranslations()
   const [expanded,  setExpanded]  = useState(false)
@@ -249,6 +252,14 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
             </button>
           )}
         </div>
+        {/* ── Map CTA footer (option A) — set SHOW_MAP_FOOTER=false above to revert ── */}
+        {SHOW_MAP_FOOTER && onClick && (
+          <div className="flex items-center gap-1.5 border-t border-border pt-2 mt-1 text-xs text-muted-foreground">
+            <MapPin className="w-3 h-3 shrink-0 text-primary" />
+            <span>{t.results.showOnMap}</span>
+            <span className="ml-auto">→</span>
+          </div>
+        )}
       </CardContent>
 
       {showDebug && createPortal(

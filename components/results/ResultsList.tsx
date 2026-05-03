@@ -1,7 +1,7 @@
 "use client"
 
-
-import { Loader2, RefreshCw, MapPin } from "lucide-react"
+import { useState } from "react"
+import { Loader2, RefreshCw, MapPin, X } from "lucide-react"
 import PlaceCard from "./PlaceCard"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
@@ -22,6 +22,22 @@ interface Props {
 
 export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, hasSearched }: Props) {
   const t = useTranslations()
+  const [mapHintSeen, setMapHintSeen] = useState(() =>
+    typeof window !== "undefined" && !!localStorage.getItem("as_map_hint_seen")
+  )
+
+  function handleSelect(place: Place) {
+    if (!mapHintSeen) {
+      localStorage.setItem("as_map_hint_seen", "1")
+      setMapHintSeen(true)
+    }
+    onSelect(place)
+  }
+
+  function dismissHint() {
+    localStorage.setItem("as_map_hint_seen", "1")
+    setMapHintSeen(true)
+  }
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -58,6 +74,21 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
           </div>
         </div>
       </div>
+
+      {/* Option C: one-time map hint banner */}
+      {hasSearched && places.length > 0 && !isLoading && !mapHintSeen && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-muted/60 border-b border-border text-xs text-muted-foreground shrink-0">
+          <MapPin className="w-3 h-3 shrink-0 text-primary" />
+          <span className="flex-1">{t.results.mapHint}</span>
+          <button
+            onClick={dismissHint}
+            aria-label="Hinweis schließen"
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* List */}
       {/* Plain overflow-y-auto avoids Radix ScrollArea's internal display:table wrapper,
@@ -111,7 +142,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
               place={place}
               filters={filters}
               isSelected={place.id === selectedId}
-              onClick={() => onSelect(place)}
+              onClick={() => handleSelect(place)}
             />
           ))}
         </div>

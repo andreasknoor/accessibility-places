@@ -57,6 +57,8 @@ export interface Translations {
     noDogs:            string
     vegetarian:        string
     vegan:             string
+    showOnMap:         string
+    mapHint:           string
   }
   a11y: {
     yes:     string

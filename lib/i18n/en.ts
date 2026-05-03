@@ -79,7 +79,9 @@ const en: Translations = {
     allowsDogs: "Dogs welcome",
     noDogs: "No dogs",
     vegetarian: "Vegetarian",
-    vegan: "Vegan",
+    vegan:      "Vegan",
+    showOnMap:  "Show on map",
+    mapHint:    "Tip: tap an entry to show it on the map",
   },
   a11y: {
     yes:     "Yes",
