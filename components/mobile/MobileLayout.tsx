@@ -92,7 +92,7 @@ export default function MobileLayout({
       )}
 
       {/* ── Tab content ── */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden isolate">
 
         {/* Results tab */}
         <div className={cn("h-full", activeTab !== "results" && "hidden")}>
