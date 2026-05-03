@@ -1,11 +1,21 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { useTranslations } from "@/lib/i18n"
 
+// Email stored encoded so it never appears as plaintext in the HTML source.
+// Decoded client-side only — invisible to static crawlers.
+const ENCODED = "YW5kcmVhcy5rbm9vckBnbWFpbC5jb20="
+
 export default function ImpressumPage() {
   const t = useTranslations()
+  const [email, setEmail] = useState<string | null>(null)
+
+  useEffect(() => {
+    setEmail(atob(ENCODED))
+  }, [])
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -37,12 +47,13 @@ export default function ImpressumPage() {
             {t.impressum.contact}
           </h2>
           <p className="text-sm">
-            <a
-              href="mailto:andreas.knoor@gmail.com"
-              className="text-primary hover:underline"
-            >
-              andreas.knoor@gmail.com
-            </a>
+            {email ? (
+              <a href={`mailto:${email}`} className="text-primary hover:underline">
+                {email}
+              </a>
+            ) : (
+              <span className="text-muted-foreground">…</span>
+            )}
           </p>
         </section>
 
