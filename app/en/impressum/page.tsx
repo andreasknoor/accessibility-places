@@ -1,16 +1,16 @@
 import type { Metadata } from "next"
-import ImpressumContent from "./ImpressumContent"
+import ImpressumContent from "@/app/impressum/ImpressumContent"
 
 const BASE = "https://accessible-places.org"
 
 export const metadata: Metadata = {
-  title: "Impressum",
+  title: "Legal Notice",
   alternates: {
-    canonical: `${BASE}/impressum`,
+    canonical: `${BASE}/en/impressum`,
     languages: { de: `${BASE}/impressum`, en: `${BASE}/en/impressum` },
   },
 }
 
-export default function ImpressumPage() {
-  return <ImpressumContent lang="de" />
+export default function ImpressumPageEn() {
+  return <ImpressumContent lang="en" />
 }
