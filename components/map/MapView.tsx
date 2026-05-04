@@ -18,9 +18,10 @@ interface Props {
   selectedId?:   string
   panTrigger?:   number
   onSelect:      (place: Place) => void
-  isFullscreen:  boolean
-  onToggleFullscreen: () => void
-  visible?:      boolean
+  isFullscreen:         boolean
+  onToggleFullscreen:   () => void
+  showFullscreenToggle?: boolean
+  visible?:             boolean
 }
 
 const CONFIDENCE_COLORS = {
@@ -52,6 +53,7 @@ export default function MapView({
   onSelect,
   isFullscreen,
   onToggleFullscreen,
+  showFullscreenToggle = true,
   visible,
 }: Props) {
   const t        = useTranslations()
@@ -274,19 +276,20 @@ export default function MapView({
     <div className="relative w-full h-full">
       <div ref={mapRef} className="w-full h-full" />
 
-      {/* Fullscreen toggle */}
-      <Button
-        size="icon"
-        variant="secondary"
-        onClick={onToggleFullscreen}
-        className="absolute top-3 right-3 z-[1000] shadow-md"
-        title={isFullscreen ? t.map.exitFullscreen : t.map.fullscreen}
-      >
-        {isFullscreen
-          ? <Minimize2 className="w-4 h-4" />
-          : <Maximize2 className="w-4 h-4" />
-        }
-      </Button>
+      {showFullscreenToggle && (
+        <Button
+          size="icon"
+          variant="secondary"
+          onClick={onToggleFullscreen}
+          className="absolute top-3 right-3 z-[1000] shadow-md"
+          title={isFullscreen ? t.map.exitFullscreen : t.map.fullscreen}
+        >
+          {isFullscreen
+            ? <Minimize2 className="w-4 h-4" />
+            : <Maximize2 className="w-4 h-4" />
+          }
+        </Button>
+      )}
     </div>
   )
 }
