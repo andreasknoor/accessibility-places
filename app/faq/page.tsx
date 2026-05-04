@@ -11,7 +11,7 @@ const FAQ_DE = [
   },
   {
     q: "Wie finde ich barrierefreie Orte in Deutschland, Österreich und der Schweiz?",
-    a: "Gib einfach einen Ort ein — zum Beispiel „Berlin Mitte" oder „Wien" — und wähle eine Kategorie wie Restaurant oder Hotel. Accessible Places durchsucht sofort mehrere Datenquellen und zeigt dir barrierefreie Orte in deiner Nähe. Die App funktioniert in der gesamten DACH-Region: Deutschland, Österreich und der Schweiz.",
+    a: 'Gib einfach einen Ort ein — zum Beispiel "Berlin Mitte" oder "Wien" — und wähle eine Kategorie wie Restaurant oder Hotel. Accessible Places durchsucht sofort mehrere Datenquellen und zeigt dir barrierefreie Orte in deiner Nähe. Die App funktioniert in der gesamten DACH-Region: Deutschland, Österreich und der Schweiz.',
   },
   {
     q: "Welche barrierefreien Orte kann ich finden — Restaurants, Hotels, Cafés?",
@@ -19,7 +19,7 @@ const FAQ_DE = [
   },
   {
     q: "Wie finde ich barrierefreie Restaurants oder Cafés in meiner Nähe?",
-    a: "Tippe auf „In der Nähe" und erteile der App die Standortfreigabe. Accessible Places ermittelt automatisch deinen Standort und sucht barrierefreie Restaurants, Cafés oder andere Orte in deiner direkten Umgebung — ohne dass du einen Ort eingeben musst.",
+    a: 'Tippe auf "In der Nähe" und erteile der App die Standortfreigabe. Accessible Places ermittelt automatisch deinen Standort und sucht barrierefreie Restaurants, Cafés oder andere Orte in deiner direkten Umgebung — ohne dass du einen Ort eingeben musst.',
   },
   {
     q: "Was ist der Unterschied zu Google Maps bei der Suche nach barrierefreien Orten?",
@@ -43,11 +43,11 @@ const FAQ_DE = [
   },
   {
     q: "Kann ich barrierefreie Orte auch auf dem Smartphone suchen?",
-    a: "Ja — Accessible Places kann als App auf dem Smartphone installiert werden, ohne App Store oder Play Store. Auf iPhone/iPad: Safari öffnen → Teilen-Symbol antippen → „Zum Home-Bildschirm" wählen. Auf Android: Chrome öffnen → Menü (drei Punkte) → „App installieren" oder „Zum Startbildschirm hinzufügen". Die App funktioniert danach wie eine native App — mit eigenem Icon, Vollbild und ohne Browser-Leiste.",
+    a: 'Ja — Accessible Places kann als App auf dem Smartphone installiert werden, ohne App Store oder Play Store. Auf iPhone/iPad: Safari öffnen → Teilen-Symbol antippen → "Zum Home-Bildschirm" wählen. Auf Android: Chrome öffnen → Menü (drei Punkte) → "App installieren" oder "Zum Startbildschirm hinzufügen". Die App funktioniert danach wie eine native App — mit eigenem Icon, Vollbild und ohne Browser-Leiste.',
   },
   {
     q: "Wie kann ich Feedback geben oder einen Fehler melden?",
-    a: "Über den „Feedback"-Link am unteren Rand der Seite kannst du direkt ein GitHub-Issue erstellen. Dafür benötigst du einen kostenlosen GitHub-Account.",
+    a: 'Über den "Feedback"-Link am unteren Rand der Seite kannst du direkt ein GitHub-Issue erstellen. Dafür benötigst du einen kostenlosen GitHub-Account.',
   },
 ]
 
