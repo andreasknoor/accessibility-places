@@ -138,11 +138,11 @@ export default function MapView({
             ${addr ? `<div style="color:#666;font-size:11px;margin-bottom:6px">${addr}</div>` : ""}
             <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:11px">
               <span style="color:#888">${t.criteria.entrance}</span>
-              <span style="color:${markerColor(place.accessibility.entrance.confidence)}">${place.accessibility.entrance.value}</span>
+              <span style="color:${markerColor(place.accessibility.entrance.confidence)}">${t.a11y[place.accessibility.entrance.value] ?? place.accessibility.entrance.value}</span>
               <span style="color:#888">${t.criteria.toilet}</span>
-              <span style="color:${markerColor(place.accessibility.toilet.confidence)}">${place.accessibility.toilet.value}</span>
+              <span style="color:${markerColor(place.accessibility.toilet.confidence)}">${t.a11y[place.accessibility.toilet.value] ?? place.accessibility.toilet.value}</span>
               <span style="color:#888">${t.criteria.parking}</span>
-              <span style="color:${markerColor(place.accessibility.parking.confidence)}">${place.accessibility.parking.value}</span>
+              <span style="color:${markerColor(place.accessibility.parking.confidence)}">${t.a11y[place.accessibility.parking.value] ?? place.accessibility.parking.value}</span>
             </div>
             <div style="margin-top:6px;font-size:10px;color:#888">
               ${t.map.source}: ${SOURCE_LABELS[place.primarySource]}
