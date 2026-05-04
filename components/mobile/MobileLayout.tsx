@@ -79,12 +79,14 @@ export default function MobileLayout({
         >
           <img src="/icons/icon-preview.svg" className="w-7 h-7 rounded-lg" alt="" aria-hidden />
           <div className="text-left">
-            <h1 className="font-bold text-sm leading-none">{t.app.title}</h1>
+            <span className="font-bold text-sm leading-none block">{t.app.title}</span>
             <p className="text-xs text-muted-foreground mt-0.5">{t.app.subtitle}</p>
           </div>
         </button>
         <LanguageSwitcher />
       </header>
+
+      <h1 className="sr-only">Barrierefreie Orte finden in Deutschland, Österreich und der Schweiz</h1>
 
       {/* ── Search bar (always visible) ── */}
       <ChatPanel key={resetKey} onSearch={handleSearch} isLoading={isLoading} onModeChange={setChatMode} />

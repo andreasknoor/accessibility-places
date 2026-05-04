@@ -82,6 +82,16 @@ const FAQ_EN = [
   },
 ]
 
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQ_DE.map(({ q, a }) => ({
+    "@type": "Question",
+    name: q,
+    acceptedAnswer: { "@type": "Answer", text: a },
+  })),
+}
+
 export default function FaqPage() {
   const t = useTranslations()
   const { locale } = useLocale()
@@ -89,6 +99,10 @@ export default function FaqPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
       <div className="max-w-lg mx-auto px-6 py-10">
         <Link
           href="/"

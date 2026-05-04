@@ -20,7 +20,10 @@ const DESCRIPTION =
   "verlässlicher als Google Maps. Kostenlose Suche nach Restaurants, Cafés, Hotels und mehr."
 
 export const metadata: Metadata = {
-  title:       "Accessible Places",
+  title: {
+    default:  "Barrierefreie Orte finden | Accessible Places",
+    template: "%s | Accessible Places",
+  },
   description: DESCRIPTION,
   metadataBase: new URL("https://accessible-places.org"),
   openGraph: {
