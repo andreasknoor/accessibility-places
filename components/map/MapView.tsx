@@ -134,7 +134,7 @@ export default function MapView({
 
         const popup = L!.popup({ maxWidth: 260 }).setContent(`
           <div style="font-family:sans-serif;font-size:13px;line-height:1.5">
-            <strong style="display:block;margin-bottom:4px">${place.name}</strong>
+            <strong style="display:block;margin-bottom:4px">${place.name} <span style="color:${markerColor(place.overallConfidence)};font-weight:normal">(${Math.round(place.overallConfidence * 100)}%)</span></strong>
             ${addr ? `<div style="color:#666;font-size:11px;margin-bottom:6px">${addr}</div>` : ""}
             <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:11px">
               <span style="color:#888">${t.criteria.entrance}</span>
