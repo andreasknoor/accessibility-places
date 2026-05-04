@@ -15,15 +15,15 @@ const FAQ_DE = [
   },
   {
     q: "Welche Kategorien gibt es?",
-    a: "Restaurants, Cafés, Hotels, Biergärten, Kneipen, Museen, Theater, Kinos und Eisdielen.",
+    a: "Restaurants, Cafés, Bars, Kneipen, Biergärten, Imbisse, Hotels, Hostels, Ferienwohnungen, Museen, Theater, Kinos, Bibliotheken, Galerien, Sehenswürdigkeiten und Eisdielen.",
   },
   {
     q: "Woher kommen die Barrierefreiheitsdaten?",
-    a: "Die App kombiniert Daten aus drei Quellen: OpenStreetMap (OSM), accessibility.cloud und Wheelmap.org. Die Daten werden zusammengeführt und mit einem Verlässlichkeitswert versehen.",
+    a: "Die App kombiniert Daten aus drei Quellen: OpenStreetMap (OSM), accessibility.cloud (einschließlich Wheelmap.org) und Google Places. Die Daten werden zusammengeführt und mit einem Verlässlichkeitswert versehen.",
   },
   {
     q: "Was bedeutet der farbige Kreis bei jedem Eintrag?",
-    a: "Grün steht für eine verlässliche Barrierefreiheitsinformation, Gelb für eine unsichere Information und Rot für wahrscheinlich nicht barrierefrei. Die Farbe basiert auf Vollständigkeit und Aktualität der Daten.",
+    a: "Grün steht für eine verlässliche Barrierefreiheitsinformation, Gelb für eine mittelgute Datenlage und Rot für eine unsichere oder unvollständige Datenlage. Die Farbe gibt also an, wie verlässlich die verfügbaren Informationen sind — nicht ob ein Ort barrierefrei ist oder nicht.",
   },
   {
     q: "Ist die App kostenlos?",
@@ -54,15 +54,15 @@ const FAQ_EN = [
   },
   {
     q: "Which categories are available?",
-    a: "Restaurants, cafés, hotels, beer gardens, pubs, museums, theatres, cinemas and ice cream shops.",
+    a: "Restaurants, cafés, bars, pubs, beer gardens, fast food / snack bars, hotels, hostels, holiday apartments, museums, theatres, cinemas, libraries, galleries, attractions and ice cream shops.",
   },
   {
     q: "Where does the accessibility data come from?",
-    a: "The app combines data from three sources: OpenStreetMap (OSM), accessibility.cloud and Wheelmap.org. Data is merged and assigned a reliability score.",
+    a: "The app combines data from three sources: OpenStreetMap (OSM), accessibility.cloud (including Wheelmap.org) and Google Places. Data is merged and assigned a reliability score.",
   },
   {
     q: "What does the coloured circle next to each entry mean?",
-    a: "Green means reliable accessibility information, yellow means uncertain, and red means probably not accessible. The colour is based on the completeness and recency of the data.",
+    a: "Green means reliable accessibility information, yellow means moderate data quality, and red means uncertain or incomplete data. The colour reflects how trustworthy the available information is — not whether a place is accessible or not.",
   },
   {
     q: "Is the app free?",

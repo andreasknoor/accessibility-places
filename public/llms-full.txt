@@ -17,13 +17,13 @@ Accessible Places hilft Menschen mit Rollstuhl oder eingeschränkter Mobilität,
 Deutschland, Österreich und die Schweiz (DACH-Region).
 
 **Welche Kategorien gibt es?**
-Restaurants, Cafés, Hotels, Biergärten, Kneipen, Museen, Theater, Kinos und Eisdielen.
+Restaurants, Cafés, Bars, Kneipen, Biergärten, Imbisse, Hotels, Hostels, Ferienwohnungen, Museen, Theater, Kinos, Bibliotheken, Galerien, Sehenswürdigkeiten und Eisdielen.
 
 **Woher kommen die Barrierefreiheitsdaten?**
-Die App kombiniert Daten aus drei Quellen: OpenStreetMap (OSM), accessibility.cloud und Wheelmap.org. Die Daten werden zusammengeführt und mit einem Verlässlichkeitswert versehen.
+Die App kombiniert Daten aus drei Quellen: OpenStreetMap (OSM), accessibility.cloud (einschließlich Wheelmap.org) und Google Places. Die Daten werden zusammengeführt und mit einem Verlässlichkeitswert versehen.
 
 **Was bedeutet der farbige Kreis bei jedem Eintrag?**
-Grün steht für eine verlässliche Barrierefreiheitsinformation, Gelb für eine unsichere Information und Rot für wahrscheinlich nicht barrierefrei. Die Farbe basiert auf Vollständigkeit und Aktualität der Daten.
+Grün steht für eine verlässliche Barrierefreiheitsinformation, Gelb für eine mittelgute Datenlage und Rot für eine unsichere oder unvollständige Datenlage. Die Farbe gibt also an, wie verlässlich die verfügbaren Informationen sind — nicht ob ein Ort barrierefrei ist oder nicht.
 
 **Ist die App kostenlos?**
 Ja, vollständig kostenlos und ohne Registrierung nutzbar.
@@ -33,6 +33,9 @@ Die Daten werden bei jeder Suche live aus den Quellen abgerufen. Manuell verifiz
 
 **Gibt es Accessible Places auch als App fürs Smartphone?**
 Ja — Accessible Places kann als App auf dem Smartphone installiert werden, ohne App Store oder Play Store. Auf iPhone/iPad: Safari öffnen → Teilen-Symbol antippen → „Zum Home-Bildschirm" wählen. Auf Android: Chrome öffnen → Menü (drei Punkte) → „App installieren" oder „Zum Startbildschirm hinzufügen". Die App funktioniert danach wie eine native App — mit eigenem Icon, Vollbild und ohne Browser-Leiste.
+
+**Wie kann ich Feedback geben oder einen Fehler melden?**
+Über den „Feedback"-Link am unteren Rand der Seite kann direkt ein GitHub-Issue erstellt werden. Dafür wird ein kostenloser GitHub-Account benötigt.
 
 ---
 
@@ -45,13 +48,13 @@ Accessible Places helps people with wheelchairs or limited mobility find accessi
 Germany, Austria and Switzerland (the DACH region).
 
 **Which categories are available?**
-Restaurants, cafés, hotels, beer gardens, pubs, museums, theatres, cinemas and ice cream shops.
+Restaurants, cafés, bars, pubs, beer gardens, fast food / snack bars, hotels, hostels, holiday apartments, museums, theatres, cinemas, libraries, galleries, attractions and ice cream shops.
 
 **Where does the accessibility data come from?**
-The app combines data from three sources: OpenStreetMap (OSM), accessibility.cloud and Wheelmap.org. Data is merged and assigned a reliability score.
+The app combines data from three sources: OpenStreetMap (OSM), accessibility.cloud (including Wheelmap.org) and Google Places. Data is merged and assigned a reliability score.
 
 **What does the coloured circle next to each entry mean?**
-Green means reliable accessibility information, yellow means uncertain, and red means probably not accessible. The colour is based on the completeness and recency of the data.
+Green means reliable accessibility information, yellow means moderate data quality, and red means uncertain or incomplete data. The colour reflects how trustworthy the available information is — not whether a place is accessible or not.
 
 **Is the app free?**
 Yes, completely free and no registration required.
@@ -61,6 +64,9 @@ Data is fetched live from the sources on every search. Manually verified entries
 
 **Is Accessible Places available as a smartphone app?**
 Yes — Accessible Places can be installed as an app on your phone without the App Store or Play Store. On iPhone/iPad: open Safari → tap the Share icon → select "Add to Home Screen". On Android: open Chrome → tap the menu (three dots) → "Install app" or "Add to home screen". Once installed it behaves like a native app — with its own icon, full screen and no browser bar.
+
+**How can I give feedback or report a bug?**
+Use the "Feedback" link at the bottom of the page to open a GitHub issue directly. You'll need a free GitHub account to submit.
 
 ---
 
