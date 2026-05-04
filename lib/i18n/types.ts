@@ -37,7 +37,6 @@ export interface Translations {
     titleRadius: (km: number) => string
     count:       (n: number) => string
     showMap:     string
-    hideMap:     string
     confidence: {
       high:   string
       medium: string

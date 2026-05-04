@@ -44,7 +44,6 @@ export default function Home() {
   const [selectedId,    setSelectedId]   = useState<string | undefined>()
   const [isLoading,     setIsLoading]    = useState(false)
   const [searchCenter,  setSearchCenter] = useState<{ lat: number; lon: number } | undefined>()
-  const [showMap,       setShowMap]      = useState(true)
   const [isFullscreen,  setIsFullscreen] = useState(false)
   const [error,         setError]        = useState<string | undefined>()
   const [sourceStates,  setSourceStates] = useState<Partial<Record<SourceId, SourceState>>>({})
@@ -236,15 +235,7 @@ export default function Home() {
             </p>
           </div>
         </button>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowMap((v) => !v)}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-md hover:bg-muted"
-          >
-            {showMap ? t.results.hideMap : t.results.showMap}
-          </button>
-          <LanguageSwitcher />
-        </div>
+        <LanguageSwitcher />
       </header>
 
       {/* ── Chat / search bar ── */}
@@ -272,10 +263,8 @@ export default function Home() {
         />
 
         <div
-          className={showMap
-            ? "shrink-0 border-r border-border flex flex-col min-h-0"
-            : "flex-1 border-r border-border flex flex-col min-h-0"}
-          style={showMap ? { width: resultsWidth } : undefined}
+          className="shrink-0 border-r border-border flex flex-col min-h-0"
+          style={{ width: resultsWidth }}
         >
           <ResultsList
             places={places}
@@ -306,25 +295,21 @@ export default function Home() {
           </div>
         </div>
 
-        {showMap && (
-          <>
-            {/* Draggable divider */}
-            <div
-              className="w-1.5 shrink-0 bg-border hover:bg-primary/40 cursor-col-resize transition-colors"
-              onMouseDown={handleDividerMouseDown}
-            />
-            <div className="flex-1 min-h-0 relative">
-              <MapView
-                places={places}
-                center={searchCenter}
-                selectedId={selectedId}
-                onSelect={(p) => setSelectedId(p.id)}
-                isFullscreen={false}
-                onToggleFullscreen={() => setIsFullscreen(true)}
-              />
-            </div>
-          </>
-        )}
+        {/* Draggable divider */}
+        <div
+          className="w-1.5 shrink-0 bg-border hover:bg-primary/40 cursor-col-resize transition-colors"
+          onMouseDown={handleDividerMouseDown}
+        />
+        <div className="flex-1 min-h-0 relative">
+          <MapView
+            places={places}
+            center={searchCenter}
+            selectedId={selectedId}
+            onSelect={(p) => setSelectedId(p.id)}
+            isFullscreen={false}
+            onToggleFullscreen={() => setIsFullscreen(true)}
+          />
+        </div>
       </div>
     </div>
   )

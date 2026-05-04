@@ -39,7 +39,6 @@ const de: Translations = {
     titleRadius: (km: number) => `(${km} km Radius)`,
     count: (n: number) => `${n} Ort${n !== 1 ? "e" : ""} gefunden`,
     showMap: "Karte anzeigen",
-    hideMap: "Karte ausblenden",
     confidence: {
       high:    "Verlässlich",
       medium:  "Mittel",
