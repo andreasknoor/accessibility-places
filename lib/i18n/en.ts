@@ -164,6 +164,7 @@ const en: Translations = {
     back:       "Back",
     operator:   "Operator",
     contact:    "Contact",
+    version:    "Version",
     disclaimer: "This is a private, non-commercial hobby project. No liability is assumed for the completeness, accuracy or timeliness of the accessibility information displayed.",
     linkLabel:  "Legal Notice",
   },

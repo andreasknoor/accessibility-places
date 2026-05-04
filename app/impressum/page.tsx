@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { useTranslations } from "@/lib/i18n"
+import { APP_VERSION } from "@/lib/config"
 
 // Email stored encoded so it never appears as plaintext in the HTML source.
 // Decoded client-side only — invisible to static crawlers.
@@ -55,6 +56,13 @@ export default function ImpressumPage() {
               <span className="text-muted-foreground">…</span>
             )}
           </p>
+        </section>
+
+        <section className="mb-6">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+            {t.impressum.version}
+          </h2>
+          <p className="text-sm tabular-nums">{APP_VERSION}</p>
         </section>
 
         <section className="border-t border-border pt-6">

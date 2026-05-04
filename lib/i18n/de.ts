@@ -164,6 +164,7 @@ const de: Translations = {
     back:       "Zurück",
     operator:   "Betreiber",
     contact:    "Kontakt",
+    version:    "Version",
     disclaimer: "Dieses Projekt ist ein privates, nicht-kommerzielles Hobby-Projekt. Für die Vollständigkeit, Richtigkeit und Aktualität der angezeigten Barrierefreiheitsinformationen wird keine Haftung übernommen.",
     linkLabel:  "Impressum",
   },

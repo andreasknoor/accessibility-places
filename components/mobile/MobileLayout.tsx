@@ -6,7 +6,6 @@ import Link from "next/link"
 import { Map, List, SlidersHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTranslations } from "@/lib/i18n"
-import { APP_VERSION } from "@/lib/config"
 import ChatPanel       from "@/components/chat/ChatPanel"
 import FilterPanel     from "@/components/filters/FilterPanel"
 import ResultsList     from "@/components/results/ResultsList"
@@ -81,9 +80,7 @@ export default function MobileLayout({
           <img src="/icons/icon-preview.svg" className="w-7 h-7 rounded-lg" alt="" aria-hidden />
           <div className="text-left">
             <h1 className="font-bold text-sm leading-none">{t.app.title}</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {t.app.subtitle} <span className="tabular-nums">(v{APP_VERSION})</span>
-            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">{t.app.subtitle}</p>
           </div>
         </button>
         <LanguageSwitcher />

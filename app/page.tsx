@@ -10,7 +10,7 @@ import LanguageSwitcher from "@/components/LanguageSwitcher"
 import MobileLayout from "@/components/mobile/MobileLayout"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { useTranslations, useLocale } from "@/lib/i18n"
-import { DEFAULT_RADIUS_KM, RADIUS_MAX_KM, APP_VERSION } from "@/lib/config"
+import { DEFAULT_RADIUS_KM, RADIUS_MAX_KM } from "@/lib/config"
 import type { Place, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState } from "@/lib/types"
 
 // Leaflet must not run on server
@@ -231,9 +231,7 @@ export default function Home() {
           <img src="/icons/icon-preview.svg" className="w-7 h-7 rounded-lg" alt="" aria-hidden />
           <div className="text-left">
             <h1 className="font-bold text-base leading-none">{t.app.title}</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {t.app.subtitle} <span className="tabular-nums">(v{APP_VERSION})</span>
-            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">{t.app.subtitle}</p>
           </div>
         </button>
         <LanguageSwitcher />

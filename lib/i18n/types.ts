@@ -135,6 +135,7 @@ export interface Translations {
     back:       string
     operator:   string
     contact:    string
+    version:    string
     disclaimer: string
     linkLabel:  string
   }
