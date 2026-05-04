@@ -2,7 +2,9 @@
 
 A web app that finds wheelchair-accessible cafés, restaurants, hotels, museums and more across Germany, Austria and Switzerland. The app aggregates accessibility data from multiple sources, deduplicates places across them, attaches a per-criterion confidence score, and surfaces user-verified entries with a dedicated badge.
 
-Built with **Next.js 16 (Turbopack)**, **React 19**, **Tailwind v4**, **Leaflet**, the **Anthropic SDK** for natural-language query parsing, and a streaming NDJSON search route that updates the UI as each data source returns.
+A particular focus is placed on **data reliability**: each source is weighted by the trustworthiness of its accessibility information. Google Places carries the lowest weight (0.35) — its accessibility data is frequently sparse, heuristic, or absent entirely, making reliable results a recurring challenge when including it.
+
+Built with **Next.js 16 (Turbopack)**, **React 19**, **Tailwind v4**, and **Leaflet**, with a streaming NDJSON search route that updates the UI as each data source returns.
 
 ---
 
@@ -18,11 +20,8 @@ Built with **Next.js 16 (Turbopack)**, **React 19**, **Tailwind v4**, **Leaflet*
   - [Streaming response](#streaming-response)
   - [Data sources & reliability weights](#data-sources--reliability-weights)
   - [Confidence scoring](#confidence-scoring)
-  - [Name search vs. category search](#name-search-vs-category-search)
-  - [Quoted names override the LLM](#quoted-names-override-the-llm)
   - [User-verified badge (Wheelmap / OSM check_date)](#user-verified-badge-wheelmap--osm-check_date)
   - [Wheelmap deep-link per place](#wheelmap-deep-link-per-place)
-  - [Dog-policy enrichment](#dog-policy-enrichment)
 - [Categories](#categories)
 - [Filters](#filters)
 - [Deployment to Vercel](#deployment-to-vercel)
@@ -33,17 +32,15 @@ Built with **Next.js 16 (Turbopack)**, **React 19**, **Tailwind v4**, **Leaflet*
 
 ## Key features
 
-- **Multi-source aggregation.** Pulls data in parallel from OpenStreetMap (Overpass), accessibility.cloud, Google Places (New) and Reisen für Alle, then deduplicates places by name + address + geo proximity.
+- **Multi-source aggregation.** Pulls data in parallel from OpenStreetMap (Overpass), accessibility.cloud and Google Places (New), then deduplicates places by name + address + geo proximity.
 - **Per-criterion confidence.** Each place gets entrance / toilet / parking attributes, scored by source reliability and presence of strong signals (e.g. `toilets:wheelchair=designated`, A.Cloud `grabBars` object).
 - **Streaming search.** The `/api/search` endpoint emits NDJSON events as each source responds, so the FilterPanel shows per-source loaders → counts → warning icons live.
-- **Natural-language query parsing.** A user types "Rollstuhlgerechte Cafés in Berlin Mitte" or `"Meierei" in Potsdam` — the Anthropic Claude Haiku model extracts location, categories and an optional name hint. Quoted strings always win as deterministic name hints.
-- **Name-first search path.** When the user names a specific place, adapter queries widen (no wheelchair pre-filter) and the OSM Overpass query switches to a name-targeted regex so the 100-result cap can't hide the target.
-- **Containment-aware deduplication.** OSM duplicates like `Meierei` (node, fast-food kiosk) and `Meierei - Brauerei Potsdam` (way, brewery) at the same coordinates merge into a single canonical place.
+- **Containment-aware deduplication.** OSM duplicates like `Meierei` (node) and `Meierei - Brauerei Potsdam` (way) at the same coordinates merge into a single canonical place.
 - **Verified-recently badge.** OSM `check_date:wheelchair` (written by Wheelmap surveys) within 2 years boosts the source weight ×1.2 and renders a `✓♿` mark left of the score.
 - **Wheelmap deep-link.** Every place card links out to its Wheelmap page — using accessibility.cloud's `infoPageUrl` when available, falling back to OSM-id and finally a coordinate-centred map view.
-- **Dog-policy hint.** OSM `dog=*` and accessibility.cloud `animalPolicy.allowsDogs` (Pfotenpiloten) are extracted and shown as a 🐾 badge on cards. (Top-level filter intentionally not exposed — data is too sparse.)
 - **Bilingual UI.** German and English, with a runtime language switcher persisted to `localStorage`.
-- **Resizable result column** with a draggable divider, full-screen map mode, dual SSR-safe Leaflet rendering.
+- **Responsive layout.** Full desktop layout (filter sidebar | resizable results column | map) and a dedicated mobile layout with tab bar (results / map / filter). Installable as a PWA on iOS and Android.
+- **"In der Nähe" mode.** One tap locates the user via the browser Geolocation API and searches around the current position, with a pulsing blue marker on the map.
 
 ---
 
@@ -54,7 +51,7 @@ Built with **Next.js 16 (Turbopack)**, **React 19**, **Tailwind v4**, **Leaflet*
 | Framework | Next.js 16.2 (App Router, Turbopack), React 19 |
 | Styling | Tailwind v4, shadcn/ui (Radix primitives), lucide-react icons |
 | Maps | Leaflet 1.9 + react-leaflet 5 (dynamically imported, no SSR) |
-| LLM | Anthropic SDK, Claude Haiku 4.5 (`claude-haiku-4-5-20251001`) |
+| Analytics | Vercel Analytics |
 | Tests | Vitest + Testing Library + jsdom |
 | Build & deploy | Vercel-friendly streaming with `Cache-Control: no-store` and `X-Accel-Buffering: no` |
 
@@ -94,10 +91,8 @@ Create a `.env.local` in the project root. None of these are exposed to the brow
 
 | Variable | Required | What it unlocks |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | recommended | Claude Haiku for query parsing & result summary. Without it the app falls back to a regex-based parser that cannot extract `nameHint`. |
 | `ACCESSIBILITY_CLOUD_API_KEY` | optional | accessibility.cloud / Wheelmap data. Without it that source is skipped silently. |
 | `GOOGLE_PLACES_API_KEY` | optional | Google Places (New) Nearby + accessibility flags. |
-| `REISEN_FUER_ALLE_API_KEY` + `REISEN_FUER_ALLE_API_BASE` | optional | Certified-business data; the adapter skips silently when either is missing or still a `your_…` placeholder. |
 
 OpenStreetMap (Overpass) requires no key.
 
@@ -107,41 +102,48 @@ OpenStreetMap (Overpass) requires no key.
 
 ```
 app/
-  layout.tsx           Root layout, fonts, LocaleProvider, TooltipProvider
-  page.tsx             Home — Chat / Filter / Results / Map
+  layout.tsx              Root layout, fonts, LocaleProvider, TooltipProvider, Analytics
+  page.tsx                Home — Chat / Filter / Results / Map
+  icon.svg                App icon, auto-served as favicon by Next.js
+  sitemap.ts              Dynamic sitemap for search engine indexing
+  robots.ts               robots.txt — allows all crawlers, points to sitemap
+  faq/page.tsx            FAQ page (DE + EN)
+  impressum/page.tsx      Legal notice / Impressum (DE + EN, obfuscated email)
   api/
-    search/route.ts    NDJSON streaming search pipeline
-    geocode/route.ts   Thin Nominatim wrapper
+    search/route.ts       NDJSON streaming search pipeline
+    geocode/route.ts      Thin Nominatim wrapper
 components/
-  chat/ChatPanel.tsx           Auto-resizing textarea + example chips
-  filters/FilterPanel.tsx      Source toggles, criteria, radius slider
-  map/MapView.tsx              Leaflet (dynamic import), confidence-coloured markers
+  chat/ChatPanel.tsx              Auto-resizing textarea + example chips + nearby mode
+  filters/FilterPanel.tsx         Source toggles, criteria, radius slider
+  map/MapView.tsx                 Leaflet (dynamic import), confidence-coloured markers, user location dot
+  mobile/MobileLayout.tsx         Mobile-specific layout with tab bar (results / map / filter)
   results/
     ResultsList.tsx
-    PlaceCard.tsx              One card per place — with Wheelmap link, dog badge, debug sheet
-    A11yAttribute.tsx          Per-criterion row in a card
-    ConfidenceBadge.tsx        Score badge + ✓♿ verified marker, tooltip-driven score breakdown
-    PlaceDebugSheet.tsx        Side-sheet exposing raw source records
-  ui/                          shadcn primitives
-  LanguageSwitcher.tsx         <select> de/en
+    PlaceCard.tsx                 One card per place — Wheelmap link, debug sheet
+    A11yAttribute.tsx             Per-criterion row in a card
+    ConfidenceBadge.tsx           Score badge + ✓♿ verified marker, tooltip-driven score breakdown
+    PlaceDebugSheet.tsx           Side-sheet exposing raw source records
+  ui/                             shadcn primitives
+  LanguageSwitcher.tsx            <select> de/en
 lib/
-  types.ts                     Domain types: Place, AccessibilityAttribute, SearchFilters, …
-  config.ts                    Reliability weights, thresholds, OSM tag mappings, APP_VERSION
-  llm.ts                       parseQuery, summariseResults, regex fallbacks, quote extractor
-  utils.ts                     cn, nanoid
+  types.ts                        Domain types: Place, AccessibilityAttribute, SearchFilters, …
+  config.ts                       Reliability weights, thresholds, OSM tag mappings, APP_VERSION
+  utils.ts                        cn, nanoid
   adapters/
-    osm.ts                     Overpass query builder + parser; check_date-based boost
-    accessibility-cloud.ts     A.Cloud parser; surfaces wheelmapUrl + animalPolicy
-    google-places.ts           Places API (New) per-category POSTs
-    reisen-fuer-alle.ts        Certified-business adapter (gated on real key)
-    index.ts                   safeRun + startAdapterTasks for streaming
+    osm.ts                        Overpass query builder + parser; check_date-based boost
+    accessibility-cloud.ts        A.Cloud parser; surfaces wheelmapUrl
+    google-places.ts              Places API (New) per-category POSTs
+    index.ts                      safeRun + startAdapterTasks for streaming
   matching/
-    match.ts                   Trigram + Haversine + name-containment match
-    merge.ts                   Source-weighted attribute merge, confidence rules
+    match.ts                      Trigram + Haversine + name-containment match
+    merge.ts                      Source-weighted attribute merge, confidence rules
   i18n/
-    index.tsx                  LocaleProvider, useTranslations, useLocale
+    index.tsx                     LocaleProvider, useTranslations, useLocale
     de.ts / en.ts / types.ts
-__tests__/                     Vitest suites — components, lib, integration (live)
+public/
+  llms.txt                        Concise app description for AI crawlers
+  llms-full.txt                   Full FAQ content for deep AI indexing
+__tests__/                        Vitest suites — components, lib, integration (live)
 ```
 
 ---
@@ -154,28 +156,22 @@ __tests__/                     Vitest suites — components, lib, integration (l
 user query
    │
    ▼
-parseQuery (Claude Haiku → JSON)        ← regex fallback if no key
-   │   { locationQuery, nameHint, categories, freeTextHint }
-   ▼
 geocode (Nominatim, DACH-restricted)
    │
    ▼
-adapters in parallel  → OSM, A.Cloud, Google Places, Reisen für Alle
+adapters in parallel  → OSM, A.Cloud, Google Places
    │   each emits a `{type:"source", …}` NDJSON event when it returns
    ▼
 match + merge   (haversine 80m + trigram + name containment)
    │
    ▼
-filterByNameHint  (only when nameHint set)
-   │
-   ▼
 computeFilteredConfidence  (only active filter criteria count)
    │
    ▼
-passesFilters (skipped when nameHint set — show by name regardless of filters)
+passesFilters
    │
    ▼
-sort by overallConfidence  →  summariseResults (Claude Haiku, optional)
+sort by overallConfidence
    │
    ▼
 emit `{type:"result", payload: SearchResult}` and close the stream
@@ -198,7 +194,6 @@ This is what powers the per-source loader / count / warning icon next to each en
 
 | Source | Weight | What it brings |
 |---|---|---|
-| Reisen für Alle | 1.00 | Certified, on-site inspected |
 | accessibility.cloud (Wheelmap and partners) | 0.75 | A11yJSON-shaped records, often with structured restroom / entrance details |
 | OpenStreetMap (Overpass) | 0.70 | Wide coverage, varying quality; single-tag signals |
 | Google Places (New) | 0.35 | Broad but accessibility data is sparse and often heuristic |
@@ -223,15 +218,6 @@ The merge picks a winner by summed source weight. Toilet attributes are governed
 
 `computeFilteredConfidence` averages **only the criteria the user has filtered for**, so toggling parking off doesn't deflate scores of places that lack parking data.
 
-### Name search vs. category search
-
-- **Category search** ("Cafés in Berlin Mitte"): adapters are queried by category and radius; OSM uses `[amenity~"^(...)$"]`; A.Cloud applies the `at-least-partially-accessible-by-wheelchair` preset; the standard accessibility filters are honoured.
-- **Name search** ("`Meierei`" in Potsdam): adapter queries widen — OSM switches to `[name~"<case-class>"][amenity]` (and other POI keys), A.Cloud uses its `q` parameter and skips the wheelchair preset, forced ALL_CATEGORIES at the route boundary, accessibility filters neutralised. The accessibility post-filter is also skipped so the named place always shows up regardless of its accessibility data.
-
-### Quoted names override the LLM
-
-Wrap a name in any of `"…"`, `'…'`, `„…"`, `"…"`, `«…»` — `extractQuotedName` extracts it and the route uses it as the deterministic `nameHint`, regardless of what the LLM returned. Useful when the LLM is misclassifying short or ambiguous names.
-
 ### User-verified badge (Wheelmap / OSM check_date)
 
 When an OSM record carries `check_date:wheelchair` (or `check_date:toilets:wheelchair`, or a generic `check_date`) within 2 years, the adapter passes `weightMultiplier = 1.2` to `buildAttribute` and marks the source attribution `verifiedRecently: true`. The `ConfidenceBadge` then renders a small `✓♿` icon left of the score.
@@ -244,17 +230,11 @@ Each card has a `♿` icon-link to wheelmap.org. Priority:
 2. OSM-id constructed `https://wheelmap.org/nodes/<id>` for nodes
 3. Coordinate fallback `https://wheelmap.org/?lat=…&lon=…&zoom=19`
 
-### Dog-policy enrichment
-
-OSM `dog=yes/leashed` → `place.allowsDogs = true`; `dog=no/outside` → `false` (outside-only doesn't help inside seating). accessibility.cloud's Pfotenpiloten dataset feeds `properties.accessibility.animalPolicy.allowsDogs`. When a Pfotenpiloten record arrives without any wheelchair data it gets a `dogPolicyOnly` flag — those records are dropped from the final result unless they merged into a place that does carry wheelchair data, ensuring the dog hint is supplementary, never the primary signal.
-
-A small 🐾 badge on the card communicates the result. There is no top-level "Dogs allowed" filter (it was tried and removed — the underlying data is too sparse to be useful as a hard filter).
-
 ---
 
 ## Categories
 
-15 fine-grained categories with separate OSM tag mappings each:
+16 fine-grained categories with separate OSM tag mappings each:
 
 ```
 cafe          amenity=cafe
@@ -272,6 +252,7 @@ cinema        amenity=cinema
 library       amenity=library
 gallery       tourism=gallery | amenity=arts_centre
 attraction    tourism=attraction | theme_park
+ice_cream     amenity=ice_cream
 ```
 
 The split between `bar` / `pub` / `biergarten` and `theater` / `cinema` and `hotel` / `hostel` / `apartment` exists so a query like "Biergärten in München" doesn't return cocktail bars and "Kino in Berlin" doesn't return playhouses.
@@ -280,9 +261,9 @@ The split between `bar` / `pub` / `biergarten` and `theater` / `cinema` and `hot
 
 ## Filters
 
-The `FilterPanel` is the left-hand sidebar:
+The `FilterPanel` is the left-hand sidebar (desktop) or the third tab (mobile):
 
-- **Sources** — toggle OSM / accessibility.cloud / Google Places / Reisen für Alle. Each row shows live status during a search (spinner → result count → ⚠ on error).
+- **Sources** — toggle OSM / accessibility.cloud / Google Places. Each row shows live status during a search (spinner → result count → ⚠ on error).
 - **Criteria** — wheelchair entrance, toilet, parking, seating. Each toggled criterion contributes to `passesFilters` and to `computeFilteredConfidence`.
 - **Radius** — 1–50 km, default 5 km.
 - **"Show places with unclear information"** — when off, places with `value === "unknown"` are dropped for any active criterion. When on, unknowns pass.
@@ -294,7 +275,7 @@ The `FilterPanel` is the left-hand sidebar:
 The project is Vercel-ready out of the box (Next.js 16). A few things to set up:
 
 1. Push to GitHub and connect the repo in the Vercel dashboard — auto-detects Next.js, no config needed.
-2. **Add environment variables** under *Project → Settings → Environment Variables* for Production / Preview / Development: at minimum `ANTHROPIC_API_KEY`. Optional: `ACCESSIBILITY_CLOUD_API_KEY`, `GOOGLE_PLACES_API_KEY`, `REISEN_FUER_ALLE_API_KEY` + `_API_BASE`.
+2. **Add environment variables** under *Project → Settings → Environment Variables* for Production / Preview / Development. Optional: `ACCESSIBILITY_CLOUD_API_KEY`, `GOOGLE_PLACES_API_KEY`.
 3. **Function timeout.** Overpass calls can take 15–25 s — exceeding Vercel's default 10 s on the Hobby plan. Add `export const maxDuration = 60` to `app/api/search/route.ts` if you hit timeouts on production.
 4. The streaming response uses `Cache-Control: no-store` and `X-Accel-Buffering: no` headers so Vercel's edge proxy doesn't buffer NDJSON output.
 
@@ -312,11 +293,10 @@ Layout:
 - `__tests__/components/` — React component tests with Testing Library / jsdom
 - `__tests__/lib/adapters/` — adapter unit tests with mocked `fetch`
 - `__tests__/lib/matching/` — match score and merge logic
-- `__tests__/lib/llm.test.ts` — regex fallback paths
-- `__tests__/integration/` — live integration tests that hit OSM, A.Cloud, Google, Anthropic. **They skip themselves when keys are absent.** They are flaky by nature (rate-limited public endpoints) and are excluded from the default expected-pass set in CI.
+- `__tests__/integration/` — live integration tests that hit OSM, A.Cloud and Google. **They skip themselves when keys are absent.** They are flaky by nature (rate-limited public endpoints) and are excluded from the default expected-pass set in CI.
 
 ---
 
 ## Versioning
 
-The user-visible app version lives in `lib/config.ts` as `APP_VERSION` and is rendered in the header next to the subtitle, e.g. `Find wheelchair-accessible places (v1.7)`. Bump it on every meaningful release so a quick glance at production confirms the right build is live. Recent versions are tagged in commit messages (`v1.5`, `v1.6`, `v1.7`, …).
+The user-visible app version lives in `lib/config.ts` as `APP_VERSION`. It is shown in the Impressum page under the "Version" section. Bump it on every meaningful release so a quick glance at the Impressum confirms the right build is live. Versions are also tagged in commit messages (`v1.30`, `v1.31`, …).
