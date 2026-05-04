@@ -14,6 +14,7 @@ let L: typeof import("leaflet") | null = null
 interface Props {
   places:        Place[]
   center?:       { lat: number; lon: number }
+  userLocation?: { lat: number; lon: number }
   selectedId?:   string
   panTrigger?:   number
   onSelect:      (place: Place) => void
@@ -45,6 +46,7 @@ function svgMarker(color: string, selected: boolean) {
 export default function MapView({
   places,
   center,
+  userLocation,
   selectedId,
   panTrigger,
   onSelect,
@@ -58,6 +60,8 @@ export default function MapView({
   const mapInst  = useRef<any>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markers  = useRef<Map<string, any>>(new Map())
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const userMarker = useRef<any>(null)
   const [mapReady, setMapReady] = useState(false)
 
   // Init map once
@@ -98,6 +102,58 @@ export default function MapView({
       }
     }
   }, [])
+
+  // Inject pulse animation CSS once
+  useEffect(() => {
+    if (document.getElementById("ap-user-loc-style")) return
+    const style = document.createElement("style")
+    style.id = "ap-user-loc-style"
+    style.textContent = `
+      @keyframes ap-pulse {
+        0%   { transform:scale(1);   opacity:0.6; }
+        70%  { transform:scale(2.8); opacity:0;   }
+        100% { transform:scale(2.8); opacity:0;   }
+      }
+      .ap-user-dot { position:relative; width:22px; height:22px; }
+      .ap-user-dot-ring {
+        position:absolute; inset:0; border-radius:50%;
+        background:rgba(59,130,246,0.35);
+        animation:ap-pulse 2s ease-out infinite;
+      }
+      .ap-user-dot-inner {
+        position:absolute; inset:4px; border-radius:50%;
+        background:#3b82f6; border:2.5px solid #fff;
+        box-shadow:0 1px 4px rgba(0,0,0,0.3);
+      }
+    `
+    document.head.appendChild(style)
+  }, [])
+
+  // User location marker (only when userLocation prop is set)
+  useEffect(() => {
+    if (!mapInst.current || !L) return
+    if (userLocation) {
+      const icon = L.divIcon({
+        html:      '<div class="ap-user-dot"><div class="ap-user-dot-ring"></div><div class="ap-user-dot-inner"></div></div>',
+        className: "",
+        iconSize:  [22, 22],
+        iconAnchor:[11, 11],
+      })
+      if (userMarker.current) {
+        userMarker.current.setLatLng([userLocation.lat, userLocation.lon])
+        userMarker.current.setIcon(icon)
+      } else {
+        userMarker.current = L.marker(
+          [userLocation.lat, userLocation.lon],
+          { icon, zIndexOffset: 1000 },
+        ).addTo(mapInst.current)
+      }
+    } else {
+      userMarker.current?.remove()
+      userMarker.current = null
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userLocation, mapReady])
 
   // Update markers when places change
   useEffect(() => {
