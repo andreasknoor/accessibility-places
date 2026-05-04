@@ -105,13 +105,18 @@ app/
   layout.tsx              Root layout, fonts, LocaleProvider, TooltipProvider, Analytics
   page.tsx                Home — Chat / Filter / Results / Map
   icon.svg                App icon, auto-served as favicon by Next.js
+  manifest.ts             Web app manifest (PWA metadata)
   sitemap.ts              Dynamic sitemap for search engine indexing
   robots.ts               robots.txt — allows all crawlers, points to sitemap
+  sw.ts                   Service worker (PWA offline support)
   faq/page.tsx            FAQ page (DE + EN)
   impressum/page.tsx      Legal notice / Impressum (DE + EN, obfuscated email)
   api/
-    search/route.ts       NDJSON streaming search pipeline
-    geocode/route.ts      Thin Nominatim wrapper
+    search/route.ts             NDJSON streaming search pipeline
+    geocode/
+      route.ts                  Nominatim forward geocode
+      suggest/route.ts          Autocomplete suggestions
+      reverse/route.ts          Reverse geocode (coords → place name)
 components/
   chat/ChatPanel.tsx              Auto-resizing textarea + example chips + nearby mode
   filters/FilterPanel.tsx         Source toggles, criteria, radius slider
@@ -128,6 +133,7 @@ components/
 lib/
   types.ts                        Domain types: Place, AccessibilityAttribute, SearchFilters, …
   config.ts                       Reliability weights, thresholds, OSM tag mappings, APP_VERSION
+  llm.ts                          Query parser (regex-based) + result summariser
   utils.ts                        cn, nanoid
   adapters/
     osm.ts                        Overpass query builder + parser; check_date-based boost
@@ -143,7 +149,11 @@ lib/
 public/
   llms.txt                        Concise app description for AI crawlers
   llms-full.txt                   Full FAQ content for deep AI indexing
-__tests__/                        Vitest suites — components, lib, integration (live)
+__tests__/
+  components/                     React component tests (Testing Library / jsdom)
+  lib/adapters/                   Adapter unit tests with mocked fetch
+  lib/matching/                   Match score and merge logic
+  integration/                    Live tests against OSM, A.Cloud, Google (skip when keys absent)
 ```
 
 ---
@@ -293,7 +303,7 @@ Layout:
 - `__tests__/components/` — React component tests with Testing Library / jsdom
 - `__tests__/lib/adapters/` — adapter unit tests with mocked `fetch`
 - `__tests__/lib/matching/` — match score and merge logic
-- `__tests__/integration/` — live integration tests that hit OSM, A.Cloud and Google. **They skip themselves when keys are absent.** They are flaky by nature (rate-limited public endpoints) and are excluded from the default expected-pass set in CI.
+- `__tests__/integration/` — live tests against OSM, A.Cloud and Google. **They skip themselves when keys are absent** and are excluded from the default CI pass set (rate-limited public endpoints).
 
 ---
 

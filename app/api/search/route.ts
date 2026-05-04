@@ -45,7 +45,7 @@ async function geocode(
   const url = `${NOMINATIM_ENDPOINT}/search?q=${encodeURIComponent(locationQuery)}&format=json&limit=1&countrycodes=de,at,ch`
   try {
     const res = await fetch(url, {
-      headers: { "User-Agent": "AccessibleSpaces/1.0" },
+      headers: { "User-Agent": "AccessiblePlaces/1.0 (contact@accessible-places.org)" },
       signal:  AbortSignal.any([signal, AbortSignal.timeout(8_000)]),
     })
     if (!res.ok) return null
