@@ -225,7 +225,7 @@ export default function Home() {
       <header className="flex items-center justify-between px-5 py-3 border-b border-border bg-card shrink-0">
         <button
           onClick={handleReset}
-          className="flex items-center gap-2.5 hover:opacity-75 transition-opacity"
+          className="flex items-center gap-2.5 hover:opacity-75 transition-opacity cursor-pointer"
           title="Reset"
         >
           <img src="/icons/icon-preview.svg" className="w-7 h-7 rounded-lg" alt="" aria-hidden />
