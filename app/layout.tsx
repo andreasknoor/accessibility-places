@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 })
 
 const DESCRIPTION =
-  "Barrierefreie Orte in Deutschland, Österreich und der Schweiz finden — " +
-  "Restaurants, Hotels, Museen und mehr mit geprüften Rollstuhl-Informationen."
+  "Barrierefreie Orte in Deutschland, Österreich und der Schweiz — " +
+  "verlässlicher als Google Maps. Kostenlose Suche nach Restaurants, Cafés, Hotels und mehr."
 
 export const metadata: Metadata = {
   title:       "Accessible Places",

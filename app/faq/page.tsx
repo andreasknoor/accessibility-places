@@ -7,7 +7,7 @@ import { useTranslations, useLocale } from "@/lib/i18n"
 const FAQ_DE = [
   {
     q: "Was ist Accessible Places?",
-    a: "Accessible Places hilft Menschen mit Rollstuhl oder eingeschränkter Mobilität, barrierefreie Orte in Deutschland, Österreich und der Schweiz zu finden — Restaurants, Cafés, Hotels, Museen und mehr.",
+    a: "Accessible Places hilft Menschen mit Rollstuhl oder eingeschränkter Mobilität, barrierefreie Orte in Deutschland, Österreich und der Schweiz zu finden. Im Mittelpunkt steht die Verlässlichkeit der Informationen: Daten aus Google Maps sind in puncto Barrierefreiheit oft unvollständig und lassen sich dort kaum gezielt filtern. Accessible Places löst genau dieses Problem — mit einer schnellen, einfach zu bedienenden Suche, die Informationen aus mehreren Quellen zusammenführt und bewertet.",
   },
   {
     q: "Welche Länder werden unterstützt?",
@@ -46,7 +46,7 @@ const FAQ_DE = [
 const FAQ_EN = [
   {
     q: "What is Accessible Places?",
-    a: "Accessible Places helps people with wheelchairs or limited mobility find accessible venues in Germany, Austria and Switzerland — restaurants, cafés, hotels, museums and more.",
+    a: "Accessible Places helps people with wheelchairs or limited mobility find accessible venues in Germany, Austria and Switzerland. A key focus is data reliability: accessibility information in Google Maps is often incomplete and difficult to filter in a meaningful way. Accessible Places solves exactly this problem — offering a fast, easy-to-use search that aggregates and rates information from multiple sources.",
   },
   {
     q: "Which countries are supported?",

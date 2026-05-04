@@ -11,7 +11,7 @@ License: Private, non-commercial project
 ## Frequently Asked Questions (DE)
 
 **Was ist Accessible Places?**
-Accessible Places hilft Menschen mit Rollstuhl oder eingeschränkter Mobilität, barrierefreie Orte in Deutschland, Österreich und der Schweiz zu finden — Restaurants, Cafés, Hotels, Museen und mehr.
+Accessible Places hilft Menschen mit Rollstuhl oder eingeschränkter Mobilität, barrierefreie Orte in Deutschland, Österreich und der Schweiz zu finden. Im Mittelpunkt steht die Verlässlichkeit der Informationen: Daten aus Google Maps sind in puncto Barrierefreiheit oft unvollständig und lassen sich dort kaum gezielt filtern. Accessible Places löst genau dieses Problem — mit einer schnellen, einfach zu bedienenden Suche, die Informationen aus mehreren Quellen zusammenführt und bewertet.
 
 **Welche Länder werden unterstützt?**
 Deutschland, Österreich und die Schweiz (DACH-Region).
@@ -42,7 +42,7 @@ Ja — Accessible Places kann als App auf dem Smartphone installiert werden, ohn
 ## Frequently Asked Questions (EN)
 
 **What is Accessible Places?**
-Accessible Places helps people with wheelchairs or limited mobility find accessible venues in Germany, Austria and Switzerland — restaurants, cafés, hotels, museums and more.
+Accessible Places helps people with wheelchairs or limited mobility find accessible venues in Germany, Austria and Switzerland. A key focus is data reliability: accessibility information in Google Maps is often incomplete and difficult to filter in a meaningful way. Accessible Places solves exactly this problem — offering a fast, easy-to-use search that aggregates and rates information from multiple sources.
 
 **Which countries are supported?**
 Germany, Austria and Switzerland (the DACH region).
