@@ -210,6 +210,7 @@ export default function Home() {
         <MapView
           places={places}
           center={searchCenter}
+          userLocation={chatMode === "nearby" ? searchCenter : undefined}
           selectedId={selectedId}
           onSelect={(p) => setSelectedId(p.id)}
           isFullscreen
