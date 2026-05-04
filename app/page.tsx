@@ -191,7 +191,6 @@ export default function Home() {
         onRadius={setRadiusKm}
         sourceStates={sourceStates}
         searchCenter={searchCenter}
-        userLocation={chatMode === "nearby" ? searchCenter : undefined}
         onSearch={handleSearch}
         onRerun={lastQuery ? () => handleSearch(lastQuery) : undefined}
         onExpandRadius={lastQuery ? handleExpandRadius : undefined}

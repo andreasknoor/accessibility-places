@@ -30,7 +30,6 @@ interface Props {
   onRadius:      (r: number) => void
   sourceStates?: Partial<Record<SourceId, SourceState>>
   searchCenter?: { lat: number; lon: number }
-  userLocation?: { lat: number; lon: number }
   onSearch:      (query: string) => void
   onRerun?:         () => void
   onExpandRadius?:  () => void
@@ -43,7 +42,7 @@ interface Props {
 export default function MobileLayout({
   places, selectedId, onSelect, isLoading,
   filters, sources, radiusKm, onFilters, onSources, onRadius,
-  sourceStates, searchCenter, userLocation, onSearch, onRerun, onExpandRadius, hasSearched, error,
+  sourceStates, searchCenter, onSearch, onRerun, onExpandRadius, hasSearched, error,
   onReset, resetKey,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>("results")
@@ -125,7 +124,7 @@ export default function MobileLayout({
             <MapView
               places={places}
               center={searchCenter}
-              userLocation={userLocation}
+              userLocation={chatMode === "nearby" ? searchCenter : undefined}
               selectedId={selectedId}
               panTrigger={panTrigger}
               onSelect={onSelect}
