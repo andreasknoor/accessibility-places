@@ -56,6 +56,24 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
 
   const district = typeof nearbyPhase === "object" ? nearbyPhase.district : null
 
+  // Restore last search on mount (chip + location, never nearby mode)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("ap_last_search")
+      if (saved) {
+        const { idx, loc } = JSON.parse(saved)
+        if (typeof idx === "number" && idx >= 0 && idx < CHIPS.length) {
+          setSelectedIdx(idx)
+          selectedIdxRef.current = idx
+        }
+        if (typeof loc === "string" && loc.trim()) {
+          skipSuggestRef.current = true
+          setLocation(loc)
+        }
+      }
+    } catch { /* ignore malformed storage */ }
+  }, [])
+
   // Show attention pulse only on the very first page visit
   useEffect(() => {
     const key = "ap_first_visit"
@@ -138,6 +156,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
     if (isLoading) return
     setSuggestions([])
     setShowSuggestions(false)
+    try { localStorage.setItem("ap_last_search", JSON.stringify({ idx: selectedIdx, loc: location.trim() })) } catch { /* ignore */ }
     onSearch(buildQuery(location))
   }
 
@@ -150,6 +169,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
     setSuggestions([])
     setShowSuggestions(false)
     setHighlightedIdx(-1)
+    try { localStorage.setItem("ap_last_search", JSON.stringify({ idx: selectedIdx, loc: newLocation.trim() })) } catch { /* ignore */ }
     onSearch(buildQuery(newLocation))
   }
 
