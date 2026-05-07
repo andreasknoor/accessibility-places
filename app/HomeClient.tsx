@@ -52,6 +52,7 @@ export default function HomeClient() {
   const [lastQuery,     setLastQuery]    = useState<string | undefined>()
   const [chatMode,      setChatMode]     = useState<"text" | "nearby">("text")
   const [resetKey,      setResetKey]     = useState(0)
+  const [scrollToId,    setScrollToId]   = useState<string | undefined>()
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
 
@@ -308,6 +309,7 @@ export default function HomeClient() {
             radiusKm={radiusKm}
             onRadiusChange={handleRadiusChange}
             hasSearched={!!lastQuery}
+            scrollToId={scrollToId}
           />
           <div className="shrink-0 border-t border-border px-4 py-2 flex justify-end gap-4">
             <Link href={locale === "en" ? "/en/faq" : "/faq"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
@@ -338,7 +340,7 @@ export default function HomeClient() {
             center={searchCenter}
             userLocation={chatMode === "nearby" ? searchCenter : undefined}
             selectedId={selectedId}
-            onSelect={(p) => setSelectedId(p.id)}
+            onSelect={(p) => { setSelectedId(p.id); setScrollToId(p.id) }}
             isFullscreen={false}
             onToggleFullscreen={() => setIsFullscreen(true)}
           />
