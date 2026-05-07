@@ -67,8 +67,6 @@ export default function MapView({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userMarker = useRef<any>(null)
   const [mapReady, setMapReady] = useState(false)
-  // Keep latest callback + places in refs so the popupopen listener (attached
-  // once) always sees the current values without needing to re-register.
   const onShowInResultsRef = useRef(onShowInResults)
   const placesRef          = useRef(places)
   useEffect(() => { onShowInResultsRef.current = onShowInResults }, [onShowInResults])
@@ -100,20 +98,6 @@ export default function MapView({
       }).addTo(map)
 
       mapInst.current = map
-
-      // Attach click handler for "show in results" buttons inside popups.
-      // Uses event delegation on the map so we never need to re-register
-      // when markers/popups are rebuilt.
-      map.on("popupopen", (e: any) => {
-        const btn = e.popup.getElement()?.querySelector("[data-show-id]")
-        if (!btn) return
-        const id = btn.getAttribute("data-show-id")
-        btn.addEventListener("click", (ev: Event) => {
-          ev.stopPropagation()
-          const place = placesRef.current.find((p) => p.id === id)
-          if (place) onShowInResultsRef.current?.(place)
-        }, { once: true })
-      })
 
       setMapReady(true)
     }
@@ -213,29 +197,44 @@ export default function MapView({
         const addr = [place.address.street, place.address.houseNumber, place.address.city]
           .filter(Boolean).join(" ")
 
-        const popup = L!.popup({ maxWidth: 260 }).setContent(`
-          <div style="font-family:sans-serif;font-size:13px;line-height:1.5">
-            <strong style="display:block;margin-bottom:4px">${place.name} <span style="color:${markerColor(place.overallConfidence)};font-weight:normal">(${Math.round(place.overallConfidence * 100)}%)</span></strong>
-            ${addr ? `<div style="color:#666;font-size:11px;margin-bottom:6px">${addr}</div>` : ""}
-            <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:11px">
-              <span style="color:#888">${t.criteria.entrance}</span>
-              <span style="color:${markerColor(place.accessibility.entrance.confidence)}">${t.a11y[place.accessibility.entrance.value] ?? place.accessibility.entrance.value}</span>
-              <span style="color:#888">${t.criteria.toilet}</span>
-              <span style="color:${markerColor(place.accessibility.toilet.confidence)}">${t.a11y[place.accessibility.toilet.value] ?? place.accessibility.toilet.value}</span>
-              <span style="color:#888">${t.criteria.parking}</span>
-              <span style="color:${markerColor(place.accessibility.parking.confidence)}">${
-                place.accessibility.parking.value === "yes" &&
-                (place.accessibility.parking.details as { nearbyOnly?: boolean } | undefined)?.nearbyOnly
-                  ? t.a11y.yesNearby
-                  : (t.a11y[place.accessibility.parking.value] ?? place.accessibility.parking.value)
-              }</span>
-            </div>
-            <div style="margin-top:6px;font-size:10px;color:#888">
-              ${t.map.source}: ${SOURCE_LABELS[place.primarySource]}
-            </div>
-            ${onShowInResults ? `<button data-show-id="${place.id}" style="display:block;margin-top:8px;font-size:11px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-align:left">${t.map.showInResults} →</button>` : ""}
+        // Build popup content as a real DOM element so L.DomEvent.on can attach
+        // the click handler — plain addEventListener and inline onclick both fail
+        // on mobile because Leaflet intercepts touchstart on the popup container.
+        const div = document.createElement("div")
+        div.style.cssText = "font-family:sans-serif;font-size:13px;line-height:1.5"
+        div.innerHTML = `
+          <strong style="display:block;margin-bottom:4px">${place.name} <span style="color:${markerColor(place.overallConfidence)};font-weight:normal">(${Math.round(place.overallConfidence * 100)}%)</span></strong>
+          ${addr ? `<div style="color:#666;font-size:11px;margin-bottom:6px">${addr}</div>` : ""}
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:11px">
+            <span style="color:#888">${t.criteria.entrance}</span>
+            <span style="color:${markerColor(place.accessibility.entrance.confidence)}">${t.a11y[place.accessibility.entrance.value] ?? place.accessibility.entrance.value}</span>
+            <span style="color:#888">${t.criteria.toilet}</span>
+            <span style="color:${markerColor(place.accessibility.toilet.confidence)}">${t.a11y[place.accessibility.toilet.value] ?? place.accessibility.toilet.value}</span>
+            <span style="color:#888">${t.criteria.parking}</span>
+            <span style="color:${markerColor(place.accessibility.parking.confidence)}">${
+              place.accessibility.parking.value === "yes" &&
+              (place.accessibility.parking.details as { nearbyOnly?: boolean } | undefined)?.nearbyOnly
+                ? t.a11y.yesNearby
+                : (t.a11y[place.accessibility.parking.value] ?? place.accessibility.parking.value)
+            }</span>
           </div>
-        `)
+          <div style="margin-top:6px;font-size:10px;color:#888">
+            ${t.map.source}: ${SOURCE_LABELS[place.primarySource]}
+          </div>
+          ${onShowInResults ? `<button data-show-id style="display:block;margin-top:8px;font-size:11px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-align:left">${t.map.showInResults} →</button>` : ""}
+        `
+        if (onShowInResults) {
+          const btn = div.querySelector<HTMLElement>("[data-show-id]")
+          if (btn) {
+            const capturedId = place.id
+            L!.DomEvent.on(btn, "click", (ev: Event) => {
+              L!.DomEvent.stopPropagation(ev)
+              const p = placesRef.current.find((pl) => pl.id === capturedId)
+              if (p) onShowInResultsRef.current?.(p)
+            })
+          }
+        }
+        const popup = L!.popup({ maxWidth: 260 }).setContent(div)
 
         const marker = L!.marker(
           [place.coordinates.lat, place.coordinates.lon],
