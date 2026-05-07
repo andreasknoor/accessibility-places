@@ -295,22 +295,28 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
                 role="listbox"
                 className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg overflow-hidden"
               >
-                {suggestions.map((s, i) => (
-                  <li
-                    key={s.display}
-                    role="option"
-                    aria-selected={i === highlightedIdx}
-                    onMouseDown={(e) => { e.preventDefault(); selectSuggestion(s) }}
-                    className={cn(
-                      "px-3 py-2 text-sm cursor-pointer transition-colors",
-                      i === highlightedIdx
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted",
-                    )}
-                  >
-                    {s.display}
-                  </li>
-                ))}
+                {suggestions.map((s, i) => {
+                  const commaIdx = s.display.indexOf(",")
+                  const splitAt  = commaIdx !== -1 ? commaIdx : s.display.lastIndexOf(" (")
+                  const bold     = splitAt !== -1 ? s.display.slice(0, splitAt) : s.display
+                  const rest     = splitAt !== -1 ? s.display.slice(splitAt)    : ""
+                  return (
+                    <li
+                      key={s.display}
+                      role="option"
+                      aria-selected={i === highlightedIdx}
+                      onMouseDown={(e) => { e.preventDefault(); selectSuggestion(s) }}
+                      className={cn(
+                        "px-3 py-2 text-sm cursor-pointer transition-colors",
+                        i === highlightedIdx
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-muted",
+                      )}
+                    >
+                      <span className="font-semibold">{bold}</span>{rest}
+                    </li>
+                  )
+                })}
               </ul>
             )}
           </div>
