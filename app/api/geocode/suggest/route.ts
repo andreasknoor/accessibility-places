@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 
-const PHOTON_URL = "https://photon.komoot.io/api/"
+const PHOTON_URL  = "https://photon.komoot.io/api/"
 // Bounding box covering DE + AT + CH (minLon, minLat, maxLon, maxLat)
-const DACH_BBOX  = "5.87,45.82,17.17,55.06"
+const DACH_BBOX   = "5.87,45.82,17.17,55.06"
+const DACH_CODES  = new Set(["DE", "AT", "CH"])
 
 export async function GET(req: NextRequest) {
   const q    = req.nextUrl.searchParams.get("q")?.trim()
@@ -27,6 +28,8 @@ export async function GET(req: NextRequest) {
     const seen = new Set<string>()
 
     const suggestions = (data.features ?? [])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .filter((f: any) => DACH_CODES.has((f.properties?.countrycode ?? "").toUpperCase()))
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .map((f: any) => {
         const p       = f.properties ?? {}
