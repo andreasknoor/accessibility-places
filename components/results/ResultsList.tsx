@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Loader2, RefreshCw, MapPin, X, ChevronDown } from "lucide-react"
 import PlaceCard from "./PlaceCard"
 import { useTranslations } from "@/lib/i18n"
@@ -22,13 +22,22 @@ interface Props {
   radiusKm?:        number
   onRadiusChange?:  (km: number) => void
   hasSearched?:     boolean
+  scrollToId?:      string
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, onRadiusChange, hasSearched }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId }: Props) {
   const t = useTranslations()
   const [mapHintSeen, setMapHintSeen] = useState(() =>
     typeof window !== "undefined" && !!localStorage.getItem("ap_map_hint_seen")
   )
+  const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+
+  useEffect(() => {
+    if (!scrollToId) return
+    requestAnimationFrame(() => {
+      itemRefs.current.get(scrollToId)?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+    })
+  }, [scrollToId])
 
   function handleSelect(place: Place) {
     if (!mapHintSeen) {
@@ -179,13 +188,17 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
           )}
 
           {!isLoading && places.map((place) => (
-            <PlaceCard
+            <div
               key={place.id}
-              place={place}
-              filters={filters}
-              isSelected={place.id === selectedId}
-              onClick={() => handleSelect(place)}
-            />
+              ref={(el) => { if (el) itemRefs.current.set(place.id, el); else itemRefs.current.delete(place.id) }}
+            >
+              <PlaceCard
+                place={place}
+                filters={filters}
+                isSelected={place.id === selectedId}
+                onClick={() => handleSelect(place)}
+              />
+            </div>
           ))}
         </div>
       </div>

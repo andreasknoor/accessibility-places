@@ -129,10 +129,11 @@ export interface Translations {
     }
   }
   map: {
-    fullscreen:     string
-    exitFullscreen: string
-    source:         string
-    confidence:     string
+    fullscreen:      string
+    exitFullscreen:  string
+    source:          string
+    confidence:      string
+    showInResults:   string
   }
   categories: {
     cafe:        string

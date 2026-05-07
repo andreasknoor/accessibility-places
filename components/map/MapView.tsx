@@ -18,6 +18,7 @@ interface Props {
   selectedId?:   string
   panTrigger?:   number
   onSelect:      (place: Place) => void
+  onShowInResults?: (place: Place) => void
   isFullscreen:         boolean
   onToggleFullscreen:   () => void
   showFullscreenToggle?: boolean
@@ -51,6 +52,7 @@ export default function MapView({
   selectedId,
   panTrigger,
   onSelect,
+  onShowInResults,
   isFullscreen,
   onToggleFullscreen,
   showFullscreenToggle = true,
@@ -65,6 +67,12 @@ export default function MapView({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userMarker = useRef<any>(null)
   const [mapReady, setMapReady] = useState(false)
+  // Keep latest callback + places in refs so the popupopen listener (attached
+  // once) always sees the current values without needing to re-register.
+  const onShowInResultsRef = useRef(onShowInResults)
+  const placesRef          = useRef(places)
+  useEffect(() => { onShowInResultsRef.current = onShowInResults }, [onShowInResults])
+  useEffect(() => { placesRef.current = places }, [places])
 
   // Init map once
   useEffect(() => {
@@ -92,6 +100,21 @@ export default function MapView({
       }).addTo(map)
 
       mapInst.current = map
+
+      // Attach click handler for "show in results" buttons inside popups.
+      // Uses event delegation on the map so we never need to re-register
+      // when markers/popups are rebuilt.
+      map.on("popupopen", (e: any) => {
+        const btn = e.popup.getElement()?.querySelector("[data-show-id]")
+        if (!btn) return
+        const id = btn.getAttribute("data-show-id")
+        btn.addEventListener("click", (ev: Event) => {
+          ev.stopPropagation()
+          const place = placesRef.current.find((p) => p.id === id)
+          if (place) onShowInResultsRef.current?.(place)
+        }, { once: true })
+      })
+
       setMapReady(true)
     }
     init()
@@ -210,6 +233,7 @@ export default function MapView({
             <div style="margin-top:6px;font-size:10px;color:#888">
               ${t.map.source}: ${SOURCE_LABELS[place.primarySource]}
             </div>
+            ${onShowInResults ? `<button data-show-id="${place.id}" style="display:block;margin-top:8px;font-size:11px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-align:left">${t.map.showInResults} →</button>` : ""}
           </div>
         `)
 

@@ -158,6 +158,7 @@ const en: Translations = {
     exitFullscreen:"Exit fullscreen",
     source:        "Source",
     confidence:    "Reliability",
+    showInResults: "Show in results",
   },
   categories: {
     cafe:        "Café",

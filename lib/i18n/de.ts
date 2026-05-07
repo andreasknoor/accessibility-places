@@ -158,6 +158,7 @@ const de: Translations = {
     exitFullscreen:"Vollbild beenden",
     source:        "Quelle",
     confidence:    "Verlässlichkeit",
+    showInResults: "Zeige in Ergebnissen",
   },
   categories: {
     cafe:        "Café",

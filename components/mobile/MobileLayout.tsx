@@ -49,6 +49,13 @@ export default function MobileLayout({
   const [mapMounted,  setMapMounted]  = useState(false)
   const [panTrigger,  setPanTrigger]  = useState(0)
   const [chatMode,    setChatMode]    = useState<"text" | "nearby">("text")
+  const [scrollToId,  setScrollToId]  = useState<string | undefined>()
+
+  function handleShowInResults(place: Place) {
+    onSelect(place)
+    setActiveTab("results")
+    setScrollToId(place.id)
+  }
 
   // All search-triggering actions switch to the results tab
   const handleSearch = (query: string) => { setActiveTab("results"); onSearch(query) }
@@ -111,6 +118,7 @@ export default function MobileLayout({
             selectedId={selectedId}
             onSelect={(p) => { onSelect(p); setPanTrigger((n) => n + 1); setActiveTab("map") }}
             isLoading={isLoading}
+            scrollToId={scrollToId}
 
             onRerun={handleRerun}
             onExpandRadius={handleExpandRadius}
@@ -130,6 +138,7 @@ export default function MobileLayout({
               selectedId={selectedId}
               panTrigger={panTrigger}
               onSelect={onSelect}
+              onShowInResults={handleShowInResults}
               isFullscreen={false}
               onToggleFullscreen={() => {}}
               showFullscreenToggle={false}
