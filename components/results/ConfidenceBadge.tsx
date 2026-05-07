@@ -34,7 +34,8 @@ function ScoreContent({ place, filters }: { place: Place; filters: SearchFilters
       key === "parking" && v === "yes" &&
       (place.accessibility.parking.details as { nearbyOnly?: boolean } | undefined)?.nearbyOnly
     ) {
-      return t.a11y.yesNearby
+      const d = (place.accessibility.parking.details as { nearbyParkingDistanceM?: number } | undefined)?.nearbyParkingDistanceM
+      return `${t.a11y.yesNearby}${d != null ? ` (${d}m)` : ""}`
     }
     if (v === "yes" || v === "limited" || v === "no") return t.a11y[v]
     return "—"

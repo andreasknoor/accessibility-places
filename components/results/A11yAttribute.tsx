@@ -33,7 +33,12 @@ export default function A11yAttribute({ label, attr, detailType, showDetails }: 
     detailType === "parking" &&
     attr.value === "yes" &&
     (attr.details as { nearbyOnly?: boolean } | undefined)?.nearbyOnly === true
-  const valueLabel = isNearbyOnlyParking ? t.a11y.yesNearby : t.a11y[attr.value]
+  const nearbyDistanceM = isNearbyOnlyParking
+    ? (attr.details as { nearbyParkingDistanceM?: number } | undefined)?.nearbyParkingDistanceM
+    : undefined
+  const valueLabel = isNearbyOnlyParking
+    ? `${t.a11y.yesNearby}${nearbyDistanceM != null ? ` (${nearbyDistanceM}m)` : ""}`
+    : t.a11y[attr.value]
 
   function detailLabel(key: string): string {
     if (!detailType) return key
