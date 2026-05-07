@@ -37,6 +37,7 @@ const de: Translations = {
   results: {
     title: "Ergebnisse",
     titleRadius: (km: number) => `(${km} km Radius)`,
+    radiusPickerLabel: "Suchradius ändern",
     count: (n: number) => `${n} Ort${n !== 1 ? "e" : ""} gefunden`,
     showMap: "Karte anzeigen",
     confidence: {

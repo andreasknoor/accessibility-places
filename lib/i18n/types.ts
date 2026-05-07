@@ -33,9 +33,10 @@ export interface Translations {
     }
   }
   results: {
-    title:       string
-    titleRadius: (km: number) => string
-    count:       (n: number) => string
+    title:              string
+    titleRadius:        (km: number) => string
+    radiusPickerLabel:  string
+    count:              (n: number) => string
     showMap:     string
     confidence: {
       high:   string

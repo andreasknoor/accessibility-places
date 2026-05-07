@@ -153,6 +153,11 @@ export default function HomeClient() {
     handleSearch(lastQuery, newRadius)
   }, [lastQuery, radiusKm, handleSearch])
 
+  const handleRadiusChange = useCallback((km: number) => {
+    setRadiusKm(km)
+    if (lastQuery) handleSearch(lastQuery, km)
+  }, [lastQuery, handleSearch])
+
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     isDragging.current = true
     dragStart.current  = { x: e.clientX, width: resultsWidth }
@@ -194,6 +199,7 @@ export default function HomeClient() {
         onSearch={handleSearch}
         onRerun={lastQuery ? () => handleSearch(lastQuery) : undefined}
         onExpandRadius={lastQuery ? handleExpandRadius : undefined}
+        onRadiusChange={handleRadiusChange}
         hasSearched={!!lastQuery}
         error={error}
         onReset={handleReset}
@@ -276,6 +282,7 @@ export default function HomeClient() {
             onRerun={lastQuery ? () => handleSearch(lastQuery) : undefined}
             onExpandRadius={lastQuery ? handleExpandRadius : undefined}
             radiusKm={radiusKm}
+            onRadiusChange={handleRadiusChange}
             hasSearched={!!lastQuery}
           />
           <div className="shrink-0 border-t border-border px-4 py-2 flex justify-end gap-4">
