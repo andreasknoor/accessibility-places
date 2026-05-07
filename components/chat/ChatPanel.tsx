@@ -119,9 +119,13 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
   function selectChip(idx: number) {
     setSelectedIdx(idx)
     selectedIdxRef.current = idx
+    const label = locale === "de" ? CHIPS[idx].de : CHIPS[idx].en
     if (mode === "nearby" && district) {
-      const label = locale === "de" ? CHIPS[idx].de : CHIPS[idx].en
       onSearch(`${label} in ${district}`)
+    } else if (mode === "text" && location.trim()) {
+      setSuggestions([])
+      setShowSuggestions(false)
+      onSearch(`${label} in ${location.trim()}`)
     }
   }
 
