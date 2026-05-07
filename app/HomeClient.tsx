@@ -279,10 +279,10 @@ export default function HomeClient() {
             hasSearched={!!lastQuery}
           />
           <div className="shrink-0 border-t border-border px-4 py-2 flex justify-end gap-4">
-            <Link href="/faq" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+            <Link href={locale === "en" ? "/en/faq" : "/faq"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
               {t.faq.linkLabel}
             </Link>
-            <Link href="/impressum" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+            <Link href={locale === "en" ? "/en/impressum" : "/impressum"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
               {t.impressum.linkLabel}
             </Link>
             <a

@@ -5,7 +5,7 @@ import dynamic from "next/dynamic"
 import Link from "next/link"
 import { Map, List, SlidersHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useTranslations } from "@/lib/i18n"
+import { useTranslations, useLocale } from "@/lib/i18n"
 import ChatPanel       from "@/components/chat/ChatPanel"
 import FilterPanel     from "@/components/filters/FilterPanel"
 import ResultsList     from "@/components/results/ResultsList"
@@ -54,6 +54,7 @@ export default function MobileLayout({
   const handleRerun = onRerun ? () => { setActiveTab("results"); onRerun() } : undefined
   const handleExpandRadius = onExpandRadius ? () => { setActiveTab("results"); onExpandRadius() } : undefined
   const t = useTranslations()
+  const { locale } = useLocale()
 
   // Mount the map only when first activated — Leaflet must initialize in a
   // visible container, not under display:none, to measure its dimensions correctly.
@@ -154,10 +155,10 @@ export default function MobileLayout({
 
       {/* ── Footer links ── */}
       <div className="flex justify-center gap-5 border-t border-border bg-card px-4 py-1.5 shrink-0">
-        <Link href="/faq" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+        <Link href={locale === "en" ? "/en/faq" : "/faq"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
           {t.faq.linkLabel}
         </Link>
-        <Link href="/impressum" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+        <Link href={locale === "en" ? "/en/impressum" : "/impressum"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
           {t.impressum.linkLabel}
         </Link>
         <a
