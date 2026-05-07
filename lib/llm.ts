@@ -5,7 +5,7 @@ const CATEGORY_HINTS: Record<Category, string[]> = {
   restaurant:  ["restaurant", "essen", "speiselokal", "gastronomie", "gastro", "lokal"],
   bar:         ["bar", "cocktail"],
   pub:         ["pub", "kneipe"],
-  biergarten:  ["biergarten", "bier"],
+  biergarten:  ["biergarten", "beer garden", "bier"],
   fast_food:   ["fast food", "fastfood", "imbiss", "döner", "burger", "pizza"],
   hotel:       ["hotel", "motel", "unterkunft", "übernachtung", "pension", "gästehaus", "lodge"],
   hostel:      ["hostel"],
@@ -33,7 +33,7 @@ export function inferCategories(query: string): Category[] {
   const lower = normaliseForMatch(query)
   const found: Category[] = []
   for (const [cat, hints] of Object.entries(CATEGORY_HINTS) as [Category, string[]][]) {
-    if (hints.some((h) => new RegExp(`\\b${normaliseForMatch(h)}\\b`, "i").test(lower))) found.push(cat)
+    if (hints.some((h) => new RegExp(`\\b${normaliseForMatch(h)}`, "i").test(lower))) found.push(cat)
   }
   return found.length > 0 ? found : [...ALL_CATEGORIES]
 }
