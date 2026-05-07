@@ -26,6 +26,7 @@ const en: Translations = {
     radius: "Search Radius",
     radiusLabel: (km: number) => `${km} km`,
     acceptUnknown: "Show places with unclear information",
+    sourceCountTooltip: (raw: number, final: number) => `Raw: ${raw} → after filter: ${final}`,
     criteriaItems: {
       entrance:     "Wheelchair-accessible entrance",
       toilet:       "Wheelchair-accessible toilet",

@@ -26,6 +26,7 @@ const de: Translations = {
     radius: "Suchradius",
     radiusLabel: (km: number) => `${km} km`,
     acceptUnknown: "Orte mit unklaren Informationen anzeigen",
+    sourceCountTooltip: (raw: number, final: number) => `Rohtreffer: ${raw} → nach Filter: ${final}`,
     criteriaItems: {
       entrance:     "Rollstuhlgerechter Eingang",
       toilet:       "Rollstuhlgerechte Toilette",

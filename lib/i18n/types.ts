@@ -18,12 +18,13 @@ export interface Translations {
     nearbyIn:      (district: string) => string
   }
   filters: {
-    title:         string
-    sources:       string
-    criteria:      string
-    radius:        string
-    radiusLabel:   (km: number) => string
-    acceptUnknown: string
+    title:               string
+    sources:             string
+    criteria:            string
+    radius:              string
+    radiusLabel:         (km: number) => string
+    acceptUnknown:       string
+    sourceCountTooltip:  (raw: number, final: number) => string
     criteriaItems: {
       entrance:     string
       toilet:       string

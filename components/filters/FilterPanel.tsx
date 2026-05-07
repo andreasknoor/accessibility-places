@@ -6,6 +6,7 @@ import { Slider }   from "@/components/ui/slider"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useTranslations } from "@/lib/i18n"
+import { useIsMobile } from "@/hooks/useIsMobile"
 import { SOURCE_LABELS } from "@/lib/config"
 import type { SearchFilters, ActiveSources, SourceId, SourceState } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -23,6 +24,8 @@ interface Props {
 }
 
 function SourceIndicator({ state }: { state?: SourceState }) {
+  const t = useTranslations()
+  const isMobile = useIsMobile()
   if (!state) return null
   if (state.status === "loading") {
     return (
@@ -51,10 +54,30 @@ function SourceIndicator({ state }: { state?: SourceState }) {
       </Tooltip>
     )
   }
-  return (
+  // Variant A: show finalCount (places attributed to this source via primarySource).
+  // While the result event hasn't arrived yet, fall back to rawCount so something
+  // shows during the brief gap between source-complete and result.
+  const display = state.finalCount ?? state.rawCount ?? 0
+  const indicator = (
     <span className="text-xs font-medium tabular-nums text-foreground/60 shrink-0">
-      {state.count ?? 0}
+      {display}
     </span>
+  )
+  // Variant C as desktop-only debug tooltip: roh → gefiltert.
+  // Only meaningful once both numbers exist *and* differ.
+  const showDebugTooltip =
+    !isMobile &&
+    state.rawCount !== undefined &&
+    state.finalCount !== undefined &&
+    state.rawCount !== state.finalCount
+  if (!showDebugTooltip) return indicator
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{indicator}</TooltipTrigger>
+      <TooltipContent side="right" className="text-xs">
+        {t.filters.sourceCountTooltip(state.rawCount!, state.finalCount!)}
+      </TooltipContent>
+    </Tooltip>
   )
 }
 

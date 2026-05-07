@@ -185,7 +185,13 @@ export type SourceStatus = "loading" | "ok" | "error"
 
 export interface SourceState {
   status: SourceStatus
-  count?: number
+  // Raw places returned by the adapter — before merge, category filter,
+  // name filter, and accessibility filters. This is what the streaming
+  // `event.type === "source"` event carries (`r.places.length`).
+  rawCount?: number
+  // Places in the *final* result list whose primarySource is this source.
+  // Computed client-side once the `event.type === "result"` event arrives.
+  finalCount?: number
   error?: string
   durationMs?: number
   // Mid-fetch progress for adapters with fallback endpoints. Currently only

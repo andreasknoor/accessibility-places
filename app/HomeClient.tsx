@@ -112,13 +112,27 @@ export default function HomeClient() {
           } else if (event.type === "source") {
             const sid = event.sourceId as SourceId
             const update: SourceState = event.status === "ok"
-              ? { status: "ok",    count: event.count as number, durationMs: event.durationMs as number }
-              : { status: "error", error: event.error as string,  durationMs: event.durationMs as number }
+              ? { status: "ok",    rawCount: event.count as number, durationMs: event.durationMs as number }
+              : { status: "error", error: event.error as string,    durationMs: event.durationMs as number }
             setSourceStates((prev) => ({ ...prev, [sid]: update }))
           } else if (event.type === "result") {
             const data = event.payload as SearchResult
             setPlaces(data.places)
             setSearchCenter(data.location)
+            // Attribute each final place to its primarySource — Variant A.
+            const finalCounts: Partial<Record<SourceId, number>> = {}
+            for (const p of data.places) {
+              finalCounts[p.primarySource] = (finalCounts[p.primarySource] ?? 0) + 1
+            }
+            setSourceStates((prev) => {
+              const next: Partial<Record<SourceId, SourceState>> = { ...prev }
+              for (const id of Object.keys(prev) as SourceId[]) {
+                if (next[id]?.status === "ok") {
+                  next[id] = { ...next[id]!, finalCount: finalCounts[id] ?? 0 }
+                }
+              }
+              return next
+            })
           } else if (event.type === "fatal") {
             throw new Error(event.error as string)
           }
