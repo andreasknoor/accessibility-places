@@ -198,7 +198,7 @@ export default function HomeClient() {
         searchCenter={searchCenter}
         onSearch={handleSearch}
         onRerun={lastQuery ? () => handleSearch(lastQuery) : undefined}
-        onExpandRadius={lastQuery ? handleExpandRadius : undefined}
+        onExpandRadius={lastQuery && radiusKm < RADIUS_MAX_KM ? handleExpandRadius : undefined}
         onRadiusChange={handleRadiusChange}
         hasSearched={!!lastQuery}
         error={error}
@@ -280,7 +280,7 @@ export default function HomeClient() {
             onSelect={(p) => setSelectedId(p.id)}
             isLoading={isLoading}
             onRerun={lastQuery ? () => handleSearch(lastQuery) : undefined}
-            onExpandRadius={lastQuery ? handleExpandRadius : undefined}
+            onExpandRadius={lastQuery && radiusKm < RADIUS_MAX_KM ? handleExpandRadius : undefined}
             radiusKm={radiusKm}
             onRadiusChange={handleRadiusChange}
             hasSearched={!!lastQuery}
