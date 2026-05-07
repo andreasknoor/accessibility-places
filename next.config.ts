@@ -33,6 +33,21 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }]
   },
+  async redirects() {
+    return [
+      {
+        source:      "/:path*",
+        has:         [{ type: "host", value: "www.accessible-places.org" }],
+        destination: "https://accessible-places.org/:path*",
+        permanent:   true,
+      },
+      {
+        source:      "/en",
+        destination: "/?lang=en",
+        permanent:   true,
+      },
+    ]
+  },
 }
 
 export default withSerwist(nextConfig)

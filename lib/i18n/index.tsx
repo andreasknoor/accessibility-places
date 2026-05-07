@@ -22,6 +22,11 @@ function detectLocale(): Locale {
   return lang === "de" ? "de" : "en"
 }
 
+function localeFromQuery(): Locale | null {
+  const q = new URLSearchParams(window.location.search).get("lang")?.slice(0, 2).toLowerCase()
+  return q === "de" || q === "en" ? q : null
+}
+
 interface LocaleContextValue {
   locale: Locale
   setLocale: (l: Locale) => void
@@ -34,6 +39,12 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>("de")
 
   useEffect(() => {
+    const fromQuery = localeFromQuery()
+    if (fromQuery) {
+      setLocaleState(fromQuery)
+      localStorage.setItem(STORAGE_KEY, fromQuery)
+      return
+    }
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored === "de" || stored === "en") setLocaleState(stored)
     else setLocaleState(detectLocale())
