@@ -62,8 +62,8 @@ async function geocode(q: string): Promise<{ lat: number; lon: number } | null> 
 
 const runLlmTests = !!process.env.ANTHROPIC_API_KEY?.startsWith("sk-") && !!process.env.TEST_LLM_QUALITY
 
-describe("parseQuery – Namensextraktion", () => {
-  it.skipIf(!runLlmTests)('extrahiert nameHint "et cetera" aus "et cetera in Potsdam"', { timeout: 20_000 }, async () => {
+describe("parseQuery – name extraction", () => {
+  it.skipIf(!runLlmTests)('extracts nameHint "et cetera" from "et cetera in Potsdam"', { timeout: 20_000 }, async () => {
     const parsed = await parseQuery("et cetera in Potsdam")
     console.log("  ↳ parseQuery:", JSON.stringify(parsed))
     expect(parsed.locationQuery.toLowerCase()).toContain("potsdam")
@@ -71,14 +71,14 @@ describe("parseQuery – Namensextraktion", () => {
     expect(parsed.categories.length).toBeGreaterThan(0)
   })
 
-  it.skipIf(!runLlmTests)('extrahiert nameHint aus eindeutigem Namen "Brauhaus Georgbräu Berlin"', { timeout: 20_000 }, async () => {
+  it.skipIf(!runLlmTests)('extracts nameHint from an unambiguous name like "Brauhaus Georgbräu Berlin"', { timeout: 20_000 }, async () => {
     const parsed = await parseQuery("Brauhaus Georgbräu Berlin")
     console.log("  ↳ parseQuery:", JSON.stringify(parsed))
     expect(parsed.locationQuery.toLowerCase()).toContain("berlin")
     expect(parsed.nameHint.toLowerCase()).toContain("georg")
   })
 
-  it.skipIf(!runLlmTests)('setzt leeren nameHint für Kategoriensuche "Cafés in Berlin Mitte"', { timeout: 20_000 }, async () => {
+  it.skipIf(!runLlmTests)('sets empty nameHint for a category search like "Cafés in Berlin Mitte"', { timeout: 20_000 }, async () => {
     const parsed = await parseQuery("Rollstuhlgerechte Cafés in Berlin Mitte")
     console.log("  ↳ parseQuery:", JSON.stringify(parsed))
     expect(parsed.locationQuery.toLowerCase()).toContain("berlin")
@@ -106,7 +106,7 @@ describe("filterByNameHint – Name-Filter-Logik", () => {
     makeName("Et-Cetera Bistro"),
   ]
 
-  it("findet exakten Treffer (Substring)", () => {
+  it("finds an exact substring match", () => {
     const result = filterByNameHint(places, "et cetera")
     const names  = result.map((p) => p.name)
     expect(names).toContain("Café et cetera")
@@ -114,27 +114,27 @@ describe("filterByNameHint – Name-Filter-Logik", () => {
     expect(names).not.toContain("Bäckerei Schmidt")
   })
 
-  it("findet Treffer mit Diakritika-Normalisierung (Café → cafe)", () => {
+  it("finds matches via diacritics normalisation (Café → cafe)", () => {
     const result = filterByNameHint(places, "Café et cetera")
     expect(result.map((p) => p.name)).toContain("Café et cetera")
   })
 
-  it("gibt alle Orte zurück wenn nameHint leer", () => {
+  it("returns all places when nameHint is empty", () => {
     expect(filterByNameHint(places, "")).toHaveLength(places.length)
   })
 
-  it("liefert leere Liste wenn kein Treffer", () => {
+  it("returns an empty list when no match is found", () => {
     expect(filterByNameHint(places, "Wirtshaus Zum Goldenen Hirsch")).toHaveLength(0)
   })
 
-  it("findet per Trigram-Ähnlichkeit (Tippfehler: 'georgbrau' findet 'Brauhaus Georgbräu')", () => {
+  it("finds via trigram similarity (typo: 'georgbrau' matches 'Brauhaus Georgbräu')", () => {
     const p2 = [makeName("Brauhaus Georgbräu"), makeName("Café Müller")]
     const result = filterByNameHint(p2, "georgbrau")
     expect(result.map((r) => r.name)).toContain("Brauhaus Georgbräu")
   })
 })
 
-// ─── Suite 3: Pipeline-Integration ohne LLM ───────────────────────────────────
+// ─── Suite 3: Pipeline integration without LLM ───────────────────────────────
 // parseQuery is bypassed with a fixed result. Tests geocode → OSM adapter →
 // filterByNameHint pipeline without any LLM involvement.
 //
@@ -144,8 +144,8 @@ describe("filterByNameHint – Name-Filter-Logik", () => {
 // and apply filterByNameHint() as a JS-level filter — exactly as the real
 // search route does when nameHint is present.
 
-describe('Namenssuche E2E – Restaurants in Berlin Mitte (ohne LLM)', () => {
-  it("geocode → OSM → filterByNameHint pipeline gibt Ergebnisse zurück", { timeout: 60_000 }, async () => {
+describe('Name-search E2E – restaurants in Berlin Mitte (no LLM)', () => {
+  it("geocode → OSM → filterByNameHint pipeline returns results", { timeout: 60_000 }, async () => {
     const geo = await geocode("Berlin Mitte")
     if (!geo) {
       console.log("[skip] Nominatim not reachable")

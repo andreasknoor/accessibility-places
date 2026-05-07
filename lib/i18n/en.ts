@@ -5,6 +5,11 @@ const en: Translations = {
     title: "Accessible Places",
     subtitle: "Find wheelchair-accessible places",
   },
+  common: {
+    close:       "Close",
+    loading:     "Loading …",
+    dismissHint: "Dismiss hint",
+  },
   chat: {
     locationPlaceholder: "Enter a city, e.g. Berlin Mitte",
     send: "Search",
@@ -83,6 +88,13 @@ const en: Translations = {
     vegan:      "Vegan",
     showOnMap:  "Show on map",
     mapHint:    "Tip: tap an entry to show it on the map",
+    scoreCalculation:      "Score calculation",
+    scoreCriterion:        "Criterion",
+    scoreValueWeight:      "Value · Weight",
+    scoreNoActiveCriteria: "No scored criteria active",
+    showRawData:           "Show raw data",
+    detailsExpand:         "Details",
+    detailsCollapse:       "Less",
   },
   a11y: {
     yes:     "Yes",

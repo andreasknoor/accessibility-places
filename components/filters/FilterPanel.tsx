@@ -30,7 +30,7 @@ function SourceIndicator({ state }: { state?: SourceState }) {
   if (state.status === "loading") {
     return (
       <span className="inline-flex items-center gap-1 shrink-0">
-        <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" aria-label="Lädt …" />
+        <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" aria-label={t.common.loading} />
         {state.attempt && state.of && state.of > 1 && (
           <span className="text-[10px] tabular-nums text-muted-foreground">
             {state.attempt}/{state.of}

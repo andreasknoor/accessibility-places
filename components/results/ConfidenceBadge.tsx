@@ -27,20 +27,18 @@ const COLORS = {
   low:    "bg-red-100 text-red-800 border-red-200",
 }
 
-const VALUE_LABEL: Record<string, string> = {
-  yes:     "Ja",
-  limited: "Eingeschränkt",
-  no:      "Nein",
-  unknown: "—",
-}
-
 function ScoreContent({ place, filters }: { place: Place; filters: SearchFilters }) {
-  const criteria = [
-    { key: "entrance" as const, label: "Eingang",    attr: place.accessibility.entrance },
-    { key: "toilet"   as const, label: "Toilette",   attr: place.accessibility.toilet   },
-    { key: "parking"  as const, label: "Parkplatz",  attr: place.accessibility.parking  },
+  const t = useTranslations()
+  const valueLabel = (v: string): string => {
+    if (v === "yes" || v === "limited" || v === "no") return t.a11y[v]
+    return "—"
+  }
+  const criteria: { key: "entrance" | "toilet" | "parking" | "seating"; label: string; attr: Place["accessibility"]["entrance"] }[] = [
+    { key: "entrance", label: t.criteria.entrance, attr: place.accessibility.entrance },
+    { key: "toilet",   label: t.criteria.toilet,   attr: place.accessibility.toilet   },
+    { key: "parking",  label: t.criteria.parking,  attr: place.accessibility.parking  },
     ...(place.accessibility.seating
-      ? [{ key: "seating" as const, label: "Sitzplätze", attr: place.accessibility.seating }]
+      ? [{ key: "seating" as const, label: t.criteria.seating, attr: place.accessibility.seating }]
       : []),
   ]
 
@@ -54,15 +52,15 @@ function ScoreContent({ place, filters }: { place: Place; filters: SearchFilters
   const formula =
     included.length > 0
       ? `(${formulaParts.join(" + ")}) ÷ ${included.length} = ${Math.round(avg * 100)}%`
-      : "Keine bewerteten Kriterien aktiv"
+      : t.results.scoreNoActiveCriteria
 
   return (
     <div className="space-y-2 text-xs">
       <table className="w-full border-collapse">
         <thead>
           <tr className="text-muted-foreground">
-            <th className="text-left font-normal pb-1">Kriterium</th>
-            <th className="text-right font-normal pb-1">Wert · Gewicht</th>
+            <th className="text-left font-normal pb-1">{t.results.scoreCriterion}</th>
+            <th className="text-right font-normal pb-1">{t.results.scoreValueWeight}</th>
           </tr>
         </thead>
         <tbody>
@@ -75,7 +73,7 @@ function ScoreContent({ place, filters }: { place: Place; filters: SearchFilters
                 <td className="py-0.5">{counts ? "✓" : "–"} {label}</td>
                 <td className="py-0.5 text-right tabular-nums">
                   {counts
-                    ? `${VALUE_LABEL[attr.value] ?? attr.value} · ${Math.round(attr.confidence * 100)}%`
+                    ? `${valueLabel(attr.value)} · ${Math.round(attr.confidence * 100)}%`
                     : "—"}
                 </td>
               </tr>
@@ -160,7 +158,7 @@ export default function ConfidenceBadge({ confidence, place, filters, className 
         <BottomSheet
           open={sheetOpen}
           onClose={() => setSheetOpen(false)}
-          title="Score-Berechnung"
+          title={t.results.scoreCalculation}
         >
           <ScoreContent place={place} filters={filters} />
         </BottomSheet>

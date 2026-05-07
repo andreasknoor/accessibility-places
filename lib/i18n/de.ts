@@ -5,6 +5,11 @@ const de: Translations = {
     title: "Accessible Places",
     subtitle: "Barrierefreie Orte finden",
   },
+  common: {
+    close:       "Schließen",
+    loading:     "Lädt …",
+    dismissHint: "Hinweis schließen",
+  },
   chat: {
     locationPlaceholder: "Ort eingeben, z. B. Berlin Mitte",
     send: "Suchen",
@@ -83,6 +88,13 @@ const de: Translations = {
     vegan:      "Vegan",
     showOnMap:  "Auf Karte zeigen",
     mapHint:    "Tipp: Eintrag antippen → auf Karte anzeigen",
+    scoreCalculation:      "Score-Berechnung",
+    scoreCriterion:        "Kriterium",
+    scoreValueWeight:      "Wert · Gewicht",
+    scoreNoActiveCriteria: "Keine bewerteten Kriterien aktiv",
+    showRawData:           "Rohdaten anzeigen",
+    detailsExpand:         "Details",
+    detailsCollapse:       "Weniger",
   },
   a11y: {
     yes:     "Ja",

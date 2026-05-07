@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { createPortal } from "react-dom"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useTranslations } from "@/lib/i18n"
 
 interface Props {
   open:     boolean
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function BottomSheet({ open, onClose, title, children, className }: Props) {
+  const t = useTranslations()
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
@@ -45,7 +47,7 @@ export function BottomSheet({ open, onClose, title, children, className }: Props
           <button
             onClick={onClose}
             className="ml-auto p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            aria-label="Schließen"
+            aria-label={t.common.close}
           >
             <X className="w-4 h-4" />
           </button>

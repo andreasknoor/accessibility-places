@@ -3,6 +3,7 @@
 import { Fragment } from "react"
 import { X } from "lucide-react"
 import { SOURCE_LABELS } from "@/lib/config"
+import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import type { Place } from "@/lib/types"
 
@@ -19,12 +20,13 @@ const VALUE_COLORS: Record<string, string> = {
 }
 
 export default function PlaceDebugSheet({ place, onClose }: Props) {
+  const t = useTranslations()
   const criteria = [
-    { key: "entrance" as const, label: "Eingang",    attr: place.accessibility.entrance },
-    { key: "toilet"   as const, label: "Toilette",   attr: place.accessibility.toilet   },
-    { key: "parking"  as const, label: "Parkplatz",  attr: place.accessibility.parking  },
+    { key: "entrance" as const, label: t.criteria.entrance, attr: place.accessibility.entrance },
+    { key: "toilet"   as const, label: t.criteria.toilet,   attr: place.accessibility.toilet   },
+    { key: "parking"  as const, label: t.criteria.parking,  attr: place.accessibility.parking  },
     ...(place.accessibility.seating
-      ? [{ key: "seating" as const, label: "Sitzplätze", attr: place.accessibility.seating }]
+      ? [{ key: "seating" as const, label: t.criteria.seating, attr: place.accessibility.seating }]
       : []),
   ]
 
@@ -44,7 +46,7 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
           <button
             onClick={onClose}
             className="shrink-0 text-muted-foreground hover:text-foreground transition-colors mt-0.5"
-            aria-label="Schließen"
+            aria-label={t.common.close}
           >
             <X className="w-4 h-4" />
           </button>
@@ -54,7 +56,7 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
 
           {/* ── Accessibility criteria ── */}
           <section>
-            <p className="font-semibold text-sm mb-3">Barrierefreiheits-Attribute</p>
+            <p className="font-semibold text-sm mb-3">Accessibility attributes</p>
             <div className="space-y-5">
               {criteria.map(({ key, label, attr }) => (
                 <div key={key}>
@@ -64,10 +66,10 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
                       {attr.value}
                     </span>
                     <span className="text-muted-foreground">
-                      {Math.round(attr.confidence * 100)}% Konfidenz
+                      {Math.round(attr.confidence * 100)}% confidence
                     </span>
                     {attr.conflict && (
-                      <span className="text-orange-600 font-medium">⚠ Konflikt</span>
+                      <span className="text-orange-600 font-medium">⚠ conflict</span>
                     )}
                   </div>
 
@@ -83,12 +85,12 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
                               {src.value}
                             </span>
                             <span className="text-muted-foreground">
-                              {Math.round(src.reliabilityWeight * 100)}% Gewicht
+                              {Math.round(src.reliabilityWeight * 100)}% weight
                             </span>
                           </div>
                           {src.rawValue && (
                             <p className="text-muted-foreground">
-                              Rohwert:{" "}
+                              Raw value:{" "}
                               <code className="font-mono bg-muted px-1 py-0.5 rounded text-[11px]">
                                 {src.rawValue}
                               </code>
@@ -110,7 +112,7 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-muted-foreground pl-3">Keine Quellen</p>
+                    <p className="text-muted-foreground pl-3">No sources</p>
                   )}
                 </div>
               ))}
@@ -119,7 +121,7 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
 
           {/* ── Raw source records ── */}
           <section>
-            <p className="font-semibold text-sm mb-3">Rohdaten ({place.sourceRecords.length} Quelle{place.sourceRecords.length !== 1 ? "n" : ""})</p>
+            <p className="font-semibold text-sm mb-3">Raw data ({place.sourceRecords.length} source{place.sourceRecords.length !== 1 ? "s" : ""})</p>
             <div className="space-y-4">
               {place.sourceRecords.map((rec, i) => (
                 <div key={i} className="border border-border rounded-md overflow-hidden">
@@ -127,7 +129,7 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
                     <span className="font-medium">{SOURCE_LABELS[rec.sourceId]}</span>
                     <code className="font-mono text-muted-foreground text-[11px]">#{rec.externalId}</code>
                     <span className="text-muted-foreground text-[11px] ml-auto">
-                      {new Date(rec.fetchedAt).toLocaleString("de-DE")}
+                      {new Date(rec.fetchedAt).toLocaleString()}
                     </span>
                   </div>
                   <pre className="font-mono text-[10px] leading-relaxed whitespace-pre-wrap break-all p-2 max-h-48 overflow-y-auto text-muted-foreground">

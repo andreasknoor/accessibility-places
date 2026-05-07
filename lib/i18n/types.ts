@@ -3,6 +3,11 @@ export interface Translations {
     title:    string
     subtitle: string
   }
+  common: {
+    close:       string
+    loading:     string
+    dismissHint: string
+  }
   chat: {
     locationPlaceholder: string
     send:          string
@@ -60,6 +65,13 @@ export interface Translations {
     vegan:             string
     showOnMap:         string
     mapHint:           string
+    scoreCalculation:     string
+    scoreCriterion:       string
+    scoreValueWeight:     string
+    scoreNoActiveCriteria: string
+    showRawData:          string
+    detailsExpand:        string
+    detailsCollapse:      string
   }
   a11y: {
     yes:     string

@@ -191,8 +191,8 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
           <div className="flex items-center gap-3">
             <button
               onClick={(e) => { e.stopPropagation(); setShowDebug(true) }}
-              aria-label="Rohdaten anzeigen"
-              title="Rohdaten anzeigen"
+              aria-label={t.results.showRawData}
+              title={t.results.showRawData}
               className="p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
             >
               <Info className="w-[1.1rem] h-[1.1rem]" />
@@ -255,7 +255,7 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               {expanded ? <ChevronUp className="w-[1.1rem] h-[1.1rem]" /> : <ChevronDown className="w-[1.1rem] h-[1.1rem]" />}
-              {expanded ? "Weniger" : "Details"}
+              {expanded ? t.results.detailsCollapse : t.results.detailsExpand}
             </button>
           )}
         </div>
