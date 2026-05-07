@@ -5,6 +5,14 @@ const en: Translations = {
     title: "Accessible Places",
     subtitle: "Find wheelchair-accessible places",
   },
+  metadata: {
+    title:               "Find wheelchair-accessible places | Accessible Places",
+    titleTemplate:       "%s | Accessible Places",
+    description:
+      "Wheelchair-accessible places across Germany, Austria, and Switzerland — " +
+      "more reliable than Google Maps. Free search for restaurants, cafés, hotels, and more.",
+    manifestDescription: "Find wheelchair-accessible places in the DACH region",
+  },
   common: {
     close:       "Close",
     loading:     "Loading …",

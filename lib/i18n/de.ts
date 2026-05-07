@@ -5,6 +5,14 @@ const de: Translations = {
     title: "Accessible Places",
     subtitle: "Barrierefreie Orte finden",
   },
+  metadata: {
+    title:               "Barrierefreie Orte finden | Accessible Places",
+    titleTemplate:       "%s | Accessible Places",
+    description:
+      "Barrierefreie Orte in Deutschland, Österreich und der Schweiz — " +
+      "verlässlicher als Google Maps. Kostenlose Suche nach Restaurants, Cafés, Hotels und mehr.",
+    manifestDescription: "Rollstuhlgerechte Orte in der DACH-Region finden",
+  },
   common: {
     close:       "Schließen",
     loading:     "Lädt …",

@@ -1,10 +1,11 @@
 import type { MetadataRoute } from "next"
+import de from "@/lib/i18n/de"
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name:             "Accessible Places",
     short_name:       "AccessiblePlaces",
-    description:      "Rollstuhlgerechte Orte in der DACH-Region finden",
+    description:      de.metadata.manifestDescription,
     start_url:        "/",
     display:          "standalone",
     background_color: "#ffffff",

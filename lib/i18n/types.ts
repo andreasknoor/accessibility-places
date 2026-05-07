@@ -3,6 +3,12 @@ export interface Translations {
     title:    string
     subtitle: string
   }
+  metadata: {
+    title:               string
+    titleTemplate:       string
+    description:         string
+    manifestDescription: string
+  }
   common: {
     close:       string
     loading:     string
