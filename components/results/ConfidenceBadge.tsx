@@ -29,7 +29,13 @@ const COLORS = {
 
 function ScoreContent({ place, filters }: { place: Place; filters: SearchFilters }) {
   const t = useTranslations()
-  const valueLabel = (v: string): string => {
+  const valueLabel = (key: "entrance" | "toilet" | "parking" | "seating", v: string): string => {
+    if (
+      key === "parking" && v === "yes" &&
+      (place.accessibility.parking.details as { nearbyOnly?: boolean } | undefined)?.nearbyOnly
+    ) {
+      return t.a11y.yesNearby
+    }
     if (v === "yes" || v === "limited" || v === "no") return t.a11y[v]
     return "—"
   }
@@ -73,7 +79,7 @@ function ScoreContent({ place, filters }: { place: Place; filters: SearchFilters
                 <td className="py-0.5">{counts ? "✓" : "–"} {label}</td>
                 <td className="py-0.5 text-right tabular-nums">
                   {counts
-                    ? `${valueLabel(attr.value)} · ${Math.round(attr.confidence * 100)}%`
+                    ? `${valueLabel(key, attr.value)} · ${Math.round(attr.confidence * 100)}%`
                     : "—"}
                 </td>
               </tr>

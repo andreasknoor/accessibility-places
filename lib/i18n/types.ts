@@ -80,10 +80,11 @@ export interface Translations {
     detailsCollapse:      string
   }
   a11y: {
-    yes:     string
-    limited: string
-    no:      string
-    unknown: string
+    yes:        string
+    yesNearby:  string
+    limited:    string
+    no:         string
+    unknown:    string
   }
   criteria: {
     entrance: string

@@ -356,3 +356,78 @@ export async function fetchOsm(
 
   throw lastError ?? new Error("All Overpass endpoints failed")
 }
+
+// ─── Disabled-parking-only fetch (for venue enrichment) ────────────────────
+//
+// Venues like hotels/restaurants almost never carry capacity:disabled or
+// parking_space=disabled tags themselves — those tags live on dedicated
+// amenity=parking features. To answer "does this venue have wheelchair
+// parking nearby?" we run a separate Overpass query for parking features
+// with disabled spaces in the same radius, then post-match by distance.
+// Failure of this query is non-fatal for the main search path.
+
+export interface NearbyParkingFeature {
+  lat:        number
+  lon:        number
+  capacity?:  number
+}
+
+export async function fetchOsmDisabledParking(
+  location: { lat: number; lon: number },
+  radiusKm: number,
+  signal?: AbortSignal,
+): Promise<NearbyParkingFeature[]> {
+  const r = radiusKm * 1000
+  const { lat, lon } = location
+
+  // Three orthogonal disabled-parking signals in OSM. We union them so the
+  // query catches both "lot with N disabled spaces" and "single dedicated
+  // disabled parking space" features.
+  const query = `[out:json][timeout:20];(` +
+    `nwr(around:${r},${lat},${lon})[amenity=parking][capacity:disabled];` +
+    `nwr(around:${r},${lat},${lon})[amenity=parking][capacity:wheelchair];` +
+    `nwr(around:${r},${lat},${lon})[amenity=parking_space][parking_space=disabled];` +
+    `);out 200 center tags;`
+
+  const headers = {
+    "Content-Type": "application/x-www-form-urlencoded",
+    "User-Agent":   "AccessibleSpaces/1.0 (accessibility search app)",
+  }
+  const body = `data=${encodeURIComponent(query)}`
+
+  // Try endpoints sequentially with short timeout — this is best-effort
+  // enrichment, not a primary data source. Caller treats any failure as
+  // "no nearby parking found" and the main pipeline continues unchanged.
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        body,
+        headers,
+        signal: signal ?? AbortSignal.timeout(15_000),
+      })
+      if (!res.ok) continue
+      const json = await res.json()
+      const out: NearbyParkingFeature[] = []
+      for (const el of json.elements ?? []) {
+        // Lat/lon for nodes is on the element; for ways/relations Overpass
+        // returns it under `center` because we requested `out center`.
+        const featLat = el.lat ?? el.center?.lat
+        const featLon = el.lon ?? el.center?.lon
+        if (typeof featLat !== "number" || typeof featLon !== "number") continue
+        const tags = el.tags ?? {}
+        const cap = parseInt(tags["capacity:disabled"] ?? tags["capacity:wheelchair"] ?? "", 10)
+        out.push({
+          lat:       featLat,
+          lon:       featLon,
+          capacity:  Number.isFinite(cap) ? cap : undefined,
+        })
+      }
+      return out
+    } catch {
+      // Swallow and try next endpoint; final fallback is empty array.
+      continue
+    }
+  }
+  return []
+}

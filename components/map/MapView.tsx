@@ -200,7 +200,12 @@ export default function MapView({
               <span style="color:#888">${t.criteria.toilet}</span>
               <span style="color:${markerColor(place.accessibility.toilet.confidence)}">${t.a11y[place.accessibility.toilet.value] ?? place.accessibility.toilet.value}</span>
               <span style="color:#888">${t.criteria.parking}</span>
-              <span style="color:${markerColor(place.accessibility.parking.confidence)}">${t.a11y[place.accessibility.parking.value] ?? place.accessibility.parking.value}</span>
+              <span style="color:${markerColor(place.accessibility.parking.confidence)}">${
+                place.accessibility.parking.value === "yes" &&
+                (place.accessibility.parking.details as { nearbyOnly?: boolean } | undefined)?.nearbyOnly
+                  ? t.a11y.yesNearby
+                  : (t.a11y[place.accessibility.parking.value] ?? place.accessibility.parking.value)
+              }</span>
             </div>
             <div style="margin-top:6px;font-size:10px;color:#888">
               ${t.map.source}: ${SOURCE_LABELS[place.primarySource]}

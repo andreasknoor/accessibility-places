@@ -3,6 +3,8 @@ import type { SearchParams, SearchResult, SourceId, FilterDebug, A11yValue, Plac
 import { startAdapterTasks }            from "@/lib/adapters"
 import { findMatch, filterByNameHint }  from "@/lib/matching/match"
 import { mergePlaces, passesFilters, finalisePlaceConfidence, computeFilteredConfidence } from "@/lib/matching/merge"
+import { fetchOsmDisabledParking, type NearbyParkingFeature } from "@/lib/adapters/osm"
+import { enrichWithNearbyParking } from "@/lib/matching/nearby-parking"
 import { parseQuery } from "@/lib/llm"
 import { NOMINATIM_ENDPOINT, RADIUS_MIN_KM, RADIUS_MAX_KM } from "@/lib/config"
 
@@ -201,6 +203,19 @@ export async function POST(req: NextRequest) {
             return r
           }),
         )
+
+        // 4a. Kick off the disabled-parking fetch in parallel with the venue
+        // adapters so it doesn't add to the visible latency. Only when the
+        // user actually has the parking filter on (otherwise the result is
+        // never used) and the feature flag is explicitly enabled.
+        // ENABLE_NEARBY_PARKING defaults to OFF: only the literal string "1"
+        // turns it on. Failure of this fetch is non-fatal — main search
+        // proceeds and parking values stay as the adapters reported them.
+        const nearbyParkingEnabled = filters.parking && process.env.ENABLE_NEARBY_PARKING === "1"
+        const nearbyParkingPromise: Promise<NearbyParkingFeature[]> = nearbyParkingEnabled
+          ? fetchOsmDisabledParking({ lat: geo.lat, lon: geo.lon }, radiusKm, signal).catch(() => [])
+          : Promise.resolve([])
+
         const adapterResults = await Promise.all(wrapped)
         if (signal.aborted) { controller.close(); return }
 
@@ -212,6 +227,15 @@ export async function POST(req: NextRequest) {
             if (idx >= 0) canonical[idx] = mergePlaces(canonical[idx], incoming)
             else          canonical.push(finalisePlaceConfidence(incoming))
           }
+        }
+
+        // 5a. Enrich each merged place with "nearby disabled parking" info
+        // when its own parking value is unknown. Done before the category
+        // filter (5b) so the upgraded value is in place for confidence and
+        // filter steps that follow.
+        if (nearbyParkingEnabled) {
+          const parkingFeatures = await nearbyParkingPromise
+          enrichWithNearbyParking(canonical, parkingFeatures)
         }
 
         const wheelchairCanonical = canonical.filter((p) => !p.dogPolicyOnly)

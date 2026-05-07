@@ -42,6 +42,15 @@ export interface ParkingDetails {
   hasWheelchairSpaces?: boolean
   spaceCount?: number
   distanceToEntranceM?: number
+  // Set when parking.value was upgraded from "unknown" to "yes" because a
+  // disabled-parking OSM feature (capacity:disabled>0 or parking_space=disabled)
+  // exists within ~150 m of the venue. The venue's own data still says nothing
+  // about parking — this only signals that nearby accessible parking exists.
+  // The UI renders "Ja, in der Nähe" / "Yes, nearby" when this is true.
+  nearbyOnly?: boolean
+  // Distance in meters from the venue to the nearest matched parking feature.
+  // Only set when nearbyOnly is true.
+  nearbyParkingDistanceM?: number
 }
 
 export interface SeatingDetails {

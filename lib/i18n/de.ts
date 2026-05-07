@@ -105,10 +105,11 @@ const de: Translations = {
     detailsCollapse:       "Weniger",
   },
   a11y: {
-    yes:     "Ja",
-    limited: "Eingeschränkt",
-    no:      "Nein",
-    unknown: "Unbekannt",
+    yes:       "Ja",
+    yesNearby: "Ja, in der Nähe",
+    limited:   "Eingeschränkt",
+    no:        "Nein",
+    unknown:   "Unbekannt",
   },
   criteria: {
     entrance: "Eingang",

@@ -26,6 +26,15 @@ export default function A11yAttribute({ label, attr, detailType, showDetails }: 
   const style = VALUE_STYLES[attr.value]
   const Icon  = style.icon
 
+  // Parking that was upgraded from "unknown" → "yes" via a nearby OSM
+  // disabled-parking feature is rendered as "Ja, in der Nähe" / "Yes, nearby"
+  // so users can tell venue-own-parking apart from nearby-parking.
+  const isNearbyOnlyParking =
+    detailType === "parking" &&
+    attr.value === "yes" &&
+    (attr.details as { nearbyOnly?: boolean } | undefined)?.nearbyOnly === true
+  const valueLabel = isNearbyOnlyParking ? t.a11y.yesNearby : t.a11y[attr.value]
+
   function detailLabel(key: string): string {
     if (!detailType) return key
     const map = t.details[detailType] as Record<string, string>
@@ -39,7 +48,7 @@ export default function A11yAttribute({ label, attr, detailType, showDetails }: 
         <Icon className={cn("w-3.5 h-3.5 shrink-0", style.color)} />
         <span className="text-xs font-medium text-foreground min-w-0 flex-1 truncate">{label}</span>
         <span className={cn("text-xs shrink-0", style.color)}>
-          {t.a11y[attr.value]}
+          {valueLabel}
         </span>
         {attr.conflict && (
           <AlertTriangle className="w-3 h-3 text-amber-500 ml-1" aria-label={t.results.conflict} />
