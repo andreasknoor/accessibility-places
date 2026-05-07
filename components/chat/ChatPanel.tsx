@@ -52,6 +52,11 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
   const debounceRef       = useRef<ReturnType<typeof setTimeout>>(undefined)
   const suggestAbortRef   = useRef<AbortController>(undefined)
   const skipSuggestRef    = useRef(false)
+  // Holds the location value that was set programmatically on restore.
+  // Autocomplete is suppressed as long as location equals this value —
+  // survives locale re-renders that would otherwise consume the one-shot
+  // skipSuggestRef too early. Cleared when the user types.
+  const restoredLocRef    = useRef("")
   const inputRef          = useRef<HTMLInputElement>(null)
 
   const district = typeof nearbyPhase === "object" ? nearbyPhase.district : null
@@ -67,7 +72,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
           selectedIdxRef.current = idx
         }
         if (typeof loc === "string" && loc.trim()) {
-          skipSuggestRef.current = true
+          restoredLocRef.current = loc
           setLocation(loc)
         }
       }
@@ -90,6 +95,9 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
       skipSuggestRef.current = false
       return
     }
+    // Skip fetch for the restored value — stays suppressed across locale
+    // re-renders until the user actually modifies the field.
+    if (restoredLocRef.current && location === restoredLocRef.current) return
 
     // Autocomplete on the non-quoted part of the input
     const query = location.replace(/["'„""‟"«»‹›][^"'„""‟"«»‹›]*["'„""‟"«»‹›]?/gu, "").trim()
@@ -278,7 +286,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
             <input
               ref={inputRef}
               value={location}
-              onChange={(e) => { setLocation(e.target.value); setHighlightedIdx(-1) }}
+              onChange={(e) => { restoredLocRef.current = ""; setLocation(e.target.value); setHighlightedIdx(-1) }}
               onKeyDown={handleKeyDown}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
               onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
