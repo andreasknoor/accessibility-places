@@ -292,6 +292,48 @@ export function confidenceLabel(c: number): "high" | "medium" | "low" {
 
 // ─── Filter places by active criteria ─────────────────────────────────────
 
+// Like passesFilters but only considers a single source's contribution to each
+// attribute — answers "if this were the only active source, would the place
+// still pass the filter?". Used to display a predictive per-source count in
+// the FilterPanel: the number predicts how many results would survive if the
+// user disabled all other sources.
+export function passesFiltersForSource(
+  place: Place,
+  sourceId: SourceId,
+  filters: {
+    entrance: boolean
+    toilet: boolean
+    parking: boolean
+    seating: boolean
+    onlyVerified?: boolean
+    acceptUnknown: boolean
+  },
+): boolean {
+  const valueFromSource = (attr: AccessibilityAttribute): A11yValue => {
+    return attr.sources.find((s) => s.sourceId === sourceId)?.value ?? "unknown"
+  }
+  const check = (attr: AccessibilityAttribute): boolean => {
+    const v = valueFromSource(attr)
+    if (v === "yes" || v === "limited") return true
+    if (v === "unknown") return filters.acceptUnknown
+    return false
+  }
+  if (filters.entrance && !check(place.accessibility.entrance)) return false
+  if (filters.toilet   && !check(place.accessibility.toilet))   return false
+  if (filters.parking  && !check(place.accessibility.parking))  return false
+  if (filters.seating  && place.accessibility.seating && !check(place.accessibility.seating)) return false
+  if (filters.onlyVerified) {
+    const attrs = [
+      place.accessibility.entrance,
+      place.accessibility.toilet,
+      place.accessibility.parking,
+      ...(place.accessibility.seating ? [place.accessibility.seating] : []),
+    ]
+    if (!attrs.some((a) => a.sources.some((s) => s.sourceId === sourceId && s.verifiedRecently))) return false
+  }
+  return true
+}
+
 export function passesFilters(
   place: Place,
   filters: {

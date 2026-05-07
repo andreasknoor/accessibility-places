@@ -11,6 +11,7 @@ import MobileLayout from "@/components/mobile/MobileLayout"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { DEFAULT_RADIUS_KM, RADIUS_MAX_KM } from "@/lib/config"
+import { passesFiltersForSource } from "@/lib/matching/merge"
 import type { Place, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState } from "@/lib/types"
 
 // Leaflet must not run on server
@@ -119,10 +120,19 @@ export default function HomeClient() {
             const data = event.payload as SearchResult
             setPlaces(data.places)
             setSearchCenter(data.location)
-            // Attribute each final place to its primarySource — Variant A.
+            // Per-source count = places that would still pass the filter if
+            // ONLY this source were active. This makes the displayed number
+            // predictive: disabling all other sources should yield this count.
+            // Sums may exceed total result count when a place could pass
+            // standalone via multiple sources — that's the honest answer.
             const finalCounts: Partial<Record<SourceId, number>> = {}
             for (const p of data.places) {
-              finalCounts[p.primarySource] = (finalCounts[p.primarySource] ?? 0) + 1
+              for (const sid of Object.keys(sources) as SourceId[]) {
+                if (!sources[sid]) continue
+                if (passesFiltersForSource(p, sid, filters)) {
+                  finalCounts[sid] = (finalCounts[sid] ?? 0) + 1
+                }
+              }
             }
             setSourceStates((prev) => {
               const next: Partial<Record<SourceId, SourceState>> = { ...prev }
