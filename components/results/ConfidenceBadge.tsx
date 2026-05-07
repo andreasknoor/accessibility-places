@@ -173,7 +173,7 @@ export default function ConfidenceBadge({ confidence, place, filters, className 
     ) : (
       <Tooltip>
         <TooltipTrigger asChild>{badge}</TooltipTrigger>
-        <TooltipContent side="left" className="bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-700 shadow-lg p-3 w-[min(22rem,90vw)]">
+        <TooltipContent side="left" className="bg-white text-zinc-900 border border-zinc-200 shadow-lg p-3 w-[min(22rem,90vw)]">
           <ScoreContent place={place} filters={filters} />
         </TooltipContent>
       </Tooltip>
