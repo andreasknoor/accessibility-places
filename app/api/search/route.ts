@@ -106,7 +106,16 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Input validation ──────────────────────────────────────────────────────
-  const { userQuery, radiusKm: rawRadius, filters: rawFilters, sources: rawSources, locale } = rawBody
+  const { userQuery, radiusKm: rawRadius, filters: rawFilters, sources: rawSources, locale, coordinates: rawCoords } = rawBody
+
+  const coordinates = (() => {
+    if (!rawCoords || typeof rawCoords !== "object") return undefined
+    const c = rawCoords as Record<string, unknown>
+    const lat = typeof c.lat === "number" ? c.lat : undefined
+    const lon = typeof c.lon === "number" ? c.lon : undefined
+    if (lat == null || lon == null || lat < -90 || lat > 90 || lon < -180 || lon > 180) return undefined
+    return { lat, lon }
+  })()
 
   if (typeof userQuery !== "string" || userQuery.trim().length === 0) {
     return new Response(JSON.stringify({ error: "userQuery must be a non-empty string" }), {
@@ -166,13 +175,19 @@ export async function POST(req: NextRequest) {
         const parsed = parseQuery(userQuery)
         if (signal.aborted) { controller.close(); return }
 
-        // ── 2. Geocode the extracted location ────────────────────────────────
-        const geo = await geocode(parsed.locationQuery, signal)
-        if (signal.aborted) { controller.close(); return }
-        if (!geo) {
-          emit({ type: "fatal", error: `Location not found: "${parsed.locationQuery}"` })
-          controller.close()
-          return
+        // ── 2. Resolve location — use GPS coords directly if provided, else geocode ──
+        let geo: { lat: number; lon: number; label: string }
+        if (coordinates) {
+          geo = { lat: coordinates.lat, lon: coordinates.lon, label: userQuery }
+        } else {
+          const geocoded = await geocode(parsed.locationQuery, signal)
+          if (signal.aborted) { controller.close(); return }
+          if (!geocoded) {
+            emit({ type: "fatal", error: `Location not found: "${parsed.locationQuery}"` })
+            controller.close()
+            return
+          }
+          geo = geocoded
         }
 
         // ── 3. Build per-source params ────────────────────────────────────────

@@ -50,14 +50,16 @@ export default function HomeClient() {
   const [sourceStates,  setSourceStates] = useState<Partial<Record<SourceId, SourceState>>>({})
   const [resultsWidth,  setResultsWidth] = useState(504)
   const [lastQuery,     setLastQuery]    = useState<string | undefined>()
+  const [lastCoords,    setLastCoords]   = useState<{ lat: number; lon: number } | undefined>()
   const [chatMode,      setChatMode]     = useState<"text" | "nearby">("text")
   const [resetKey,      setResetKey]     = useState(0)
   const [scrollToId,    setScrollToId]   = useState<string | undefined>()
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
 
-  const handleSearch = useCallback(async (query: string, radiusKmOverride?: number) => {
+  const handleSearch = useCallback(async (query: string, radiusKmOverride?: number, coords?: { lat: number; lon: number }) => {
     setLastQuery(query)
+    setLastCoords(coords)
     setIsLoading(true)
     setError(undefined)
     setPlaces([])
@@ -75,7 +77,7 @@ export default function HomeClient() {
       const res = await fetch("/api/search", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ userQuery: query, radiusKm: radiusKmOverride ?? radiusKm, filters, sources, locale }),
+        body:    JSON.stringify({ userQuery: query, radiusKm: radiusKmOverride ?? radiusKm, filters, sources, locale, coordinates: coords }),
       })
 
       if (!res.ok || !res.body) {
@@ -176,13 +178,13 @@ export default function HomeClient() {
     if (!lastQuery) return
     const newRadius = Math.min(radiusKm * 2, RADIUS_MAX_KM)
     setRadiusKm(newRadius)
-    handleSearch(lastQuery, newRadius)
-  }, [lastQuery, radiusKm, handleSearch])
+    handleSearch(lastQuery, newRadius, lastCoords)
+  }, [lastQuery, radiusKm, lastCoords, handleSearch])
 
   const handleRadiusChange = useCallback((km: number) => {
     setRadiusKm(km)
-    if (lastQuery) handleSearch(lastQuery, km)
-  }, [lastQuery, handleSearch])
+    if (lastQuery) handleSearch(lastQuery, km, lastCoords)
+  }, [lastQuery, lastCoords, handleSearch])
 
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     isDragging.current = true
@@ -223,7 +225,7 @@ export default function HomeClient() {
         sourceStates={sourceStates}
         searchCenter={searchCenter}
         onSearch={handleSearch}
-        onRerun={lastQuery ? () => handleSearch(lastQuery) : undefined}
+        onRerun={lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords) : undefined}
         onExpandRadius={lastQuery && radiusKm < RADIUS_MAX_KM ? handleExpandRadius : undefined}
         onRadiusChange={handleRadiusChange}
         hasSearched={!!lastQuery}
@@ -305,7 +307,7 @@ export default function HomeClient() {
             selectedId={selectedId}
             onSelect={(p) => setSelectedId(p.id)}
             isLoading={isLoading}
-            onRerun={lastQuery ? () => handleSearch(lastQuery) : undefined}
+            onRerun={lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords) : undefined}
             onExpandRadius={lastQuery && radiusKm < RADIUS_MAX_KM ? handleExpandRadius : undefined}
             radiusKm={radiusKm}
             onRadiusChange={handleRadiusChange}

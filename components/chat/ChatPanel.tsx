@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
+type Coords = { lat: number; lon: number }
+
 interface Props {
-  onSearch:      (query: string) => void
+  onSearch:      (query: string, coords?: Coords) => void
   isLoading:     boolean
   onModeChange?: (mode: "text" | "nearby") => void
   autoFocus?:    boolean
@@ -26,7 +28,7 @@ const CHIPS = [
 ]
 
 type Mode        = "text" | "nearby"
-type NearbyPhase = "idle" | "locating" | { district: string } | "error"
+type NearbyPhase = "idle" | "locating" | { district: string; lat: number; lon: number } | "error"
 
 type Suggestion = { display: string; name: string }
 
@@ -135,10 +137,9 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
     if (next !== "nearby") return
     if (nearbyPhase === "idle") {
       handleLocate()
-    } else if (district) {
-      // District already known — re-run search with the currently selected chip
+    } else if (typeof nearbyPhase === "object") {
       const label = locale === "de" ? CHIPS[selectedIdx].de : CHIPS[selectedIdx].en
-      onSearch(`${label} in ${district}`)
+      onSearch(`${label} in ${nearbyPhase.district}`, { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
     }
   }
 
@@ -146,8 +147,8 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
     setSelectedIdx(idx)
     selectedIdxRef.current = idx
     const label = locale === "de" ? CHIPS[idx].de : CHIPS[idx].en
-    if (mode === "nearby" && district) {
-      onSearch(`${label} in ${district}`)
+    if (mode === "nearby" && typeof nearbyPhase === "object") {
+      onSearch(`${label} in ${nearbyPhase.district}`, { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
     } else if (mode === "text" && location.trim()) {
       setSuggestions([])
       setShowSuggestions(false)
@@ -213,18 +214,19 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
     setNearbyPhase("locating")
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
+        const { latitude: lat, longitude: lon } = pos.coords
         try {
-          const d = await reverseGeocode(pos.coords.latitude, pos.coords.longitude)
-          setNearbyPhase({ district: d })
+          const d = await reverseGeocode(lat, lon)
+          setNearbyPhase({ district: d, lat, lon })
           const chip = CHIPS[selectedIdxRef.current]
           const label = locale === "de" ? chip.de : chip.en
-          onSearch(d ? `${label} in ${d}` : label)
+          onSearch(d ? `${label} in ${d}` : label, { lat, lon })
         } catch {
           setNearbyPhase("error")
         }
       },
       () => setNearbyPhase("error"),
-      { timeout: 10_000, enableHighAccuracy: false },
+      { timeout: 10_000, enableHighAccuracy: true },
     )
   }
 
