@@ -32,6 +32,7 @@ export function BottomSheet({ open, onClose, title, children, className }: Props
       <div
         className="fixed inset-0 z-[1060] bg-black/40"
         onClick={onClose}
+        onTouchEnd={(e) => { e.preventDefault(); onClose() }}
         aria-hidden
       />
       <div
@@ -46,6 +47,7 @@ export function BottomSheet({ open, onClose, title, children, className }: Props
           {title && <p className="font-semibold text-sm">{title}</p>}
           <button
             onClick={onClose}
+            onTouchEnd={(e) => { e.preventDefault(); onClose() }}
             className="ml-auto p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             aria-label={t.common.close}
           >
