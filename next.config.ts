@@ -41,11 +41,6 @@ const nextConfig: NextConfig = {
         destination: "https://accessible-places.org/:path*",
         permanent:   true,
       },
-      {
-        source:      "/en",
-        destination: "/?lang=en",
-        permanent:   true,
-      },
     ]
   },
 }

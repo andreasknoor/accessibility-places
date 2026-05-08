@@ -34,11 +34,13 @@ interface LocaleContextValue {
 
 const LocaleContext = createContext<LocaleContextValue | undefined>(undefined)
 
-export function LocaleProvider({ children }: { children: ReactNode }) {
-  // Start with "de" so SSR matches; resolve real locale after mount.
-  const [locale, setLocaleState] = useState<Locale>("de")
+export function LocaleProvider({ children, initialLocale }: { children: ReactNode; initialLocale?: Locale }) {
+  // Start with initialLocale (for route-controlled pages like /en) or "de" (SSR default).
+  const [locale, setLocaleState] = useState<Locale>(initialLocale ?? "de")
 
   useEffect(() => {
+    // Skip browser/storage detection when the route itself controls the locale.
+    if (initialLocale) return
     const fromQuery = localeFromQuery()
     if (fromQuery) {
       setLocaleState(fromQuery)
@@ -48,11 +50,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored === "de" || stored === "en") setLocaleState(stored)
     else setLocaleState(detectLocale())
-  }, [])
-
-  useEffect(() => {
-    document.documentElement.lang = locale
-  }, [locale])
+  }, [initialLocale])
 
   function setLocale(l: Locale) {
     setLocaleState(l)

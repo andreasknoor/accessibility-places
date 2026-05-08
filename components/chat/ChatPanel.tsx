@@ -308,6 +308,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
                   setLocation("")
                   setSuggestions([])
                   setShowSuggestions(false)
+                  try { localStorage.removeItem("ap_last_search") } catch { /* ignore */ }
                   inputRef.current?.focus()
                 }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"

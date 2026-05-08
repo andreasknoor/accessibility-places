@@ -4,6 +4,8 @@ import { usePathname, useRouter } from "next/navigation"
 import { useLocale, type Locale } from "@/lib/i18n"
 
 const PATH_MAP: Record<string, Record<Locale, string>> = {
+  "/":              { de: "/",           en: "/en" },
+  "/en":            { de: "/",           en: "/en" },
   "/faq":           { de: "/faq",        en: "/en/faq" },
   "/en/faq":        { de: "/faq",        en: "/en/faq" },
   "/impressum":     { de: "/impressum",  en: "/en/impressum" },

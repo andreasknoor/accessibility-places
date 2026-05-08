@@ -168,6 +168,7 @@ export default function HomeClient() {
     setError(undefined)
     setSourceStates({})
     setChatMode("text")
+    try { localStorage.removeItem("ap_last_search") } catch { /* ignore */ }
     setResetKey((k) => k + 1)
   }, [])
 

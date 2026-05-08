@@ -35,7 +35,11 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
 
   return (
     <>
-      <div className="fixed inset-0 z-[1050] bg-black/25" onClick={onClose} />
+      <div
+        className="fixed inset-0 z-[1050] bg-black/25"
+        onClick={onClose}
+        onTouchEnd={(e) => { e.preventDefault(); onClose() }}
+      />
       <div className="fixed right-0 top-0 z-[1051] h-full w-[520px] max-w-full bg-white shadow-2xl border-l border-border flex flex-col">
 
         <div className="flex items-start justify-between gap-3 px-4 py-3 border-b border-border shrink-0">
@@ -45,6 +49,7 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
           </div>
           <button
             onClick={onClose}
+            onTouchEnd={(e) => { e.preventDefault(); onClose() }}
             className="shrink-0 text-muted-foreground hover:text-foreground transition-colors mt-0.5"
             aria-label={t.common.close}
           >
