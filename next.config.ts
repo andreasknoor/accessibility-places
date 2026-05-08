@@ -16,12 +16,12 @@ const securityHeaders = [
     key:   "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",   // Next.js requires these
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://tally.so",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https://*.tile.openstreetmap.org https://maps.gstatic.com",
-      "connect-src 'self' https://nominatim.openstreetmap.org https://places.googleapis.com https://api.accessibility.cloud https://www.reisefueralle.de",
+      "connect-src 'self' https://nominatim.openstreetmap.org https://places.googleapis.com https://api.accessibility.cloud https://www.reisefueralle.de https://tally.so",
       "font-src 'self'",
-      "frame-src 'none'",
+      "frame-src https://tally.so",
       "object-src 'none'",
       "base-uri 'self'",
     ].join("; "),

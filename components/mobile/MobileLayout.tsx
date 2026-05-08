@@ -172,14 +172,14 @@ export default function MobileLayout({
         <Link href={locale === "en" ? "/en/impressum" : "/impressum"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
           {t.impressum.linkLabel}
         </Link>
-        <a
-          href="https://github.com/andreasknoor/accessibility-places/issues/new"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+        <button
+          data-tally-open={locale === "en" ? "vGEMjQ" : "Zjv94z"}
+          data-tally-emoji-text="👋"
+          data-tally-emoji-animation="wave"
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
         >
           {t.faq.feedbackLabel}
-        </a>
+        </button>
       </div>
 
       {/* ── Bottom tab bar ── */}
