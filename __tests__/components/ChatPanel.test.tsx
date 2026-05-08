@@ -29,11 +29,13 @@ function mockFetch(suggestions: { display: string; name: string }[]) {
 }
 
 function getInput() {
-  return screen.getByPlaceholderText(/Berlin|city|stadt|ort/i) as HTMLInputElement
+  // Match location-input placeholder specifically — the name field also contains "Ort" in DE
+  return screen.getByPlaceholderText(/Ort eingeben|Enter a city/i) as HTMLInputElement
 }
 
 beforeEach(() => {
   vi.useFakeTimers()
+  localStorage.clear()
 })
 
 afterEach(() => {
@@ -109,7 +111,8 @@ describe("ChatPanel autocomplete — dropdown", () => {
     await act(() => vi.runAllTimersAsync())
     expect(screen.getByRole("listbox")).toBeInTheDocument()
     expect(screen.getByText("Berlin")).toBeInTheDocument()
-    expect(screen.getByText("Mitte, Berlin")).toBeInTheDocument()
+    // "Mitte, Berlin" is rendered as <span>Mitte</span>, Berlin — match by full text content
+    expect(screen.getByText((_, el) => el?.textContent === "Mitte, Berlin")).toBeInTheDocument()
   })
 
   it("hides dropdown when API returns empty array", async () => {
@@ -180,7 +183,7 @@ describe("ChatPanel autocomplete — keyboard navigation", () => {
     fireEvent.keyDown(getInput(), { key: "ArrowDown" })
     fireEvent.keyDown(getInput(), { key: "Enter" })
 
-    expect(onSearch).toHaveBeenCalledWith(expect.stringContaining("Berlin"))
+    expect(onSearch).toHaveBeenCalledWith(expect.stringContaining("Berlin"), undefined, undefined)
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
   })
 
@@ -192,7 +195,7 @@ describe("ChatPanel autocomplete — keyboard navigation", () => {
     await act(() => vi.runAllTimersAsync())
 
     fireEvent.keyDown(getInput(), { key: "Enter" })
-    expect(onSearch).toHaveBeenCalledWith(expect.stringContaining("Berlin"))
+    expect(onSearch).toHaveBeenCalledWith(expect.stringContaining("Berlin"), undefined, undefined)
   })
 })
 
@@ -208,20 +211,25 @@ describe("ChatPanel autocomplete — selection", () => {
 
     fireEvent.mouseDown(screen.getByRole("option", { name: "Mitte, Berlin" }))
     expect(getInput().value).toBe("Mitte, Berlin")
-    expect(onSearch).toHaveBeenCalledWith(expect.stringContaining("Mitte, Berlin"))
+    expect(onSearch).toHaveBeenCalledWith(expect.stringContaining("Mitte, Berlin"), undefined, undefined)
   })
 
-  it("preserves a quoted nameHint when selecting a location suggestion", async () => {
+  it("passes name field value as nameHint to onSearch when selecting a suggestion", async () => {
     const onSearch = vi.fn()
     mockFetch([{ display: "Berlin", name: "Berlin" }])
     renderPanel(onSearch)
-    // User typed a quoted name followed by partial location
-    fireEvent.change(getInput(), { target: { value: '"Goldener Löwe" Ber' } })
+    // Expand name field and fill it
+    const nameInput = screen.getByPlaceholderText(/Name des Ortes|Venue name/i) as HTMLInputElement
+    fireEvent.change(nameInput, { target: { value: "Goldener Löwe" } })
+    // Type and select location
+    fireEvent.change(getInput(), { target: { value: "Ber" } })
     await act(() => vi.runAllTimersAsync())
-
     fireEvent.mouseDown(screen.getByRole("option", { name: "Berlin" }))
-    expect(getInput().value).toBe('"Goldener Löwe" Berlin')
-    expect(onSearch).toHaveBeenCalledWith(expect.stringContaining("Berlin"))
+    expect(onSearch).toHaveBeenCalledWith(
+      expect.stringContaining("Berlin"),
+      undefined,
+      "Goldener Löwe",
+    )
   })
 
   it("closes the dropdown after selecting a suggestion", async () => {
