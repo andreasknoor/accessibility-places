@@ -274,7 +274,7 @@ export default function HomeClient() {
       <h1 className="sr-only">Barrierefreie Orte finden in Deutschland, Österreich und der Schweiz</h1>
 
       {/* ── Chat / search bar ── */}
-      <ChatPanel key={resetKey} onSearch={handleSearch} isLoading={isLoading} onModeChange={setChatMode} autoFocus />
+      <ChatPanel key={resetKey} onSearch={(query, coords) => handleSearch(query, undefined, coords)} isLoading={isLoading} onModeChange={setChatMode} autoFocus />
 
       {/* ── Error banner ── */}
       {error && (
