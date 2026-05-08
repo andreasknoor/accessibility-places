@@ -72,6 +72,25 @@ google_places:       0.35
 
 The name field is a separate input, **not** embedded in the query string. `ChatPanel.onSearch` signature: `(query: string, coords?: Coords, nameHint?: string)`. The `nameHint` is passed in the API request body and applied as a JS post-filter (`filterByNameHint` — substring + trigram ≥ 0.6) after the merge step. This means accessibility filters apply independently of name searches.
 
+### Geocoding API routes
+
+Three proxy routes forward to external geocoding services (all restricted to DACH):
+- `GET /api/geocode?q=` — Nominatim forward geocoding; returns `{ lat, lon, displayName }`.
+- `GET /api/geocode/suggest?q=&lang=` — Photon/Komoot autocomplete (bbox: DE+AT+CH); returns `[{ display, name }]`.
+- `GET /api/geocode/reverse?lat=&lon=` — Nominatim reverse geocoding; returns `{ district }` for the "Nearby" label.
+
+The `countrycodes=de,at,ch` constraint in Nominatim calls and the Photon bounding box must both be updated when expanding beyond DACH.
+
+### Rate limiting & production details
+
+`/api/search` applies in-memory sliding-window rate limits per IP: 10 searches/min general, 3/min for Google Places. These reset on serverless cold start — not suitable for multi-instance without a shared store.
+
+In production, `raw` adapter response data is stripped from `sourceRecords` before the response is sent (see `stripRaw()`). In development the raw data is preserved for debugging.
+
+### PWA / Service Worker
+
+`app/sw.ts` + `@serwist/next`. The service worker is **disabled in development** (`disable: process.env.NODE_ENV === "development"` in `next.config.ts`). Adding new external domains also requires updating the `connect-src` allowlist in the CSP headers defined in `next.config.ts`.
+
 ## Versioning
 
 `APP_VERSION` in `lib/config.ts` — bump on every meaningful release. Shown in the Impressum.
