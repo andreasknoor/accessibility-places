@@ -109,12 +109,13 @@ describe("GET /api/geocode/suggest", () => {
     expect(data[0].display).toBe("Kleinstadt, Musterkreis (DE)")
   })
 
-  it("omits country suffix when countrycode is absent", async () => {
+  it("filters out features without a DACH countrycode", async () => {
+    // Features without a recognised DACH countrycode (DE/AT/CH) are excluded.
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      photonResponse([feature("Berlin")]),
+      photonResponse([feature("London", { countrycode: "GB" }), feature("Paris")]),
     ))
-    const data = await (await GET(makeReq("Berlin"))).json()
-    expect(data[0].display).toBe("Berlin")
+    const data = await (await GET(makeReq("L"))).json()
+    expect(data).toEqual([])
   })
 
   it("filters out features with empty name", async () => {

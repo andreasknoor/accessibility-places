@@ -33,7 +33,13 @@ export function inferCategories(query: string): Category[] {
   const lower = normaliseForMatch(query)
   const found: Category[] = []
   for (const [cat, hints] of Object.entries(CATEGORY_HINTS) as [Category, string[]][]) {
-    if (hints.some((h) => new RegExp(`\\b${normaliseForMatch(h)}`, "i").test(lower))) found.push(cat)
+    if (hints.some((h) => {
+      const norm = normaliseForMatch(h)
+      // Short hints (≤3 chars) need a word boundary at the end to avoid false
+      // positives like "bar" matching "barrierefreie".
+      const pattern = norm.length <= 3 ? `\\b${norm}\\b` : `\\b${norm}`
+      return new RegExp(pattern, "i").test(lower)
+    })) found.push(cat)
   }
   return found.length > 0 ? found : [...ALL_CATEGORIES]
 }
