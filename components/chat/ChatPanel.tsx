@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Send, Loader2, LocateFixed, MapPin, X, Plus } from "lucide-react"
+import { Send, Loader2, LocateFixed, MapPin, X, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { useIsMobile } from "@/hooks/useIsMobile"
@@ -289,6 +289,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
       {mode === "text" && (
         <>
         <div className="flex gap-2 items-center">
+          {/* Location input */}
           <div className="relative flex-1">
             {inputPulse && (
               <span
@@ -312,7 +313,9 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
                 "w-full rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]",
                 "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
                 "focus-visible:ring-ring disabled:opacity-50",
-                location && "pr-7",
+                isMobile && !showNameField
+                  ? (location ? "pr-12" : "pr-7")
+                  : (location ? "pr-7" : ""),
               )}
             />
             {location && (
@@ -326,10 +329,27 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
                   try { localStorage.removeItem("ap_last_search") } catch { /* ignore */ }
                   inputRef.current?.focus()
                 }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                className={cn(
+                  "absolute top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors",
+                  isMobile && !showNameField ? "right-8" : "right-2",
+                )}
                 aria-label="Clear"
               >
                 <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+            {/* Chevron toggle — mobile only, embedded in location input when name field is hidden */}
+            {isMobile && !showNameField && (
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  setShowNameField(true)
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label={t.chat.nameToggleShow}
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
               </button>
             )}
 
@@ -365,6 +385,38 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
             )}
           </div>
 
+          {/* Name input — desktop: inline flex-1 alongside location */}
+          {!isMobile && (
+            <div className="relative flex-1">
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") submit() }}
+                placeholder={t.chat.namePlaceholder}
+                disabled={isLoading}
+                className={cn(
+                  "w-full rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]",
+                  "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
+                  "focus-visible:ring-ring disabled:opacity-50",
+                  name && "pr-7",
+                )}
+              />
+              {name && (
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    setName("")
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="Clear"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          )}
+
           <Button
             onClick={submit}
             disabled={isLoading || !location.trim()}
@@ -388,18 +440,8 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
           </Button>
         </div>
 
-        {/* ── Name filter (mobile: toggle, desktop: always visible) ── */}
-        {isMobile && !showNameField && (
-          <button
-            type="button"
-            onClick={() => setShowNameField(true)}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors self-start"
-          >
-            <Plus className="w-3 h-3" />
-            {t.chat.nameToggleShow}
-          </button>
-        )}
-        {(!isMobile || showNameField) && (
+        {/* Mobile: name field as second row when expanded */}
+        {isMobile && showNameField && (
           <div className="relative">
             <input
               value={name}
@@ -410,24 +452,21 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
               className={cn(
                 "w-full rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]",
                 "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
-                "focus-visible:ring-ring disabled:opacity-50",
-                (isMobile || name) && "pr-7",
+                "focus-visible:ring-ring disabled:opacity-50 pr-7",
               )}
             />
-            {(isMobile || name) && (
-              <button
-                type="button"
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  setName("")
-                  if (isMobile) setShowNameField(false)
-                }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                aria-label={isMobile ? t.chat.nameToggleHide : "Clear"}
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                setName("")
+                setShowNameField(false)
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={t.chat.nameToggleHide}
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
         )}
         </>
