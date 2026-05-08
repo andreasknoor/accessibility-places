@@ -287,6 +287,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
 
       {/* ── Text search mode ── */}
       {mode === "text" && (
+        <>
         <div className="flex gap-2 items-center">
           <div className="relative flex-1">
             {inputPulse && (
@@ -429,6 +430,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
             )}
           </div>
         )}
+        </>
       )}
 
       {/* ── Nearby mode ── */}
