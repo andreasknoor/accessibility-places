@@ -224,7 +224,7 @@ export default function HomeClient() {
         onRadius={setRadiusKm}
         sourceStates={sourceStates}
         searchCenter={searchCenter}
-        onSearch={handleSearch}
+        onSearch={(query, coords) => handleSearch(query, undefined, coords)}
         onRerun={lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords) : undefined}
         onExpandRadius={lastQuery && radiusKm < RADIUS_MAX_KM ? handleExpandRadius : undefined}
         onRadiusChange={handleRadiusChange}
