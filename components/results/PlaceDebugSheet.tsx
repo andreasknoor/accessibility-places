@@ -34,7 +34,9 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
     .filter(Boolean).join(" ")
 
   return (
-    <>
+    // stopPropagation prevents clicks from bubbling through the React portal
+    // tree to PlaceCard's onClick (which would switch to the map tab).
+    <div onClick={(e) => e.stopPropagation()}>
       <div
         className="fixed inset-0 z-[1050] bg-black/25"
         onClick={onClose}
@@ -147,6 +149,6 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
 
         </div>
       </div>
-    </>
+    </div>
   )
 }
