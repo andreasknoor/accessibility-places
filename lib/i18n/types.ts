@@ -26,7 +26,10 @@ export interface Translations {
     modeNearby:    string
     locateButton:  string
     locationError: string
-    nearbyIn:      (district: string) => string
+    nearbyIn:        (district: string) => string
+    namePlaceholder: string
+    nameToggleShow:  string
+    nameToggleHide:  string
   }
   filters: {
     title:               string

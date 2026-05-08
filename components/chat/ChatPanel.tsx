@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Send, Loader2, LocateFixed, MapPin, X } from "lucide-react"
+import { Send, Loader2, LocateFixed, MapPin, X, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTranslations, useLocale } from "@/lib/i18n"
+import { useIsMobile } from "@/hooks/useIsMobile"
 import { cn } from "@/lib/utils"
 
 type Coords = { lat: number; lon: number }
@@ -42,9 +43,12 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
 export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
+  const isMobile = useIsMobile()
   const [mode,           setMode]           = useState<Mode>("text")
   const [nearbyPhase,    setNearbyPhase]    = useState<NearbyPhase>("idle")
   const [location,       setLocation]       = useState("")
+  const [name,           setName]           = useState("")
+  const [showNameField,  setShowNameField]  = useState(false)
   const [selectedIdx,    setSelectedIdx]    = useState(0)
   const [suggestions,    setSuggestions]    = useState<Suggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -68,7 +72,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
     try {
       const saved = localStorage.getItem("ap_last_search")
       if (saved) {
-        const { idx, loc } = JSON.parse(saved)
+        const { idx, loc, name: savedName } = JSON.parse(saved)
         if (typeof idx === "number" && idx >= 0 && idx < CHIPS.length) {
           setSelectedIdx(idx)
           selectedIdxRef.current = idx
@@ -76,6 +80,10 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
         if (typeof loc === "string" && loc.trim()) {
           restoredLocRef.current = loc
           setLocation(loc)
+        }
+        if (typeof savedName === "string" && savedName.trim()) {
+          setName(savedName)
+          setShowNameField(true)
         }
       }
     } catch { /* ignore malformed storage */ }
@@ -139,7 +147,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
       handleLocate()
     } else if (typeof nearbyPhase === "object") {
       const label = locale === "de" ? CHIPS[selectedIdx].de : CHIPS[selectedIdx].en
-      onSearch(`${label} in ${nearbyPhase.district}`, { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
+      onSearch(withName(`${label} in ${nearbyPhase.district}`), { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
     }
   }
 
@@ -148,7 +156,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
     selectedIdxRef.current = idx
     const label = locale === "de" ? CHIPS[idx].de : CHIPS[idx].en
     if (mode === "nearby" && typeof nearbyPhase === "object") {
-      onSearch(`${label} in ${nearbyPhase.district}`, { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
+      onSearch(withName(`${label} in ${nearbyPhase.district}`), { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
     } else if (mode === "text" && location.trim()) {
       setSuggestions([])
       setShowSuggestions(false)
@@ -161,12 +169,16 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
     return loc.trim() ? `${label} in ${loc.trim()}` : label
   }
 
+  function withName(q: string): string {
+    return name.trim() ? `"${name.trim()}" ${q}` : q
+  }
+
   function submit() {
     if (isLoading) return
     setSuggestions([])
     setShowSuggestions(false)
-    try { localStorage.setItem("ap_last_search", JSON.stringify({ idx: selectedIdx, loc: location.trim() })) } catch { /* ignore */ }
-    onSearch(buildQuery(location))
+    try { localStorage.setItem("ap_last_search", JSON.stringify({ idx: selectedIdx, loc: location.trim(), name: name.trim() })) } catch { /* ignore */ }
+    onSearch(withName(buildQuery(location)))
   }
 
   function selectSuggestion(s: Suggestion) {
@@ -178,8 +190,8 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
     setSuggestions([])
     setShowSuggestions(false)
     setHighlightedIdx(-1)
-    try { localStorage.setItem("ap_last_search", JSON.stringify({ idx: selectedIdx, loc: newLocation.trim() })) } catch { /* ignore */ }
-    onSearch(buildQuery(newLocation))
+    try { localStorage.setItem("ap_last_search", JSON.stringify({ idx: selectedIdx, loc: newLocation.trim(), name: name.trim() })) } catch { /* ignore */ }
+    onSearch(withName(buildQuery(newLocation)))
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -220,7 +232,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
           setNearbyPhase({ district: d, lat, lon })
           const chip = CHIPS[selectedIdxRef.current]
           const label = locale === "de" ? chip.de : chip.en
-          onSearch(d ? `${label} in ${d}` : label, { lat, lon })
+          onSearch(withName(d ? `${label} in ${d}` : label), { lat, lon })
         } catch {
           setNearbyPhase("error")
         }
@@ -374,6 +386,49 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
             </span>
           </Button>
         </div>
+
+        {/* ── Name filter (mobile: toggle, desktop: always visible) ── */}
+        {isMobile && !showNameField && (
+          <button
+            type="button"
+            onClick={() => setShowNameField(true)}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors self-start"
+          >
+            <Plus className="w-3 h-3" />
+            {t.chat.nameToggleShow}
+          </button>
+        )}
+        {(!isMobile || showNameField) && (
+          <div className="relative">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") submit() }}
+              placeholder={t.chat.namePlaceholder}
+              disabled={isLoading}
+              className={cn(
+                "w-full rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]",
+                "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
+                "focus-visible:ring-ring disabled:opacity-50",
+                (isMobile || name) && "pr-7",
+              )}
+            />
+            {(isMobile || name) && (
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  setName("")
+                  if (isMobile) setShowNameField(false)
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label={isMobile ? t.chat.nameToggleHide : "Clear"}
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        )}
       )}
 
       {/* ── Nearby mode ── */}
