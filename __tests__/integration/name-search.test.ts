@@ -62,27 +62,25 @@ async function geocode(q: string): Promise<{ lat: number; lon: number } | null> 
 
 const runLlmTests = !!process.env.ANTHROPIC_API_KEY?.startsWith("sk-") && !!process.env.TEST_LLM_QUALITY
 
-describe("parseQuery – name extraction", () => {
-  it.skipIf(!runLlmTests)('extracts nameHint "et cetera" from "et cetera in Potsdam"', { timeout: 20_000 }, async () => {
-    const parsed = await parseQuery("et cetera in Potsdam")
+describe("parseQuery – location and category extraction", () => {
+  it.skipIf(!runLlmTests)('extracts location from "Cafés in Potsdam"', { timeout: 20_000 }, async () => {
+    const parsed = await parseQuery("Cafés in Potsdam")
     console.log("  ↳ parseQuery:", JSON.stringify(parsed))
     expect(parsed.locationQuery.toLowerCase()).toContain("potsdam")
-    expect(parsed.nameHint.toLowerCase()).toContain("et cetera")
     expect(parsed.categories.length).toBeGreaterThan(0)
   })
 
-  it.skipIf(!runLlmTests)('extracts nameHint from an unambiguous name like "Brauhaus Georgbräu Berlin"', { timeout: 20_000 }, async () => {
-    const parsed = await parseQuery("Brauhaus Georgbräu Berlin")
+  it.skipIf(!runLlmTests)('extracts location from "Restaurants in Berlin Mitte"', { timeout: 20_000 }, async () => {
+    const parsed = await parseQuery("Restaurants in Berlin Mitte")
     console.log("  ↳ parseQuery:", JSON.stringify(parsed))
     expect(parsed.locationQuery.toLowerCase()).toContain("berlin")
-    expect(parsed.nameHint.toLowerCase()).toContain("georg")
+    expect(parsed.categories).toContain("restaurant")
   })
 
-  it.skipIf(!runLlmTests)('sets empty nameHint for a category search like "Cafés in Berlin Mitte"', { timeout: 20_000 }, async () => {
+  it.skipIf(!runLlmTests)('infers cafe category for "Rollstuhlgerechte Cafés in Berlin Mitte"', { timeout: 20_000 }, async () => {
     const parsed = await parseQuery("Rollstuhlgerechte Cafés in Berlin Mitte")
     console.log("  ↳ parseQuery:", JSON.stringify(parsed))
     expect(parsed.locationQuery.toLowerCase()).toContain("berlin")
-    expect(parsed.nameHint).toBe("")
     expect(parsed.categories).toContain("cafe")
   })
 })
@@ -135,14 +133,8 @@ describe("filterByNameHint – Name-Filter-Logik", () => {
 })
 
 // ─── Suite 3: Pipeline integration without LLM ───────────────────────────────
-// parseQuery is bypassed with a fixed result. Tests geocode → OSM adapter →
-// filterByNameHint pipeline without any LLM involvement.
-//
-// NOTE: nameHint must NOT be set in SearchParams because that switches
-// buildOverpassQuery to a name-targeted Overpass query (which may return 0
-// results if the specific café is not in OSM). Instead we fetch by category
-// and apply filterByNameHint() as a JS-level filter — exactly as the real
-// search route does when nameHint is present.
+// Tests geocode → OSM adapter → filterByNameHint pipeline.
+// Category-based OSM search + JS-level name post-filter — same as the real route.
 
 describe('Name-search E2E – restaurants in Berlin Mitte (no LLM)', () => {
   it("geocode → OSM → filterByNameHint pipeline returns results", { timeout: 60_000 }, async () => {

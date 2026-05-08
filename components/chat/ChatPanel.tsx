@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 type Coords = { lat: number; lon: number }
 
 interface Props {
-  onSearch:      (query: string, coords?: Coords) => void
+  onSearch:      (query: string, coords?: Coords, nameHint?: string) => void
   isLoading:     boolean
   onModeChange?: (mode: "text" | "nearby") => void
   autoFocus?:    boolean
@@ -147,7 +147,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
       handleLocate()
     } else if (typeof nearbyPhase === "object") {
       const label = locale === "de" ? CHIPS[selectedIdx].de : CHIPS[selectedIdx].en
-      onSearch(withName(`${label} in ${nearbyPhase.district}`), { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
+      onSearch(`${label} in ${nearbyPhase.district}`, { lat: nearbyPhase.lat, lon: nearbyPhase.lon }, name.trim() || undefined)
     }
   }
 
@@ -156,11 +156,11 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
     selectedIdxRef.current = idx
     const label = locale === "de" ? CHIPS[idx].de : CHIPS[idx].en
     if (mode === "nearby" && typeof nearbyPhase === "object") {
-      onSearch(withName(`${label} in ${nearbyPhase.district}`), { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
+      onSearch(`${label} in ${nearbyPhase.district}`, { lat: nearbyPhase.lat, lon: nearbyPhase.lon }, name.trim() || undefined)
     } else if (mode === "text" && location.trim()) {
       setSuggestions([])
       setShowSuggestions(false)
-      onSearch(`${label} in ${location.trim()}`)
+      onSearch(`${label} in ${location.trim()}`, undefined, name.trim() || undefined)
     }
   }
 
@@ -169,29 +169,23 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
     return loc.trim() ? `${label} in ${loc.trim()}` : label
   }
 
-  function withName(q: string): string {
-    return name.trim() ? `"${name.trim()}" ${q}` : q
-  }
-
   function submit() {
     if (isLoading) return
     setSuggestions([])
     setShowSuggestions(false)
     try { localStorage.setItem("ap_last_search", JSON.stringify({ idx: selectedIdx, loc: location.trim(), name: name.trim() })) } catch { /* ignore */ }
-    onSearch(withName(buildQuery(location)))
+    onSearch(buildQuery(location), undefined, name.trim() || undefined)
   }
 
   function selectSuggestion(s: Suggestion) {
-    // Preserve any quoted nameHint the user typed; replace the location part
-    const quotedPart = location.match(/["'„""‟"«»‹›][^"'„""‟"«»‹›]+["'„""‟"«»‹›]/u)?.[0] ?? ""
-    const newLocation = quotedPart ? `${quotedPart} ${s.display}` : s.display
-    skipSuggestRef.current = true  // setLocation below will trigger useEffect — skip the fetch
+    const newLocation = s.display
+    skipSuggestRef.current = true
     setLocation(newLocation)
     setSuggestions([])
     setShowSuggestions(false)
     setHighlightedIdx(-1)
     try { localStorage.setItem("ap_last_search", JSON.stringify({ idx: selectedIdx, loc: newLocation.trim(), name: name.trim() })) } catch { /* ignore */ }
-    onSearch(withName(buildQuery(newLocation)))
+    onSearch(buildQuery(newLocation), undefined, name.trim() || undefined)
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -232,7 +226,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
           setNearbyPhase({ district: d, lat, lon })
           const chip = CHIPS[selectedIdxRef.current]
           const label = locale === "de" ? chip.de : chip.en
-          onSearch(withName(d ? `${label} in ${d}` : label), { lat, lon })
+          onSearch(d ? `${label} in ${d}` : label, { lat, lon }, name.trim() || undefined)
         } catch {
           setNearbyPhase("error")
         }

@@ -225,16 +225,7 @@ export async function fetchAccessibilityCloud(params: SearchParams): Promise<Pla
   url.searchParams.set("radius",    String(params.radiusKm * 1000))
   url.searchParams.set("limit",     "100")
 
-  if (params.nameHint) {
-    // Name search: push the term server-side via the `q` parameter and skip
-    // the accessibility preset so the target isn't filtered out before name
-    // matching can run. (Verified empirically against the live API — other
-    // parameter names like `searchQuery`, `text`, `name` are silently ignored.)
-    url.searchParams.set("q", params.nameHint)
-  } else {
-    // Default: only return places with at least partial wheelchair access.
-    url.searchParams.set("accessibilityPreset", "at-least-partially-accessible-by-wheelchair")
-  }
+  url.searchParams.set("accessibilityPreset", "at-least-partially-accessible-by-wheelchair")
 
   const res = await fetch(url.toString(), {
     headers: { Accept: "application/json" },

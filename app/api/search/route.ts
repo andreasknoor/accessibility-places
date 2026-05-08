@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server"
-import type { SearchParams, SearchResult, SourceId, FilterDebug, A11yValue, Place, SearchFilters } from "@/lib/types"
+import type { SearchParams, SearchResult, SourceId, FilterDebug, A11yValue, Place } from "@/lib/types"
 import { startAdapterTasks }            from "@/lib/adapters"
 import { findMatch, filterByNameHint }  from "@/lib/matching/match"
 import { mergePlaces, passesFilters, finalisePlaceConfidence, computeFilteredConfidence } from "@/lib/matching/merge"
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Input validation ──────────────────────────────────────────────────────
-  const { userQuery, radiusKm: rawRadius, filters: rawFilters, sources: rawSources, locale, coordinates: rawCoords } = rawBody
+  const { userQuery, radiusKm: rawRadius, filters: rawFilters, sources: rawSources, locale, coordinates: rawCoords, nameHint: rawNameHint } = rawBody
 
   const coordinates = (() => {
     if (!rawCoords || typeof rawCoords !== "object") return undefined
@@ -129,6 +129,8 @@ export async function POST(req: NextRequest) {
       headers: { "Content-Type": "application/json" },
     })
   }
+
+  const nameHint = typeof rawNameHint === "string" ? rawNameHint.trim().slice(0, 100) : ""
 
   const radiusKm = typeof rawRadius === "number"
     ? Math.max(RADIUS_MIN_KM, Math.min(RADIUS_MAX_KM, rawRadius))
@@ -191,17 +193,13 @@ export async function POST(req: NextRequest) {
         }
 
         // ── 3. Build per-source params ────────────────────────────────────────
-        const PERMISSIVE_FILTERS: SearchFilters = { entrance: false, toilet: false, parking: false, seating: false, onlyVerified: false, acceptUnknown: true }
-        const nameHint = parsed.nameHint ?? ""
-
         const params: SearchParams = {
           query:      userQuery,
           location:   { lat: geo.lat, lon: geo.lon },
           radiusKm,
           categories: parsed.categories,
-          filters:    nameHint ? PERMISSIVE_FILTERS : filters,
+          filters,
           sources,
-          nameHint:   nameHint || undefined,
           signal,
         }
 

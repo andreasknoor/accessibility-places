@@ -51,15 +51,17 @@ export default function HomeClient() {
   const [resultsWidth,  setResultsWidth] = useState(504)
   const [lastQuery,     setLastQuery]    = useState<string | undefined>()
   const [lastCoords,    setLastCoords]   = useState<{ lat: number; lon: number } | undefined>()
+  const [lastNameHint,  setLastNameHint] = useState<string | undefined>()
   const [chatMode,      setChatMode]     = useState<"text" | "nearby">("text")
   const [resetKey,      setResetKey]     = useState(0)
   const [scrollToId,    setScrollToId]   = useState<string | undefined>()
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
 
-  const handleSearch = useCallback(async (query: string, radiusKmOverride?: number, coords?: { lat: number; lon: number }) => {
+  const handleSearch = useCallback(async (query: string, radiusKmOverride?: number, coords?: { lat: number; lon: number }, nameHint?: string) => {
     setLastQuery(query)
     setLastCoords(coords)
+    setLastNameHint(nameHint)
     setIsLoading(true)
     setError(undefined)
     setPlaces([])
@@ -77,7 +79,7 @@ export default function HomeClient() {
       const res = await fetch("/api/search", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ userQuery: query, radiusKm: radiusKmOverride ?? radiusKm, filters, sources, locale, coordinates: coords }),
+        body:    JSON.stringify({ userQuery: query, radiusKm: radiusKmOverride ?? radiusKm, filters, sources, locale, coordinates: coords, nameHint }),
       })
 
       if (!res.ok || !res.body) {
@@ -178,13 +180,13 @@ export default function HomeClient() {
     if (!lastQuery) return
     const newRadius = Math.min(radiusKm * 2, RADIUS_MAX_KM)
     setRadiusKm(newRadius)
-    handleSearch(lastQuery, newRadius, lastCoords)
-  }, [lastQuery, radiusKm, lastCoords, handleSearch])
+    handleSearch(lastQuery, newRadius, lastCoords, lastNameHint)
+  }, [lastQuery, radiusKm, lastCoords, lastNameHint, handleSearch])
 
   const handleRadiusChange = useCallback((km: number) => {
     setRadiusKm(km)
-    if (lastQuery) handleSearch(lastQuery, km, lastCoords)
-  }, [lastQuery, lastCoords, handleSearch])
+    if (lastQuery) handleSearch(lastQuery, km, lastCoords, lastNameHint)
+  }, [lastQuery, lastCoords, lastNameHint, handleSearch])
 
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     isDragging.current = true
@@ -224,8 +226,8 @@ export default function HomeClient() {
         onRadius={setRadiusKm}
         sourceStates={sourceStates}
         searchCenter={searchCenter}
-        onSearch={(query, coords) => handleSearch(query, undefined, coords)}
-        onRerun={lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords) : undefined}
+        onSearch={(query, coords, nameHint) => handleSearch(query, undefined, coords, nameHint)}
+        onRerun={lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords, lastNameHint) : undefined}
         onExpandRadius={lastQuery && radiusKm < RADIUS_MAX_KM ? handleExpandRadius : undefined}
         onRadiusChange={handleRadiusChange}
         hasSearched={!!lastQuery}
@@ -274,7 +276,7 @@ export default function HomeClient() {
       <h1 className="sr-only">Barrierefreie Orte finden in Deutschland, Österreich und der Schweiz</h1>
 
       {/* ── Chat / search bar ── */}
-      <ChatPanel key={resetKey} onSearch={(query, coords) => handleSearch(query, undefined, coords)} isLoading={isLoading} onModeChange={setChatMode} autoFocus />
+      <ChatPanel key={resetKey} onSearch={(query, coords, nameHint) => handleSearch(query, undefined, coords, nameHint)} isLoading={isLoading} onModeChange={setChatMode} autoFocus />
 
       {/* ── Error banner ── */}
       {error && (
@@ -293,7 +295,7 @@ export default function HomeClient() {
           onSources={setSources}
           onRadius={setRadiusKm}
           sourceStates={sourceStates}
-          onRerun={chatMode === "nearby" && lastQuery ? () => handleSearch(lastQuery) : undefined}
+          onRerun={chatMode === "nearby" && lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords, lastNameHint) : undefined}
           isLoading={isLoading}
         />
 
@@ -307,7 +309,7 @@ export default function HomeClient() {
             selectedId={selectedId}
             onSelect={(p) => setSelectedId(p.id)}
             isLoading={isLoading}
-            onRerun={lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords) : undefined}
+            onRerun={lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords, lastNameHint) : undefined}
             onExpandRadius={lastQuery && radiusKm < RADIUS_MAX_KM ? handleExpandRadius : undefined}
             radiusKm={radiusKm}
             onRadiusChange={handleRadiusChange}

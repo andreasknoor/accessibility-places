@@ -65,25 +65,14 @@ export function extractLocationFallback(query: string): string {
  * Deterministic query parser — no LLM involved.
  *
  * The UI always sends: "<ChipLabel> in <LocationInput>"
- * where <LocationInput> may contain a quoted name like "Goldener Löwe".
- *
- * Rules:
- *   - Quoted text → nameHint (signals a named-place search)
- *   - Remaining text after stripping quotes → location for Nominatim
- *   - Categories inferred from chip label via CATEGORY_HINTS regex
+ * Categories are inferred from the chip label; location extracted via fallback.
+ * Name filtering is handled separately as a post-filter on results.
  */
 export function parseQuery(userQuery: string): ParsedQuery {
-  const nameHint = extractQuotedName(userQuery)
-
-  const withoutName = nameHint
-    ? userQuery.replace(QUOTE_RE, "").replace(/\s+/g, " ").trim()
-    : userQuery
-
-  const locationQuery = extractLocationFallback(withoutName).trim() || withoutName.trim()
+  const locationQuery = extractLocationFallback(userQuery).trim() || userQuery.trim()
 
   return {
     locationQuery,
-    nameHint,
     categories: inferCategories(userQuery),
     freeTextHint: "",
   }

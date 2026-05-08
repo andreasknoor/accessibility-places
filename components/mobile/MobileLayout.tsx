@@ -29,7 +29,7 @@ interface Props {
   onRadius:      (r: number) => void
   sourceStates?: Partial<Record<SourceId, SourceState>>
   searchCenter?: { lat: number; lon: number }
-  onSearch:      (query: string, coords?: { lat: number; lon: number }) => void
+  onSearch:      (query: string, coords?: { lat: number; lon: number }, nameHint?: string) => void
   onRerun?:         () => void
   onExpandRadius?:  () => void
   onRadiusChange?:  (km: number) => void
@@ -58,7 +58,7 @@ export default function MobileLayout({
   }
 
   // All search-triggering actions switch to the results tab
-  const handleSearch = (query: string, coords?: { lat: number; lon: number }) => { setActiveTab("results"); onSearch(query, coords) }
+  const handleSearch = (query: string, coords?: { lat: number; lon: number }, nameHint?: string) => { setActiveTab("results"); onSearch(query, coords, nameHint) }
   const handleRerun = onRerun ? () => { setActiveTab("results"); onRerun() } : undefined
   const handleExpandRadius = onExpandRadius ? () => { setActiveTab("results"); onExpandRadius() } : undefined
   const t = useTranslations()

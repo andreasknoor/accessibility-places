@@ -175,7 +175,6 @@ export interface SearchParams {
   categories: Category[]
   filters: SearchFilters
   sources: ActiveSources
-  nameHint?: string
   signal?: AbortSignal
 }
 
@@ -185,7 +184,6 @@ export interface ParsedQuery {
   locationQuery: string
   categories: Category[]
   freeTextHint: string
-  nameHint: string
 }
 
 // ─── Per-source live state (emitted incrementally during streaming search) ─

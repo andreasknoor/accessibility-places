@@ -27,26 +27,12 @@ function buildOverpassNameRegex(hint: string): string {
 }
 
 export function buildOverpassQuery(params: SearchParams): string {
-  const { location, radiusKm, categories, filters, nameHint } = params
+  const { location, radiusKm, categories, filters } = params
   const r   = radiusKm * 1000
   const lat = location.lat
   const lon = location.lon
 
-  // ── Name-targeted query ──────────────────────────────────────────────────
-  // When the user is searching for a specific named place, skip the heavy
-  // multi-alternation amenity/tourism filter and let Overpass use its name
-  // index. Constrain to features that carry a POI key so streets and address
-  // points named "Meiereiweg" etc. don't pollute results.
-  if (nameHint) {
-    const nm = `[name~"${buildOverpassNameRegex(nameHint)}"]`
-    const poiKeys = ["amenity", "tourism", "shop", "craft", "leisure"] as const
-    const clauses = poiKeys.map(
-      (k) => `nwr(around:${r},${lat},${lon})${nm}[${k}];`,
-    )
-    return `[out:json][timeout:25];(${clauses.join("")});out 200 center tags;`
-  }
-
-  // ── Default category-driven query ────────────────────────────────────────
+  // ── Category-driven query ─────────────────────────────────────────────────
   // Collect all amenity and tourism values across requested categories
   const amenityVals = new Set<string>()
   const tourismVals = new Set<string>()
