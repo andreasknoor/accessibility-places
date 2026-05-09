@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 npm run dev          # dev server (Turbopack)
 npm run build        # production build
+npm run start        # serve the built production output
 npm run lint         # ESLint
 npm test             # run all tests once (required before every commit/push)
 npm run test:watch   # watch mode
@@ -16,6 +17,10 @@ npx vitest run __tests__/lib/llm.test.ts
 ```
 
 **Always run `npm test` before committing or pushing.** No check-ins without a full test run.
+
+## Next.js version note
+
+This project uses **Next.js 16.2.4**, which contains breaking changes from prior versions. APIs, conventions, and file structure may differ from training-data knowledge. Before writing Next.js-specific code, read the relevant guide in `node_modules/next/dist/docs/` and heed any deprecation notices in the build output.
 
 ## Architecture
 
@@ -80,7 +85,7 @@ google_places:       0.35
 
 ### Mobile vs desktop
 
-`useIsMobile()` (pointer: coarse or max-width 767px) gates layout branching in `HomeClient.tsx`. Mobile uses `MobileLayout` (tab bar: results / map / filter). Desktop has a resizable results column with a drag handle. In tests, `matchMedia` is mocked to always return `false` (desktop), so both inputs in the search bar are always rendered.
+`useIsMobile()` (`hooks/useIsMobile.ts` — pointer: coarse or max-width 767px) gates layout branching in `HomeClient.tsx`. Mobile uses `MobileLayout` (tab bar: results / map / filter). Desktop has a resizable results column with a drag handle. In tests, `matchMedia` is mocked to always return `false` (desktop), so both inputs in the search bar are always rendered.
 
 `MapView` (`components/map/MapView.tsx`) uses Leaflet and is loaded via `dynamic(..., { ssr: false })` to prevent server-side rendering errors.
 

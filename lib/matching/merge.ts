@@ -208,6 +208,7 @@ function findPrimarySource(place: Place): SourceId {
   )
   const order: SourceId[] = [
     "reisen_fuer_alle",
+    "ginto",
     "accessibility_cloud",
     "osm",
     "google_places",
