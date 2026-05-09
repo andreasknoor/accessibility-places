@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { fetchGinto } from "@/lib/adapters/ginto"
-import { RELIABILITY_WEIGHTS, GINTO_LEVEL2_WEIGHT } from "@/lib/config"
+import { RELIABILITY_WEIGHTS, GINTO_LEVEL2_WEIGHT, GINTO_LEVEL3_WEIGHT } from "@/lib/config"
 import type { SearchParams } from "@/lib/types"
 
 const BASE_PARAMS: SearchParams = {
@@ -45,8 +45,16 @@ beforeEach(() => {
 
 // ─── weight logic ─────────────────────────────────────────────────────────────
 
-describe("Ginto weight and verifiedRecently logic", () => {
-  it("LEVEL_1 not verified → base weight 0.90, no badge", async () => {
+describe("Ginto weight by detail level", () => {
+  it("no level info → base weight 0.90, no badge", async () => {
+    mockFetch({ ...BASE_NODE, qualityInfo: { detailLevels: [] } })
+    const places = await fetchGinto(BASE_PARAMS)
+    const src = places[0].accessibility.entrance.sources[0]
+    expect(src.reliabilityWeight).toBeCloseTo(RELIABILITY_WEIGHTS.ginto)
+    expect(src.verifiedRecently).toBeUndefined()
+  })
+
+  it("LEVEL_1 only → base weight 0.90, no badge", async () => {
     mockFetch({ ...BASE_NODE, qualityInfo: { detailLevels: ["LEVEL_1"] } })
     const places = await fetchGinto(BASE_PARAMS)
     const src = places[0].accessibility.entrance.sources[0]
@@ -54,33 +62,29 @@ describe("Ginto weight and verifiedRecently logic", () => {
     expect(src.verifiedRecently).toBeUndefined()
   })
 
-  it("LEVEL_2 not verified → weight 0.95, no badge", async () => {
-    mockFetch({ ...BASE_NODE, qualityInfo: { detailLevels: ["LEVEL_2"] } })
+  it("LEVEL_2 → weight 0.95, no badge", async () => {
+    mockFetch({ ...BASE_NODE, qualityInfo: { detailLevels: ["LEVEL_2", "LEVEL_1"] } })
     const places = await fetchGinto(BASE_PARAMS)
     const src = places[0].accessibility.entrance.sources[0]
     expect(src.reliabilityWeight).toBeCloseTo(GINTO_LEVEL2_WEIGHT)
     expect(src.verifiedRecently).toBeUndefined()
   })
 
-  it("LEVEL_1 recently verified → weight capped at 1.0 (0.90×1.2), badge set", async () => {
-    const recentDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days ago
+  it("LEVEL_3 → weight 0.97, no badge", async () => {
+    mockFetch({ ...BASE_NODE, qualityInfo: { detailLevels: ["LEVEL_3", "LEVEL_2", "LEVEL_1"] } })
+    const places = await fetchGinto(BASE_PARAMS)
+    const src = places[0].accessibility.entrance.sources[0]
+    expect(src.reliabilityWeight).toBeCloseTo(GINTO_LEVEL3_WEIGHT)
+    expect(src.verifiedRecently).toBeUndefined()
+  })
+
+  it("updatedAt does not set verifiedRecently regardless of recency", async () => {
+    const recentDate = new Date(Date.now() - 1000).toISOString() // 1 second ago
     mockFetch({ ...BASE_NODE, updatedAt: recentDate, qualityInfo: { detailLevels: ["LEVEL_1"] } })
     const places = await fetchGinto(BASE_PARAMS)
     const src = places[0].accessibility.entrance.sources[0]
-    // 0.90 × 1.2 = 1.08 → capped to 1.0 by buildAttribute
-    expect(src.reliabilityWeight).toBeCloseTo(1.0)
-    expect(src.verifiedRecently).toBe(true)
-    expect(src.verifiedAt).toBe(recentDate)
-  })
-
-  it("LEVEL_2 recently verified → max(0.95, 1.08) wins, weight capped at 1.0, badge set", async () => {
-    const recentDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-    mockFetch({ ...BASE_NODE, updatedAt: recentDate, qualityInfo: { detailLevels: ["LEVEL_2"] } })
-    const places = await fetchGinto(BASE_PARAMS)
-    const src = places[0].accessibility.entrance.sources[0]
-    // verified weight (1.08) > level2 weight (0.95) → 1.08 wins, capped to 1.0
-    expect(src.reliabilityWeight).toBeCloseTo(1.0)
-    expect(src.verifiedRecently).toBe(true)
+    expect(src.verifiedRecently).toBeUndefined()
+    expect(src.verifiedAt).toBeUndefined()
   })
 })
 

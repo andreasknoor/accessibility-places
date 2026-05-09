@@ -6,7 +6,7 @@
  */
 import type { Place, SearchParams, A11yValue, Category } from "../types"
 import { buildAttribute } from "../matching/merge"
-import { RELIABILITY_WEIGHTS, GINTO_LEVEL2_WEIGHT } from "../config"
+import { RELIABILITY_WEIGHTS, GINTO_LEVEL2_WEIGHT, GINTO_LEVEL3_WEIGHT } from "../config"
 import { nanoid } from "../utils"
 
 const ENDPOINT   = "https://api.ginto.guide/graphql"
@@ -179,8 +179,6 @@ export async function fetchGinto(params: SearchParams): Promise<Place[]> {
   return allNodes.map((node) => nodeToPlace(node))
 }
 
-const TWO_YEARS_MS = 2 * 365.25 * 24 * 60 * 60 * 1000
-
 function nodeToPlace(node: GintoNode): Place {
   const ratingKeys = node.accessibilityInfo.defaultRatings.map((r) => r.key)
   const { entrance, toilet, parking } = extractValues(ratingKeys)
@@ -189,20 +187,17 @@ function nodeToPlace(node: GintoNode): Place {
   const gintoCategory = node.categories[0]?.key ?? ""
   const category: Category = FROM_GINTO[gintoCategory] ?? "attraction"
 
-  // Weight: LEVEL_2 entries are more thoroughly documented (0.95 vs 0.90).
-  // Recently updated entries get a ×1.2 boost (same rule as OSM check_date).
-  // When both apply, take the larger effective weight — don't stack.
-  const isLevel2           = node.qualityInfo.detailLevels.includes("LEVEL_2")
-  const isVerifiedRecently = Date.now() - new Date(node.updatedAt).getTime() < TWO_YEARS_MS
-  const level2Weight       = isLevel2 ? GINTO_LEVEL2_WEIGHT : RELIABILITY_WEIGHTS.ginto
-  const verifiedWeight     = RELIABILITY_WEIGHTS.ginto * 1.2
-  const effectiveWeight    = isVerifiedRecently
-    ? Math.max(level2Weight, verifiedWeight)
-    : level2Weight
-  const weightMultiplier   = effectiveWeight / RELIABILITY_WEIGHTS.ginto
+  // Weight scales with the highest documented detail level.
+  // updatedAt is a system bulk-republish timestamp, not a human verification
+  // date, so it is stored in metadata only and not used for verifiedRecently.
+  const levels          = node.qualityInfo.detailLevels
+  const baseWeight      = levels.includes("LEVEL_3") ? GINTO_LEVEL3_WEIGHT
+                        : levels.includes("LEVEL_2") ? GINTO_LEVEL2_WEIGHT
+                        : RELIABILITY_WEIGHTS.ginto
+  const weightMultiplier = baseWeight / RELIABILITY_WEIGHTS.ginto
 
   const attr = (value: A11yValue) =>
-    buildAttribute("ginto", value, rawValue, {}, false, weightMultiplier, node.updatedAt, isVerifiedRecently)
+    buildAttribute("ginto", value, rawValue, {}, false, weightMultiplier, undefined, false)
 
   return {
     id:          nanoid(),
