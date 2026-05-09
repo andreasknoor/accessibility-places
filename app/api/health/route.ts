@@ -15,12 +15,12 @@ import {
 // Coordinates bypass Nominatim so geocoding failures don't affect the check.
 
 const SCENARIO = {
-  label:      "Cafés in Berlin Mitte (entrance filter)",
+  label:      "Cafés in Berlin Mitte (entrance + toilet filter)",
   location:   { lat: 52.5200, lon: 13.4050 },
   radiusKm:   2,
   categories: ["cafe"] as SearchParams["categories"],
   filters: {
-    entrance: true, toilet: false, parking: false, seating: false,
+    entrance: true, toilet: true, parking: false, seating: false,
     onlyVerified: false, acceptUnknown: true,
   },
   minResults:    3,
