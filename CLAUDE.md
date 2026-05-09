@@ -37,11 +37,12 @@ No LLM is used at runtime (`@anthropic-ai/sdk` is an unused leftover in `package
 
 ### Adapters (`lib/adapters/`)
 
-Four adapters run in parallel via `startAdapterTasks()`:
+Five adapters run in parallel via `startAdapterTasks()`:
 - **OSM** (`osm.ts`): Overpass query, retries across 3 mirror endpoints on timeout/5xx. `[timeout:25]` in QL + `AbortSignal.timeout(28_000)` on the fetch.
 - **accessibility.cloud** (`accessibility-cloud.ts`): A11yJSON-shaped records. Always uses `accessibilityPreset=at-least-partially-accessible-by-wheelchair`.
-- **Reisen für Alle** (`reisen-fuer-alle.ts`): Highest reliability weight (1.0).
-- **Google Places** (`google-places.ts`): Lowest reliability weight (0.35); fires one POST per category.
+- **Reisen für Alle** (`reisen-fuer-alle.ts`): Highest reliability weight (1.0). Hidden from FilterPanel UI (not in `SOURCE_ORDER`) but always active when the key is set.
+- **Ginto** (`ginto.ts`): GraphQL API (`POST https://api.ginto.guide/graphql`), Switzerland only (all results have `countryCode: "CH"`). `defaultRatings[].key` prefix convention maps to A11yValue: no prefix → entrance, `toilet_` → toilet, `parking_` → parking. Paginates up to 2 pages (100 results). Weight 0.90.
+- **Google Places** (`google-places.ts`): Lowest reliability weight (0.35); fires one POST per category. **Disabled by default** in `DEFAULT_SOURCES`.
 
 ### Matching & merging (`lib/matching/`)
 
@@ -55,6 +56,8 @@ where `addrScore = streetTrigram × 0.6 + cityMatch × 0.25 + zipMatch × 0.15`.
 
 `merge.ts` – winning `A11yValue` is determined by summed source reliability weight. Toilet confidence is boosted to 1.0 when `isDesignated` or `hasGrabBars` is true; capped at 0.9 for weaker toilet signals. The `computeFilteredConfidence()` function averages **only the criteria the user has active**, so deactivating parking doesn't drag down scores. `passesFiltersForSource(place, sourceId, filters)` answers "would this place pass if only this one source were active?" — used by `FilterPanel` to show a predictive per-source result count. Note: `seating` is an optional criterion — not all adapters populate it, so `Place.accessibility.seating` may be `undefined`.
 
+`passesFilters` treats both `"yes"` and `"limited"` as passing for any active criterion. This is intentional: `"limited"` (eingeschränkt) means potentially usable, not inaccessible. Only `"no"` fails; `"unknown"` fails unless `acceptUnknown` is true.
+
 `nearby-parking.ts` – post-merge enrichment controlled by the `ENABLE_NEARBY_PARKING` flag. `enrichWithNearbyParking()` upgrades `parking.value` from `"unknown"` to `"yes"` with `details.nearbyOnly = true` when a disabled-parking OSM node (capacity:disabled > 0 or parking_space=disabled) is found within 150 m (`DEFAULT_MAX_NEARBY_PARKING_M`). Deliberately does **not** add a `SourceAttribution`, so confidence and per-source filter counts are unaffected.
 
 `buildAttribute(…, weightMultiplier)` — when `weightMultiplier > 1.0` the source gets `verifiedRecently: true`. Currently only the OSM adapter sets this (via `check_date:wheelchair` ≤ 2 years old). The `onlyVerified` filter in `SearchFilters` requires at least one attribution to carry this flag.
@@ -63,6 +66,7 @@ where `addrScore = streetTrigram × 0.6 + cityMatch × 0.25 + zipMatch × 0.15`.
 
 ```ts
 reisen_fuer_alle:    1.00
+ginto:               0.90
 accessibility_cloud: 0.75
 osm:                 0.70
 google_places:       0.35
@@ -91,6 +95,7 @@ The name field is a separate input, **not** embedded in the query string. `ChatP
 - `allowsDogs` / `dogPolicyOnly` — sourced from supplementary A.Cloud datasets (e.g. Pfotenpiloten). Records that arrive as `dogPolicyOnly: true` are dropped by the search route **unless** they merge with a place that has real wheelchair data. Once merged the flag is cleared (`undefined`).
 - `isVegetarianFriendly` / `isVeganFriendly` — from OSM `diet:vegetarian|vegan=yes/only` or Google Places types `vegetarian_restaurant` / `vegan_restaurant`. `vegan=true` implies `vegetarian=true` (set automatically during merge).
 - `wheelmapUrl` — authoritative Wheelmap.org URL from `accessibility.cloud`'s `infoPageUrl`; preferred over a constructed link.
+- `gintoUrl` — Ginto detail page URL from `publication.linkUrl`; shown as ShieldCheck icon in PlaceCard when present.
 
 ### Geocoding API routes
 
@@ -105,7 +110,11 @@ The `countrycodes=de,at,ch` constraint in Nominatim calls and the Photon boundin
 
 `/api/search` applies in-memory sliding-window rate limits per IP: 10 searches/min general, 3/min for Google Places. These reset on serverless cold start — not suitable for multi-instance without a shared store.
 
-In production, `raw` adapter response data is stripped from `sourceRecords` before the response is sent (see `stripRaw()`). In development the raw data is preserved for debugging.
+In production, `raw` adapter response data is stripped from `sourceRecords` before the response is sent (see `stripRaw()`). In development the raw data is preserved for debugging. Adapters can populate `SourceRecord.metadata` (a plain object) for key fields that should survive `stripRaw()` and remain visible in the debug sheet in production — currently only the Ginto adapter does this.
+
+`POST /api/log-error` — client-side error forwarding. `HomeClient` calls this fire-and-forget in its search `catch` block; the route logs via `console.error` (appears as Error in Vercel Function Logs).
+
+`GET /api/health?token=SECRET` — token-protected E2E health check. Live mode runs a real OSM search (Cafés, Berlin Mitte, entrance + toilet filter). Mock mode (`?mock=1`) runs fixture data through the real pipeline without external calls — suitable for load testing. Google Places is hardcoded off. Ginto is hardcoded off (CH-only, separate concern). Returns 200/503 with structured JSON.
 
 ### PWA / Service Worker
 
