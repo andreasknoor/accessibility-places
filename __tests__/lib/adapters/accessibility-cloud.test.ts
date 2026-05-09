@@ -303,4 +303,20 @@ describe("fetchAccessibilityCloud", () => {
     expect(td.doorWidthCm).toBe(90)
     expect(td.hasEmergencyPullstring).toBe(true)
   })
+
+  it("combines user signal with timeout so client disconnect aborts the fetch (Bug 3)", async () => {
+    const controller = new AbortController()
+    let capturedSignal: AbortSignal | undefined
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((_url: unknown, init: RequestInit) => {
+      capturedSignal = init?.signal as AbortSignal
+      return Promise.resolve({ ok: true, json: async () => ({ features: [] }) })
+    }))
+
+    await fetchAccessibilityCloud({ ...BASE_PARAMS, signal: controller.signal })
+
+    expect(capturedSignal).toBeDefined()
+    expect(capturedSignal!.aborted).toBe(false)
+    controller.abort()
+    expect(capturedSignal!.aborted).toBe(true)
+  })
 })

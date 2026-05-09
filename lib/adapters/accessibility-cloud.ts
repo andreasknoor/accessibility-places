@@ -229,7 +229,9 @@ export async function fetchAccessibilityCloud(params: SearchParams): Promise<Pla
 
   const res = await fetch(url.toString(), {
     headers: { Accept: "application/json" },
-    signal:  AbortSignal.timeout(15_000),
+    signal: params.signal
+      ? AbortSignal.any([params.signal, AbortSignal.timeout(15_000)])
+      : AbortSignal.timeout(15_000),
   })
 
   if (!res.ok) throw new Error(`accessibility.cloud error: ${res.status}`)

@@ -46,7 +46,7 @@ Five adapters run in parallel via `startAdapterTasks()`:
 - **OSM** (`osm.ts`): Overpass query, retries across 3 mirror endpoints on timeout/5xx. `[timeout:25]` in QL + `AbortSignal.timeout(28_000)` on the fetch.
 - **accessibility.cloud** (`accessibility-cloud.ts`): A11yJSON-shaped records. Always uses `accessibilityPreset=at-least-partially-accessible-by-wheelchair`.
 - **Reisen für Alle** (`reisen-fuer-alle.ts`): Highest reliability weight (1.0). Hidden from FilterPanel UI (not in `SOURCE_ORDER`) but always active when the key is set.
-- **Ginto** (`ginto.ts`): GraphQL API (`POST https://api.ginto.guide/graphql`), Switzerland only (all results have `countryCode: "CH"`). `defaultRatings[].key` prefix convention maps to A11yValue: no prefix → entrance, `toilet_` → toilet, `parking_` → parking. Paginates up to 2 pages (100 results). Weight 0.90.
+- **Ginto** (`ginto.ts`): GraphQL API (`POST https://api.ginto.guide/graphql`), Switzerland only (all results have `countryCode: "CH"`). `defaultRatings[].key` prefix convention maps to A11yValue: no prefix → entrance, `toilet_` → toilet, `parking_` → parking. Paginates up to 2 pages (100 results). Base weight 0.90; LEVEL_2 entries use 0.95, LEVEL_3 entries use 0.97 (via `qualityInfo.detailLevels`). `updatedAt` is a system republish timestamp, not a human verification date — stored in `metadata` only, never sets `verifiedRecently`.
 - **Google Places** (`google-places.ts`): Lowest reliability weight (0.35); fires one POST per category. **Disabled by default** in `DEFAULT_SOURCES`.
 
 ### Matching & merging (`lib/matching/`)
@@ -71,7 +71,7 @@ where `addrScore = streetTrigram × 0.6 + cityMatch × 0.25 + zipMatch × 0.15`.
 
 ```ts
 reisen_fuer_alle:    1.00
-ginto:               0.90
+ginto:               0.90  // LEVEL_2 entries → 0.95, LEVEL_3 → 0.97
 accessibility_cloud: 0.75
 osm:                 0.70
 google_places:       0.35
@@ -143,6 +143,7 @@ In production, `raw` adapter response data is stripped from `sourceRecords` befo
 
 - `__tests__/components/` — jsdom + Testing Library
 - `__tests__/lib/` — pure unit tests (node environment via `// @vitest-environment node` header where needed)
+- `__tests__/api/` — API route unit tests (node environment, mocked `fetch`)
 - `__tests__/integration/` — live network tests; skip themselves when API keys or network are absent. Not required for CI.
 
 `vitest.setup.ts` mocks `window.matchMedia` (always returns `matches: false`), `localStorage`, and `ResizeObserver` for jsdom tests.

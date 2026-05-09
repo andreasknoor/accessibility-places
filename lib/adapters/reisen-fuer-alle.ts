@@ -168,7 +168,9 @@ export async function fetchReisenFuerAlle(params: SearchParams): Promise<Place[]
       Authorization: `Bearer ${apiKey}`,
       Accept:        "application/json",
     },
-    signal: AbortSignal.timeout(15_000),
+    signal: params.signal
+      ? AbortSignal.any([params.signal, AbortSignal.timeout(15_000)])
+      : AbortSignal.timeout(15_000),
   })
 
   if (!res.ok) throw new Error(`Reisen für Alle API error: ${res.status}`)

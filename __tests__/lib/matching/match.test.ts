@@ -4,6 +4,7 @@ import {
   trigramSimilarity,
   haversineMetres,
   findMatch,
+  filterByNameHint,
 } from "@/lib/matching/match"
 import type { Place } from "@/lib/types"
 
@@ -127,6 +128,47 @@ describe("haversineMetres", () => {
     const dist = haversineMetres({ lat: 52.520, lon: 13.405 }, { lat: 52.521, lon: 13.405 })
     expect(dist).toBeGreaterThan(80)
     expect(dist).toBeLessThan(130)
+  })
+})
+
+// ─── filterByNameHint ────────────────────────────────────────────────────────
+
+describe("filterByNameHint", () => {
+  it("returns all places when hint is empty string", () => {
+    const places = [makePlace({ name: "Café Mitte" }), makePlace({ name: "Pizza Roma" })]
+    expect(filterByNameHint(places, "")).toHaveLength(2)
+  })
+
+  it("keeps place whose name contains the hint (substring match)", () => {
+    const places = [makePlace({ name: "Café Mitte" }), makePlace({ name: "Pizza Roma" })]
+    expect(filterByNameHint(places, "Mitte")).toHaveLength(1)
+    expect(filterByNameHint(places, "Mitte")[0].name).toBe("Café Mitte")
+  })
+
+  it("is case-insensitive", () => {
+    const places = [makePlace({ name: "Sushi Bar Tokio" })]
+    expect(filterByNameHint(places, "sushi bar tokio")).toHaveLength(1)
+  })
+
+  it("strips diacritics so 'Cafe' matches 'Café'", () => {
+    const places = [makePlace({ name: "Café Schöneberg" })]
+    expect(filterByNameHint(places, "Cafe Schoneberg")).toHaveLength(1)
+  })
+
+  it("keeps place with trigram similarity ≥ 0.6 despite no exact substring", () => {
+    // "Pizzeria" vs "Pizzeria Romana" — no substring but trigram should pass
+    const places = [makePlace({ name: "Pizzeria Romana" })]
+    expect(filterByNameHint(places, "Pizzeria Romana XY")).toHaveLength(1)
+  })
+
+  it("drops place with low similarity and no substring match", () => {
+    const places = [makePlace({ name: "Sushi Tokyo" }), makePlace({ name: "Bratwurst Stand" })]
+    expect(filterByNameHint(places, "Sushi Tokyo")).toHaveLength(1)
+  })
+
+  it("returns empty array when no place matches", () => {
+    const places = [makePlace({ name: "Café Berlin" }), makePlace({ name: "Bistro Hamburg" })]
+    expect(filterByNameHint(places, "Münchner Wirtshaus")).toHaveLength(0)
   })
 })
 

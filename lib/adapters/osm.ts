@@ -304,7 +304,9 @@ export async function fetchOsm(
         method: "POST",
         body,
         headers,
-        signal: AbortSignal.timeout(28_000),
+        signal: params.signal
+          ? AbortSignal.any([params.signal, AbortSignal.timeout(28_000)])
+          : AbortSignal.timeout(28_000),
       })
       if (res.status === 429 || res.status >= 500) {
         lastError = new Error(`Overpass ${endpoint} returned ${res.status}`)
@@ -390,7 +392,9 @@ export async function fetchOsmDisabledParking(
         method: "POST",
         body,
         headers,
-        signal: signal ?? AbortSignal.timeout(15_000),
+        signal: signal
+          ? AbortSignal.any([signal, AbortSignal.timeout(15_000)])
+          : AbortSignal.timeout(15_000),
       })
       if (!res.ok) continue
       const json = await res.json()

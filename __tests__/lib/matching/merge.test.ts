@@ -4,6 +4,7 @@ import {
   emptyAttribute,
   mergePlaces,
   passesFilters,
+  passesFiltersForSource,
   confidenceLabel,
   finalisePlaceConfidence,
   computeFilteredConfidence,
@@ -369,6 +370,88 @@ describe("passesFilters", () => {
   it("'no' never passes even with acceptUnknown=true", () => {
     const p = place(noAttr, yesAttr, yesAttr)
     expect(passesFilters(p, { ...ALL_FILTERS, acceptUnknown: true })).toBe(false)
+  })
+
+  describe("seating sub-filter (Bug 5: undefined was silently passing)", () => {
+    const seatingFilters: SearchFilters = { ...ALL_FILTERS, seating: true }
+    const seatYes = buildAttribute("google_places", "yes", "true",  { isAccessible: true })
+    const seatNo  = buildAttribute("google_places", "no",  "false", { isAccessible: false })
+
+    it("fails when seating attribute is absent and acceptUnknown=false", () => {
+      const p = place(yesAttr, yesAttr, yesAttr)   // no seating attribute
+      expect(passesFilters(p, seatingFilters)).toBe(false)
+    })
+
+    it("passes when seating attribute is absent and acceptUnknown=true", () => {
+      const p = place(yesAttr, yesAttr, yesAttr)
+      expect(passesFilters(p, { ...seatingFilters, acceptUnknown: true })).toBe(true)
+    })
+
+    it("fails when seating value is 'no'", () => {
+      const p = makePlace({
+        accessibility: { entrance: yesAttr, toilet: yesAttr, parking: yesAttr, seating: seatNo },
+      })
+      expect(passesFilters(p, seatingFilters)).toBe(false)
+    })
+
+    it("passes when seating value is 'yes'", () => {
+      const p = makePlace({
+        accessibility: { entrance: yesAttr, toilet: yesAttr, parking: yesAttr, seating: seatYes },
+      })
+      expect(passesFilters(p, seatingFilters)).toBe(true)
+    })
+  })
+})
+
+// ─── passesFiltersForSource ───────────────────────────────────────────────────
+
+describe("passesFiltersForSource", () => {
+  const osmYes = buildAttribute("osm", "yes", "yes", {})
+  const osmNo  = buildAttribute("osm", "no",  "no",  {})
+
+  function placeWith(entrance = osmYes, toilet = osmYes, parking = osmYes): Place {
+    return makePlace({
+      accessibility: { entrance, toilet, parking },
+      sourceRecords: [{ sourceId: "osm", externalId: "1", fetchedAt: "", raw: {} }],
+    })
+  }
+
+  it("passes when source value is yes for active criterion", () => {
+    const p = placeWith()
+    expect(passesFiltersForSource(p, "osm", ALL_FILTERS)).toBe(true)
+  })
+
+  it("fails when source value is no for active criterion", () => {
+    const p = placeWith(osmNo, osmYes, osmYes)
+    expect(passesFiltersForSource(p, "osm", ALL_FILTERS)).toBe(false)
+  })
+
+  it("treats missing source value as unknown", () => {
+    const p = placeWith()
+    // google_places has no contribution → value resolves to "unknown"
+    expect(passesFiltersForSource(p, "google_places", ALL_FILTERS)).toBe(false)
+    expect(passesFiltersForSource(p, "google_places", { ...ALL_FILTERS, acceptUnknown: true })).toBe(true)
+  })
+
+  describe("seating sub-filter (Bug 5 parity)", () => {
+    it("fails when seating attribute is absent and acceptUnknown=false", () => {
+      const p = placeWith()   // no seating attribute
+      expect(passesFiltersForSource(p, "osm", { ...ALL_FILTERS, seating: true })).toBe(false)
+    })
+
+    it("passes when seating attribute is absent and acceptUnknown=true", () => {
+      const p = placeWith()
+      expect(passesFiltersForSource(p, "osm", { ...ALL_FILTERS, seating: true, acceptUnknown: true })).toBe(true)
+    })
+
+    it("fails when source seating value is 'no'", () => {
+      const seatNo = buildAttribute("google_places", "no", "false", { isAccessible: false })
+      const p = makePlace({
+        accessibility: { entrance: osmYes, toilet: osmYes, parking: osmYes, seating: seatNo },
+        sourceRecords: [{ sourceId: "google_places", externalId: "gp1", fetchedAt: "", raw: {} }],
+      })
+      expect(passesFiltersForSource(p, "google_places", { ...ALL_FILTERS, seating: true })).toBe(false)
+    })
   })
 })
 

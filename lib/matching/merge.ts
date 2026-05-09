@@ -346,7 +346,13 @@ export function passesFiltersForSource(
   if (filters.entrance && !check(place.accessibility.entrance)) return false
   if (filters.toilet   && !check(place.accessibility.toilet))   return false
   if (filters.parking  && !check(place.accessibility.parking))  return false
-  if (filters.seating  && place.accessibility.seating && !check(place.accessibility.seating)) return false
+  if (filters.seating) {
+    if (!place.accessibility.seating) {
+      if (!filters.acceptUnknown) return false
+    } else if (!check(place.accessibility.seating)) {
+      return false
+    }
+  }
   if (filters.onlyVerified) {
     const attrs = [
       place.accessibility.entrance,
@@ -379,7 +385,13 @@ export function passesFilters(
   if (filters.entrance && !check(place.accessibility.entrance)) return false
   if (filters.toilet   && !check(place.accessibility.toilet))   return false
   if (filters.parking  && !check(place.accessibility.parking))  return false
-  if (filters.seating  && place.accessibility.seating && !check(place.accessibility.seating)) return false
+  if (filters.seating) {
+    if (!place.accessibility.seating) {
+      if (!filters.acceptUnknown) return false
+    } else if (!check(place.accessibility.seating)) {
+      return false
+    }
+  }
 
   // "Only manually verified" — require at least one source attribution that
   // carries the recently-verified flag (today: OSM `check_date:wheelchair`

@@ -280,6 +280,7 @@ export async function POST(req: NextRequest) {
             if (filters.entrance && !["yes","limited"].includes(p.accessibility.entrance.value) && !(p.accessibility.entrance.value === "unknown" && filters.acceptUnknown)) failedBy.entrance++
             if (filters.toilet   && !["yes","limited"].includes(p.accessibility.toilet.value)   && !(p.accessibility.toilet.value   === "unknown" && filters.acceptUnknown)) failedBy.toilet++
             if (filters.parking  && !["yes","limited"].includes(p.accessibility.parking.value)  && !(p.accessibility.parking.value  === "unknown" && filters.acceptUnknown)) failedBy.parking++
+            if (filters.seating  && p.accessibility.seating && !["yes","limited"].includes(p.accessibility.seating.value) && !(p.accessibility.seating.value === "unknown" && filters.acceptUnknown)) failedBy.seating++
           }
         }
         const filterDebug: FilterDebug = {

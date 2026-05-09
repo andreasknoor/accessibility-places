@@ -7,6 +7,7 @@ import {
   osmAllowsDogs,
   osmDiet,
   fetchOsm,
+  fetchOsmDisabledParking,
   isRecentlyVerified,
 } from "@/lib/adapters/osm"
 import type { SearchParams } from "@/lib/types"
@@ -427,5 +428,92 @@ describe("fetchOsm", () => {
     }))
     const result = await fetchOsm({ ...BASE_PARAMS, categories: ["hotel"] })
     expect(result[0].coordinates.lat).toBe(52.530)
+  })
+
+  it("combines user signal with timeout so client disconnect aborts the fetch (Bug 3)", async () => {
+    const controller = new AbortController()
+    let capturedSignal: AbortSignal | undefined
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((_url: unknown, init: RequestInit) => {
+      capturedSignal = init?.signal as AbortSignal
+      return Promise.resolve({ ok: true, json: async () => ({ elements: [] }) })
+    }))
+
+    await fetchOsm({ ...BASE_PARAMS, signal: controller.signal })
+
+    expect(capturedSignal).toBeDefined()
+    expect(capturedSignal!.aborted).toBe(false)
+    controller.abort()
+    expect(capturedSignal!.aborted).toBe(true)
+  })
+})
+
+// ─── fetchOsmDisabledParking ──────────────────────────────────────────────────
+
+describe("fetchOsmDisabledParking", () => {
+  beforeEach(() => vi.restoreAllMocks())
+
+  it("returns empty array when Overpass returns no elements", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ elements: [] }),
+    }))
+    const result = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    expect(result).toEqual([])
+  })
+
+  it("parses capacity:disabled from parking features", async () => {
+    const element = {
+      type: "node", id: 1, lat: 52.52, lon: 13.405,
+      tags: { amenity: "parking", "capacity:disabled": "3" },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ elements: [element] }),
+    }))
+    const [f] = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    expect(f.lat).toBe(52.52)
+    expect(f.capacity).toBe(3)
+  })
+
+  it("uses center for way elements", async () => {
+    const element = {
+      type: "way", id: 2,
+      center: { lat: 52.530, lon: 13.410 },
+      tags: { amenity: "parking", "capacity:disabled": "2" },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ elements: [element] }),
+    }))
+    const [f] = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    expect(f.lat).toBe(52.530)
+  })
+
+  it("returns empty array on non-200 response and tries next endpoint", async () => {
+    let calls = 0
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(() => {
+      calls++
+      if (calls < 3) return Promise.resolve({ ok: false, status: 503 })
+      return Promise.resolve({ ok: true, json: async () => ({ elements: [] }) })
+    }))
+    const result = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    expect(calls).toBe(3)
+    expect(result).toEqual([])
+  })
+
+  it("combines user signal with timeout (Bug 4)", async () => {
+    const controller = new AbortController()
+    let capturedSignal: AbortSignal | undefined
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((_url: unknown, init: RequestInit) => {
+      capturedSignal = init?.signal as AbortSignal
+      return Promise.resolve({ ok: true, json: async () => ({ elements: [] }) })
+    }))
+
+    await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1, controller.signal)
+
+    expect(capturedSignal).toBeDefined()
+    expect(capturedSignal!.aborted).toBe(false)
+    controller.abort()
+    expect(capturedSignal!.aborted).toBe(true)
   })
 })
