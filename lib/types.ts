@@ -6,6 +6,7 @@ export type SourceId =
   | "osm"
   | "reisen_fuer_alle"
   | "google_places"
+  | "ginto"
 
 export type Category =
   | "cafe" | "restaurant" | "bar" | "pub" | "biergarten" | "fast_food"
@@ -117,6 +118,7 @@ export interface Place {
   // accessibility.cloud's `infoPageUrl` for Wheelmap-derived places) hands one
   // back. Used in preference to a manually constructed Wheelmap link.
   wheelmapUrl?: string
+  gintoUrl?: string
 
   // Bonus info from supplementary A.Cloud datasets (e.g. Pfotenpiloten):
   // does the place welcome dogs? `undefined` = unknown.
@@ -165,6 +167,7 @@ export interface ActiveSources {
   accessibility_cloud: boolean
   osm: boolean
   reisen_fuer_alle: boolean
+  ginto: boolean
   google_places: boolean
 }
 

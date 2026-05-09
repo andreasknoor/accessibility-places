@@ -30,6 +30,7 @@ const DEFAULT_SOURCES: ActiveSources = {
   accessibility_cloud: true,
   osm:                 true,
   reisen_fuer_alle:    true,
+  ginto:               true,
   google_places:       false,
 }
 

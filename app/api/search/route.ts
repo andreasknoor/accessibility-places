@@ -149,6 +149,7 @@ export async function POST(req: NextRequest) {
     accessibility_cloud: Boolean(rawSources && typeof rawSources === "object" && (rawSources as Record<string, unknown>).accessibility_cloud),
     osm:                 Boolean(rawSources && typeof rawSources === "object" && (rawSources as Record<string, unknown>).osm),
     reisen_fuer_alle:    Boolean(rawSources && typeof rawSources === "object" && (rawSources as Record<string, unknown>).reisen_fuer_alle),
+    ginto:               Boolean(rawSources && typeof rawSources === "object" && (rawSources as Record<string, unknown>).ginto),
     google_places:       Boolean(rawSources && typeof rawSources === "object" && (rawSources as Record<string, unknown>).google_places),
   }
 

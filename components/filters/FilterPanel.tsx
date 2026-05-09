@@ -84,14 +84,16 @@ function SourceIndicator({ state }: { state?: SourceState }) {
 const SOURCE_ORDER: SourceId[] = [
   "osm",
   "accessibility_cloud",
+  "ginto",
   "google_places",
 ]
 
 const SOURCE_RELIABILITY: Record<SourceId, string> = {
   osm:                 "bg-yellow-500",
   accessibility_cloud: "bg-lime-500",
-  google_places:       "bg-orange-400",
   reisen_fuer_alle:    "bg-green-500",
+  ginto:               "bg-teal-500",
+  google_places:       "bg-orange-400",
 }
 
 const SOURCE_DISABLED: Partial<Record<SourceId, true>> = {}

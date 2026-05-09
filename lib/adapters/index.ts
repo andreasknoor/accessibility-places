@@ -3,6 +3,7 @@ import { fetchOsm }                  from "./osm"
 import { fetchAccessibilityCloud }   from "./accessibility-cloud"
 import { fetchReisenFuerAlle }       from "./reisen-fuer-alle"
 import { fetchGooglePlaces }         from "./google-places"
+import { fetchGinto }                from "./ginto"
 
 export type AdapterResult = {
   sourceId: SourceId
@@ -45,6 +46,8 @@ export function startAdapterTasks(
     tasks.push({ sourceId: "reisen_fuer_alle",    promise: safeRun("reisen_fuer_alle",    () => fetchReisenFuerAlle(params)) })
   if (sources.google_places)
     tasks.push({ sourceId: "google_places",       promise: safeRun("google_places",       () => fetchGooglePlaces(params)) })
+  if (sources.ginto)
+    tasks.push({ sourceId: "ginto",               promise: safeRun("ginto",               () => fetchGinto(params)) })
   return tasks
 }
 

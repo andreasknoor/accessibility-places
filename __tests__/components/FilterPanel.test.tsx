@@ -7,7 +7,7 @@ const DEFAULT_FILTERS: SearchFilters = {
   entrance: true, toilet: true, parking: true, seating: false, onlyVerified: false, acceptUnknown: false,
 }
 const DEFAULT_SOURCES: ActiveSources = {
-  accessibility_cloud: true, osm: true, reisen_fuer_alle: true, google_places: true,
+  accessibility_cloud: true, osm: true, reisen_fuer_alle: true, ginto: true, google_places: true,
 }
 
 function renderPanel(
@@ -31,11 +31,12 @@ function renderPanel(
 }
 
 describe("FilterPanel", () => {
-  it("renders the 3 visible data source checkboxes", () => {
+  it("renders the 4 visible data source checkboxes", () => {
     // reisen_fuer_alle is active but intentionally hidden from the UI (not in SOURCE_ORDER)
     renderPanel()
     expect(screen.getByLabelText(/accessibility\.cloud/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/OpenStreetMap/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Ginto/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/Google Places/i)).toBeInTheDocument()
     expect(screen.queryByLabelText(/Reisen für Alle/i)).not.toBeInTheDocument()
   })
