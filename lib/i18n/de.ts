@@ -32,7 +32,7 @@ const de: Translations = {
     locationError: "Standort konnte nicht ermittelt werden.",
     nearbyIn:        (d: string) => `In der Nähe von ${d}`,
     namePlaceholder: "Name des Ortes (optional)",
-    nameToggleShow:  "Nach Name filtern",
+    nameToggleShow:  "+ Nach Ortsname filtern",
     nameToggleHide:  "Name-Filter entfernen",
   },
   filters: {

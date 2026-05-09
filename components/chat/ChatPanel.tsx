@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Send, Loader2, LocateFixed, MapPin, X, ChevronRight } from "lucide-react"
+import { Send, Loader2, LocateFixed, MapPin, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { useIsMobile } from "@/hooks/useIsMobile"
@@ -303,9 +303,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
                 "w-full rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]",
                 "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
                 "focus-visible:ring-ring disabled:opacity-50",
-                isMobile && !showNameField
-                  ? (location ? "pr-12" : "pr-7")
-                  : (location ? "pr-7" : ""),
+                location ? "pr-7" : "",
               )}
             />
             {location && (
@@ -319,27 +317,10 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
                   try { localStorage.removeItem("ap_last_search") } catch { /* ignore */ }
                   inputRef.current?.focus()
                 }}
-                className={cn(
-                  "absolute top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors",
-                  isMobile && !showNameField ? "right-8" : "right-2",
-                )}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 aria-label="Clear"
               >
                 <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-            {/* Chevron toggle — mobile only, embedded in location input when name field is hidden */}
-            {isMobile && !showNameField && (
-              <button
-                type="button"
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  setShowNameField(true)
-                }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                aria-label={t.chat.nameToggleShow}
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
               </button>
             )}
 
@@ -429,6 +410,17 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
             </span>
           </Button>
         </div>
+
+        {/* Mobile: expand link — visible when name field is hidden */}
+        {isMobile && !showNameField && (
+          <button
+            type="button"
+            onClick={() => setShowNameField(true)}
+            className="self-start text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {t.chat.nameToggleShow}
+          </button>
+        )}
 
         {/* Mobile: name field as second row when expanded */}
         {isMobile && showNameField && (
