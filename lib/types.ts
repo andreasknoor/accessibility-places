@@ -100,6 +100,9 @@ export interface SourceRecord {
   sourceId: SourceId
   externalId: string
   fetchedAt: string
+  // Structured fields that survive stripRaw() in production.
+  // Adapters populate this to expose key data in the debug sheet.
+  metadata?: Record<string, unknown>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   raw?: any
 }

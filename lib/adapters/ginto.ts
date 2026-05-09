@@ -206,7 +206,15 @@ function nodeToPlace(node: GintoNode): Place {
       sourceId:   "ginto",
       externalId: node.entryId,
       fetchedAt:  new Date().toISOString(),
-      raw:        node,
+      metadata: {
+        name:        node.name,
+        category:    node.categories[0]?.key,
+        ratings:     node.accessibilityInfo.defaultRatings.map((r) => r.key),
+        city:        node.position.city,
+        countryCode: node.position.countryCode,
+        linkUrl:     node.publication.linkUrl,
+      },
+      raw: node,
     }],
   }
 }

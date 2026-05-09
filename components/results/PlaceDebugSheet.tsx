@@ -140,7 +140,11 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
                     </span>
                   </div>
                   <pre className="font-mono text-[10px] leading-relaxed whitespace-pre-wrap break-all p-2 max-h-48 overflow-y-auto text-muted-foreground">
-                    {JSON.stringify(rec.raw, null, 2)}
+                    {rec.raw != null
+                      ? JSON.stringify(rec.raw, null, 2)
+                      : rec.metadata != null
+                        ? JSON.stringify(rec.metadata, null, 2)
+                        : "(no data)"}
                   </pre>
                 </div>
               ))}
