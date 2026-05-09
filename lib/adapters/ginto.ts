@@ -6,6 +6,7 @@
  */
 import type { Place, SearchParams, A11yValue, Category } from "../types"
 import { buildAttribute } from "../matching/merge"
+import { RELIABILITY_WEIGHTS, GINTO_LEVEL2_WEIGHT } from "../config"
 import { nanoid } from "../utils"
 
 const ENDPOINT   = "https://api.ginto.guide/graphql"
@@ -92,6 +93,8 @@ const GQL_QUERY = `
         position { lat lng street housenumber postcode city countryCode }
         accessibilityInfo { defaultRatings { key } }
         publication { linkUrl }
+        updatedAt
+        qualityInfo { detailLevels }
       }
     }
   }
@@ -104,6 +107,8 @@ interface GintoNode {
   position:        { lat: number; lng: number; street?: string; housenumber?: string; postcode?: string; city?: string; countryCode?: string }
   accessibilityInfo: { defaultRatings: { key: string }[] }
   publication:     { linkUrl?: string }
+  updatedAt:       string
+  qualityInfo:     { detailLevels: string[] }
 }
 
 async function fetchPage(
@@ -174,6 +179,8 @@ export async function fetchGinto(params: SearchParams): Promise<Place[]> {
   return allNodes.map((node) => nodeToPlace(node))
 }
 
+const TWO_YEARS_MS = 2 * 365.25 * 24 * 60 * 60 * 1000
+
 function nodeToPlace(node: GintoNode): Place {
   const ratingKeys = node.accessibilityInfo.defaultRatings.map((r) => r.key)
   const { entrance, toilet, parking } = extractValues(ratingKeys)
@@ -181,6 +188,21 @@ function nodeToPlace(node: GintoNode): Place {
 
   const gintoCategory = node.categories[0]?.key ?? ""
   const category: Category = FROM_GINTO[gintoCategory] ?? "attraction"
+
+  // Weight: LEVEL_2 entries are more thoroughly documented (0.95 vs 0.90).
+  // Recently updated entries get a ×1.2 boost (same rule as OSM check_date).
+  // When both apply, take the larger effective weight — don't stack.
+  const isLevel2           = node.qualityInfo.detailLevels.includes("LEVEL_2")
+  const isVerifiedRecently = Date.now() - new Date(node.updatedAt).getTime() < TWO_YEARS_MS
+  const level2Weight       = isLevel2 ? GINTO_LEVEL2_WEIGHT : RELIABILITY_WEIGHTS.ginto
+  const verifiedWeight     = RELIABILITY_WEIGHTS.ginto * 1.2
+  const effectiveWeight    = isVerifiedRecently
+    ? Math.max(level2Weight, verifiedWeight)
+    : level2Weight
+  const weightMultiplier   = effectiveWeight / RELIABILITY_WEIGHTS.ginto
+
+  const attr = (value: A11yValue) =>
+    buildAttribute("ginto", value, rawValue, {}, false, weightMultiplier, node.updatedAt, isVerifiedRecently)
 
   return {
     id:          nanoid(),
@@ -196,9 +218,9 @@ function nodeToPlace(node: GintoNode): Place {
     coordinates:   { lat: node.position.lat, lon: node.position.lng },
     gintoUrl:      node.publication.linkUrl,
     accessibility: {
-      entrance: buildAttribute("ginto", entrance, rawValue, {}),
-      toilet:   buildAttribute("ginto", toilet,   rawValue, {}),
-      parking:  buildAttribute("ginto", parking,  rawValue, {}),
+      entrance: attr(entrance),
+      toilet:   attr(toilet),
+      parking:  attr(parking),
     },
     overallConfidence: 0,
     primarySource:     "ginto",
@@ -213,6 +235,8 @@ function nodeToPlace(node: GintoNode): Place {
         city:        node.position.city,
         countryCode: node.position.countryCode,
         linkUrl:     node.publication.linkUrl,
+        detailLevels: node.qualityInfo.detailLevels,
+        updatedAt:   node.updatedAt,
       },
       raw: node,
     }],

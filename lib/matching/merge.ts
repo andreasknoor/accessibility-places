@@ -278,10 +278,16 @@ export function buildAttribute(
   isOsmOverall = false,
   weightMultiplier = 1.0,
   verifiedAt?: string,
+  verifiedRecently?: boolean,
 ): AccessibilityAttribute {
   const baseWeight = RELIABILITY_WEIGHTS[sourceId]
   const overallAdj = isOsmOverall ? OSM_ENTRANCE_WEIGHT_FACTOR : 1.0
   const weight     = Math.min(baseWeight * overallAdj * weightMultiplier, 1.0)
+
+  // verifiedRecently can be passed explicitly (e.g. Ginto: weight boost from
+  // LEVEL_2 should not show the badge; only updatedAt-based verification should).
+  // Falls back to weightMultiplier > 1.0 for callers that don't pass it (OSM).
+  const isVerified = verifiedRecently ?? weightMultiplier > 1.0
 
   const src: SourceAttribution = {
     sourceId,
@@ -289,7 +295,7 @@ export function buildAttribute(
     rawValue,
     reliabilityWeight: weight,
     details,
-    ...(weightMultiplier > 1.0 ? { verifiedRecently: true } : {}),
+    ...(isVerified ? { verifiedRecently: true } : {}),
     ...(verifiedAt ? { verifiedAt } : {}),
   }
 

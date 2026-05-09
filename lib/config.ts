@@ -2,7 +2,7 @@ import type { SourceId, Category } from "./types"
 
 // User-visible app version, shown in the header next to the subtitle.
 // Bump on every meaningful release.
-export const APP_VERSION = "1.64"
+export const APP_VERSION = "1.65"
 
 export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
   reisen_fuer_alle:    1.00,
@@ -11,6 +11,9 @@ export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
   osm:                 0.70,
   google_places:       0.35,
 }
+
+// Ginto entries with detailLevel LEVEL_2 are more thoroughly documented
+export const GINTO_LEVEL2_WEIGHT = 0.95
 
 // OSM wheelchair= main tag is a whole-place proxy, not entrance-specific
 // → reduce its effective weight for entrance criterion
