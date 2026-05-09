@@ -64,7 +64,11 @@ export interface Translations {
     conflict:          string
     primarySource:     string
     noData:            string
+    websiteLink:       string
+    phoneLink:         string
     wheelmapLink:      string
+    gintoLink:         string
+    googleMapsLink:    string
     verifiedRecently:  string
     verifiedAt:        (date: string) => string
     verifiedAge:       (date: string) => string

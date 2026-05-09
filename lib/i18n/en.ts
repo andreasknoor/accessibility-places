@@ -68,7 +68,11 @@ const en: Translations = {
     conflict: "Sources disagree",
     primarySource: "Best source",
     noData: "No data",
-    wheelmapLink: "Check on Wheelmap.org",
+    websiteLink:    "Visit website",
+    phoneLink:      "Call",
+    wheelmapLink:   "Check on Wheelmap.org",
+    gintoLink:      "Check on Ginto",
+    googleMapsLink: "Open in Google Maps",
     verifiedRecently: "Recently user-verified (Wheelmap/OSM, ≤ 2 years)",
     verifiedAt: (date: string) => {
       const d = new Date(date)

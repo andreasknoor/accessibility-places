@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { createPortal } from "react-dom"
-import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Info, Accessibility, PawPrint, Salad, Leaf, Map } from "lucide-react"
+import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Info, Accessibility, PawPrint, Salad, Leaf, Map, ShieldCheck } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import ConfidenceBadge  from "./ConfidenceBadge"
@@ -202,7 +202,8 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
                 href={place.website}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Website"
+                aria-label={t.results.websiteLink}
+                title={t.results.websiteLink}
                 onClick={(e) => e.stopPropagation()}
                 className="p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
               >
@@ -212,6 +213,8 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
             {place.phone && (
               <a
                 href={`tel:${place.phone}`}
+                aria-label={t.results.phoneLink}
+                title={t.results.phoneLink}
                 onClick={(e) => e.stopPropagation()}
                 className="p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
               >
@@ -229,12 +232,25 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
             >
               <Accessibility className="w-[1.1rem] h-[1.1rem]" />
             </a>
+            {place.gintoUrl && (
+              <a
+                href={place.gintoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={t.results.gintoLink}
+                title={t.results.gintoLink}
+                onClick={(e) => e.stopPropagation()}
+                className="p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ShieldCheck className="w-[1.1rem] h-[1.1rem]" />
+              </a>
+            )}
             <a
               href={googleMapsHref}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="Google Maps"
-              title="Google Maps"
+              aria-label={t.results.googleMapsLink}
+              title={t.results.googleMapsLink}
               onClick={(e) => e.stopPropagation()}
               className="p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
             >
