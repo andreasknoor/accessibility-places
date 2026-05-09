@@ -122,6 +122,7 @@ export function mergePlaces(existing: Place, incoming: Place): Place {
   if (!merged.website     && incoming.website)     merged.website     = incoming.website
   if (!merged.phone       && incoming.phone)       merged.phone       = incoming.phone
   if (!merged.wheelmapUrl && incoming.wheelmapUrl) merged.wheelmapUrl = incoming.wheelmapUrl
+  if (!merged.gintoUrl    && incoming.gintoUrl)    merged.gintoUrl    = incoming.gintoUrl
   if (merged.allowsDogs === undefined && incoming.allowsDogs !== undefined) {
     merged.allowsDogs = incoming.allowsDogs
   }
