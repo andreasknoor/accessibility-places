@@ -72,7 +72,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
     try {
       const saved = localStorage.getItem("ap_last_search")
       if (saved) {
-        const { idx, loc, name: savedName } = JSON.parse(saved)
+        const { idx, loc } = JSON.parse(saved)
         if (typeof idx === "number" && idx >= 0 && idx < CHIPS.length) {
           setSelectedIdx(idx)
           selectedIdxRef.current = idx
@@ -80,10 +80,6 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
         if (typeof loc === "string" && loc.trim()) {
           restoredLocRef.current = loc
           setLocation(loc)
-        }
-        if (typeof savedName === "string" && savedName.trim()) {
-          setName(savedName)
-          setShowNameField(true)
         }
       }
     } catch { /* ignore malformed storage */ }
@@ -173,7 +169,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
     if (isLoading) return
     setSuggestions([])
     setShowSuggestions(false)
-    try { localStorage.setItem("ap_last_search", JSON.stringify({ idx: selectedIdx, loc: location.trim(), name: name.trim() })) } catch { /* ignore */ }
+    try { localStorage.setItem("ap_last_search", JSON.stringify({ idx: selectedIdx, loc: location.trim() })) } catch { /* ignore */ }
     onSearch(buildQuery(location), undefined, name.trim() || undefined)
   }
 
@@ -184,7 +180,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
     setSuggestions([])
     setShowSuggestions(false)
     setHighlightedIdx(-1)
-    try { localStorage.setItem("ap_last_search", JSON.stringify({ idx: selectedIdx, loc: newLocation.trim(), name: name.trim() })) } catch { /* ignore */ }
+    try { localStorage.setItem("ap_last_search", JSON.stringify({ idx: selectedIdx, loc: newLocation.trim() })) } catch { /* ignore */ }
     onSearch(buildQuery(newLocation), undefined, name.trim() || undefined)
   }
 

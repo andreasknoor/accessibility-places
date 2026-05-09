@@ -33,7 +33,7 @@ Client reads this as a `ReadableStream` in `HomeClient.tsx` and updates state in
 
 ### Query parsing (`lib/llm.ts`)
 
-No LLM is used at runtime. `parseQuery()` deterministically extracts `locationQuery` (for Nominatim) and `categories` (from `CATEGORY_HINTS` regex match). The name filter is entirely separate — it is passed as `nameHint` in the API body and applied server-side after all adapter results are merged.
+No LLM is used at runtime (`@anthropic-ai/sdk` is an unused leftover in `package.json`). `parseQuery()` deterministically extracts `locationQuery` (for Nominatim) and `categories` (from `CATEGORY_HINTS` regex match). `extractQuotedName()` pulls text inside any quote style (straight, curly, guillemets) and is used by `ChatPanel` to populate `nameHint` when the user wraps a name in quotes. The name filter is entirely separate — it is passed as `nameHint` in the API body and applied server-side after all adapter results are merged.
 
 ### Adapters (`lib/adapters/`)
 
@@ -45,9 +45,19 @@ Four adapters run in parallel via `startAdapterTasks()`:
 
 ### Matching & merging (`lib/matching/`)
 
-`match.ts` – a candidate place is considered the same as an existing canonical place when a weighted score (Haversine distance + trigram name similarity + name containment) exceeds `MATCH_SCORE_THRESHOLD = 0.72`.
+`match.ts` – a candidate place is considered the same as an existing canonical place when a weighted score exceeds `MATCH_SCORE_THRESHOLD = 0.72`. The formula is:
 
-`merge.ts` – winning `A11yValue` is determined by summed source reliability weight. Toilet confidence is boosted to 1.0 when `isDesignated` or `hasGrabBars` is true. The `computeFilteredConfidence()` function averages **only the criteria the user has active**, so deactivating parking doesn't drag down scores.
+```
+effectiveName × 0.5 + addrScore × 0.3 + geoScore × 0.2
+```
+
+where `addrScore = streetTrigram × 0.6 + cityMatch × 0.25 + zipMatch × 0.15`. A fast reject fires when distance > 3 × `GEO_MATCH_RADIUS_M` (240 m). Name containment (one normalised name substring of the other within 80 m) raises the effective name score to ≥ 0.9.
+
+`merge.ts` – winning `A11yValue` is determined by summed source reliability weight. Toilet confidence is boosted to 1.0 when `isDesignated` or `hasGrabBars` is true; capped at 0.9 for weaker toilet signals. The `computeFilteredConfidence()` function averages **only the criteria the user has active**, so deactivating parking doesn't drag down scores. `passesFiltersForSource(place, sourceId, filters)` answers "would this place pass if only this one source were active?" — used by `FilterPanel` to show a predictive per-source result count. Note: `seating` is an optional criterion — not all adapters populate it, so `Place.accessibility.seating` may be `undefined`.
+
+`nearby-parking.ts` – post-merge enrichment controlled by the `ENABLE_NEARBY_PARKING` flag. `enrichWithNearbyParking()` upgrades `parking.value` from `"unknown"` to `"yes"` with `details.nearbyOnly = true` when a disabled-parking OSM node (capacity:disabled > 0 or parking_space=disabled) is found within 150 m (`DEFAULT_MAX_NEARBY_PARKING_M`). Deliberately does **not** add a `SourceAttribution`, so confidence and per-source filter counts are unaffected.
+
+`buildAttribute(…, weightMultiplier)` — when `weightMultiplier > 1.0` the source gets `verifiedRecently: true`. Currently only the OSM adapter sets this (via `check_date:wheelchair` ≤ 2 years old). The `onlyVerified` filter in `SearchFilters` requires at least one attribution to carry this flag.
 
 ### Confidence weights (`lib/config.ts`)
 
@@ -68,9 +78,19 @@ google_places:       0.35
 
 `useIsMobile()` (pointer: coarse or max-width 767px) gates layout branching in `HomeClient.tsx`. Mobile uses `MobileLayout` (tab bar: results / map / filter). Desktop has a resizable results column with a drag handle. In tests, `matchMedia` is mocked to always return `false` (desktop), so both inputs in the search bar are always rendered.
 
+`MapView` (`components/map/MapView.tsx`) uses Leaflet and is loaded via `dynamic(..., { ssr: false })` to prevent server-side rendering errors.
+
 ### Name filter (ChatPanel → API)
 
 The name field is a separate input, **not** embedded in the query string. `ChatPanel.onSearch` signature: `(query: string, coords?: Coords, nameHint?: string)`. The `nameHint` is passed in the API request body and applied as a JS post-filter (`filterByNameHint` — substring + trigram ≥ 0.6) after the merge step. This means accessibility filters apply independently of name searches.
+
+### Supplementary Place fields
+
+`Place` carries optional fields that adapters populate beyond wheelchair data:
+
+- `allowsDogs` / `dogPolicyOnly` — sourced from supplementary A.Cloud datasets (e.g. Pfotenpiloten). Records that arrive as `dogPolicyOnly: true` are dropped by the search route **unless** they merge with a place that has real wheelchair data. Once merged the flag is cleared (`undefined`).
+- `isVegetarianFriendly` / `isVeganFriendly` — from OSM `diet:vegetarian|vegan=yes/only` or Google Places types `vegetarian_restaurant` / `vegan_restaurant`. `vegan=true` implies `vegetarian=true` (set automatically during merge).
+- `wheelmapUrl` — authoritative Wheelmap.org URL from `accessibility.cloud`'s `infoPageUrl`; preferred over a constructed link.
 
 ### Geocoding API routes
 
@@ -98,8 +118,11 @@ In production, `raw` adapter response data is stripped from `sourceRecords` befo
 ## Environment variables (server-side only)
 
 - `ACCESSIBILITY_CLOUD_API_KEY` — optional; source is silently skipped if absent
+- `REISEN_FUER_ALLE_API_KEY` — optional; source is silently skipped if absent. Request access from DSFT/Natko at reisen-fuer-alle.de (non-commercial use available on request).
+- `REISEN_FUER_ALLE_API_BASE` — base URL for the RfA API (e.g. `https://api.reisen-fuer-alle.de/v1`); required alongside the key
 - `GOOGLE_PLACES_API_KEY` — optional; source is silently skipped if absent
 - `ENABLE_NEARBY_PARKING=1` — feature flag; enables the optional disabled-parking enrichment fetch (off by default)
+- `HEALTH_CHECK_SECRET` — required to activate `GET /api/health`; requests without a matching `?token=` get 401. If unset the endpoint returns 503.
 
 ## Tests
 

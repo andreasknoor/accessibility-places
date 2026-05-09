@@ -156,6 +156,12 @@ export default function HomeClient() {
     } catch (err) {
       setError(t.chat.errorGeneric)
       console.error(err)
+      const e = err instanceof Error ? err : new Error(String(err))
+      void fetch("/api/log-error", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ message: e.message, stack: e.stack, context: query }),
+      }).catch(() => undefined)
     } finally {
       setIsLoading(false)
     }
