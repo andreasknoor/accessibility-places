@@ -2,7 +2,7 @@ import { NextRequest } from "next/server"
 import type { SearchParams, SearchResult, SourceId, FilterDebug, A11yValue, Place } from "@/lib/types"
 import { startAdapterTasks }            from "@/lib/adapters"
 import { findMatch, filterByNameHint }  from "@/lib/matching/match"
-import { mergePlaces, passesFilters, finalisePlaceConfidence, computeFilteredConfidence } from "@/lib/matching/merge"
+import { mergePlaces, passesFilters, finalisePlaceConfidence, computeFilteredConfidence, countLimited } from "@/lib/matching/merge"
 import { fetchOsmDisabledParking, type NearbyParkingFeature } from "@/lib/adapters/osm"
 import { enrichWithNearbyParking } from "@/lib/matching/nearby-parking"
 import { parseQuery } from "@/lib/llm"
@@ -289,10 +289,14 @@ export async function POST(req: NextRequest) {
           toiletValueCounts,
         }
 
+        const sortPlaces = (a: Place & { overallConfidence: number }, b: Place & { overallConfidence: number }) => {
+          const confDiff = b.overallConfidence - a.overallConfidence
+          if (Math.abs(confDiff) >= 0.001) return confDiff
+          return countLimited(a, filters) - countLimited(b, filters)
+        }
         const filtered = nameHint
-          ? [...withScore].sort((a, b) => b.overallConfidence - a.overallConfidence)
-          : withScore.filter((p) => passesFilters(p, filters))
-                    .sort((a, b) => b.overallConfidence - a.overallConfidence)
+          ? [...withScore].sort(sortPlaces)
+          : withScore.filter((p) => passesFilters(p, filters)).sort(sortPlaces)
 
         // ── 8. Stats ─────────────────────────────────────────────────────────
         const sourceStats = {} as Record<SourceId, number>

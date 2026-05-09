@@ -7,6 +7,7 @@ import {
   confidenceLabel,
   finalisePlaceConfidence,
   computeFilteredConfidence,
+  countLimited,
 } from "@/lib/matching/merge"
 import { RELIABILITY_WEIGHTS } from "@/lib/config"
 import type { Place, SearchFilters } from "@/lib/types"
@@ -456,6 +457,75 @@ describe("computeFilteredConfidence", () => {
   it("returns 0 when all active criteria are unknown", () => {
     const place = makePlace()
     expect(computeFilteredConfidence(place, filtersAll)).toBe(0)
+  })
+})
+
+// ─── countLimited ────────────────────────────────────────────────────────────
+
+describe("countLimited", () => {
+  const filters = { entrance: true, toilet: true, parking: true, seating: false }
+
+  it("returns 0 when no active criterion is limited", () => {
+    const place = makePlace({
+      accessibility: {
+        entrance: { ...emptyAttribute(), value: "yes" },
+        toilet:   { ...emptyAttribute(), value: "yes" },
+        parking:  { ...emptyAttribute(), value: "unknown" },
+      },
+    })
+    expect(countLimited(place, filters)).toBe(0)
+  })
+
+  it("counts each active criterion that is limited", () => {
+    const place = makePlace({
+      accessibility: {
+        entrance: { ...emptyAttribute(), value: "limited" },
+        toilet:   { ...emptyAttribute(), value: "limited" },
+        parking:  { ...emptyAttribute(), value: "yes" },
+      },
+    })
+    expect(countLimited(place, filters)).toBe(2)
+  })
+
+  it("ignores criteria that are not active in filters", () => {
+    const place = makePlace({
+      accessibility: {
+        entrance: { ...emptyAttribute(), value: "limited" },
+        toilet:   { ...emptyAttribute(), value: "yes" },
+        parking:  { ...emptyAttribute(), value: "yes" },
+      },
+    })
+    const entranceOnly = { entrance: true, toilet: false, parking: false, seating: false }
+    expect(countLimited(place, entranceOnly)).toBe(1)
+    const toiletOnly   = { entrance: false, toilet: true, parking: false, seating: false }
+    expect(countLimited(place, toiletOnly)).toBe(0)
+  })
+
+  it("lower count sorts before higher count", () => {
+    const allYes = makePlace({
+      overallConfidence: 0.7,
+      accessibility: {
+        entrance: { ...emptyAttribute(), value: "yes" },
+        toilet:   { ...emptyAttribute(), value: "yes" },
+        parking:  { ...emptyAttribute(), value: "yes" },
+      },
+    })
+    const oneLimited = makePlace({
+      id: "p2",
+      overallConfidence: 0.7,
+      accessibility: {
+        entrance: { ...emptyAttribute(), value: "yes" },
+        toilet:   { ...emptyAttribute(), value: "limited" },
+        parking:  { ...emptyAttribute(), value: "yes" },
+      },
+    })
+    const places = [oneLimited, allYes]
+    places.sort((a, b) => {
+      const diff = b.overallConfidence - a.overallConfidence
+      if (Math.abs(diff) >= 0.001) return diff
+      return countLimited(a, filters) - countLimited(b, filters)
+    })
+    expect(places[0].id).toBe("p1") // allYes ranks first
   })
 })
 

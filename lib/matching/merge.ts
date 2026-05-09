@@ -201,6 +201,23 @@ export function computeFilteredConfidence(
   return known.reduce((sum, a) => sum + a.confidence, 0) / known.length
 }
 
+// ─── Count "limited" values among active filter criteria ──────────────────
+// Used as a tiebreaker in sort: places with zero "limited" values rank above
+// places with one or more, when overallConfidence is within floating-point
+// epsilon. Lower count = better.
+
+export function countLimited(
+  place: Place,
+  filters: { entrance: boolean; toilet: boolean; parking: boolean; seating: boolean },
+): number {
+  let n = 0
+  if (filters.entrance && place.accessibility.entrance.value === "limited") n++
+  if (filters.toilet   && place.accessibility.toilet.value   === "limited") n++
+  if (filters.parking  && place.accessibility.parking.value  === "limited") n++
+  if (filters.seating  && place.accessibility.seating?.value === "limited") n++
+  return n
+}
+
 // ─── Primary source = highest reliability weight that contributed ──────────
 
 function findPrimarySource(place: Place): SourceId {
