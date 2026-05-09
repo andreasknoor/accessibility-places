@@ -104,6 +104,7 @@ const en: Translations = {
     showOnMap:  "Show on map",
     mapHint:    "Tip: tap an entry to show it on the map",
     scoreCalculation:      "Score calculation",
+    scoreDataQualityNote:  "The score reflects how reliable the underlying data is, not how accessible the place is.",
     scoreCriterion:        "Criterion",
     scoreValueWeight:      "Value · Weight",
     scoreNoActiveCriteria: "No scored criteria active",

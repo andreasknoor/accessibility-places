@@ -63,6 +63,9 @@ function ScoreContent({ place, filters }: { place: Place; filters: SearchFilters
 
   return (
     <div className="space-y-2 text-xs">
+      <p className="text-muted-foreground italic leading-snug">
+        {t.results.scoreDataQualityNote}
+      </p>
       <table className="w-full border-collapse">
         <thead>
           <tr className="text-muted-foreground">

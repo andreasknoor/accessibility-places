@@ -79,6 +79,7 @@ export interface Translations {
     showOnMap:         string
     mapHint:           string
     scoreCalculation:     string
+    scoreDataQualityNote: string
     scoreCriterion:       string
     scoreValueWeight:     string
     scoreNoActiveCriteria: string

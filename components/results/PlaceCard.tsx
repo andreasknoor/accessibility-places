@@ -197,6 +197,19 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
             >
               <Info className="w-[1.1rem] h-[1.1rem]" />
             </button>
+            {place.gintoUrl && (
+              <a
+                href={place.gintoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={t.results.gintoLink}
+                title={t.results.gintoLink}
+                onClick={(e) => e.stopPropagation()}
+                className="p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ShieldCheck className="w-[1.1rem] h-[1.1rem]" />
+              </a>
+            )}
             {place.website && (
               <a
                 href={place.website}
@@ -232,19 +245,6 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
             >
               <Accessibility className="w-[1.1rem] h-[1.1rem]" />
             </a>
-            {place.gintoUrl && (
-              <a
-                href={place.gintoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={t.results.gintoLink}
-                title={t.results.gintoLink}
-                onClick={(e) => e.stopPropagation()}
-                className="p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ShieldCheck className="w-[1.1rem] h-[1.1rem]" />
-              </a>
-            )}
             <a
               href={googleMapsHref}
               target="_blank"
