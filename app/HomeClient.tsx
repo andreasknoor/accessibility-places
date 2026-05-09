@@ -30,7 +30,7 @@ const DEFAULT_SOURCES: ActiveSources = {
   accessibility_cloud: true,
   osm:                 true,
   reisen_fuer_alle:    true,
-  google_places:       true,
+  google_places:       false,
 }
 
 export default function HomeClient() {
