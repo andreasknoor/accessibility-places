@@ -7,8 +7,8 @@ export const APP_VERSION = "1.67"
 export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
   reisen_fuer_alle:    1.00,
   ginto:               0.90,
-  accessibility_cloud: 0.75,
-  osm:                 0.70,
+  accessibility_cloud: 0.70,
+  osm:                 0.75,
   google_places:       0.35,
 }
 

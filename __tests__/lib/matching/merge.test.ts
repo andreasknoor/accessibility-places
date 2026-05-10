@@ -129,7 +129,7 @@ describe("mergePlaces", () => {
   })
 
   it("detects conflict when sources disagree", () => {
-    // accessibility_cloud(0.75) vs osm(0.60): ratio = 0.60/0.75 = 0.80 > 0.5 → conflict
+    // osm(0.675) vs accessibility_cloud(0.70): ratio = 0.675/0.70 = 0.96 > 0.5 → conflict
     const a = makePlace({
       id: "a",
       accessibility: {
@@ -142,7 +142,7 @@ describe("mergePlaces", () => {
     const b = makePlace({
       id: "b",
       accessibility: {
-        entrance: buildAttribute("osm", "no", "no", {}),
+        entrance: buildAttribute("osm", "no", "no", {}, true),  // isOsmOverall → 0.75×0.90=0.675
         toilet:   emptyAttribute(),
         parking:  emptyAttribute(),
       },
@@ -151,7 +151,7 @@ describe("mergePlaces", () => {
 
     const merged = mergePlaces(a, b)
     expect(merged.accessibility.entrance.conflict).toBe(true)
-    // accessibility_cloud (weight 0.75) wins over osm (weight 0.60)
+    // accessibility_cloud (weight 0.70) wins over osm entrance (weight 0.675)
     expect(merged.accessibility.entrance.value).toBe("yes")
   })
 
@@ -469,8 +469,8 @@ describe("finalisePlaceConfidence", () => {
     // Adapters emit overallConfidence: 0 — finalisePlaceConfidence must fix it
     expect(place.overallConfidence).toBe(0)
     const finalised = finalisePlaceConfidence(place)
-    // entrance(0.75) + toilet(0.75) / 2 known attrs = 0.75
-    expect(finalised.overallConfidence).toBeCloseTo(0.75)
+    // entrance(0.70) + toilet(0.70) / 2 known attrs = 0.70
+    expect(finalised.overallConfidence).toBeCloseTo(0.70)
   })
 
   it("ignores unknown attributes in the average", () => {
@@ -502,27 +502,27 @@ describe("computeFilteredConfidence", () => {
   it("only averages active filter criteria", () => {
     const place = makePlace({
       accessibility: {
-        entrance: buildAttribute("accessibility_cloud", "yes", "yes", {}), // 0.75
-        toilet:   buildAttribute("accessibility_cloud", "yes", "yes", {}), // 0.75
-        parking:  buildAttribute("osm", "no", "no", {}),                  // 0.60 — inactive
+        entrance: buildAttribute("accessibility_cloud", "yes", "yes", {}), // 0.70
+        toilet:   buildAttribute("accessibility_cloud", "yes", "yes", {}), // 0.70
+        parking:  buildAttribute("osm", "no", "no", {}),                  // 0.675 — inactive
       },
     })
-    // parking is inactive → excluded; (0.75 + 0.75) / 2 = 0.75
-    expect(computeFilteredConfidence(place, filtersEntranceToilet)).toBeCloseTo(0.75)
+    // parking is inactive → excluded; (0.70 + 0.70) / 2 = 0.70
+    expect(computeFilteredConfidence(place, filtersEntranceToilet)).toBeCloseTo(0.70)
   })
 
   it("inactive criteria with low value do not drag score down", () => {
     const place = makePlace({
       accessibility: {
-        entrance: buildAttribute("accessibility_cloud", "yes", "yes", {}), // 0.75
-        toilet:   buildAttribute("accessibility_cloud", "yes", "yes", {}), // 0.75
+        entrance: buildAttribute("accessibility_cloud", "yes", "yes", {}), // 0.70
+        toilet:   buildAttribute("accessibility_cloud", "yes", "yes", {}), // 0.70
         parking:  buildAttribute("google_places", "no", "no", {}),         // 0.35 — inactive
       },
     })
     const withParking    = computeFilteredConfidence(place, filtersAll)
     const withoutParking = computeFilteredConfidence(place, filtersEntranceToilet)
     expect(withoutParking).toBeGreaterThan(withParking)
-    expect(withoutParking).toBeCloseTo(0.75)
+    expect(withoutParking).toBeCloseTo(0.70)
   })
 
   it("falls back to all known criteria when no filter is active", () => {
