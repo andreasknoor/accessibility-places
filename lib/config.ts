@@ -46,12 +46,12 @@ export const SOURCE_LABELS: Record<SourceId, string> = {
   google_places:       "Google Places",
 }
 
+// Both are raced in parallel — the first successful response wins.
+// overpass.osm.ch removed: returns 0 results for any non-CH query (Swiss-only data).
+// overpass.private.coffee removed: same operator as kumi.systems, unreachable.
 export const OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
-  // Replaced maps.mail.ru with the Swiss community mirror — better latency
-  // from DACH and not subject to EU↔RU routing instability.
-  "https://overpass.osm.ch/api/interpreter",
 ]
 export const OVERPASS_ENDPOINT = OVERPASS_ENDPOINTS[0]
 export const NOMINATIM_ENDPOINT = "https://nominatim.openstreetmap.org"

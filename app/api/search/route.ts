@@ -76,7 +76,6 @@ function stripRaw(places: Place[]): Place[] {
 // ─── Streaming NDJSON event types ───────────────────────────────────────────
 
 type StreamEvent =
-  | { type: "source-progress"; sourceId: SourceId; attempt: number; of: number }
   | { type: "source"; sourceId: SourceId; status: "ok" | "error"; count?: number; error?: string; durationMs: number }
   | { type: "result"; payload: SearchResult }
   | { type: "fatal";  error: string }
@@ -205,9 +204,7 @@ export async function POST(req: NextRequest) {
         }
 
         // ── 4. Fire all adapters ──────────────────────────────────────────────
-        const tasks = startAdapterTasks(params, (sourceId, attempt, of) => {
-          emit({ type: "source-progress", sourceId, attempt, of })
-        })
+        const tasks = startAdapterTasks(params)
         const wrapped = tasks.map(({ sourceId, promise }) =>
           promise.then((r) => {
             const event: StreamEvent = r.error

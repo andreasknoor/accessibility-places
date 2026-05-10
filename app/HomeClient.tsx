@@ -107,18 +107,7 @@ export default function HomeClient() {
           let event: { type: string; [k: string]: unknown }
           try { event = JSON.parse(line) } catch { continue }
 
-          if (event.type === "source-progress") {
-            const sid = event.sourceId as SourceId
-            setSourceStates((prev) => ({
-              ...prev,
-              [sid]: {
-                ...prev[sid],
-                status:  "loading",
-                attempt: event.attempt as number,
-                of:      event.of      as number,
-              },
-            }))
-          } else if (event.type === "source") {
+          if (event.type === "source") {
             const sid = event.sourceId as SourceId
             const update: SourceState = event.status === "ok"
               ? { status: "ok",    rawCount: event.count as number, durationMs: event.durationMs as number }

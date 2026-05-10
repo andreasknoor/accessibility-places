@@ -27,19 +27,14 @@ export async function safeRun(
 }
 
 /** Build per-source pending tasks. Used by the streaming search route to emit
- *  per-source events as each adapter finishes individually.
- *
- *  `onProgress` lets adapters (currently only OSM, with its multi-endpoint
- *  fallback) report mid-fetch progress so the UI can show "1/3, 2/3, 3/3"
- *  next to the loading spinner. */
+ *  per-source events as each adapter finishes individually. */
 export function startAdapterTasks(
   params: SearchParams,
-  onProgress?: (sourceId: SourceId, attempt: number, of: number) => void,
 ): Array<{ sourceId: SourceId; promise: Promise<AdapterResult> }> {
   const { sources } = params
   const tasks: Array<{ sourceId: SourceId; promise: Promise<AdapterResult> }> = []
   if (sources.osm)
-    tasks.push({ sourceId: "osm",                 promise: safeRun("osm",                 () => fetchOsm(params, (a, of) => onProgress?.("osm", a, of))) })
+    tasks.push({ sourceId: "osm",                 promise: safeRun("osm",                 () => fetchOsm(params)) })
   if (sources.accessibility_cloud)
     tasks.push({ sourceId: "accessibility_cloud", promise: safeRun("accessibility_cloud", () => fetchAccessibilityCloud(params)) })
   if (sources.reisen_fuer_alle)

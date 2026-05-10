@@ -207,11 +207,6 @@ export interface SourceState {
   finalCount?: number
   error?: string
   durationMs?: number
-  // Mid-fetch progress for adapters with fallback endpoints. Currently only
-  // OSM uses this — `attempt` is the 1-based index of the endpoint currently
-  // being tried out of `of` total.
-  attempt?: number
-  of?: number
 }
 
 // ─── API response ──────────────────────────────────────────────────────────

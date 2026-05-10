@@ -62,19 +62,24 @@ export function buildOverpassQuery(params: SearchParams): string {
   // ~2× as many genuinely verified places.
   const verified = filters.onlyVerified ? `[~"^check_date"~"."]` : ""
 
+  // Emit node + way clauses for each filter set. Relations are rare for
+  // venues and expensive for Overpass to compute — omitting them has
+  // negligible impact on result quality while speeding up server-side eval.
+  function addClauses(tag: string, vals: string): void {
+    const filter = `(around:${r},${lat},${lon})[${tag}~"^(${vals})$"]${wc}${verified};`
+    clauses.push(`node${filter}`)
+    clauses.push(`way${filter}`)
+  }
+
   const clauses: string[] = []
-  if (amenityVals.size > 0) {
-    const vals = [...amenityVals].join("|")
-    clauses.push(`nwr(around:${r},${lat},${lon})[amenity~"^(${vals})$"]${wc}${verified};`)
-  }
-  if (tourismVals.size > 0) {
-    const vals = [...tourismVals].join("|")
-    clauses.push(`nwr(around:${r},${lat},${lon})[tourism~"^(${vals})$"]${wc}${verified};`)
-  }
+  if (amenityVals.size > 0) addClauses("amenity", [...amenityVals].join("|"))
+  if (tourismVals.size > 0) addClauses("tourism", [...tourismVals].join("|"))
 
   if (clauses.length === 0) return ""
 
-  return `[out:json][timeout:25];(${clauses.join("")});out 200 center tags;`
+  // Server timeout 12 s: fail fast so the parallel endpoint race can
+  // declare a winner before the global client timeout fires.
+  return `[out:json][timeout:12];(${clauses.join("")});out 200 center tags;`
 }
 
 // ─── OSM tag → A11yValue mapping ──────────────────────────────────────────
@@ -281,10 +286,7 @@ function elementToPlace(el: any): Place | null {
 
 // ─── Public adapter function ───────────────────────────────────────────────
 
-export async function fetchOsm(
-  params: SearchParams,
-  onAttempt?: (attempt: number, of: number) => void,
-): Promise<Place[]> {
+export async function fetchOsm(params: SearchParams): Promise<Place[]> {
   const query = buildOverpassQuery(params)
   if (!query) return []
 
@@ -293,56 +295,46 @@ export async function fetchOsm(
     "User-Agent":   "AccessibleSpaces/1.0 (accessibility search app)",
   }
   const body = `data=${encodeURIComponent(query)}`
-  const total = OVERPASS_ENDPOINTS.length
 
-  let lastError: Error | null = null
-  for (let i = 0; i < total; i++) {
-    const endpoint = OVERPASS_ENDPOINTS[i]
-    onAttempt?.(i + 1, total)
-    try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        body,
-        headers,
-        signal: params.signal
-          ? AbortSignal.any([params.signal, AbortSignal.timeout(28_000)])
-          : AbortSignal.timeout(28_000),
-      })
-      if (res.status === 429 || res.status >= 500) {
-        lastError = new Error(`Overpass ${endpoint} returned ${res.status}`)
-        continue
-      }
-      if (!res.ok) throw new Error(`Overpass API error: ${res.status}`)
-      const json = await res.json()
-      const places: Place[] = []
-      for (const el of json.elements ?? []) {
-        const place = elementToPlace(el)
-        if (place) places.push(place)
-      }
-      return places
-    } catch (err) {
-      const e   = err as Error
-      const msg = e.message ?? ""
-      const name = e.name    ?? ""
-      // Retry on transient failures: timeouts, aborted fetches, network blips,
-      // or the 429/5xx error above. Permanent errors (4xx other than 429,
-      // malformed JSON, …) still propagate immediately.
-      const transient =
-        name === "TimeoutError"        ||
-        name === "AbortError"          ||
-        msg.includes("aborted")        ||
-        msg.includes("fetch failed")   ||
-        msg.includes("network")        ||
-        (msg.includes("Overpass") && msg.includes("returned"))
-      if (transient) {
-        lastError = e
-        continue
-      }
-      throw err
+  // Race all endpoints in parallel — the first successful response wins and
+  // the rest are aborted. This removes the sequential worst-case latency
+  // (28 s × 3 = 84 s) and naturally deprioritises slow mirrors at runtime.
+  const cancelRace = new AbortController()
+
+  try {
+    const json = await Promise.any(
+      OVERPASS_ENDPOINTS.map(async (endpoint) => {
+        const signal = params.signal
+          ? AbortSignal.any([params.signal, cancelRace.signal, AbortSignal.timeout(20_000)])
+          : AbortSignal.any([cancelRace.signal, AbortSignal.timeout(20_000)])
+
+        const res = await fetch(endpoint, { method: "POST", body, headers, signal })
+
+        // Treat rate-limit and server errors as rejection so another endpoint
+        // can win the race. Hard client errors (4xx other than 429) propagate.
+        if (res.status === 429 || res.status >= 500)
+          throw new Error(`Overpass ${endpoint} returned ${res.status}`)
+        if (!res.ok) throw new Error(`Overpass API error: ${res.status}`)
+
+        return res.json()
+      }),
+    )
+
+    cancelRace.abort() // cancel any still-running fetches
+
+    const places: Place[] = []
+    for (const el of json.elements ?? []) {
+      const place = elementToPlace(el)
+      if (place) places.push(place)
     }
+    return places
+  } catch (err) {
+    cancelRace.abort()
+    // Unwrap AggregateError so the first underlying error (e.g. "returned 429",
+    // "Overpass API error: 400") surfaces in logs rather than a generic message.
+    if (err instanceof AggregateError) throw err.errors[0] ?? new Error("All Overpass endpoints failed")
+    throw err
   }
-
-  throw lastError ?? new Error("All Overpass endpoints failed")
 }
 
 // ─── Disabled-parking-only fetch (for venue enrichment) ────────────────────

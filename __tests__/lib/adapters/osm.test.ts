@@ -72,9 +72,9 @@ describe("buildOverpassQuery", () => {
 
   it("deduplicates overlapping tag values across categories", () => {
     const q = buildOverpassQuery({ ...BASE_PARAMS, categories: ["cafe", "restaurant", "hotel"] })
-    // Should be a single amenity filter, not multiple
+    // node + way per tag type → 2 amenity~ clauses (deduplicated values within each)
     const amenityMatches = q.match(/amenity~/g) ?? []
-    expect(amenityMatches).toHaveLength(1)
+    expect(amenityMatches).toHaveLength(2)
   })
 
   it("produces valid Overpass QL structure", () => {
@@ -357,7 +357,7 @@ describe("fetchOsm", () => {
   })
 
   it("boosts entrance weight when check_date:wheelchair is recent", async () => {
-    const recent = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10) // 30 days ago
+    const recent = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
     const element = {
       id: 1, type: "node", lat: 52.52, lon: 13.405,
       tags: { name: "Recent", amenity: "restaurant", wheelchair: "yes", "check_date:wheelchair": recent },
@@ -389,32 +389,6 @@ describe("fetchOsm", () => {
     expect(p.sourceRecords[0].externalId).toBe("node/99")
   })
 
-  it("calls onAttempt before each endpoint try", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ elements: [] }) }))
-    const onAttempt = vi.fn()
-    await fetchOsm(BASE_PARAMS, onAttempt)
-    // First endpoint succeeds → only one attempt reported
-    expect(onAttempt).toHaveBeenCalledTimes(1)
-    expect(onAttempt).toHaveBeenCalledWith(1, 3)
-  })
-
-  it("falls back to next endpoint on TimeoutError (regression: this used to abort after first timeout)", async () => {
-    let calls = 0
-    vi.stubGlobal("fetch", vi.fn().mockImplementation(() => {
-      calls++
-      if (calls < 3) {
-        const err = new Error("The operation was aborted due to timeout")
-        err.name = "TimeoutError"
-        return Promise.reject(err)
-      }
-      return Promise.resolve({ ok: true, json: async () => ({ elements: [] }) })
-    }))
-    const onAttempt = vi.fn()
-    await fetchOsm(BASE_PARAMS, onAttempt)
-    expect(onAttempt).toHaveBeenCalledTimes(3)
-    expect(onAttempt.mock.calls.map((c) => c[0])).toEqual([1, 2, 3])
-  })
-
   it("uses center coordinates for way elements", async () => {
     const element = {
       id: 456,
@@ -430,20 +404,93 @@ describe("fetchOsm", () => {
     expect(result[0].coordinates.lat).toBe(52.530)
   })
 
-  it("combines user signal with timeout so client disconnect aborts the fetch (Bug 3)", async () => {
-    const controller = new AbortController()
-    let capturedSignal: AbortSignal | undefined
+  // ─── Parallel race behaviour ──────────────────────────────────────────────
+
+  it("fires both endpoints simultaneously (parallel, not sequential)", async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ elements: [] }),
+    })
+    vi.stubGlobal("fetch", mockFetch)
+    await fetchOsm(BASE_PARAMS)
+    // Both endpoints must be called — verifies the parallel race fires them all.
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+  })
+
+  it("returns results from exactly one winner — parallel responses are not concatenated", async () => {
+    const element = { id: 1, type: "node", lat: 52.52, lon: 13.405, tags: { name: "Race Café", amenity: "cafe" } }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ elements: [element] }),
+    }))
+    const result = await fetchOsm(BASE_PARAMS)
+    // Both endpoints return the same element. If results were concatenated we'd
+    // get 2 identical places. The race must process only the first resolved response.
+    expect(result).toHaveLength(1)
+  })
+
+  it("cancels the losing endpoint fetch after the race winner responds", async () => {
+    const capturedSignals: AbortSignal[] = []
     vi.stubGlobal("fetch", vi.fn().mockImplementation((_url: unknown, init: RequestInit) => {
-      capturedSignal = init?.signal as AbortSignal
+      capturedSignals.push(init?.signal as AbortSignal)
       return Promise.resolve({ ok: true, json: async () => ({ elements: [] }) })
     }))
+    await fetchOsm(BASE_PARAMS)
+    // cancelRace.abort() fires after the winner is found. All composite signals
+    // (which include cancelRace.signal) are now aborted — the loser gets cancelled.
+    expect(capturedSignals).toHaveLength(2)
+    expect(capturedSignals.every((s) => s.aborted)).toBe(true)
+  })
 
-    await fetchOsm({ ...BASE_PARAMS, signal: controller.signal })
+  it("returns results even when the first endpoint fails (timeout/5xx)", async () => {
+    let calls = 0
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(() => {
+      const n = ++calls
+      if (n < 2) {
+        const err = new Error("The operation was aborted due to timeout")
+        err.name = "TimeoutError"
+        return Promise.reject(err)
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ elements: [] }) })
+    }))
+    const result = await fetchOsm(BASE_PARAMS)
+    expect(result).toEqual([]) // 2nd endpoint succeeded
+    expect(calls).toBe(2)      // both were initiated in parallel
+  })
 
-    expect(capturedSignal).toBeDefined()
-    expect(capturedSignal!.aborted).toBe(false)
+  it("aborts all in-flight endpoint fetches when the user signal fires (Bug 3)", async () => {
+    const controller = new AbortController()
+    const capturedSignals: AbortSignal[] = []
+
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((_url: unknown, init: RequestInit) => {
+      const signal = init?.signal as AbortSignal
+      capturedSignals.push(signal)
+      // Simulate a fetch that is pending until its signal aborts.
+      return new Promise<Response>((_, reject) => {
+        signal.addEventListener("abort", () => {
+          const err = new Error("The user aborted a request.")
+          err.name = "AbortError"
+          reject(err)
+        })
+      })
+    }))
+
+    const promise = fetchOsm({ ...BASE_PARAMS, signal: controller.signal })
+
+    // Yield to allow both parallel fetch calls to be initiated.
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(capturedSignals).toHaveLength(2)
+    // Signals are composite (AbortSignal.any) — not yet aborted.
+    expect(capturedSignals.every((s) => !s.aborted)).toBe(true)
+
+    // Aborting the user controller must propagate to all endpoint signals.
     controller.abort()
-    expect(capturedSignal!.aborted).toBe(true)
+    expect(capturedSignals.every((s) => s.aborted)).toBe(true)
+
+    // fetchOsm must reject (both fail with AbortError → AggregateError unwrapped).
+    await expect(promise).rejects.toThrow()
   })
 })
 
@@ -493,11 +540,11 @@ describe("fetchOsmDisabledParking", () => {
     let calls = 0
     vi.stubGlobal("fetch", vi.fn().mockImplementation(() => {
       calls++
-      if (calls < 3) return Promise.resolve({ ok: false, status: 503 })
+      if (calls < 2) return Promise.resolve({ ok: false, status: 503 })
       return Promise.resolve({ ok: true, json: async () => ({ elements: [] }) })
     }))
     const result = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
-    expect(calls).toBe(3)
+    expect(calls).toBe(2) // 2 endpoints: first fails (503), second succeeds
     expect(result).toEqual([])
   })
 
