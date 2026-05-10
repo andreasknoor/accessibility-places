@@ -72,8 +72,8 @@ where `addrScore = streetTrigram × 0.6 + cityMatch × 0.25 + zipMatch × 0.15`.
 ```ts
 reisen_fuer_alle:    1.00
 ginto:               0.90  // LEVEL_2 entries → 0.95, LEVEL_3 → 0.97
-accessibility_cloud: 0.75
-osm:                 0.70
+accessibility_cloud: 0.70
+osm:                 0.75
 google_places:       0.35
 ```
 

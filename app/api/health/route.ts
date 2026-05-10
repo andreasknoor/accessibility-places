@@ -43,8 +43,8 @@ function makeMockPlaces(): Place[] {
     coordinates: { lat, lon },
     accessibility: {
       entrance: {
-        value: entrance, confidence: 0.70, conflict: false,
-        sources: [{ sourceId: "osm", value: entrance, rawValue: entrance, reliabilityWeight: 0.70 }],
+        value: entrance, confidence: 0.75, conflict: false,
+        sources: [{ sourceId: "osm", value: entrance, rawValue: entrance, reliabilityWeight: 0.75 }],
         details: {},
       },
       toilet:  emptyAttribute(),

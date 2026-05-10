@@ -204,8 +204,8 @@ This is what powers the per-source loader / count / warning icon next to each en
 
 | Source | Weight | What it brings |
 |---|---|---|
-| accessibility.cloud (Wheelmap and partners) | 0.75 | A11yJSON-shaped records, often with structured restroom / entrance details |
-| OpenStreetMap (Overpass) | 0.70 | Wide coverage, varying quality; single-tag signals |
+| OpenStreetMap (Overpass) | 0.75 | Primary source; broadest coverage, live data, direct wheelchair tags |
+| accessibility.cloud (Wheelmap and partners) | 0.70 | A11yJSON-shaped records; 78–81% are a Wheelmap mirror of OSM for DACH, plus supplementary sources (DogMap etc.) |
 | Google Places (New) | 0.35 | Broad but accessibility data is sparse and often heuristic |
 
 OSM `wheelchair=*` is treated as a whole-place proxy; an additional ×0.85 factor is applied when it stands in for the entrance attribute specifically.
