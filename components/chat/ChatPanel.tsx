@@ -166,7 +166,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
   }
 
   function submit() {
-    if (isLoading) return
+    if (isLoading || !location.trim()) return
     setSuggestions([])
     setShowSuggestions(false)
     try { localStorage.setItem("ap_last_search", JSON.stringify({ idx: selectedIdx, loc: location.trim() })) } catch { /* ignore */ }

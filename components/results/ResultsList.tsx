@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
-import { Loader2, RefreshCw, MapPin, X, ChevronDown } from "lucide-react"
+import { useState, useRef, useEffect, useMemo } from "react"
+import { Loader2, RefreshCw, MapPin, X, ChevronDown, ArrowUpDown } from "lucide-react"
 import PlaceCard from "./PlaceCard"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { Popover, PopoverTrigger, PopoverContent, PopoverClose } from "@/components/ui/popover"
-import type { Place, SearchFilters } from "@/lib/types"
+import { haversineMetres } from "@/lib/matching/match"
+import type { Place, SearchFilters, FilterDebug } from "@/lib/types"
 
 const RADIUS_PRESETS_KM = [1, 2, 5, 10, 25, 50] as const
 
@@ -23,14 +24,27 @@ interface Props {
   onRadiusChange?:  (km: number) => void
   hasSearched?:     boolean
   scrollToId?:      string
+  filterDebug?:     FilterDebug
+  searchCenter?:    { lat: number; lon: number }
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter }: Props) {
   const t = useTranslations()
   const [mapHintSeen, setMapHintSeen] = useState(() =>
     typeof window !== "undefined" && !!localStorage.getItem("ap_map_hint_seen")
   )
+  const [sortBy, setSortBy] = useState<"confidence" | "distance">("confidence")
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+
+  const displayedPlaces = useMemo(() => {
+    if (sortBy === "distance" && searchCenter) {
+      return [...places].sort((a, b) =>
+        haversineMetres(searchCenter, a.coordinates) -
+        haversineMetres(searchCenter, b.coordinates)
+      )
+    }
+    return places
+  }, [places, sortBy, searchCenter])
 
   useEffect(() => {
     if (!scrollToId) return
@@ -126,6 +140,32 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
         </div>
       </div>
 
+      {/* Sort toggle bar — only when searchCenter is known and there are results */}
+      {!isLoading && places.length > 0 && searchCenter && (
+        <div className="px-4 py-1.5 border-b border-border shrink-0 flex items-center gap-1 text-xs">
+          <ArrowUpDown className="w-3 h-3 text-muted-foreground mr-1 shrink-0" />
+          <button
+            type="button"
+            onClick={() => setSortBy("confidence")}
+            className={cn("px-1.5 py-0.5 rounded transition-colors cursor-pointer",
+              sortBy === "confidence" ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {t.results.sortByConfidence}
+          </button>
+          <span className="text-muted-foreground">·</span>
+          <button
+            type="button"
+            onClick={() => setSortBy("distance")}
+            className={cn("px-1.5 py-0.5 rounded transition-colors cursor-pointer",
+              sortBy === "distance" ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {t.results.sortByDistance}
+          </button>
+        </div>
+      )}
+
       {/* Option C: one-time map hint banner */}
       {hasSearched && places.length > 0 && !isLoading && !mapHintSeen && (
         <div className="flex items-center gap-2 px-3 py-2 bg-muted/60 border-b border-border text-xs text-muted-foreground shrink-0">
@@ -168,12 +208,33 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
           )}
 
           {!isLoading && places.length === 0 && hasSearched && (
-            <div className="flex flex-col items-center gap-3 py-8">
-              <p className="text-sm text-muted-foreground text-center">
-                {t.chat.noResults}
-              </p>
+            <div className="flex flex-col items-center gap-3 py-8 px-4">
+              {filterDebug && filterDebug.total > 0 ? (
+                <>
+                  <p className="text-sm text-muted-foreground text-center">
+                    {t.results.noResultsFiltered(filterDebug.total)}
+                  </p>
+                  {(() => {
+                    const top = Object.entries(filterDebug.failedBy)
+                      .filter(([, count]) => count > 0)
+                      .sort(([, a], [, b]) => b - a)[0]
+                    if (!top) return null
+                    const [key] = top
+                    const label = t.filters.criteriaItems[key as keyof typeof t.filters.criteriaItems]
+                    return (
+                      <p className="text-xs text-muted-foreground text-center">
+                        {t.results.filterBlockedBy} <strong className="text-foreground">{label}</strong>
+                      </p>
+                    )
+                  })()}
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center">
+                  {filterDebug ? t.results.noResultsArea : t.chat.noResults}
+                </p>
+              )}
               {onExpandRadius && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 mt-1">
                   <span className="text-sm text-muted-foreground">{t.results.expandRadius}</span>
                   <button
                     onClick={onExpandRadius}
@@ -187,7 +248,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
             </div>
           )}
 
-          {!isLoading && places.map((place) => (
+          {!isLoading && displayedPlaces.map((place) => (
             <div
               key={place.id}
               ref={(el) => { if (el) itemRefs.current.set(place.id, el); else itemRefs.current.delete(place.id) }}

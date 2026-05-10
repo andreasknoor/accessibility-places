@@ -86,6 +86,11 @@ export interface Translations {
     showRawData:          string
     detailsExpand:        string
     detailsCollapse:      string
+    noResultsArea:        string
+    noResultsFiltered:    (n: number) => string
+    filterBlockedBy:      string
+    sortByConfidence:     string
+    sortByDistance:       string
   }
   a11y: {
     yes:        string

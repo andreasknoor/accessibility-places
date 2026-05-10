@@ -78,23 +78,34 @@ export default function A11yAttribute({ label, attr, detailType, showDetails }: 
         // info doesn't help the wheelchair-accessibility judgement enough to
         // justify the row. Hidden from the detail list. The key is still in
         // attr.details so the toilet-shape detection in merge.ts keeps working.
-        const HIDDEN_DETAIL_KEYS = new Set(["isInside"])
+        // `description` is handled separately below as italic free text.
+        const HIDDEN_DETAIL_KEYS = new Set(["isInside", "description"])
         const entries = Object.entries(attr.details).filter(
           ([k, v]) => v != null && !HIDDEN_DETAIL_KEYS.has(k),
         )
-        if (entries.length === 0) return null
+        const description = typeof (attr.details as Record<string, unknown>).description === "string"
+          ? (attr.details as Record<string, unknown>).description as string
+          : undefined
+        if (entries.length === 0 && !description) return null
         return (
-          <dl className="grid grid-cols-[minmax(0,auto)_minmax(0,1fr)] gap-x-2 gap-y-0.5 pl-5 mt-0.5">
-            {entries.map(([k, v]) => {
-              const val = typeof v === "boolean" ? (v ? "✓" : "✗") : String(v)
-              return (
-                <Fragment key={k}>
-                  <dt className="text-xs text-muted-foreground break-words">{detailLabel(k)}</dt>
-                  <dd className="text-xs text-foreground break-words">{val}</dd>
-                </Fragment>
-              )
-            })}
-          </dl>
+          <>
+            {entries.length > 0 && (
+              <dl className="grid grid-cols-[minmax(0,auto)_minmax(0,1fr)] gap-x-2 gap-y-0.5 pl-5 mt-0.5">
+                {entries.map(([k, v]) => {
+                  const val = typeof v === "boolean" ? (v ? "✓" : "✗") : String(v)
+                  return (
+                    <Fragment key={k}>
+                      <dt className="text-xs text-muted-foreground break-words">{detailLabel(k)}</dt>
+                      <dd className="text-xs text-foreground break-words">{val}</dd>
+                    </Fragment>
+                  )
+                })}
+              </dl>
+            )}
+            {description && (
+              <p className="pl-5 text-xs italic text-muted-foreground mt-0.5">{description}</p>
+            )}
+          </>
         )
       })()}
     </div>

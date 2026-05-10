@@ -31,8 +31,8 @@ const en: Translations = {
     locateButton:  "Detect location",
     locationError: "Location could not be determined.",
     nearbyIn:        (d: string) => `Near ${d}`,
-    namePlaceholder: "Venue name (optional)",
-    nameToggleShow:  "+ Filter by venue name",
+    namePlaceholder: "e.g. \"The Crown\" or \"Hilton\"",
+    nameToggleShow:  "+ Filter results by name",
     nameToggleHide:  "Remove name filter",
   },
   filters: {
@@ -111,6 +111,11 @@ const en: Translations = {
     showRawData:           "Show raw data",
     detailsExpand:         "Details",
     detailsCollapse:       "Less",
+    noResultsArea:         "No places found in this area.",
+    noResultsFiltered:     (n: number) => `${n} place${n !== 1 ? "s" : ""} found – none match all active filters.`,
+    filterBlockedBy:       "Main reason for exclusion:",
+    sortByConfidence:      "Reliability",
+    sortByDistance:        "Distance",
   },
   a11y: {
     yes:       "Yes",

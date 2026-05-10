@@ -12,7 +12,7 @@ import { useIsMobile } from "@/hooks/useIsMobile"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { DEFAULT_RADIUS_KM, RADIUS_MAX_KM } from "@/lib/config"
 import { passesFiltersForSource } from "@/lib/matching/merge"
-import type { Place, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState } from "@/lib/types"
+import type { Place, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug } from "@/lib/types"
 
 // Leaflet must not run on server
 const MapView = dynamic(() => import("@/components/map/MapView"), { ssr: false })
@@ -46,6 +46,7 @@ export default function HomeClient() {
   const [selectedId,    setSelectedId]   = useState<string | undefined>()
   const [isLoading,     setIsLoading]    = useState(false)
   const [searchCenter,  setSearchCenter] = useState<{ lat: number; lon: number } | undefined>()
+  const [filterDebug,   setFilterDebug]  = useState<FilterDebug | undefined>()
   const [isFullscreen,  setIsFullscreen] = useState(false)
   const [error,         setError]        = useState<string | undefined>()
   const [sourceStates,  setSourceStates] = useState<Partial<Record<SourceId, SourceState>>>({})
@@ -67,6 +68,7 @@ export default function HomeClient() {
     setError(undefined)
     setPlaces([])
     setSelectedId(undefined)
+    setFilterDebug(undefined)
 
     // Initialise per-source loading state for each active source so the
     // FilterPanel renders spinners immediately.
@@ -126,6 +128,7 @@ export default function HomeClient() {
             const data = event.payload as SearchResult
             setPlaces(data.places)
             setSearchCenter(data.location)
+            setFilterDebug(data.filterDebug)
             // Per-source count = places that would still pass the filter if
             // ONLY this source were active. This makes the displayed number
             // predictive: disabling all other sources should yield this count.
@@ -176,6 +179,7 @@ export default function HomeClient() {
     setSelectedId(undefined)
     setLastQuery(undefined)
     setSearchCenter(undefined)
+    setFilterDebug(undefined)
     setError(undefined)
     setSourceStates({})
     setChatMode("text")
@@ -241,6 +245,7 @@ export default function HomeClient() {
         error={error}
         onReset={handleReset}
         resetKey={resetKey}
+        filterDebug={filterDebug}
       />
     )
   }
@@ -322,6 +327,8 @@ export default function HomeClient() {
             onRadiusChange={handleRadiusChange}
             hasSearched={!!lastQuery}
             scrollToId={scrollToId}
+            filterDebug={filterDebug}
+            searchCenter={searchCenter}
           />
           <div className="shrink-0 border-t border-border px-4 py-2 flex justify-end gap-4">
             <Link href={locale === "en" ? "/en/faq" : "/faq"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">

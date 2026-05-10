@@ -10,7 +10,7 @@ import ChatPanel       from "@/components/chat/ChatPanel"
 import FilterPanel     from "@/components/filters/FilterPanel"
 import ResultsList     from "@/components/results/ResultsList"
 import LanguageSwitcher from "@/components/LanguageSwitcher"
-import type { Place, SearchFilters, ActiveSources, SourceId, SourceState } from "@/lib/types"
+import type { Place, SearchFilters, ActiveSources, SourceId, SourceState, FilterDebug } from "@/lib/types"
 
 const MapView = dynamic(() => import("@/components/map/MapView"), { ssr: false })
 
@@ -37,13 +37,14 @@ interface Props {
   error?:           string
   onReset?:         () => void
   resetKey?:        number
+  filterDebug?:     FilterDebug
 }
 
 export default function MobileLayout({
   places, selectedId, onSelect, isLoading,
   filters, sources, radiusKm, onFilters, onSources, onRadius,
   sourceStates, searchCenter, onSearch, onRerun, onExpandRadius, onRadiusChange, hasSearched, error,
-  onReset, resetKey,
+  onReset, resetKey, filterDebug,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>("results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -125,6 +126,8 @@ export default function MobileLayout({
             radiusKm={radiusKm}
             onRadiusChange={onRadiusChange}
             hasSearched={hasSearched}
+            filterDebug={filterDebug}
+            searchCenter={searchCenter}
           />
         </div>
 

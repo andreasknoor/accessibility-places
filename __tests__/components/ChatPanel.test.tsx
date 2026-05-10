@@ -219,7 +219,7 @@ describe("ChatPanel autocomplete — selection", () => {
     mockFetch([{ display: "Berlin", name: "Berlin" }])
     renderPanel(onSearch)
     // Expand name field and fill it
-    const nameInput = screen.getByPlaceholderText(/Name des Ortes|Venue name/i) as HTMLInputElement
+    const nameInput = screen.getByPlaceholderText(/Zur Linde|The Crown/i) as HTMLInputElement
     fireEvent.change(nameInput, { target: { value: "Goldener Löwe" } })
     // Type and select location
     fireEvent.change(getInput(), { target: { value: "Ber" } })
