@@ -153,7 +153,9 @@ export async function fetchGooglePlaces(params: SearchParams): Promise<Place[]> 
             "X-Goog-FieldMask": FIELD_MASK,
           },
           body:   JSON.stringify(body),
-          signal: params.signal ?? AbortSignal.timeout(15_000),
+          signal: params.signal
+            ? AbortSignal.any([params.signal, AbortSignal.timeout(15_000)])
+            : AbortSignal.timeout(15_000),
         })
 
         if (!res.ok) {
