@@ -1,9 +1,10 @@
 import type { Place, SearchParams, SearchFilters, Category } from "./types"
 import { fetchAllSources }          from "./adapters"
 import { findMatch }                from "./matching/match"
-import { mergePlaces, finalisePlaceConfidence, computeFilteredConfidence } from "./matching/merge"
+import { mergePlaces, finalisePlaceConfidence, computeFilteredConfidence, passesFilters } from "./matching/merge"
 
-const NO_FILTERS: SearchFilters = {
+// Fetch without any filter so all sources return their full result set.
+const FETCH_FILTERS: SearchFilters = {
   entrance:      false,
   toilet:        false,
   parking:       false,
@@ -11,6 +12,28 @@ const NO_FILTERS: SearchFilters = {
   onlyVerified:  false,
   acceptUnknown: true,
 }
+
+// Preferred display filter: entrance + toilet accessible (yes or limited).
+const FILTERS_STRICT: SearchFilters = {
+  entrance:      true,
+  toilet:        true,
+  parking:       false,
+  seating:       false,
+  onlyVerified:  false,
+  acceptUnknown: false,
+}
+
+// Fallback filter used when strict yields fewer than MIN_RESULTS places.
+const FILTERS_ENTRANCE: SearchFilters = {
+  entrance:      true,
+  toilet:        false,
+  parking:       false,
+  seating:       false,
+  onlyVerified:  false,
+  acceptUnknown: false,
+}
+
+const MIN_RESULTS = 5
 
 const SEO_SOURCES: SearchParams["sources"] = {
   osm:                 true,
@@ -31,7 +54,7 @@ export async function fetchPlacesForSeoPage(
     location:   { lat, lon },
     radiusKm,
     categories: [category],
-    filters:    NO_FILTERS,
+    filters:    FETCH_FILTERS,
     sources:    SEO_SOURCES,
     signal:     AbortSignal.timeout(30_000),
   }
@@ -47,9 +70,14 @@ export async function fetchPlacesForSeoPage(
     }
   }
 
-  return canonical
-    .filter((p) => !p.dogPolicyOnly && p.category === category)
-    .map((p) => ({ ...p, overallConfidence: computeFilteredConfidence(p, NO_FILTERS) }))
+  const base = canonical.filter((p) => !p.dogPolicyOnly && p.category === category)
+
+  const strict = base.filter((p) => passesFilters(p, FILTERS_STRICT))
+  const activeFilters = strict.length >= MIN_RESULTS ? FILTERS_STRICT : FILTERS_ENTRANCE
+  const filtered = activeFilters === FILTERS_STRICT ? strict : base.filter((p) => passesFilters(p, FILTERS_ENTRANCE))
+
+  return filtered
+    .map((p) => ({ ...p, overallConfidence: computeFilteredConfidence(p, activeFilters) }))
     .sort((a, b) => b.overallConfidence - a.overallConfidence)
     .slice(0, 25)
 }
