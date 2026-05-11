@@ -24,6 +24,11 @@ export const metadata: Metadata = {
   },
 }
 
-export default function EnPage() {
-  return <HomeClient />
+export default async function EnPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; cat?: string }>
+}) {
+  const { q, cat } = await searchParams
+  return <HomeClient initialCity={q} initialCategory={cat} />
 }

@@ -124,6 +124,8 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
   const homeUrl    = locale === "en" ? "/en" : "/"
   const otherCities = CITIES.filter((c) => c.slug !== city.slug)
 
+  const searchUrl = `${homeUrl}?q=${encodeURIComponent(cityName)}&cat=${encodeURIComponent(categorySlug)}`
+
   const heading = locale === "de"
     ? `Rollstuhlgerechte ${catLabel} in ${cityName}`
     : `Wheelchair-accessible ${catLabel} in ${cityName}`
@@ -218,7 +220,7 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
 
           {/* CTA */}
           <Link
-            href={homeUrl}
+            href={searchUrl}
             className="inline-flex items-center gap-2 bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors mb-8"
           >
             {ctaLabel}

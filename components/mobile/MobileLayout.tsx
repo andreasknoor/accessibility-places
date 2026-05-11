@@ -35,16 +35,18 @@ interface Props {
   onRadiusChange?:  (km: number) => void
   hasSearched?:     boolean
   error?:           string
-  onReset?:         () => void
-  resetKey?:        number
-  filterDebug?:     FilterDebug
+  onReset?:          () => void
+  resetKey?:         number
+  filterDebug?:      FilterDebug
+  initialLocation?:  string
+  initialChipIdx?:   number
 }
 
 export default function MobileLayout({
   places, selectedId, onSelect, isLoading,
   filters, sources, radiusKm, onFilters, onSources, onRadius,
   sourceStates, searchCenter, onSearch, onRerun, onExpandRadius, onRadiusChange, hasSearched, error,
-  onReset, resetKey, filterDebug,
+  onReset, resetKey, filterDebug, initialLocation, initialChipIdx,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>("results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -99,7 +101,7 @@ export default function MobileLayout({
       <h1 className="sr-only">Barrierefreie Orte finden in Deutschland, Österreich und der Schweiz</h1>
 
       {/* ── Search bar (always visible) ── */}
-      <ChatPanel key={resetKey} onSearch={handleSearch} isLoading={isLoading} onModeChange={setChatMode} />
+      <ChatPanel key={resetKey} onSearch={handleSearch} isLoading={isLoading} onModeChange={setChatMode} initialLocation={initialLocation} initialChipIdx={initialChipIdx} />
 
       {/* ── Error banner ── */}
       {error && (

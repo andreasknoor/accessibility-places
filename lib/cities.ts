@@ -52,6 +52,38 @@ export const SEO_CATEGORY_TO_SLUG: Partial<Record<Category, string>> = Object.fr
   Object.entries(SEO_CATEGORY_SLUGS).map(([slug, cat]) => [cat, slug]),
 ) as Partial<Record<Category, string>>
 
+// CHIPS array index in ChatPanel for visual chip pre-selection
+// (undefined = no matching chip; search still works via query term)
+export const SEO_CATEGORY_TO_CHIP_IDX: Partial<Record<string, number>> = {
+  restaurant: 0,
+  cafe:       1,
+  hotel:      2,
+  biergarten: 3,
+  pub:        4,
+  museum:     5,
+  theater:    6,
+  cinema:     7,
+}
+
+// Query term that parseQuery() server-side recognises for each category slug
+export const SEO_CATEGORY_QUERY_TERM: Record<string, { de: string; en: string }> = {
+  cafe:        { de: "Cafés",             en: "Cafés" },
+  restaurant:  { de: "Restaurants",      en: "Restaurants" },
+  bar:         { de: "Bar",              en: "Bar" },
+  pub:         { de: "Kneipe",           en: "Pub" },
+  biergarten:  { de: "Biergarten",       en: "Beer Garden" },
+  "fast-food": { de: "Imbiss",           en: "Fast Food" },
+  hotel:       { de: "Hotel",            en: "Hotel" },
+  hostel:      { de: "Hostel",           en: "Hostel" },
+  apartment:   { de: "Ferienwohnung",    en: "Apartment" },
+  museum:      { de: "Museen",           en: "Museum" },
+  theater:     { de: "Theater",          en: "Theater" },
+  cinema:      { de: "Kino",             en: "Cinema" },
+  library:     { de: "Bibliothek",       en: "Library" },
+  gallery:     { de: "Galerie",          en: "Gallery" },
+  attraction:  { de: "Sehenswürdigkeit", en: "Attraction" },
+}
+
 // Plural display labels for page headings
 export const SEO_CATEGORY_LABEL: Record<string, { de: string; en: string }> = {
   cafe:        { de: "Cafés",               en: "Cafés" },

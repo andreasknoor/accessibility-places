@@ -10,10 +10,12 @@ import { cn } from "@/lib/utils"
 type Coords = { lat: number; lon: number }
 
 interface Props {
-  onSearch:      (query: string, coords?: Coords, nameHint?: string) => void
-  isLoading:     boolean
-  onModeChange?: (mode: "text" | "nearby") => void
-  autoFocus?:    boolean
+  onSearch:         (query: string, coords?: Coords, nameHint?: string) => void
+  isLoading:        boolean
+  onModeChange?:    (mode: "text" | "nearby") => void
+  autoFocus?:       boolean
+  initialLocation?: string
+  initialChipIdx?:  number
 }
 
 const CHIPS = [
@@ -40,7 +42,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
   return data.district ?? ""
 }
 
-export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus }: Props) {
+export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
   const isMobile = useIsMobile()
@@ -67,8 +69,18 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
 
   const district = typeof nearbyPhase === "object" ? nearbyPhase.district : null
 
-  // Restore last search on mount (chip + location, never nearby mode)
+  // Restore last search on mount (chip + location, never nearby mode).
+  // URL-derived initialLocation takes priority over localStorage.
   useEffect(() => {
+    if (initialLocation) {
+      restoredLocRef.current = initialLocation
+      setLocation(initialLocation)
+      if (initialChipIdx !== undefined && initialChipIdx >= 0 && initialChipIdx < CHIPS.length) {
+        setSelectedIdx(initialChipIdx)
+        selectedIdxRef.current = initialChipIdx
+      }
+      return
+    }
     try {
       const saved = localStorage.getItem("ap_last_search")
       if (saved) {
@@ -83,6 +95,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
         }
       }
     } catch { /* ignore malformed storage */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Show attention pulse only on the very first page visit

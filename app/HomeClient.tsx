@@ -11,6 +11,7 @@ import MobileLayout from "@/components/mobile/MobileLayout"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { DEFAULT_RADIUS_KM, RADIUS_MAX_KM } from "@/lib/config"
+import { SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { passesFiltersForSource } from "@/lib/matching/merge"
 import type { Place, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug } from "@/lib/types"
 
@@ -34,7 +35,12 @@ const DEFAULT_SOURCES: ActiveSources = {
   google_places:       false,
 }
 
-export default function HomeClient() {
+interface Props {
+  initialCity?:     string
+  initialCategory?: string
+}
+
+export default function HomeClient({ initialCity, initialCategory }: Props) {
   const t        = useTranslations()
   const { locale } = useLocale()
   const isMobile = useIsMobile()
@@ -188,6 +194,19 @@ export default function HomeClient() {
     if (lastQuery) handleSearch(lastQuery, km, lastCoords, lastNameHint)
   }, [lastQuery, lastCoords, lastNameHint, handleSearch])
 
+  // Auto-trigger search when arriving from an SEO landing page CTA
+  const autoSearchFiredRef = useRef(false)
+  useEffect(() => {
+    if (!initialCity || !initialCategory || autoSearchFiredRef.current) return
+    const term = SEO_CATEGORY_QUERY_TERM[initialCategory]
+    if (!term) return
+    autoSearchFiredRef.current = true
+    const queryTerm = locale === "en" ? term.en : term.de
+    handleSearch(`${queryTerm} in ${initialCity}`)
+  // Only run once on mount — initialCity/initialCategory are stable URL-derived values
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     isDragging.current = true
     dragStart.current  = { x: e.clientX, width: resultsWidth }
@@ -235,6 +254,8 @@ export default function HomeClient() {
         onReset={handleReset}
         resetKey={resetKey}
         filterDebug={filterDebug}
+        initialLocation={initialCity}
+        initialChipIdx={initialCategory ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : undefined}
       />
     )
   }
@@ -277,7 +298,15 @@ export default function HomeClient() {
       <h1 className="sr-only">Barrierefreie Orte finden in Deutschland, Österreich und der Schweiz</h1>
 
       {/* ── Chat / search bar ── */}
-      <ChatPanel key={resetKey} onSearch={(query, coords, nameHint) => handleSearch(query, undefined, coords, nameHint)} isLoading={isLoading} onModeChange={setChatMode} autoFocus />
+      <ChatPanel
+        key={resetKey}
+        onSearch={(query, coords, nameHint) => handleSearch(query, undefined, coords, nameHint)}
+        isLoading={isLoading}
+        onModeChange={setChatMode}
+        autoFocus
+        initialLocation={initialCity}
+        initialChipIdx={initialCategory ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : undefined}
+      />
 
       {/* ── Error banner ── */}
       {error && (
