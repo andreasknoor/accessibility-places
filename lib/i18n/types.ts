@@ -93,6 +93,7 @@ export interface Translations {
     sortByDistance:       string
     adjustFilters:        string
     adjustFiltersHint:    string
+    distanceFromHere:     (m: number) => string
   }
   a11y: {
     yes:        string

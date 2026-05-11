@@ -272,6 +272,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
                 filters={filters}
                 isSelected={place.id === selectedId}
                 onClick={() => handleSelect(place)}
+                distanceM={searchCenter ? haversineMetres(searchCenter, place.coordinates) : undefined}
               />
             </div>
           ))}

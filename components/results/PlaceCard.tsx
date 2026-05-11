@@ -14,10 +14,11 @@ import { cn } from "@/lib/utils"
 import type { Place, SearchFilters } from "@/lib/types"
 
 interface Props {
-  place:      Place
-  filters?:   SearchFilters
+  place:       Place
+  filters?:    SearchFilters
   isSelected?: boolean
-  onClick?:   () => void
+  onClick?:    () => void
+  distanceM?:  number
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -41,7 +42,7 @@ const CATEGORY_ICONS: Record<string, string> = {
 /** Set to false (or delete the footer block below) to revert option A */
 const SHOW_MAP_FOOTER = true
 
-export default function PlaceCard({ place, filters, isSelected, onClick }: Props) {
+export default function PlaceCard({ place, filters, isSelected, onClick, distanceM }: Props) {
   const t = useTranslations()
   const [expanded,  setExpanded]  = useState(false)
   const [showDebug, setShowDebug] = useState(false)
@@ -112,6 +113,12 @@ export default function PlaceCard({ place, filters, isSelected, onClick }: Props
                 <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                   <MapPin className="w-3 h-3 shrink-0" />
                   <span className="truncate min-w-0">{addr}</span>
+                  {distanceM !== undefined && (
+                    <>
+                      <span className="shrink-0">·</span>
+                      <span className="shrink-0">{t.results.distanceFromHere(Math.round(distanceM))}</span>
+                    </>
+                  )}
                 </p>
               )}
             </div>

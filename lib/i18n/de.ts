@@ -118,6 +118,7 @@ const de: Translations = {
     sortByDistance:        "Entfernung",
     adjustFilters:         "Filter anpassen",
     adjustFiltersHint:     "Passe die Filterkriterien links an, um mehr Ergebnisse zu sehen.",
+    distanceFromHere:      (m: number) => m < 1000 ? `${m} m entfernt` : `${(m / 1000).toFixed(1).replace(".", ",")} km entfernt`,
   },
   a11y: {
     yes:       "Ja",
