@@ -1,5 +1,6 @@
-import { notFound }       from "next/navigation"
-import type { Metadata }  from "next"
+import { cache }        from "react"
+import { notFound }    from "next/navigation"
+import type { Metadata } from "next"
 import { CITY_MAP, SEO_CATEGORY_SLUGS, SEO_CATEGORY_LABEL } from "@/lib/cities"
 import { fetchPlacesForSeoPage }  from "@/lib/seo-search"
 import SeoPageContent             from "@/components/seo/SeoPageContent"
@@ -8,31 +9,55 @@ export const revalidate = 86400 // ISR: regenerate at most every 24 h
 
 type Params = { city: string; category: string }
 
+const cachedFetch = cache(fetchPlacesForSeoPage)
+
 function resolve(params: Params) {
   const city     = CITY_MAP.get(params.city as never)
   const category = SEO_CATEGORY_SLUGS[params.category]
   return { city, category }
 }
 
+const BASE = "https://accessible-places.org"
+
 export async function generateMetadata(
   { params }: { params: Promise<Params> },
 ): Promise<Metadata> {
   const { city, category } = resolve(await params)
   if (!city || !category) return {}
-  const slug        = Object.keys(SEO_CATEGORY_SLUGS).find((k) => SEO_CATEGORY_SLUGS[k] === category)!
-  const catLabel    = SEO_CATEGORY_LABEL[slug]?.en ?? slug
-  const title       = `Wheelchair-accessible ${catLabel} in ${city.nameEn}`
-  const description = `Find wheelchair-accessible ${catLabel} in ${city.nameEn} – entrance, toilet and parking data from OpenStreetMap, accessibility.cloud and more.`
-  const canonical   = `https://accessible-places.org/en/${city.slug}/${slug}`
+  const slug      = Object.keys(SEO_CATEGORY_SLUGS).find((k) => SEO_CATEGORY_SLUGS[k] === category)!
+  const catLabel  = SEO_CATEGORY_LABEL[slug]?.en ?? slug
+  const places    = await cachedFetch(city.lat, city.lon, category).catch(() => [])
+  const count     = places.length
+  const canonical = `${BASE}/en/${city.slug}/${slug}`
+
+  const title = `Wheelchair-accessible ${catLabel} in ${city.nameEn}`
+  const description = count > 0
+    ? `${count} wheelchair-accessible ${catLabel} in ${city.nameEn} – entrance, toilet and parking data from OpenStreetMap, accessibility.cloud and more.`
+    : `Wheelchair-accessible ${catLabel} in ${city.nameEn} – entrance, toilet and parking data from OpenStreetMap, accessibility.cloud and more.`
 
   return {
     title,
     description,
     alternates: {
       canonical,
-      languages: { de: `https://accessible-places.org/${city.slug}/${slug}` },
+      languages: {
+        de:          `${BASE}/${city.slug}/${slug}`,
+        en:          canonical,
+        "x-default": `${BASE}/${city.slug}/${slug}`,
+      },
     },
-    openGraph: { title, description, url: canonical, locale: "en_GB" },
+    openGraph: {
+      title,
+      description,
+      url:      canonical,
+      locale:   "en_GB",
+      siteName: "Accessible Places",
+    },
+    twitter: {
+      card:        "summary",
+      title,
+      description,
+    },
   }
 }
 
@@ -42,8 +67,7 @@ export default async function CityPageEn({ params }: { params: Promise<Params> }
 
   const { city, category } = resolved
   const slug   = Object.keys(SEO_CATEGORY_SLUGS).find((k) => SEO_CATEGORY_SLUGS[k] === category)!
-
-  const places = await fetchPlacesForSeoPage(city.lat, city.lon, category).catch(() => [])
+  const places = await cachedFetch(city.lat, city.lon, category).catch(() => [])
 
   return (
     <SeoPageContent

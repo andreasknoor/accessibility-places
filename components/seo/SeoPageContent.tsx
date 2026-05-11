@@ -154,41 +154,57 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
     { label: catLabel,            href: null },
   ]
 
-  const structuredData = {
-    "@context":        "https://schema.org",
-    "@type":           "ItemList",
-    "name":            heading,
-    "url":             `${BASE}${prefix}/${city.slug}/${categorySlug}`,
-    "numberOfItems":   places.length,
-    "itemListElement": places.map((p, i) => ({
-      "@type":    "ListItem",
-      "position": i + 1,
-      "name":     p.name,
-      "item": {
-        "@type":       "LocalBusiness",
-        "name":        p.name,
-        "address": {
-          "@type":           "PostalAddress",
-          "streetAddress":   [p.address.street, p.address.houseNumber].filter(Boolean).join(" "),
-          "addressLocality": p.address.city,
-          "postalCode":      p.address.postalCode,
-          "addressCountry":  p.address.country,
+  const canonicalUrl = `${BASE}${prefix}/${city.slug}/${categorySlug}`
+
+  const structuredData = [
+    {
+      "@context":        "https://schema.org",
+      "@type":           "ItemList",
+      "name":            heading,
+      "url":             canonicalUrl,
+      "numberOfItems":   places.length,
+      "itemListElement": places.map((p, i) => ({
+        "@type":    "ListItem",
+        "position": i + 1,
+        "name":     p.name,
+        "item": {
+          "@type":       "LocalBusiness",
+          "name":        p.name,
+          "address": {
+            "@type":           "PostalAddress",
+            "streetAddress":   [p.address.street, p.address.houseNumber].filter(Boolean).join(" "),
+            "addressLocality": p.address.city,
+            "postalCode":      p.address.postalCode,
+            "addressCountry":  p.address.country,
+          },
+          "geo": {
+            "@type":     "GeoCoordinates",
+            "latitude":  p.coordinates.lat,
+            "longitude": p.coordinates.lon,
+          },
         },
-        "geo": {
-          "@type":     "GeoCoordinates",
-          "latitude":  p.coordinates.lat,
-          "longitude": p.coordinates.lon,
-        },
-      },
-    })),
-  }
+      })),
+    },
+    {
+      "@context": "https://schema.org",
+      "@type":    "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Accessible Places", "item": `${BASE}${homeUrl}` },
+        { "@type": "ListItem", "position": 2, "name": cityName,            "item": `${BASE}${prefix}/${city.slug}/restaurant` },
+        { "@type": "ListItem", "position": 3, "name": catLabel,            "item": canonicalUrl },
+      ],
+    },
+  ]
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-      />
+      {structuredData.map((block, i) => (
+        <script
+          key={i}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(block) }}
+        />
+      ))}
 
       <div className="min-h-screen flex flex-col bg-gray-50">
         {/* Top bar */}
