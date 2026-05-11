@@ -46,6 +46,7 @@ export async function generateMetadata(
         "x-default": `${BASE}/${city.slug}/${slug}`,
       },
     },
+    robots: { index: true, follow: true },
     openGraph: {
       title,
       description,
