@@ -121,6 +121,34 @@ In production, `raw` adapter response data is stripped from `sourceRecords` befo
 
 `GET /api/health?token=SECRET` — token-protected E2E health check. Live mode runs a real OSM search (Cafés, Berlin Mitte, entrance + toilet filter). Mock mode (`?mock=1`) runs fixture data through the real pipeline without external calls — suitable for load testing. Google Places is hardcoded off. Ginto is hardcoded off (CH-only, separate concern). Returns 200/503 with structured JSON.
 
+### Local SEO pages (`app/[city]/[category]/` and `app/en/[city]/[category]/`)
+
+Static landing pages for 32 DACH cities × 15 categories × 2 locales = **960 pages** total, generated via ISR (`export const revalidate = 86400`).
+
+**City/category configuration — `lib/cities.ts`:**
+- `CITIES` — 32 cities with slug, nameDe, nameEn, country, lat, lon. `CitySlug` union type must be kept in sync with this array.
+- `SEO_CATEGORY_SLUGS` — URL slug → `Category` type (e.g. `"fast-food"` → `"fast_food"`). `SEO_CATEGORY_TO_SLUG` is the reverse.
+- `SEO_CATEGORY_TO_CHIP_IDX` — slug → CHIPS array index in ChatPanel (8 categories have chips; the rest get `undefined`). The "Related categories" section on SEO pages **only shows chip-backed categories** — both for UX consistency and because those categories have a pre-select chip when the user lands on the main app.
+- `SEO_CATEGORY_QUERY_TERM` — slug → `{ de, en }` query string recognisable by `parseQuery()`. Used for the auto-search trigger on the home page.
+- `SEO_CATEGORY_LABEL` — plural display labels used in page headings and navigation chips.
+- `CITY_MAP` — `Map<CitySlug, City>` for O(1) lookup in page routes.
+
+**Data fetching — `lib/seo-search.ts`:**
+`fetchPlacesForSeoPage(lat, lon, category, radiusKm=5)` calls `fetchAllSources` directly (no HTTP round-trip). Uses `NO_FILTERS` (all false, `acceptUnknown: true`) and `SEO_SOURCES` (excludes Google Places). Merges with `findMatch`/`mergePlaces`/`finalisePlaceConfidence`, sorts by `computeFilteredConfidence`, returns top 25.
+
+**Rendering — `components/seo/SeoPageContent.tsx`:**
+Server component shared by DE and EN routes. Includes Schema.org `ItemList` JSON-LD, breadcrumb, hreflang language switcher, related categories (chip-backed only), and related cities. The confidence badge format matches the main app exactly: `"X% · Verlässlich/Mittel/Unsicher"` via `confidenceLabel()` from `merge.ts`.
+
+**Sitemap — `app/sitemap.ts`:**
+Generates entries dynamically from `CITIES` and `SEO_CATEGORY_SLUGS`. Adding a city to `CITIES` (and `CitySlug`) automatically adds it to the sitemap — no other change needed.
+
+**Deep-link flow (SEO page → main app):**
+Each place card on an SEO page links to:
+```
+/?q={cityName}&cat={categorySlug}&selectLat={lat}&selectLon={lon}&selectName={name}
+```
+`app/page.tsx` (and `app/en/page.tsx`) reads these params and passes them as props to `HomeClient`. On mount, `HomeClient` auto-fires the city+category search, then after results arrive it selects the nearest place within 100 m via Haversine distance (`haversineMetres` from `lib/matching/match.ts`) — setting `selectedId` and `scrollToId` to trigger the same highlight+scroll behaviour as clicking a map marker.
+
 ### PWA / Service Worker
 
 `app/sw.ts` + `@serwist/next`. The service worker is **disabled in development** (`disable: process.env.NODE_ENV === "development"` in `next.config.ts`). Adding new external domains also requires updating the `connect-src` allowlist in the CSP headers defined in `next.config.ts`.
@@ -141,8 +169,8 @@ In production, `raw` adapter response data is stripped from `sourceRecords` befo
 
 ## Tests
 
-- `__tests__/components/` — jsdom + Testing Library
-- `__tests__/lib/` — pure unit tests (node environment via `// @vitest-environment node` header where needed)
+- `__tests__/components/` — jsdom + Testing Library (includes `SeoPageContent.test.tsx` for badge format and chip-category filtering)
+- `__tests__/lib/` — pure unit tests (node environment via `// @vitest-environment node` header where needed; includes `cities.test.ts` for data-integrity checks)
 - `__tests__/api/` — API route unit tests (node environment, mocked `fetch`)
 - `__tests__/integration/` — live network tests; skip themselves when API keys or network are absent. Not required for CI.
 
