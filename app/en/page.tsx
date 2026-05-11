@@ -27,8 +27,16 @@ export const metadata: Metadata = {
 export default async function EnPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; cat?: string }>
+  searchParams: Promise<{ q?: string; cat?: string; selectLat?: string; selectLon?: string; selectName?: string }>
 }) {
-  const { q, cat } = await searchParams
-  return <HomeClient initialCity={q} initialCategory={cat} />
+  const { q, cat, selectLat, selectLon, selectName } = await searchParams
+  return (
+    <HomeClient
+      initialCity={q}
+      initialCategory={cat}
+      initialSelectLat={selectLat  ? parseFloat(selectLat)  : undefined}
+      initialSelectLon={selectLon  ? parseFloat(selectLon)  : undefined}
+      initialSelectName={selectName}
+    />
+  )
 }

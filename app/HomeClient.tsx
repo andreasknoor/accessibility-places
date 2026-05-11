@@ -12,6 +12,7 @@ import { useIsMobile } from "@/hooks/useIsMobile"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { DEFAULT_RADIUS_KM, RADIUS_MAX_KM } from "@/lib/config"
 import { SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
+import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
 import type { Place, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug } from "@/lib/types"
 
@@ -36,11 +37,14 @@ const DEFAULT_SOURCES: ActiveSources = {
 }
 
 interface Props {
-  initialCity?:     string
-  initialCategory?: string
+  initialCity?:       string
+  initialCategory?:   string
+  initialSelectLat?:  number
+  initialSelectLon?:  number
+  initialSelectName?: string
 }
 
-export default function HomeClient({ initialCity, initialCategory }: Props) {
+export default function HomeClient({ initialCity, initialCategory, initialSelectLat, initialSelectLon, initialSelectName }: Props) {
   const t        = useTranslations()
   const { locale } = useLocale()
   const isMobile = useIsMobile()
@@ -65,6 +69,12 @@ export default function HomeClient({ initialCity, initialCategory }: Props) {
   const [scrollToId,    setScrollToId]   = useState<string | undefined>()
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
+  const selectTarget = useRef(
+    initialSelectLat != null && initialSelectLon != null
+      ? { lat: initialSelectLat, lon: initialSelectLon }
+      : null,
+  )
+  const hasAutoSelected = useRef(false)
 
   const handleSearch = useCallback(async (query: string, radiusKmOverride?: number, coords?: { lat: number; lon: number }, nameHint?: string) => {
     setLastQuery(query)
@@ -124,6 +134,21 @@ export default function HomeClient({ initialCity, initialCategory }: Props) {
             setPlaces(data.places)
             setSearchCenter(data.location)
             setFilterDebug(data.filterDebug)
+
+            // Auto-select place from SEO deep-link (closest within 100 m)
+            if (selectTarget.current && !hasAutoSelected.current) {
+              let best: (typeof data.places)[0] | undefined
+              let bestDist = Infinity
+              for (const p of data.places) {
+                const d = haversineMetres(selectTarget.current, p.coordinates)
+                if (d < bestDist) { bestDist = d; best = p }
+              }
+              if (best && bestDist < 100) {
+                hasAutoSelected.current = true
+                setSelectedId(best.id)
+                setScrollToId(best.id)
+              }
+            }
             // Per-source count = places that would still pass the filter if
             // ONLY this source were active. This makes the displayed number
             // predictive: disabling all other sources should yield this count.

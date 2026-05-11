@@ -44,68 +44,64 @@ function confidenceClass(score: number) {
 
 // ─── Single place card ───────────────────────────────────────────────────────
 
-function SeoPlaceCard({ place, locale }: { place: Place; locale: Locale }) {
+function SeoPlaceCard({ place, locale, searchBaseUrl }: { place: Place; locale: Locale; searchBaseUrl: string }) {
   const addr = [
     [place.address.street, place.address.houseNumber].filter(Boolean).join(" "),
     place.address.city,
   ].filter(Boolean).join(", ")
 
+  const placeUrl = `${searchBaseUrl}&selectLat=${place.coordinates.lat}&selectLon=${place.coordinates.lon}&selectName=${encodeURIComponent(place.name)}`
   const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${place.coordinates.lat},${place.coordinates.lon}`
 
   const criteriaLabel = locale === "de"
     ? { entrance: "Eingang", toilet: "Toilette", parking: "Parkplatz" }
     : { entrance: "Entrance", toilet: "Toilet",  parking: "Parking" }
+  const openInAppLabel = locale === "de" ? "In App öffnen →" : "Open in app →"
 
   return (
-    <article className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm flex flex-col gap-2">
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="font-semibold text-gray-900 text-sm leading-snug">{place.name}</h3>
-        <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${confidenceClass(place.overallConfidence)}`}>
-          {Math.round(place.overallConfidence * 100)}&thinsp;%
-        </span>
-      </div>
+    <article className="rounded-lg border border-gray-200 bg-white shadow-sm flex flex-col overflow-hidden">
+      {/* Clickable body — opens the main app with this place pre-selected */}
+      <Link
+        href={placeUrl}
+        className="block p-4 hover:bg-blue-50 transition-colors flex flex-col gap-2 flex-1"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-semibold text-gray-900 text-sm leading-snug">{place.name}</h3>
+          <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${confidenceClass(place.overallConfidence)}`}>
+            {Math.round(place.overallConfidence * 100)}&thinsp;%
+          </span>
+        </div>
 
-      {addr && <p className="text-xs text-gray-500">{addr}</p>}
+        {addr && <p className="text-xs text-gray-500">{addr}</p>}
 
-      <dl className="flex flex-wrap gap-1.5 mt-0.5">
-        {(["entrance", "toilet", "parking"] as const).map((key) => {
-          const attr = place.accessibility[key]
-          if (!attr) return null
-          return (
-            <div key={key} className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${VALUE_CLASSES[attr.value]}`}>
-              <dt className="font-medium">{criteriaLabel[key]}:</dt>
-              <dd>{a11yLabel(attr.value, locale)}</dd>
-            </div>
-          )
-        })}
-      </dl>
+        <dl className="flex flex-wrap gap-1.5">
+          {(["entrance", "toilet", "parking"] as const).map((key) => {
+            const attr = place.accessibility[key]
+            if (!attr) return null
+            return (
+              <div key={key} className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${VALUE_CLASSES[attr.value]}`}>
+                <dt className="font-medium">{criteriaLabel[key]}:</dt>
+                <dd>{a11yLabel(attr.value, locale)}</dd>
+              </div>
+            )
+          })}
+        </dl>
 
-      <div className="flex gap-3 mt-1 flex-wrap">
+        <span className="text-xs text-blue-600 mt-1">{openInAppLabel}</span>
+      </Link>
+
+      {/* External links — separate element, no nested <a> */}
+      <div className="flex gap-3 px-4 py-2 border-t border-gray-100 flex-wrap">
         {place.wheelmapUrl && (
-          <a
-            href={place.wheelmapUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-blue-600 hover:underline"
-          >
+          <a href={place.wheelmapUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:underline">
             Wheelmap
           </a>
         )}
-        <a
-          href={gmapsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-blue-600 hover:underline"
-        >
+        <a href={gmapsUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:underline">
           Google Maps
         </a>
         {place.website && (
-          <a
-            href={place.website}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-blue-600 hover:underline"
-          >
+          <a href={place.website} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:underline">
             Website
           </a>
         )}
@@ -232,7 +228,7 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {places.map((place) => (
-                <SeoPlaceCard key={place.id} place={place} locale={locale} />
+                <SeoPlaceCard key={place.id} place={place} locale={locale} searchBaseUrl={searchUrl} />
               ))}
             </div>
           )}
