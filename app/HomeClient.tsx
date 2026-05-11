@@ -269,7 +269,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onSources={setSources}
         onRadius={setRadiusKm}
         sourceStates={sourceStates}
-        searchCenter={searchCenter}
+        searchCenter={chatMode === "nearby" ? searchCenter : undefined}
         onSearch={(query, coords, nameHint) => handleSearch(query, undefined, coords, nameHint)}
         onRerun={lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords, lastNameHint) : undefined}
         onExpandRadius={lastQuery && radiusKm < RADIUS_MAX_KM ? handleExpandRadius : undefined}
@@ -371,7 +371,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             hasSearched={!!lastQuery}
             scrollToId={scrollToId}
             filterDebug={filterDebug}
-            searchCenter={searchCenter}
+            searchCenter={chatMode === "nearby" ? searchCenter : undefined}
           />
           <div className="shrink-0 border-t border-border px-4 py-2 flex justify-end gap-4">
             <Link href={locale === "en" ? "/en/faq" : "/faq"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
