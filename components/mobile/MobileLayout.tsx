@@ -123,6 +123,7 @@ export default function MobileLayout({
 
             onRerun={handleRerun}
             onExpandRadius={handleExpandRadius}
+            onAdjustFilters={() => setActiveTab("filter")}
             radiusKm={radiusKm}
             onRadiusChange={onRadiusChange}
             hasSearched={hasSearched}

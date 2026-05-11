@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useMemo } from "react"
-import { Loader2, RefreshCw, MapPin, X, ChevronDown, ArrowUpDown } from "lucide-react"
+import { Loader2, RefreshCw, MapPin, X, ChevronDown, ArrowUpDown, SlidersHorizontal } from "lucide-react"
 import PlaceCard from "./PlaceCard"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
@@ -24,11 +24,12 @@ interface Props {
   onRadiusChange?:  (km: number) => void
   hasSearched?:     boolean
   scrollToId?:      string
-  filterDebug?:     FilterDebug
-  searchCenter?:    { lat: number; lon: number }
+  filterDebug?:       FilterDebug
+  searchCenter?:      { lat: number; lon: number }
+  onAdjustFilters?:   () => void
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters }: Props) {
   const t = useTranslations()
   const [mapHintSeen, setMapHintSeen] = useState(() =>
     typeof window !== "undefined" && !!localStorage.getItem("ap_map_hint_seen")
@@ -233,18 +234,31 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
                   {filterDebug ? t.results.noResultsArea : t.chat.noResults}
                 </p>
               )}
-              {onExpandRadius && (
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-sm text-muted-foreground">{t.results.expandRadius}</span>
+              <div className="flex flex-wrap justify-center gap-2 mt-1">
+                {onExpandRadius && (
                   <button
                     onClick={onExpandRadius}
-                    className="px-3 py-1 rounded-md bg-primary text-primary-foreground text-sm font-medium
-                               hover:bg-primary/90 transition-colors"
+                    className="px-3 py-1.5 rounded-md border border-border bg-card text-sm font-medium
+                               hover:bg-muted transition-colors"
                   >
-                    {t.results.expandRadiusYes}
+                    {t.results.expandRadius}
                   </button>
-                </div>
-              )}
+                )}
+                {onAdjustFilters ? (
+                  <button
+                    onClick={onAdjustFilters}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary
+                               text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                  >
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                    {t.results.adjustFilters}
+                  </button>
+                ) : (
+                  <p className="w-full text-center text-xs text-muted-foreground mt-1">
+                    {t.results.adjustFiltersHint}
+                  </p>
+                )}
+              </div>
             </div>
           )}
 

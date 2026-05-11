@@ -91,6 +91,8 @@ export interface Translations {
     filterBlockedBy:      string
     sortByConfidence:     string
     sortByDistance:       string
+    adjustFilters:        string
+    adjustFiltersHint:    string
   }
   a11y: {
     yes:        string

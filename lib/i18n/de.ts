@@ -116,6 +116,8 @@ const de: Translations = {
     filterBlockedBy:       "Hauptausschlussgrund:",
     sortByConfidence:      "Verlässlichkeit",
     sortByDistance:        "Entfernung",
+    adjustFilters:         "Filter anpassen",
+    adjustFiltersHint:     "Passe die Filterkriterien links an, um mehr Ergebnisse zu sehen.",
   },
   a11y: {
     yes:       "Ja",
