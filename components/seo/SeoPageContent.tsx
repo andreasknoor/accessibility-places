@@ -262,7 +262,7 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
 
           {/* Source note */}
           <p className="text-xs text-gray-400 mt-6">
-            {sourceLabel} OpenStreetMap, accessibility.cloud, Reisen für Alle
+            {sourceLabel} OpenStreetMap, accessibility.cloud, Ginto (CH)
           </p>
 
           {/* Related categories */}
