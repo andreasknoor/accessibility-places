@@ -109,13 +109,13 @@ export default function PlaceCard({ place, filters, isSelected, onClick, distanc
               <h3 className="font-semibold text-sm leading-snug truncate">
                 {place.name}
               </h3>
-              {addr && (
+              {(addr || distanceM !== undefined) && (
                 <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                   <MapPin className="w-3 h-3 shrink-0" />
-                  <span className="truncate min-w-0">{addr}</span>
+                  {addr && <span className="truncate min-w-0">{addr}</span>}
                   {distanceM !== undefined && (
                     <>
-                      <span className="shrink-0">·</span>
+                      {addr && <span className="shrink-0">·</span>}
                       <span className="shrink-0">{t.results.distanceFromHere(Math.round(distanceM))}</span>
                     </>
                   )}
