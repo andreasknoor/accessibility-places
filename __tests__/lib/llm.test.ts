@@ -170,4 +170,11 @@ describe("parseQuery", () => {
     expect(parseQuery("Kinos in Hamburg").categories).toContain("cinema")
     expect(parseQuery("Hotels in Wien").categories).toContain("hotel")
   })
+
+  it("extracts Basel (CH) as locationQuery from 'Kneipen in Basel (CH)' (server log regression)", () => {
+    // geocode/suggest appends (CC) country codes; this caused "Location not found: Kneipen Basel"
+    const r = parseQuery("Kneipen in Basel (CH)")
+    expect(r.locationQuery).toBe("Basel (CH)")
+    expect(r.categories).toContain("pub")
+  })
 })
