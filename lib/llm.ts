@@ -57,14 +57,25 @@ export function extractQuotedName(query: string): string {
 }
 
 export function extractLocationFallback(query: string): string {
-  const match = query.match(
+  // The geocode-suggest endpoint appends "(CC)" country codes to display labels
+  // (e.g. "Basel (CH)"). Strip it before matching so the character-class regex
+  // doesn't fail, then reattach so Nominatim still gets the disambiguation hint.
+  const ccMatch    = query.match(/\s*\(([A-Z]{2,3})\)\s*$/)
+  const cc         = ccMatch?.[1] ?? ""
+  const stripped   = cc ? query.slice(0, query.lastIndexOf(ccMatch![0])).trimEnd() : query
+
+  const match = stripped.match(
     /\bin\s+([A-ZÄÖÜ][a-zA-ZäöüÄÖÜß\s\-,]+?)(?:\s*$|\s+(?:und|oder|mit|für|nahe|near|and|or|with)\b)/i,
   )
-  if (match) return match[1].trim()
+  if (match) {
+    const loc = match[1].trim()
+    return cc ? `${loc} (${cc})` : loc
+  }
 
-  const words = query.split(/\s+/)
+  const words      = stripped.split(/\s+/)
   const capitalised = words.filter((w) => /^[A-ZÄÖÜ]/.test(w))
-  return capitalised.slice(-2).join(" ") || query
+  const loc        = capitalised.slice(-2).join(" ") || stripped
+  return cc ? `${loc} (${cc})` : loc
 }
 
 /**

@@ -26,6 +26,22 @@ describe("extractLocationFallback", () => {
     const result = extractLocationFallback("Restaurants in Wien mit Rollstuhltoilette")
     expect(result).toBe("Wien")
   })
+
+  it("preserves (CC) country-code suffix appended by geocode suggest", () => {
+    // "Basel (CH)" is the display label from the autocomplete — the (CC) must
+    // survive so Nominatim can use it for disambiguation.
+    expect(extractLocationFallback("Kneipen in Basel (CH)")).toBe("Basel (CH)")
+  })
+
+  it("preserves (AT) and (DE) country codes too", () => {
+    expect(extractLocationFallback("Cafés in Wien (AT)")).toBe("Wien (AT)")
+    expect(extractLocationFallback("Hotels in München (DE)")).toBe("München (DE)")
+  })
+
+  it("handles query with only city + country code (no 'in')", () => {
+    // Fallback path: no "in", but country code should still be reattached.
+    expect(extractLocationFallback("Basel (CH)")).toContain("(CH)")
+  })
 })
 
 // ─── extractQuotedName ───────────────────────────────────────────────────────
