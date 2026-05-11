@@ -1,6 +1,6 @@
 import Link from "next/link"
 import type { Place, A11yValue } from "@/lib/types"
-import { CITIES, SEO_CATEGORY_LABEL, SEO_CATEGORY_TO_SLUG, type City } from "@/lib/cities"
+import { CITIES, SEO_CATEGORY_LABEL, SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_TO_SLUG, type City } from "@/lib/cities"
 import { CONFIDENCE_THRESHOLDS } from "@/lib/config"
 
 const BASE = "https://accessible-places.org"
@@ -243,7 +243,7 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
             <h2 className="text-base font-semibold text-gray-700 mb-3">{relatedCategoriesLabel}</h2>
             <div className="flex flex-wrap gap-2">
               {Object.entries(SEO_CATEGORY_LABEL)
-                .filter(([slug]) => slug !== categorySlug)
+                .filter(([slug]) => slug !== categorySlug && slug in SEO_CATEGORY_TO_CHIP_IDX)
                 .map(([slug, labels]) => (
                   <Link
                     key={slug}
