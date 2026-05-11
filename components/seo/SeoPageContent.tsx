@@ -1,7 +1,7 @@
 import Link from "next/link"
 import type { Place, A11yValue } from "@/lib/types"
 import { CITIES, SEO_CATEGORY_LABEL, SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_TO_SLUG, type City } from "@/lib/cities"
-import { CONFIDENCE_THRESHOLDS } from "@/lib/config"
+import { confidenceLabel } from "@/lib/matching/merge"
 
 const BASE = "https://accessible-places.org"
 
@@ -36,10 +36,16 @@ function a11yLabel(value: A11yValue, locale: Locale) {
 
 // ─── Confidence badge ────────────────────────────────────────────────────────
 
-function confidenceClass(score: number) {
-  if (score >= CONFIDENCE_THRESHOLDS.high)   return "bg-green-100 text-green-800"
-  if (score >= CONFIDENCE_THRESHOLDS.medium) return "bg-amber-100 text-amber-800"
-  return "bg-gray-100 text-gray-600"
+const CONFIDENCE_COLORS: Record<"high" | "medium" | "low", string> = {
+  high:   "bg-green-100 text-green-800 border border-green-200",
+  medium: "bg-yellow-100 text-yellow-800 border border-yellow-200",
+  low:    "bg-red-100 text-red-800 border border-red-200",
+}
+
+const CONFIDENCE_LABEL: Record<"high" | "medium" | "low", { de: string; en: string }> = {
+  high:   { de: "Verlässlich", en: "Reliable" },
+  medium: { de: "Mittel",      en: "Moderate" },
+  low:    { de: "Unsicher",    en: "Uncertain" },
 }
 
 // ─── Single place card ───────────────────────────────────────────────────────
@@ -67,9 +73,14 @@ function SeoPlaceCard({ place, locale, searchBaseUrl }: { place: Place; locale: 
       >
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-semibold text-gray-900 text-sm leading-snug">{place.name}</h3>
-          <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${confidenceClass(place.overallConfidence)}`}>
-            {Math.round(place.overallConfidence * 100)}&thinsp;%
-          </span>
+          {(() => {
+            const level = confidenceLabel(place.overallConfidence)
+            return (
+              <span className={`shrink-0 text-xs font-semibold px-2.5 py-0.5 rounded-full ${CONFIDENCE_COLORS[level]}`}>
+                {Math.round(place.overallConfidence * 100)}% · {CONFIDENCE_LABEL[level][locale]}
+              </span>
+            )
+          })()}
         </div>
 
         {addr && <p className="text-xs text-gray-500">{addr}</p>}
