@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react"
 import dynamic from "next/dynamic"
+import Script from "next/script"
 import Link from "next/link"
 import ChatPanel    from "@/components/chat/ChatPanel"
 import FilterPanel  from "@/components/filters/FilterPanel"
@@ -303,6 +304,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   }
 
   return (
+    <>
+    <Script src="https://tally.so/widgets/embed.js" strategy="lazyOnload" />
     <div className="flex flex-col h-screen overflow-hidden bg-background text-foreground">
       {/* ── Top bar ── */}
       <header className="flex items-center justify-between px-5 py-3 border-b border-border bg-card shrink-0">
@@ -409,5 +412,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         </div>
       </div>
     </div>
+    </>
   )
 }

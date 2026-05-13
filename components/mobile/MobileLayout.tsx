@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import dynamic from "next/dynamic"
+import Script from "next/script"
 import Link from "next/link"
 import { Map, List, SlidersHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -80,6 +81,8 @@ export default function MobileLayout({
   ]
 
   return (
+    <>
+    <Script src="https://tally.so/widgets/embed.js" strategy="lazyOnload" />
     <div className="flex flex-col h-svh overflow-hidden bg-background text-foreground">
 
       {/* ── Header ── */}
@@ -209,5 +212,6 @@ export default function MobileLayout({
       </nav>
 
     </div>
+    </>
   )
 }
