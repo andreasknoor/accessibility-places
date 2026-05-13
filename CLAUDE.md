@@ -29,7 +29,6 @@ This project uses **Next.js 16.2.4**, which contains breaking changes from prior
 The `/api/search` POST endpoint is a **streaming NDJSON** response. It emits newline-delimited JSON events as work progresses, then one final `result` event:
 
 ```
-{"type":"source-progress", "sourceId":"osm", "attempt":1, "of":3}
 {"type":"source", "sourceId":"osm", "status":"ok", "count":18, "durationMs":1234}
 {"type":"result", "payload": { places, location, … }}
 ```
@@ -43,7 +42,7 @@ No LLM is used at runtime (`@anthropic-ai/sdk` is an unused leftover in `package
 ### Adapters (`lib/adapters/`)
 
 Five adapters run in parallel via `startAdapterTasks()`:
-- **OSM** (`osm.ts`): Overpass query, retries across 3 mirror endpoints on timeout/5xx. `[timeout:25]` in QL + `AbortSignal.timeout(28_000)` on the fetch.
+- **OSM** (`osm.ts`): Overpass query raced in parallel across 2 mirror endpoints via `Promise.any()` — first successful response wins, loser is aborted. `[timeout:12]` in QL + `AbortSignal.timeout(20_000)` client-side. 429/5xx throws immediately so the race can resolve. `AggregateError` is unwrapped to `err.errors[0]` when both fail.
 - **accessibility.cloud** (`accessibility-cloud.ts`): A11yJSON-shaped records. Always uses `accessibilityPreset=at-least-partially-accessible-by-wheelchair`.
 - **Reisen für Alle** (`reisen-fuer-alle.ts`): Highest reliability weight (1.0). Hidden from FilterPanel UI (not in `SOURCE_ORDER`) but always active when the key is set.
 - **Ginto** (`ginto.ts`): GraphQL API (`POST https://api.ginto.guide/graphql`), Switzerland only (all results have `countryCode: "CH"`). `defaultRatings[].key` prefix convention maps to A11yValue: no prefix → entrance, `toilet_` → toilet, `parking_` → parking. Paginates up to 2 pages (100 results). Base weight 0.90; LEVEL_2 entries use 0.95, LEVEL_3 entries use 0.97 (via `qualityInfo.detailLevels`). `updatedAt` is a system republish timestamp, not a human verification date — stored in `metadata` only, never sets `verifiedRecently`.
@@ -86,6 +85,10 @@ google_places:       0.35
 ### Mobile vs desktop
 
 `useIsMobile()` (`hooks/useIsMobile.ts` — pointer: coarse or max-width 767px) gates layout branching in `HomeClient.tsx`. Mobile uses `MobileLayout` (tab bar: results / map / filter). Desktop has a resizable results column with a drag handle. In tests, `matchMedia` is mocked to always return `false` (desktop), so both inputs in the search bar are always rendered.
+
+**Empty state actions** — `ResultsList` accepts an optional `onAdjustFilters?: () => void` prop. When present (mobile only), a primary "Filter anpassen" button is rendered alongside the expand-radius button; clicking it calls the callback. `MobileLayout` passes `() => setActiveTab("filter")`. When absent (desktop), a text hint is shown instead — the filter panel is already visible.
+
+**Distance display** — `PlaceCard` shows inline distance (`t.results.distanceFromHere`) when `searchCenter` is provided and the place has coordinates. In Nearby mode `HomeClient` always has a `searchCenter`; in text-search mode it is set after geocoding.
 
 `MapView` (`components/map/MapView.tsx`) uses Leaflet and is loaded via `dynamic(..., { ssr: false })` to prevent server-side rendering errors.
 
@@ -166,6 +169,7 @@ Each place card on an SEO page links to:
 - `ENABLE_NEARBY_PARKING=1` — feature flag; enables the optional disabled-parking enrichment fetch (off by default)
 - `GINTO_API_KEY` — optional; Ginto GraphQL API (Swiss accessibility data, CH only). Contact support@ginto.guide. Source silently skipped if absent.
 - `HEALTH_CHECK_SECRET` — required to activate `GET /api/health`; requests without a matching `?token=` get 401. If unset the endpoint returns 503.
+- `REVALIDATE_SECRET` — required to activate `POST /api/revalidate-seo`. Run `npm run revalidate:seo` (with `REVALIDATE_SECRET` set) to mark all 960 SEO pages as stale. Pages use `revalidate = false` and never auto-regenerate.
 
 ## Tests
 

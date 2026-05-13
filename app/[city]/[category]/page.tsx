@@ -5,7 +5,7 @@ import { CITY_MAP, SEO_CATEGORY_SLUGS, SEO_CATEGORY_LABEL } from "@/lib/cities"
 import { fetchPlacesForSeoPage }  from "@/lib/seo-search"
 import SeoPageContent             from "@/components/seo/SeoPageContent"
 
-export const revalidate = 86400 // ISR: regenerate at most every 24 h
+export const revalidate = false // never auto-regenerate — use /api/revalidate-seo
 
 type Params = { city: string; category: string }
 

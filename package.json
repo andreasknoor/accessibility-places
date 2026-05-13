@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepare": "git config core.hooksPath .githooks || true"
+    "prepare": "git config core.hooksPath .githooks || true",
+    "revalidate:seo": "npx tsx scripts/revalidate-seo.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
