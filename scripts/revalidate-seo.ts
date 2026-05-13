@@ -17,14 +17,18 @@ if (!SECRET) {
 
 const url = `${BASE}/api/revalidate-seo?token=${encodeURIComponent(SECRET)}`
 
-console.log(`Revalidating SEO pages at ${BASE} …`)
+async function main() {
+  console.log(`Revalidating SEO pages at ${BASE} …`)
 
-const res  = await fetch(url, { method: "POST" })
-const body = await res.json().catch(() => ({}))
+  const res  = await fetch(url, { method: "POST" })
+  const body = await res.json().catch(() => ({}))
 
-if (!res.ok) {
-  console.error(`Failed (${res.status}):`, body)
-  process.exit(1)
+  if (!res.ok) {
+    console.error(`Failed (${res.status}):`, body)
+    process.exit(1)
+  }
+
+  console.log(`Done — ${body.revalidated} pages marked for revalidation`)
 }
 
-console.log(`Done — ${body.revalidated} pages marked for revalidation`)
+main()
