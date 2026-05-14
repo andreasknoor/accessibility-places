@@ -49,10 +49,10 @@ async function snapshotOne(task: Task): Promise<void> {
   try {
     const places = await fetchPlacesForSeoPage(task.lat, task.lon, task.category)
     await put(path, JSON.stringify(places), {
-      access:              "public",
+      access:              "private",
       allowOverwrite:      true,
       contentType:         "application/json",
-      cacheControlMaxAge:  60 * 60 * 24 * 7, // 1 week CDN cache
+      cacheControlMaxAge:  60 * 60 * 24 * 7,
     })
     done++
     process.stdout.write(`  ok   ${path}  (${places.length} places)\n`)

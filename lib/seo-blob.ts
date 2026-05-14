@@ -28,7 +28,9 @@ export async function getPlacesSnapshot(
     const map = await getUrlMap()
     const url = map.get(`seo/${citySlug}/${categorySlug}.json`)
     if (!url) return []
-    const res = await fetch(url)
+    const res = await fetch(url, {
+      headers: { authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` },
+    })
     if (!res.ok) return []
     return (await res.json()) as Place[]
   } catch {
