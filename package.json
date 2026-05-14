@@ -10,7 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "prepare": "git config core.hooksPath .githooks || true",
-    "revalidate:seo": "npx tsx scripts/revalidate-seo.ts"
+    "snapshot:seo": "npx tsx scripts/snapshot-seo.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
@@ -23,6 +23,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@serwist/next": "^9.5.10",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/blob": "^2.3.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "leaflet": "^1.9.4",

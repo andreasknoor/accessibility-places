@@ -14,6 +14,9 @@ npm run test:watch   # watch mode
 
 # Run a single test file
 npx vitest run __tests__/lib/llm.test.ts
+
+# SEO data snapshot (requires BLOB_READ_WRITE_TOKEN + adapter API keys)
+npm run snapshot:seo     # fetch live data for all 960 pages, write Place[] JSON to Vercel Blob
 ```
 
 **Always run `npm test` before committing or pushing.** No check-ins without a full test run.
@@ -126,7 +129,7 @@ In production, `raw` adapter response data is stripped from `sourceRecords` befo
 
 ### Local SEO pages (`app/[city]/[category]/` and `app/en/[city]/[category]/`)
 
-Static landing pages for 32 DACH cities × 15 categories × 2 locales = **960 pages** total, generated via ISR (`export const revalidate = 86400`).
+Static landing pages for 32 DACH cities × 15 categories × 2 locales = **960 pages** total. Pages are **fully static** — generated at build time from Vercel Blob snapshots. `generateStaticParams` pre-renders all 960 pages; `dynamicParams = false` returns 404 for unknown slugs. There is no ISR or on-demand revalidation.
 
 **City/category configuration — `lib/cities.ts`:**
 - `CITIES` — 32 cities with slug, nameDe, nameEn, country, lat, lon. `CitySlug` union type must be kept in sync with this array.
@@ -137,13 +140,16 @@ Static landing pages for 32 DACH cities × 15 categories × 2 locales = **960 pa
 - `CITY_MAP` — `Map<CitySlug, City>` for O(1) lookup in page routes.
 
 **Data fetching — `lib/seo-search.ts`:**
-`fetchPlacesForSeoPage(lat, lon, category, radiusKm=5)` calls `fetchAllSources` directly (no HTTP round-trip). Uses `NO_FILTERS` (all false, `acceptUnknown: true`) and `SEO_SOURCES` (excludes Google Places). Merges with `findMatch`/`mergePlaces`/`finalisePlaceConfidence`, sorts by `computeFilteredConfidence`, returns top 25.
+`fetchPlacesForSeoPage(lat, lon, category, radiusKm=5)` calls `fetchAllSources` directly (no HTTP round-trip). Fetches with all filters off (`acceptUnknown: true`) and `SEO_SOURCES` (excludes Google Places). After merging, applies a filter cascade: first tries `FILTERS_STRICT` (entrance + toilet, no unknown); if that yields fewer than 5 results, falls back to `FILTERS_ENTRANCE` (entrance only). Recomputes `computeFilteredConfidence` using the active filter set, sorts descending, returns top 25.
 
 **Rendering — `components/seo/SeoPageContent.tsx`:**
 Server component shared by DE and EN routes. Includes Schema.org `ItemList` JSON-LD, breadcrumb, hreflang language switcher, related categories (chip-backed only), and related cities. The confidence badge format matches the main app exactly: `"X% · Verlässlich/Mittel/Unsicher"` via `confidenceLabel()` from `merge.ts`.
 
 **Sitemap — `app/sitemap.ts`:**
 Generates entries dynamically from `CITIES` and `SEO_CATEGORY_SLUGS`. Adding a city to `CITIES` (and `CitySlug`) automatically adds it to the sitemap — no other change needed.
+
+**Snapshot pipeline — `scripts/snapshot-seo.ts` + `lib/seo-blob.ts`:**
+`snapshot:seo` calls `fetchPlacesForSeoPage` for every city/category combination and writes `Place[]` as JSON to Vercel Blob at `seo/{citySlug}/{categorySlug}.json` (public, 1-week CDN cache, `allowOverwrite: true`). At build time, `lib/seo-blob.ts` calls `list({ prefix: 'seo/' })` once, caches the URL map in module scope, then each page fetches its blob URL. To update SEO content: run `npm run snapshot:seo` (or let the weekly GitHub Actions cron do it), then trigger a new Vercel deployment. The snapshot workflow (`.github/workflows/snapshot-seo.yml`) runs every Sunday at 03:00 UTC and can be triggered manually via `workflow_dispatch`.
 
 **Deep-link flow (SEO page → main app):**
 Each place card on an SEO page links to:
@@ -168,8 +174,8 @@ Each place card on an SEO page links to:
 - `GOOGLE_PLACES_API_KEY` — optional; source is silently skipped if absent
 - `ENABLE_NEARBY_PARKING=1` — feature flag; enables the optional disabled-parking enrichment fetch (off by default)
 - `GINTO_API_KEY` — optional; Ginto GraphQL API (Swiss accessibility data, CH only). Contact support@ginto.guide. Source silently skipped if absent.
+- `BLOB_READ_WRITE_TOKEN` — auto-provisioned by Vercel when the Blob store is linked. Required at build time (to list snapshot URLs) and for `npm run snapshot:seo`. Add to GitHub Actions secrets for the snapshot workflow.
 - `HEALTH_CHECK_SECRET` — required to activate `GET /api/health`; requests without a matching `?token=` get 401. If unset the endpoint returns 503.
-- `REVALIDATE_SECRET` — required to activate `POST /api/revalidate-seo`. Run `npm run revalidate:seo` (with `REVALIDATE_SECRET` set) to mark all 960 SEO pages as stale. Pages use `revalidate = false` and never auto-regenerate.
 
 ## Tests
 

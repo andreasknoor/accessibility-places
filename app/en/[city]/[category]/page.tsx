@@ -1,15 +1,24 @@
-import { cache }        from "react"
-import { notFound }    from "next/navigation"
-import type { Metadata } from "next"
-import { CITY_MAP, SEO_CATEGORY_SLUGS, SEO_CATEGORY_LABEL } from "@/lib/cities"
-import { fetchPlacesForSeoPage }  from "@/lib/seo-search"
-import SeoPageContent             from "@/components/seo/SeoPageContent"
+import { cache }           from "react"
+import { notFound }        from "next/navigation"
+import type { Metadata }    from "next"
+import { CITIES, CITY_MAP, SEO_CATEGORY_SLUGS, SEO_CATEGORY_LABEL } from "@/lib/cities"
+import { getPlacesSnapshot }  from "@/lib/seo-blob"
+import SeoPageContent         from "@/components/seo/SeoPageContent"
 
-export const revalidate = false // never auto-regenerate — use /api/revalidate-seo
+export const dynamicParams = false
+
+export async function generateStaticParams() {
+  return CITIES.flatMap((city) =>
+    Object.keys(SEO_CATEGORY_SLUGS).map((category) => ({
+      city:     city.slug,
+      category,
+    })),
+  )
+}
 
 type Params = { city: string; category: string }
 
-const cachedFetch = cache(fetchPlacesForSeoPage)
+const cachedSnapshot = cache(getPlacesSnapshot)
 
 function resolve(params: Params) {
   const city     = CITY_MAP.get(params.city as never)
@@ -26,7 +35,7 @@ export async function generateMetadata(
   if (!city || !category) return {}
   const slug      = Object.keys(SEO_CATEGORY_SLUGS).find((k) => SEO_CATEGORY_SLUGS[k] === category)!
   const catLabel  = SEO_CATEGORY_LABEL[slug]?.en ?? slug
-  const places    = await cachedFetch(city.lat, city.lon, category).catch(() => [])
+  const places    = await cachedSnapshot(city.slug, slug)
   const count     = places.length
   const canonical = `${BASE}/en/${city.slug}/${slug}`
 
@@ -68,7 +77,7 @@ export default async function CityPageEn({ params }: { params: Promise<Params> }
 
   const { city, category } = resolved
   const slug   = Object.keys(SEO_CATEGORY_SLUGS).find((k) => SEO_CATEGORY_SLUGS[k] === category)!
-  const places = await cachedFetch(city.lat, city.lon, category).catch(() => [])
+  const places = await cachedSnapshot(city.slug, slug)
 
   return (
     <SeoPageContent
