@@ -69,8 +69,10 @@ export default function MapView({
   const [mapReady, setMapReady] = useState(false)
   const onShowInResultsRef = useRef(onShowInResults)
   const placesRef          = useRef(places)
+  const userLocationRef    = useRef(userLocation)
   useEffect(() => { onShowInResultsRef.current = onShowInResults }, [onShowInResults])
   useEffect(() => { placesRef.current = places }, [places])
+  useEffect(() => { userLocationRef.current = userLocation }, [userLocation])
 
   // Init map once
   useEffect(() => {
@@ -248,12 +250,12 @@ export default function MapView({
       }
     }
 
-    // Always fit bounds to show all results when places are present
+    // Fit bounds to show all results; include user location when in nearby mode
     if (places.length > 0) {
-      const bounds = L!.latLngBounds(
-        places.map((p) => [p.coordinates.lat, p.coordinates.lon] as [number, number]),
-      )
-      mapInst.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 })
+      const latlngs: [number, number][] = places.map((p) => [p.coordinates.lat, p.coordinates.lon])
+      const ul = userLocationRef.current
+      if (ul) latlngs.push([ul.lat, ul.lon])
+      mapInst.current.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 15 })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [places, selectedId, mapReady])
@@ -288,10 +290,10 @@ export default function MapView({
     const id = setTimeout(() => {
       mapInst.current?.invalidateSize()
       if (places.length > 0) {
-        const bounds = L!.latLngBounds(
-          places.map((p) => [p.coordinates.lat, p.coordinates.lon] as [number, number]),
-        )
-        mapInst.current?.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 })
+        const latlngs: [number, number][] = places.map((p) => [p.coordinates.lat, p.coordinates.lon])
+        const ul = userLocationRef.current
+        if (ul) latlngs.push([ul.lat, ul.lon])
+        mapInst.current?.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 15 })
       } else if (center) {
         mapInst.current?.setView([center.lat, center.lon], 13)
       }
