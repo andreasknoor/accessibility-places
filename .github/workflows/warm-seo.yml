@@ -1,0 +1,24 @@
+name: Warm SEO Cache
+
+on:
+  deployment_status:
+
+jobs:
+  warm:
+    # Only run when Vercel marks a Production deployment as successful
+    if: >
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment == 'Production'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Warm SEO pages
+        run: npm run warm:seo
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          WARM_CONCURRENCY: 12
