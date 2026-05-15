@@ -16,7 +16,7 @@ npm run test:watch   # watch mode
 npx vitest run __tests__/lib/llm.test.ts
 
 # SEO data snapshot (requires BLOB_READ_WRITE_TOKEN + adapter API keys)
-npm run snapshot:seo     # fetch live data for all 960 pages, write Place[] JSON to Vercel Blob
+npm run snapshot:seo     # fetch live data for all 640 pages, write Place[] JSON to Vercel Blob
 ```
 
 **Always run `npm test` before committing or pushing.** No check-ins without a full test run.
@@ -83,7 +83,7 @@ google_places:       0.35
 
 ### i18n (`lib/i18n/`)
 
-`LocaleProvider` is nested: root layout uses `"de"` as default; `app/en/layout.tsx` wraps `/en/*` in a second `LocaleProvider initialLocale="en"`. The `document.documentElement.lang` attribute is set only by the leaf layout to avoid the parent overwriting the child. All translations are typed via `lib/i18n/types.ts`.
+`LocaleProvider` is nested: root layout uses `"de"` as default; `app/en/layout.tsx` wraps `/en/*` in a second `LocaleProvider initialLocale="en"`. `app/en/layout.tsx` is a **Server Component** — the `document.documentElement.lang = "en"` side effect lives in `app/en/LangSetter.tsx`, a null-rendering client component that is imported by the layout. This separation is required so Next.js can resolve `generateMetadata` from EN SEO pages (client layouts break the metadata chain). All translations are typed via `lib/i18n/types.ts`. `distanceFromHere(m: number) => string` formats metres/km in the locale's style (DE: `"250 m entfernt"`, EN: `"250 m away"`).
 
 ### Mobile vs desktop
 
@@ -91,7 +91,7 @@ google_places:       0.35
 
 **Empty state actions** — `ResultsList` accepts an optional `onAdjustFilters?: () => void` prop. When present (mobile only), a primary "Filter anpassen" button is rendered alongside the expand-radius button; clicking it calls the callback. `MobileLayout` passes `() => setActiveTab("filter")`. When absent (desktop), a text hint is shown instead — the filter panel is already visible.
 
-**Distance display** — `PlaceCard` shows inline distance (`t.results.distanceFromHere`) when `searchCenter` is provided and the place has coordinates. In Nearby mode `HomeClient` always has a `searchCenter`; in text-search mode it is set after geocoding.
+**Distance display** — `PlaceCard` shows inline distance (`t.results.distanceFromHere`) when `distanceM` prop is provided. `HomeClient` passes `searchCenter` to `ResultsList` **only when `chatMode === "nearby"`** — distance is intentionally not shown for text-search results.
 
 `MapView` (`components/map/MapView.tsx`) uses Leaflet and is loaded via `dynamic(..., { ssr: false })` to prevent server-side rendering errors.
 
@@ -129,7 +129,7 @@ In production, `raw` adapter response data is stripped from `sourceRecords` befo
 
 ### Local SEO pages (`app/[city]/[category]/` and `app/en/[city]/[category]/`)
 
-Static landing pages for 32 DACH cities × 15 categories × 2 locales = **960 pages** total. Pages are **fully static** — generated at build time from Vercel Blob snapshots. `generateStaticParams` pre-renders all 960 pages; `dynamicParams = false` returns 404 for unknown slugs. There is no ISR or on-demand revalidation.
+Static landing pages for 32 DACH cities × 10 categories × 2 locales = **640 pages** total. Pages are **fully static** (`export const dynamicParams = false`) — generated at build time from Vercel Blob snapshots. `generateStaticParams` pre-renders all combinations; unknown slugs return 404. No ISR.
 
 **City/category configuration — `lib/cities.ts`:**
 - `CITIES` — 32 cities with slug, nameDe, nameEn, country, lat, lon. `CitySlug` union type must be kept in sync with this array.
@@ -140,10 +140,10 @@ Static landing pages for 32 DACH cities × 15 categories × 2 locales = **960 pa
 - `CITY_MAP` — `Map<CitySlug, City>` for O(1) lookup in page routes.
 
 **Data fetching — `lib/seo-search.ts`:**
-`fetchPlacesForSeoPage(lat, lon, category, radiusKm=5)` calls `fetchAllSources` directly (no HTTP round-trip). Fetches with all filters off (`acceptUnknown: true`) and `SEO_SOURCES` (excludes Google Places). After merging, applies a filter cascade: first tries `FILTERS_STRICT` (entrance + toilet, no unknown); if that yields fewer than 5 results, falls back to `FILTERS_ENTRANCE` (entrance only). Recomputes `computeFilteredConfidence` using the active filter set, sorts descending, returns top 25.
+`fetchPlacesForSeoPage(lat, lon, category, radiusKm=5)` calls `fetchAllSources` directly (no HTTP round-trip). Fetches with all filters off (`acceptUnknown: true`) and `SEO_SOURCES` (excludes Google Places). After merging, always applies `FILTERS_STRICT` (entrance=true, toilet=true, acceptUnknown=false). Recomputes `computeFilteredConfidence` using these filters, sorts descending, returns top 25.
 
 **Rendering — `components/seo/SeoPageContent.tsx`:**
-Server component shared by DE and EN routes. Includes Schema.org `ItemList` JSON-LD, breadcrumb, hreflang language switcher, related categories (chip-backed only), and related cities. The confidence badge format matches the main app exactly: `"X% · Verlässlich/Mittel/Unsicher"` via `confidenceLabel()` from `merge.ts`.
+Server component shared by DE and EN routes. Includes Schema.org `ItemList` + `BreadcrumbList` JSON-LD, hreflang language switcher, related categories (chip-backed only — `SEO_CATEGORY_TO_CHIP_IDX !== undefined`), and related cities. The confidence badge format matches the main app exactly: `"X% · Verlässlich/Mittel/Unsicher"` via `confidenceLabel()` from `merge.ts`. Source attribution names the active adapters (`"OpenStreetMap, accessibility.cloud, Ginto (CH)"`) — exclude adapters that require keys absent in the deployment.
 
 **Sitemap — `app/sitemap.ts`:**
 Generates entries dynamically from `CITIES` and `SEO_CATEGORY_SLUGS`. Adding a city to `CITIES` (and `CitySlug`) automatically adds it to the sitemap — no other change needed.

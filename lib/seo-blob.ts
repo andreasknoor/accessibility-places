@@ -48,6 +48,13 @@ export async function getNonEmptySlugPairs(): Promise<SlugPair[]> {
   }
 }
 
+// Returns a Set<"citySlug/categorySlug"> for all non-empty snapshots.
+// Used by page components to filter related-category and related-city links.
+export async function getValidPairSet(): Promise<Set<string>> {
+  const pairs = await getNonEmptySlugPairs()
+  return new Set(pairs.map(({ city, category }) => `${city}/${category}`))
+}
+
 export async function getPlacesSnapshot(
   citySlug:     string,
   categorySlug: string,

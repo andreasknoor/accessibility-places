@@ -12,6 +12,7 @@ interface Props {
   city:         City
   categorySlug: string
   places:       Place[]
+  validPaths:   Set<string>
 }
 
 // ─── A11y value helpers ──────────────────────────────────────────────────────
@@ -123,13 +124,13 @@ function SeoPlaceCard({ place, locale, searchBaseUrl }: { place: Place; locale: 
 
 // ─── Full page content ───────────────────────────────────────────────────────
 
-export default function SeoPageContent({ locale, city, categorySlug, places }: Props) {
+export default function SeoPageContent({ locale, city, categorySlug, places, validPaths }: Props) {
   const label      = SEO_CATEGORY_LABEL[categorySlug]
   const cityName   = locale === "de" ? city.nameDe : city.nameEn
   const catLabel   = label[locale]
   const prefix     = locale === "en" ? "/en" : ""
   const homeUrl    = locale === "en" ? "/en" : "/"
-  const otherCities = CITIES.filter((c) => c.slug !== city.slug)
+  const otherCities = CITIES.filter((c) => c.slug !== city.slug && validPaths.has(`${c.slug}/${categorySlug}`))
 
   const searchUrl = `${homeUrl}?q=${encodeURIComponent(cityName)}&cat=${encodeURIComponent(categorySlug)}`
 
@@ -270,7 +271,7 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
             <h2 className="text-base font-semibold text-gray-700 mb-3">{relatedCategoriesLabel}</h2>
             <div className="flex flex-wrap gap-2">
               {Object.entries(SEO_CATEGORY_LABEL)
-                .filter(([slug]) => slug !== categorySlug && slug in SEO_CATEGORY_TO_CHIP_IDX)
+                .filter(([slug]) => slug !== categorySlug && slug in SEO_CATEGORY_TO_CHIP_IDX && validPaths.has(`${city.slug}/${slug}`))
                 .map(([slug, labels]) => (
                   <Link
                     key={slug}

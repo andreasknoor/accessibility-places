@@ -2,7 +2,7 @@ import { cache }           from "react"
 import { notFound }        from "next/navigation"
 import type { Metadata }    from "next"
 import { CITIES, CITY_MAP, SEO_CATEGORY_SLUGS, SEO_CATEGORY_LABEL } from "@/lib/cities"
-import { getPlacesSnapshot, getNonEmptySlugPairs } from "@/lib/seo-blob"
+import { getPlacesSnapshot, getNonEmptySlugPairs, getValidPairSet } from "@/lib/seo-blob"
 import SeoPageContent         from "@/components/seo/SeoPageContent"
 
 export const dynamicParams = false
@@ -19,7 +19,8 @@ export async function generateStaticParams() {
 
 type Params = { city: string; category: string }
 
-const cachedSnapshot = cache(getPlacesSnapshot)
+const cachedSnapshot   = cache(getPlacesSnapshot)
+const cachedValidPaths = cache(getValidPairSet)
 
 function resolve(params: Params) {
   const city     = CITY_MAP.get(params.city as never)
@@ -77,8 +78,11 @@ export default async function CityPageEn({ params }: { params: Promise<Params> }
   if (!resolved.city || !resolved.category) notFound()
 
   const { city, category } = resolved
-  const slug   = Object.keys(SEO_CATEGORY_SLUGS).find((k) => SEO_CATEGORY_SLUGS[k] === category)!
-  const places = await cachedSnapshot(city.slug, slug)
+  const slug       = Object.keys(SEO_CATEGORY_SLUGS).find((k) => SEO_CATEGORY_SLUGS[k] === category)!
+  const places     = await cachedSnapshot(city.slug, slug)
+  const validPaths = process.env.BLOB_READ_WRITE_TOKEN
+    ? await cachedValidPaths()
+    : new Set(ALL_PARAMS.map((p) => `${p.city}/${p.category}`))
 
   return (
     <SeoPageContent
@@ -86,6 +90,7 @@ export default async function CityPageEn({ params }: { params: Promise<Params> }
       city={city}
       categorySlug={slug}
       places={places}
+      validPaths={validPaths}
     />
   )
 }
