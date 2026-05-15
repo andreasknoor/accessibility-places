@@ -150,7 +150,7 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
 
   const breadcrumbItems = [
     { label: "Accessible Places", href: homeUrl },
-    { label: cityName,            href: `${prefix}/${city.slug}/restaurant` },
+    { label: cityName,            href: `${homeUrl}?q=${encodeURIComponent(cityName)}` },
     { label: catLabel,            href: null },
   ]
 
@@ -190,7 +190,7 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
       "@type":    "BreadcrumbList",
       "itemListElement": [
         { "@type": "ListItem", "position": 1, "name": "Accessible Places", "item": `${BASE}${homeUrl}` },
-        { "@type": "ListItem", "position": 2, "name": cityName,            "item": `${BASE}${prefix}/${city.slug}/restaurant` },
+        { "@type": "ListItem", "position": 2, "name": cityName,            "item": `${BASE}${homeUrl}?q=${encodeURIComponent(cityName)}` },
         { "@type": "ListItem", "position": 3, "name": catLabel,            "item": canonicalUrl },
       ],
     },
