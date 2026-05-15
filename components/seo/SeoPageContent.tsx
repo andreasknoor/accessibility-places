@@ -1,6 +1,6 @@
 import Link from "next/link"
 import type { Place, A11yValue, EntranceDetails, ToiletDetails } from "@/lib/types"
-import { CITIES, SEO_CATEGORY_LABEL, SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_TO_SLUG, type City } from "@/lib/cities"
+import { CITIES, SEO_CATEGORY_LABEL, SEO_CATEGORY_TO_CHIP_IDX, type City } from "@/lib/cities"
 import { confidenceLabel } from "@/lib/matching/merge"
 import { hasData } from "@/lib/seo-validity"
 import NavigationProgress from "@/components/seo/NavigationProgress"
@@ -201,8 +201,8 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
     : `Wheelchair-accessible ${catLabel} in ${cityName}`
 
   const intro = locale === "de"
-    ? `Hier findest du rollstuhlgerechte ${catLabel} in ${cityName} – mit verifizierten Barrierefreiheits-Daten von OpenStreetMap, accessibility.cloud und weiteren Quellen. Alle Einträge zeigen Eingang, Toilette und Parkplatz-Informationen.`
-    : `Find wheelchair-accessible ${catLabel} in ${cityName} – with verified accessibility data from OpenStreetMap, accessibility.cloud and more. Every entry shows entrance, toilet and parking information.`
+    ? `Hier findest du rollstuhlgerechte ${catLabel} in ${cityName} – mit verifizierten Barrierefreiheits-Daten von OpenStreetMap, accessibility.cloud und weiteren Quellen. Alle Einträge zeigen Eingang- und Toiletten-Informationen.`
+    : `Find wheelchair-accessible ${catLabel} in ${cityName} – with verified accessibility data from OpenStreetMap, accessibility.cloud and more. Every entry shows entrance and toilet information.`
 
   const relatedCategoriesLabel = locale === "de" ? `Weitere Kategorien in ${cityName}` : `More categories in ${cityName}`
   const relatedCitiesLabel     = locale === "de" ? `${catLabel} in anderen Städten`     : `${catLabel} in other cities`
