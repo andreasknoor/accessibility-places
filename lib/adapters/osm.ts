@@ -77,9 +77,10 @@ export function buildOverpassQuery(params: SearchParams): string {
 
   if (clauses.length === 0) return ""
 
-  // Server timeout 12 s: fail fast so the parallel endpoint race can
-  // declare a winner before the global client timeout fires.
-  return `[out:json][timeout:12];(${clauses.join("")});out 200 center tags;`
+  // timeout:12 — fail fast so the parallel endpoint race can declare a winner.
+  // maxsize:67108864 — 64 MB cap signals low RAM demand; raises acceptance
+  // probability when the server is under high load (default assumption: 512 MB).
+  return `[out:json][timeout:12][maxsize:67108864];(${clauses.join("")});out 200 center tags;`
 }
 
 // ─── OSM tag → A11yValue mapping ──────────────────────────────────────────
@@ -292,7 +293,7 @@ export async function fetchOsm(params: SearchParams): Promise<Place[]> {
 
   const headers = {
     "Content-Type": "application/x-www-form-urlencoded",
-    "User-Agent":   "AccessibleSpaces/1.0 (accessibility search app)",
+    "User-Agent":   "AccessibleSpaces/1.0 (accessibility search; mailto:andreas.knoor@gmail.com)",
   }
   const body = `data=${encodeURIComponent(query)}`
 
@@ -371,7 +372,7 @@ export async function fetchOsmDisabledParking(
 
   const headers = {
     "Content-Type": "application/x-www-form-urlencoded",
-    "User-Agent":   "AccessibleSpaces/1.0 (accessibility search app)",
+    "User-Agent":   "AccessibleSpaces/1.0 (accessibility search; mailto:andreas.knoor@gmail.com)",
   }
   const body = `data=${encodeURIComponent(query)}`
 
