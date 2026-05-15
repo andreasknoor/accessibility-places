@@ -1,9 +1,15 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi } from "vitest"
 import { render, screen } from "@testing-library/react"
 import SeoPageContent from "@/components/seo/SeoPageContent"
 import { buildAttribute } from "@/lib/matching/merge"
 import { CITIES, SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_LABEL } from "@/lib/cities"
 import type { Place } from "@/lib/types"
+
+// Validity data changes with every cron run — mock it so tests stay stable.
+vi.mock("@/lib/seo-validity", () => ({
+  hasData: () => true,
+  VALID_SEO_PATHS: new Set<string>(),
+}))
 
 const BERLIN = CITIES.find((c) => c.slug === "berlin")!
 
