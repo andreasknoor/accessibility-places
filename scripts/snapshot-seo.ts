@@ -15,7 +15,7 @@
  *   GINTO_API_KEY                  — optional, source skipped if absent
  */
 
-import { put } from "@vercel/blob"
+import { put, head } from "@vercel/blob"
 import { CITIES, SEO_CATEGORY_SLUGS } from "../lib/cities"
 import { fetchPlacesForSeoPage }      from "../lib/seo-search"
 import type { Category }              from "../lib/types"
@@ -44,10 +44,24 @@ const tasks: Task[] = CITIES.flatMap((city) =>
 let done   = 0
 let failed = 0
 
+async function hasExistingData(path: string): Promise<boolean> {
+  try {
+    const blob = await head(path, { token: process.env.BLOB_READ_WRITE_TOKEN })
+    return blob.size > 2  // [] is 2 bytes
+  } catch {
+    return false
+  }
+}
+
 async function snapshotOne(task: Task): Promise<void> {
   const path = `seo/${task.citySlug}/${task.categorySlug}.json`
   try {
     const places = await fetchPlacesForSeoPage(task.lat, task.lon, task.category)
+    if (places.length === 0 && await hasExistingData(path)) {
+      process.stdout.write(`  skip ${path}  (0 places — keeping existing data)\n`)
+      done++
+      return
+    }
     await put(path, JSON.stringify(places), {
       access:              "private",
       allowOverwrite:      true,
