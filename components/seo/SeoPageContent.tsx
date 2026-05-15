@@ -91,7 +91,11 @@ function SeoPlaceCard({ place, locale, searchBaseUrl }: { place: Place; locale: 
   ].filter(Boolean).join(", ")
 
   const placeUrl = `${searchBaseUrl}&selectLat=${place.coordinates.lat}&selectLon=${place.coordinates.lon}&selectName=${encodeURIComponent(place.name)}`
-  const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${place.coordinates.lat},${place.coordinates.lon}`
+  const gmapsQuery = encodeURIComponent([place.name, place.address.city].filter(Boolean).join(" "))
+  const gPlacesId  = place.sourceRecords.find((r) => r.sourceId === "google_places")?.externalId
+  const gmapsUrl   = gPlacesId
+    ? `https://www.google.com/maps/search/?api=1&query=${gmapsQuery}&query_place_id=${gPlacesId}`
+    : `https://www.google.com/maps/search/?api=1&query=${gmapsQuery}`
 
   const openInAppLabel = locale === "de" ? "In App öffnen →" : "Open in app →"
 
