@@ -3,6 +3,7 @@ import type { Place, A11yValue, EntranceDetails, ToiletDetails } from "@/lib/typ
 import { CITIES, SEO_CATEGORY_LABEL, SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_TO_SLUG, type City } from "@/lib/cities"
 import { confidenceLabel } from "@/lib/matching/merge"
 import { hasData } from "@/lib/seo-validity"
+import NavigationProgress from "@/components/seo/NavigationProgress"
 
 const BASE = "https://accessible-places.org"
 
@@ -251,6 +252,7 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
 
   return (
     <>
+      <NavigationProgress />
       {structuredData.map((block, i) => (
         <script
           key={i}
