@@ -16,8 +16,8 @@ import { existsSync, readFileSync, writeFileSync, renameSync, mkdirSync } from "
 import { join }                        from "path"
 
 const VALIDITY_PATH = join(process.cwd(), "lib/generated/seo-validity.json")
-const CONCURRENCY   = 5
-const DELAY_MS      = 500
+const CONCURRENCY   = 2
+const DELAY_MS      = 2000
 
 async function main() {
   const existing: Record<string, boolean> = existsSync(VALIDITY_PATH)
@@ -43,9 +43,9 @@ async function main() {
         const hasData = places.length > 0
         if (existing[key] === true && !hasData) {
           // Previously confirmed but now returns 0 results. Could be a transient
-          // Overpass gap, not a genuine category closure. Keep true to avoid
-          // removing confirmed pages from the sitemap on a bad day.
-          console.warn(`  ⚠ ${key}: was confirmed, now 0 places — keeping true (transient gap?)`)
+          // Overpass timeout (safeRun swallows ETIMEDOUT and returns []). Keep true
+          // to avoid removing confirmed pages from the sitemap on a bad day.
+          console.warn(`  ⚠ ${key}: was confirmed, now 0 places — keeping true (possible timeout)`)
         } else {
           updated[key] = hasData
         }
