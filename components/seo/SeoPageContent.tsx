@@ -97,6 +97,16 @@ function SeoPlaceCard({ place, locale, searchBaseUrl }: { place: Place; locale: 
     ? `https://www.google.com/maps/search/?api=1&query=${gmapsQuery}&query_place_id=${gPlacesId}`
     : `https://www.google.com/maps/search/?api=1&query=${gmapsQuery}`
 
+  const wheelmapUrl = (() => {
+    if (place.wheelmapUrl) return place.wheelmapUrl
+    const osm = place.sourceRecords.find((r) => r.sourceId === "osm")
+    if (osm) {
+      const [type, id] = osm.externalId.split("/")
+      if (type === "node" && id) return `https://wheelmap.org/nodes/${id}`
+    }
+    return `https://wheelmap.org/?lat=${place.coordinates.lat}&lon=${place.coordinates.lon}&zoom=19`
+  })()
+
   const openInAppLabel = locale === "de" ? "In App öffnen →" : "Open in app →"
 
   const entrance    = place.accessibility.entrance
@@ -158,11 +168,9 @@ function SeoPlaceCard({ place, locale, searchBaseUrl }: { place: Place; locale: 
 
       {/* External links — separate element, no nested <a> */}
       <div className="flex gap-3 px-4 py-2 border-t border-gray-100 flex-wrap">
-        {place.wheelmapUrl && (
-          <a href={place.wheelmapUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:underline">
-            Wheelmap
-          </a>
-        )}
+        <a href={wheelmapUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:underline">
+          Wheelmap
+        </a>
         <a href={gmapsUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:underline">
           Google Maps
         </a>
