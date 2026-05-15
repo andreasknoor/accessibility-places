@@ -23,18 +23,6 @@ const FILTERS_STRICT: SearchFilters = {
   acceptUnknown: false,
 }
 
-// Fallback filter used when strict yields fewer than MIN_RESULTS places.
-const FILTERS_ENTRANCE: SearchFilters = {
-  entrance:      true,
-  toilet:        false,
-  parking:       false,
-  seating:       false,
-  onlyVerified:  false,
-  acceptUnknown: false,
-}
-
-const MIN_RESULTS = 5
-
 const SEO_SOURCES: SearchParams["sources"] = {
   osm:                 true,
   accessibility_cloud: true,
@@ -71,13 +59,10 @@ export async function fetchPlacesForSeoPage(
   }
 
   const base = canonical.filter((p) => !p.dogPolicyOnly && p.category === category)
-
-  const strict = base.filter((p) => passesFilters(p, FILTERS_STRICT))
-  const activeFilters = strict.length >= MIN_RESULTS ? FILTERS_STRICT : FILTERS_ENTRANCE
-  const filtered = activeFilters === FILTERS_STRICT ? strict : base.filter((p) => passesFilters(p, FILTERS_ENTRANCE))
+  const filtered = base.filter((p) => passesFilters(p, FILTERS_STRICT))
 
   return filtered
-    .map((p) => ({ ...p, overallConfidence: computeFilteredConfidence(p, activeFilters) }))
+    .map((p) => ({ ...p, overallConfidence: computeFilteredConfidence(p, FILTERS_STRICT) }))
     .sort((a, b) => b.overallConfidence - a.overallConfidence)
     .slice(0, 25)
 }
