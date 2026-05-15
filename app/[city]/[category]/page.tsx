@@ -1,6 +1,6 @@
 import { notFound }      from "next/navigation"
 import type { Metadata } from "next"
-import { CITIES, CITY_MAP, SEO_CATEGORY_SLUGS, SEO_CATEGORY_LABEL } from "@/lib/cities"
+import { CITY_MAP, SEO_CATEGORY_SLUGS, SEO_CATEGORY_LABEL, type CitySlug } from "@/lib/cities"
 import { fetchPlacesForSeoPage } from "@/lib/seo-search"
 import SeoPageContent    from "@/components/seo/SeoPageContent"
 
@@ -14,7 +14,7 @@ export function generateStaticParams() { return [] }
 type Params = { city: string; category: string }
 
 function resolve(params: Params) {
-  const city     = CITY_MAP.get(params.city as never)
+  const city     = CITY_MAP.get(params.city as CitySlug)
   const category = SEO_CATEGORY_SLUGS[params.category]
   return { city, category }
 }
@@ -52,7 +52,13 @@ export default async function CityPage({ params }: { params: Promise<Params> }) 
 
   const { city, category } = resolved
   const slug   = Object.keys(SEO_CATEGORY_SLUGS).find((k) => SEO_CATEGORY_SLUGS[k] === category)!
-  const places = await fetchPlacesForSeoPage(city.lat, city.lon, category).catch(() => [])
+  let places
+  try {
+    places = await fetchPlacesForSeoPage(city.lat, city.lon, category)
+  } catch (err) {
+    console.error(`[seo] fetch failed for ${city.slug}/${slug}:`, err)
+    throw err  // let Next.js serve the stale ISR cache instead of caching an empty page
+  }
 
   return <SeoPageContent locale="de" city={city} categorySlug={slug} places={places} />
 }

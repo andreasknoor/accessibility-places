@@ -161,7 +161,7 @@ function SeoPlaceCard({ place, locale, searchBaseUrl }: { place: Place; locale: 
         <a href={gmapsUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:underline">
           Google Maps
         </a>
-        {place.website && (
+        {place.website && /^https?:\/\//i.test(place.website) && (
           <a href={place.website} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:underline">
             Website
           </a>
@@ -197,6 +197,9 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
   const noResultsLabel         = locale === "de" ? "Aktuell sind keine Einträge verfügbar." : "No entries available at this time."
   const sourceLabel            = locale === "de" ? "Datenquelle:" : "Source:"
   const backLabel              = locale === "de" ? "← Zur Suche" : "← Back to search"
+
+  const relatedCategories = Object.entries(SEO_CATEGORY_LABEL)
+    .filter(([slug]) => slug !== categorySlug && slug in SEO_CATEGORY_TO_CHIP_IDX && hasData(city.slug, slug))
 
   const breadcrumbItems = [
     { label: "Accessible Places", href: homeUrl },
@@ -252,7 +255,7 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
         <script
           key={i}
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(block) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(block).replace(/</g, "\\u003c") }}
         />
       ))}
 
@@ -316,12 +319,11 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
           </p>
 
           {/* Related categories */}
-          <section className="mt-12">
-            <h2 className="text-base font-semibold text-gray-700 mb-3">{relatedCategoriesLabel}</h2>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(SEO_CATEGORY_LABEL)
-                .filter(([slug]) => slug !== categorySlug && slug in SEO_CATEGORY_TO_CHIP_IDX && hasData(city.slug, slug))
-                .map(([slug, labels]) => (
+          {relatedCategories.length > 0 && (
+            <section className="mt-12">
+              <h2 className="text-base font-semibold text-gray-700 mb-3">{relatedCategoriesLabel}</h2>
+              <div className="flex flex-wrap gap-2">
+                {relatedCategories.map(([slug, labels]) => (
                   <Link
                     key={slug}
                     href={`${prefix}/${city.slug}/${slug}`}
@@ -330,24 +332,27 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
                     {labels[locale]}
                   </Link>
                 ))}
-            </div>
-          </section>
+              </div>
+            </section>
+          )}
 
           {/* Related cities */}
-          <section className="mt-8 mb-12">
-            <h2 className="text-base font-semibold text-gray-700 mb-3">{relatedCitiesLabel}</h2>
-            <div className="flex flex-wrap gap-2">
-              {otherCities.map((c) => (
-                <Link
-                  key={c.slug}
-                  href={`${prefix}/${c.slug}/${categorySlug}`}
-                  className="text-sm px-3 py-1.5 rounded-full border border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:text-blue-700 transition-colors"
-                >
-                  {locale === "de" ? c.nameDe : c.nameEn}
-                </Link>
-              ))}
-            </div>
-          </section>
+          {otherCities.length > 0 && (
+            <section className="mt-8 mb-12">
+              <h2 className="text-base font-semibold text-gray-700 mb-3">{relatedCitiesLabel}</h2>
+              <div className="flex flex-wrap gap-2">
+                {otherCities.map((c) => (
+                  <Link
+                    key={c.slug}
+                    href={`${prefix}/${c.slug}/${categorySlug}`}
+                    className="text-sm px-3 py-1.5 rounded-full border border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:text-blue-700 transition-colors"
+                  >
+                    {locale === "de" ? c.nameDe : c.nameEn}
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
 
           <Link href={homeUrl} className="text-sm text-blue-600 hover:underline">{backLabel}</Link>
         </main>

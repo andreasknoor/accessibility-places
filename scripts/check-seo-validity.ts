@@ -2,15 +2,17 @@
  * Checks all city/category combinations and writes lib/generated/seo-validity.json.
  *
  * Safety rules:
- *   - A failed check never overwrites an existing `true` value (Overpass downtime
- *     cannot remove previously confirmed pages from the sitemap/links).
- *   - If < 50% of checks succeed the script exits without writing (full outage guard).
+ *   - A check returning 0 results never overwrites an existing `true` value — only a
+ *     check that actually finds places can confirm a new page. This protects against
+ *     transient Overpass gaps removing confirmed pages from the sitemap.
+ *   - If ≤ 50% of checks succeed the script exits without writing (full outage guard).
+ *   - The file is written atomically (write tmp → rename) to prevent corrupt reads.
  *   - The file is only written when the content actually changed.
  */
 
 import { CITIES, SEO_CATEGORY_SLUGS } from "../lib/cities"
 import { fetchPlacesForSeoPage }       from "../lib/seo-search"
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs"
+import { existsSync, readFileSync, writeFileSync, renameSync, mkdirSync } from "fs"
 import { join }                        from "path"
 
 const VALIDITY_PATH = join(process.cwd(), "lib/generated/seo-validity.json")
@@ -40,11 +42,10 @@ async function main() {
         const places = await fetchPlacesForSeoPage(city.lat, city.lon, category)
         const hasData = places.length > 0
         if (existing[key] === true && !hasData) {
-          // Previously had data but now empty — only update if we're confident
-          // (could be a transient Overpass gap). We still update false→false
-          // and undefined→false here; the guard is for true→false flips.
-          // Comment out the next line to be more conservative (never flip true→false).
-          updated[key] = false
+          // Previously confirmed but now returns 0 results. Could be a transient
+          // Overpass gap, not a genuine category closure. Keep true to avoid
+          // removing confirmed pages from the sitemap on a bad day.
+          console.warn(`  ⚠ ${key}: was confirmed, now 0 places — keeping true (transient gap?)`)
         } else {
           updated[key] = hasData
         }
@@ -68,7 +69,7 @@ async function main() {
   }
 
   const total = combos.length
-  if (successCount < total * 0.5) {
+  if (successCount <= total * 0.5) {
     console.error(`\nAbort: only ${successCount}/${total} checks succeeded (< 50%). File not written.`)
     process.exit(1)
   }
@@ -82,7 +83,9 @@ async function main() {
     return
   }
 
-  writeFileSync(VALIDITY_PATH, newContent)
+  const tmpPath = VALIDITY_PATH + ".tmp"
+  writeFileSync(tmpPath, newContent)
+  renameSync(tmpPath, VALIDITY_PATH)
   const trueCount  = Object.values(updated).filter(Boolean).length
   const falseCount = Object.values(updated).filter((v) => !v).length
   console.log(`\nWritten: ${trueCount} with data, ${falseCount} empty (${successCount} checked, ${failCount} failed)`)
