@@ -1,0 +1,38 @@
+name: Check SEO Validity
+
+on:
+  schedule:
+    - cron: "0 3 * * *"   # daily at 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Run validity check
+        run: npx tsx scripts/check-seo-validity.ts
+        env:
+          ACCESSIBILITY_CLOUD_API_KEY: ${{ secrets.ACCESSIBILITY_CLOUD_API_KEY }}
+          REISEN_FUER_ALLE_API_KEY:    ${{ secrets.REISEN_FUER_ALLE_API_KEY }}
+          REISEN_FUER_ALLE_API_BASE:   ${{ secrets.REISEN_FUER_ALLE_API_BASE }}
+          GINTO_API_KEY:               ${{ secrets.GINTO_API_KEY }}
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add lib/generated/seo-validity.json
+          git diff --staged --quiet || git commit -m "chore(seo): update validity data [skip ci]"
+          git push

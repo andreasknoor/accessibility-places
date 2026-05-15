@@ -14,6 +14,9 @@ npm run test:watch   # watch mode
 
 # Run a single test file
 npx vitest run __tests__/lib/llm.test.ts
+
+# Update SEO validity data (which city/category combos have actual data)
+npm run check:seo
 ```
 
 **Always run `npm test` before committing or pushing.** No check-ins without a full test run.
@@ -140,10 +143,13 @@ ISR landing pages for 32 DACH cities × 10 categories × 2 locales = **640 pages
 `fetchPlacesForSeoPage(lat, lon, category, radiusKm=5)` calls `fetchAllSources` directly (no HTTP round-trip). Fetches with all filters off (`acceptUnknown: true`) and `SEO_SOURCES` (excludes Google Places). After merging, always applies `FILTERS_STRICT` (entrance=true, toilet=true, acceptUnknown=false). Recomputes `computeFilteredConfidence` using these filters, sorts descending, returns top 25.
 
 **Rendering — `components/seo/SeoPageContent.tsx`:**
-Server component shared by DE and EN routes. Includes Schema.org `ItemList` + `BreadcrumbList` JSON-LD, hreflang language switcher, related categories (chip-backed only — `SEO_CATEGORY_TO_CHIP_IDX !== undefined`), and related cities. The confidence badge format matches the main app exactly: `"X% · Verlässlich/Mittel/Unsicher"` via `confidenceLabel()` from `merge.ts`. Source attribution names the active adapters (`"OpenStreetMap, accessibility.cloud, Ginto (CH)"`) — exclude adapters that require keys absent in the deployment.
+Server component shared by DE and EN routes. Includes Schema.org `ItemList` + `BreadcrumbList` JSON-LD, hreflang language switcher, related categories (chip-backed only — `SEO_CATEGORY_TO_CHIP_IDX !== undefined` — and filtered by `hasData`), and related cities (filtered by `hasData`). The confidence badge format matches the main app exactly: `"X% · Verlässlich/Mittel/Unsicher"` via `confidenceLabel()` from `merge.ts`. Source attribution names the active adapters (`"OpenStreetMap, accessibility.cloud, Ginto (CH)"`) — exclude adapters that require keys absent in the deployment.
+
+**Validity data — `lib/generated/seo-validity.json` + `lib/seo-validity.ts`:**
+A 320-entry JSON file (`citySlug/categorySlug → boolean`) that records which combinations actually have accessible places. Updated by `npm run check:seo` (or the daily GitHub Actions cron `.github/workflows/check-seo-validity.yml`). Safety rules: failed checks never overwrite an existing `true` (Overpass downtime cannot remove confirmed pages); the file is not written if < 50% of checks succeed. `hasData(citySlug, categorySlug)` defaults to `true` for unknown combos (conservative). `VALID_SEO_PATHS` is a `Set<string>` used by both the sitemap and `SeoPageContent`.
 
 **Sitemap — `app/sitemap.ts`:**
-Generates entries dynamically from `CITIES` and `SEO_CATEGORY_SLUGS`. Adding a city to `CITIES` (and `CitySlug`) automatically adds it to the sitemap — no other change needed.
+Filters SEO pages through `VALID_SEO_PATHS` — only confirmed combos appear in the sitemap. Adding a city to `CITIES` (and `CitySlug`) automatically includes it once the validity cron runs.
 
 **Deep-link flow (SEO page → main app):**
 Each place card on an SEO page links to:

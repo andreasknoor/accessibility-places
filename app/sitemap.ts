@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next"
 import { CITIES, SEO_CATEGORY_SLUGS } from "@/lib/cities"
+import { VALID_SEO_PATHS } from "@/lib/seo-validity"
 
 const BASE = "https://accessible-places.org"
 
@@ -14,10 +15,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
   ]
 
   const seoPages: MetadataRoute.Sitemap = CITIES.flatMap((city) =>
-    Object.keys(SEO_CATEGORY_SLUGS).flatMap((category) => [
-      { url: `${BASE}/${city.slug}/${category}`,    lastModified: new Date(), changeFrequency: "weekly" as const, priority: 0.7 },
-      { url: `${BASE}/en/${city.slug}/${category}`, lastModified: new Date(), changeFrequency: "weekly" as const, priority: 0.7 },
-    ]),
+    Object.keys(SEO_CATEGORY_SLUGS)
+      .filter((category) => VALID_SEO_PATHS.has(`${city.slug}/${category}`))
+      .flatMap((category) => [
+        { url: `${BASE}/${city.slug}/${category}`,    lastModified: new Date(), changeFrequency: "weekly" as const, priority: 0.7 },
+        { url: `${BASE}/en/${city.slug}/${category}`, lastModified: new Date(), changeFrequency: "weekly" as const, priority: 0.7 },
+      ]),
   )
 
   return [...staticPages, ...seoPages]
