@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "prepare": "git config core.hooksPath .githooks || true",
-    "snapshot:seo": "npx tsx scripts/snapshot-seo.ts"
+    "snapshot:seo": "npx tsx scripts/snapshot-seo.ts",
+    "rebuild:seo":  "npx tsx scripts/rebuild-seo.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
