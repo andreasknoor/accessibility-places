@@ -1,8 +1,6 @@
 name: Snapshot SEO Data
 
 on:
-  schedule:
-    - cron: '0 3 * * 0'  # Every Sunday at 03:00 UTC
   workflow_dispatch:       # Manual trigger from GitHub UI
 
 env:
