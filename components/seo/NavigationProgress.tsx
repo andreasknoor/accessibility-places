@@ -28,9 +28,14 @@ export default function NavigationProgress() {
   if (!pending) return null
 
   return (
-    <div
-      aria-hidden
-      className="fixed top-0 left-0 right-0 z-50 h-0.5 bg-blue-600 origin-left animate-pulse"
-    />
+    <div aria-hidden className="fixed top-0 left-0 right-0 z-50 h-1 bg-blue-100 overflow-hidden">
+      <div className="h-full bg-blue-600 absolute" style={{ width: "45%", animation: "nav-progress 1.2s ease-in-out infinite" }} />
+      <style>{`
+        @keyframes nav-progress {
+          0%   { left: -45%; }
+          100% { left: 145%; }
+        }
+      `}</style>
+    </div>
   )
 }
