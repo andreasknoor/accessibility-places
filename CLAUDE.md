@@ -14,9 +14,6 @@ npm run test:watch   # watch mode
 
 # Run a single test file
 npx vitest run __tests__/lib/llm.test.ts
-
-# SEO data snapshot (requires BLOB_READ_WRITE_TOKEN + adapter API keys)
-npm run snapshot:seo     # fetch live data for all 640 pages, write Place[] JSON to Vercel Blob
 ```
 
 **Always run `npm test` before committing or pushing.** No check-ins without a full test run.
@@ -129,12 +126,12 @@ In production, `raw` adapter response data is stripped from `sourceRecords` befo
 
 ### Local SEO pages (`app/[city]/[category]/` and `app/en/[city]/[category]/`)
 
-Static landing pages for 32 DACH cities × 10 categories × 2 locales = **640 pages** total. Pages are **fully static** (`export const dynamicParams = false`) — generated at build time from Vercel Blob snapshots. `generateStaticParams` pre-renders all combinations; unknown slugs return 404. No ISR.
+ISR landing pages for 32 DACH cities × 10 categories × 2 locales = **640 pages** total. `generateStaticParams` pre-renders all combinations at build time; `dynamicParams = false` returns 404 for unknown slugs. The DE route uses `export const revalidate = 432000` (5 days); the EN route uses `Math.round(5.5 * 24 * 3600)` (5.5 days) to stagger revalidation across locales. Data is fetched live at render time via `fetchPlacesForSeoPage(...).catch(() => [])` — if the fetch fails the page renders with an empty list rather than erroring, and the ISR stale copy is served until the next successful revalidation.
 
 **City/category configuration — `lib/cities.ts`:**
 - `CITIES` — 32 cities with slug, nameDe, nameEn, country, lat, lon. `CitySlug` union type must be kept in sync with this array.
 - `SEO_CATEGORY_SLUGS` — URL slug → `Category` type (e.g. `"fast-food"` → `"fast_food"`). `SEO_CATEGORY_TO_SLUG` is the reverse.
-- `SEO_CATEGORY_TO_CHIP_IDX` — slug → CHIPS array index in ChatPanel (8 categories have chips; the rest get `undefined`). The "Related categories" section on SEO pages **only shows chip-backed categories** — both for UX consistency and because those categories have a pre-select chip when the user lands on the main app.
+- `SEO_CATEGORY_TO_CHIP_IDX` — slug → CHIPS array index in ChatPanel (all 10 SEO categories have a chip equivalent). The "Related categories" section on SEO pages **only shows chip-backed categories** — both for UX consistency and because those categories have a pre-select chip when the user lands on the main app.
 - `SEO_CATEGORY_QUERY_TERM` — slug → `{ de, en }` query string recognisable by `parseQuery()`. Used for the auto-search trigger on the home page.
 - `SEO_CATEGORY_LABEL` — plural display labels used in page headings and navigation chips.
 - `CITY_MAP` — `Map<CitySlug, City>` for O(1) lookup in page routes.
@@ -147,9 +144,6 @@ Server component shared by DE and EN routes. Includes Schema.org `ItemList` + `B
 
 **Sitemap — `app/sitemap.ts`:**
 Generates entries dynamically from `CITIES` and `SEO_CATEGORY_SLUGS`. Adding a city to `CITIES` (and `CitySlug`) automatically adds it to the sitemap — no other change needed.
-
-**Snapshot pipeline — `scripts/snapshot-seo.ts` + `lib/seo-blob.ts`:**
-`snapshot:seo` calls `fetchPlacesForSeoPage` for every city/category combination and writes `Place[]` as JSON to Vercel Blob at `seo/{citySlug}/{categorySlug}.json` (public, 1-week CDN cache, `allowOverwrite: true`). At build time, `lib/seo-blob.ts` calls `list({ prefix: 'seo/' })` once, caches the URL map in module scope, then each page fetches its blob URL. To update SEO content: run `npm run snapshot:seo` (or let the weekly GitHub Actions cron do it), then trigger a new Vercel deployment. The snapshot workflow (`.github/workflows/snapshot-seo.yml`) runs every Sunday at 03:00 UTC and can be triggered manually via `workflow_dispatch`.
 
 **Deep-link flow (SEO page → main app):**
 Each place card on an SEO page links to:
@@ -174,7 +168,6 @@ Each place card on an SEO page links to:
 - `GOOGLE_PLACES_API_KEY` — optional; source is silently skipped if absent
 - `ENABLE_NEARBY_PARKING=1` — feature flag; enables the optional disabled-parking enrichment fetch (off by default)
 - `GINTO_API_KEY` — optional; Ginto GraphQL API (Swiss accessibility data, CH only). Contact support@ginto.guide. Source silently skipped if absent.
-- `BLOB_READ_WRITE_TOKEN` — auto-provisioned by Vercel when the Blob store is linked. Required at build time (to list snapshot URLs) and for `npm run snapshot:seo`. Add to GitHub Actions secrets for the snapshot workflow.
 - `HEALTH_CHECK_SECRET` — required to activate `GET /api/health`; requests without a matching `?token=` get 401. If unset the endpoint returns 503.
 
 ## Tests
