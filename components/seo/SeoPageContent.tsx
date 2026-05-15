@@ -1,5 +1,5 @@
 import Link from "next/link"
-import type { Place, A11yValue } from "@/lib/types"
+import type { Place, A11yValue, EntranceDetails, ToiletDetails } from "@/lib/types"
 import { CITIES, SEO_CATEGORY_LABEL, SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_TO_SLUG, type City } from "@/lib/cities"
 import { confidenceLabel } from "@/lib/matching/merge"
 import { hasData } from "@/lib/seo-validity"
@@ -35,6 +35,38 @@ function a11yLabel(value: A11yValue, locale: Locale) {
   return VALUE_LABEL[value][locale]
 }
 
+// ─── Detail item builders ────────────────────────────────────────────────────
+
+function entranceDetailItems(d: EntranceDetails, locale: Locale): string[] {
+  const de = locale === "de"
+  const items: string[] = []
+  if (d.isLevel === true)              items.push(de ? "Ebenerdig"           : "Level access")
+  if (d.isLevel === false)             items.push(de ? "Stufe(n)"            : "Steps present")
+  if (d.hasRamp)                       items.push(de ? "Rampe"               : "Ramp")
+  if (d.rampSlopePercent !== undefined) items.push(de ? `Neigung: ${d.rampSlopePercent}%` : `Slope: ${d.rampSlopePercent}%`)
+  if (d.doorWidthCm      !== undefined) items.push(de ? `Türbreite: ${d.doorWidthCm} cm`  : `Door: ${d.doorWidthCm} cm`)
+  if (d.stepCount        !== undefined && d.stepCount > 0)
+                                        items.push(de ? `${d.stepCount} Stufe${d.stepCount !== 1 ? "n" : ""}` : `${d.stepCount} step${d.stepCount !== 1 ? "s" : ""}`)
+  if (d.stepHeightCm     !== undefined) items.push(de ? `Stufenhöhe: ${d.stepHeightCm} cm` : `Step height: ${d.stepHeightCm} cm`)
+  if (d.hasAutomaticDoor)              items.push(de ? "Automatische Tür"    : "Automatic door")
+  if (d.hasHoist)                      items.push(de ? "Hebebühne"           : "Hoist/lift")
+  if (d.description)                   items.push(d.description)
+  return items
+}
+
+function toiletDetailItems(d: ToiletDetails, locale: Locale): string[] {
+  const de = locale === "de"
+  const items: string[] = []
+  if (d.isDesignated)                   items.push(de ? "Rollstuhl-WC"           : "Wheelchair toilet")
+  if (d.hasGrabBars)                    items.push(de ? "Haltegriffe"            : "Grab bars")
+  if (d.grabBarsOnBothSides)            items.push(de ? "Beidseitige Haltegriffe" : "Grab bars both sides")
+  if (d.turningRadiusCm !== undefined)  items.push(de ? `Wendekreis: ${d.turningRadiusCm} cm` : `Turning radius: ${d.turningRadiusCm} cm`)
+  if (d.doorWidthCm     !== undefined)  items.push(de ? `Türbreite: ${d.doorWidthCm} cm`      : `Door: ${d.doorWidthCm} cm`)
+  if (d.isInside === true)              items.push(de ? "WC im Gebäude"          : "Inside venue")
+  if (d.hasEmergencyPullstring)         items.push(de ? "Notrufzug"              : "Emergency cord")
+  return items
+}
+
 // ─── Confidence badge ────────────────────────────────────────────────────────
 
 const CONFIDENCE_COLORS: Record<"high" | "medium" | "low", string> = {
@@ -60,10 +92,16 @@ function SeoPlaceCard({ place, locale, searchBaseUrl }: { place: Place; locale: 
   const placeUrl = `${searchBaseUrl}&selectLat=${place.coordinates.lat}&selectLon=${place.coordinates.lon}&selectName=${encodeURIComponent(place.name)}`
   const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${place.coordinates.lat},${place.coordinates.lon}`
 
-  const criteriaLabel = locale === "de"
-    ? { entrance: "Eingang", toilet: "Toilette", parking: "Parkplatz" }
-    : { entrance: "Entrance", toilet: "Toilet",  parking: "Parking" }
   const openInAppLabel = locale === "de" ? "In App öffnen →" : "Open in app →"
+
+  const entrance    = place.accessibility.entrance
+  const toilet      = place.accessibility.toilet
+  const entrItems   = entrance?.details ? entranceDetailItems(entrance.details as EntranceDetails, locale) : []
+  const toiletItems = toilet?.details   ? toiletDetailItems(toilet.details     as ToiletDetails,  locale) : []
+
+  const criteriaLabel = locale === "de"
+    ? { entrance: "Eingang", toilet: "Toilette" }
+    : { entrance: "Entrance", toilet: "Toilet"  }
 
   return (
     <article className="rounded-lg border border-gray-200 bg-white shadow-sm flex flex-col overflow-hidden">
@@ -86,18 +124,29 @@ function SeoPlaceCard({ place, locale, searchBaseUrl }: { place: Place; locale: 
 
         {addr && <p className="text-xs text-gray-500">{addr}</p>}
 
-        <dl className="flex flex-wrap gap-1.5">
-          {(["entrance", "toilet", "parking"] as const).map((key) => {
-            const attr = place.accessibility[key]
+        <div className="flex flex-col gap-1.5">
+          {([
+            { key: "entrance" as const, attr: entrance, items: entrItems   },
+            { key: "toilet"   as const, attr: toilet,   items: toiletItems },
+          ]).map(({ key, attr, items }) => {
             if (!attr) return null
             return (
-              <div key={key} className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${VALUE_CLASSES[attr.value]}`}>
-                <dt className="font-medium">{criteriaLabel[key]}:</dt>
-                <dd>{a11yLabel(attr.value, locale)}</dd>
+              <div key={key}>
+                <div className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${VALUE_CLASSES[attr.value]}`}>
+                  <span className="font-medium">{criteriaLabel[key]}:</span>
+                  <span>{a11yLabel(attr.value, locale)}</span>
+                </div>
+                {items.length > 0 && (
+                  <ul className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0">
+                    {items.map((item, i) => (
+                      <li key={i} className="text-xs text-gray-500">· {item}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
             )
           })}
-        </dl>
+        </div>
 
         <span className="text-xs text-blue-600 mt-1">{openInAppLabel}</span>
       </Link>
