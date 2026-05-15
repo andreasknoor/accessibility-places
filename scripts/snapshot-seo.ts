@@ -5,7 +5,7 @@
  *
  * Usage:
  *   npm run snapshot:seo
- *   SNAPSHOT_CONCURRENCY=8 npm run snapshot:seo
+ *   SNAPSHOT_CONCURRENCY=2 npm run snapshot:seo
  *
  * Required env vars:
  *   BLOB_READ_WRITE_TOKEN          — Vercel Blob write access
@@ -20,8 +20,9 @@ import { CITIES, SEO_CATEGORY_SLUGS } from "../lib/cities"
 import { fetchPlacesForSeoPage }      from "../lib/seo-search"
 import type { Category }              from "../lib/types"
 
-const CONCURRENCY = Number(process.env.SNAPSHOT_CONCURRENCY ?? 5)
-const DELAY_MS    = Number(process.env.SNAPSHOT_DELAY_MS    ?? 500)
+const CONCURRENCY   = Number(process.env.SNAPSHOT_CONCURRENCY ?? 2)
+const DELAY_MS      = Number(process.env.SNAPSHOT_DELAY_MS    ?? 1000)
+const RETRY_WAIT_MS = 30_000
 
 interface Task {
   citySlug:     string
@@ -30,6 +31,12 @@ interface Task {
   lat:          number
   lon:          number
 }
+
+// "written"  — blob written with ≥1 place
+// "empty"    — blob written with 0 places and no prior data → retry candidate
+// "skip"     — 0 places but prior data exists → kept as-is
+// "error"    — fetch or write threw
+type SnapshotResult = "written" | "empty" | "skip" | "error"
 
 const tasks: Task[] = CITIES.flatMap((city) =>
   Object.entries(SEO_CATEGORY_SLUGS).map(([slug, category]) => ({
@@ -53,14 +60,14 @@ async function hasExistingData(path: string): Promise<boolean> {
   }
 }
 
-async function snapshotOne(task: Task): Promise<void> {
+async function snapshotOne(task: Task, isRetry = false): Promise<SnapshotResult> {
   const path = `seo/${task.citySlug}/${task.categorySlug}.json`
   try {
     const places = await fetchPlacesForSeoPage(task.lat, task.lon, task.category)
     if (places.length === 0 && await hasExistingData(path)) {
       process.stdout.write(`  skip ${path}  (0 places — keeping existing data)\n`)
       done++
-      return
+      return "skip"
     }
     await put(path, JSON.stringify(places), {
       access:              "private",
@@ -69,11 +76,31 @@ async function snapshotOne(task: Task): Promise<void> {
       cacheControlMaxAge:  60 * 60 * 24 * 7,
     })
     done++
-    process.stdout.write(`  ok   ${path}  (${places.length} places)\n`)
+    const label = isRetry ? "retry" : "ok   "
+    process.stdout.write(`  ${label} ${path}  (${places.length} places)\n`)
+    return places.length > 0 ? "written" : "empty"
   } catch (err) {
     failed++
     process.stderr.write(`  err  ${path}: ${err}\n`)
+    return "error"
   }
+}
+
+async function runBatches(taskList: Task[], isRetry = false): Promise<Task[]> {
+  const retryQueue: Task[] = []
+  for (let i = 0; i < taskList.length; i += CONCURRENCY) {
+    const batch = taskList.slice(i, i + CONCURRENCY)
+    const results = await Promise.all(batch.map((t) => snapshotOne(t, isRetry)))
+    if (!isRetry) {
+      batch.forEach((t, idx) => {
+        if (results[idx] === "empty") retryQueue.push(t)
+      })
+    }
+    if (i + CONCURRENCY < taskList.length) {
+      await new Promise((r) => setTimeout(r, DELAY_MS))
+    }
+  }
+  return retryQueue
 }
 
 async function main() {
@@ -84,15 +111,16 @@ async function main() {
 
   console.log(`Snapshotting ${tasks.length} pages  (concurrency=${CONCURRENCY}, delay=${DELAY_MS}ms)\n`)
 
-  for (let i = 0; i < tasks.length; i += CONCURRENCY) {
-    const batch = tasks.slice(i, i + CONCURRENCY)
-    await Promise.all(batch.map(snapshotOne))
-    if (i + CONCURRENCY < tasks.length) {
-      await new Promise((r) => setTimeout(r, DELAY_MS))
-    }
+  const retryQueue = await runBatches(tasks)
+
+  if (retryQueue.length > 0) {
+    process.stdout.write(`\n↩  ${retryQueue.length} empty — waiting ${RETRY_WAIT_MS / 1000}s for Overpass to recover...\n\n`)
+    await new Promise((r) => setTimeout(r, RETRY_WAIT_MS))
+    done -= retryQueue.length  // these were already counted; re-count after retry
+    await runBatches(retryQueue, true)
   }
 
-  console.log(`\n― ${done + failed} processed: ${done} ok, ${failed} failed ―`)
+  console.log(`\n― ${tasks.length} processed: ${done} ok, ${failed} failed ―`)
   if (failed > 0) process.exit(1)
 }
 
