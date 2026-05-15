@@ -20,8 +20,8 @@ import { CITIES, SEO_CATEGORY_SLUGS } from "../lib/cities"
 import { fetchPlacesForSeoPage }      from "../lib/seo-search"
 import type { Category }              from "../lib/types"
 
-const CONCURRENCY   = Number(process.env.SNAPSHOT_CONCURRENCY ?? 2)
-const DELAY_MS      = Number(process.env.SNAPSHOT_DELAY_MS    ?? 1000)
+const CONCURRENCY   = Number(process.env.SNAPSHOT_CONCURRENCY ?? 5)
+const DELAY_MS      = Number(process.env.SNAPSHOT_DELAY_MS    ?? 500)
 const RETRY_WAIT_MS = 30_000
 
 interface Task {
