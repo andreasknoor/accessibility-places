@@ -2,7 +2,8 @@ import { notFound }      from "next/navigation"
 import type { Metadata } from "next"
 import { CITY_MAP, SEO_CATEGORY_SLUGS, SEO_CATEGORY_LABEL, type CitySlug } from "@/lib/cities"
 import { fetchPlacesForSeoPage } from "@/lib/seo-search"
-import SeoPageContent    from "@/components/seo/SeoPageContent"
+import { hasData }               from "@/lib/seo-validity"
+import SeoPageContent            from "@/components/seo/SeoPageContent"
 
 // ISR: 5-day revalidation. generateStaticParams returns [] so no pages are
 // pre-rendered at build time — all 320 routes render lazily on first request.
@@ -59,6 +60,8 @@ export default async function CityPage({ params }: { params: Promise<Params> }) 
     console.error(`[seo] fetch failed for ${city.slug}/${slug}:`, err)
     throw err  // let Next.js serve the stale ISR cache instead of caching an empty page
   }
+
+  if (places.length === 0 && !hasData(city.slug, slug)) notFound()
 
   return <SeoPageContent locale="de" city={city} categorySlug={slug} places={places} />
 }

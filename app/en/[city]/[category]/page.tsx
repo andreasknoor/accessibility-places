@@ -2,7 +2,8 @@ import { notFound }      from "next/navigation"
 import type { Metadata } from "next"
 import { CITY_MAP, SEO_CATEGORY_SLUGS, SEO_CATEGORY_LABEL, type CitySlug } from "@/lib/cities"
 import { fetchPlacesForSeoPage } from "@/lib/seo-search"
-import SeoPageContent    from "@/components/seo/SeoPageContent"
+import { hasData }               from "@/lib/seo-validity"
+import SeoPageContent            from "@/components/seo/SeoPageContent"
 
 // ISR: 5.5-day revalidation, offset from DE (5 days) so both locales don't
 // revalidate simultaneously. generateStaticParams returns [] so no pages are
@@ -59,6 +60,8 @@ export default async function CityPageEn({ params }: { params: Promise<Params> }
     console.error(`[seo] fetch failed for ${city.slug}/${slug}:`, err)
     throw err  // let Next.js serve the stale ISR cache instead of caching an empty page
   }
+
+  if (places.length === 0 && !hasData(city.slug, slug)) notFound()
 
   return <SeoPageContent locale="en" city={city} categorySlug={slug} places={places} />
 }
