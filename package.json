@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "prepare": "git config core.hooksPath .githooks || true",
-    "check:seo": "tsx scripts/check-seo-validity.ts"
+    "check:seo": "tsx scripts/check-seo-validity.ts",
+    "warm:seo":  "tsx scripts/warm-seo.ts"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.3.3",
