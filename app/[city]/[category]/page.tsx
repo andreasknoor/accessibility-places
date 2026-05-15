@@ -2,18 +2,19 @@ import { cache }           from "react"
 import { notFound }        from "next/navigation"
 import type { Metadata }    from "next"
 import { CITIES, CITY_MAP, SEO_CATEGORY_SLUGS, SEO_CATEGORY_LABEL } from "@/lib/cities"
-import { getPlacesSnapshot }  from "@/lib/seo-blob"
+import { getPlacesSnapshot, getNonEmptySlugPairs } from "@/lib/seo-blob"
 import SeoPageContent         from "@/components/seo/SeoPageContent"
 
 export const dynamicParams = false
 
+const ALL_PARAMS = CITIES.flatMap((city) =>
+  Object.keys(SEO_CATEGORY_SLUGS).map((category) => ({ city: city.slug, category })),
+)
+
 export async function generateStaticParams() {
-  return CITIES.flatMap((city) =>
-    Object.keys(SEO_CATEGORY_SLUGS).map((category) => ({
-      city:     city.slug,
-      category,
-    })),
-  )
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return ALL_PARAMS
+  const pairs = await getNonEmptySlugPairs()
+  return pairs.length > 0 ? pairs : ALL_PARAMS
 }
 
 type Params = { city: string; category: string }
