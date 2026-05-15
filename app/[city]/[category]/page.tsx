@@ -4,19 +4,10 @@ import { CITIES, CITY_MAP, SEO_CATEGORY_SLUGS, SEO_CATEGORY_LABEL } from "@/lib/
 import { fetchPlacesForSeoPage } from "@/lib/seo-search"
 import SeoPageContent    from "@/components/seo/SeoPageContent"
 
-export const dynamicParams = false
-
-// ISR: pages regenerate in the background after 5 days.
-// Stale-while-revalidate means users always see the last successful render.
-// On API failure, fetchPlacesForSeoPage catches and returns [] so the page
-// renders a "no results" state rather than propagating an exception.
+// ISR: rendered on first request, then cached for 5 days (stale-while-revalidate).
+// No generateStaticParams — avoids a 320-page build-time fetch burst that
+// causes Overpass to return empty results silently.
 export const revalidate = 5 * 24 * 3600 // 432 000 s
-
-export function generateStaticParams() {
-  return CITIES.flatMap((city) =>
-    Object.keys(SEO_CATEGORY_SLUGS).map((category) => ({ city: city.slug, category })),
-  )
-}
 
 type Params = { city: string; category: string }
 

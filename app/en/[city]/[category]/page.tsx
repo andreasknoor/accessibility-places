@@ -4,17 +4,10 @@ import { CITIES, CITY_MAP, SEO_CATEGORY_SLUGS, SEO_CATEGORY_LABEL } from "@/lib/
 import { fetchPlacesForSeoPage } from "@/lib/seo-search"
 import SeoPageContent    from "@/components/seo/SeoPageContent"
 
-export const dynamicParams = false
-
 // ISR: 5.5 days — offset from the DE route (5 days) so both locales don't
-// revalidate simultaneously across the same set of 320 pages.
+// revalidate simultaneously. No generateStaticParams — avoids a 320-page
+// build-time fetch burst that causes Overpass to return empty results silently.
 export const revalidate = Math.round(5.5 * 24 * 3600) // 475 200 s
-
-export function generateStaticParams() {
-  return CITIES.flatMap((city) =>
-    Object.keys(SEO_CATEGORY_SLUGS).map((category) => ({ city: city.slug, category })),
-  )
-}
 
 type Params = { city: string; category: string }
 
