@@ -280,8 +280,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onReset={handleReset}
         resetKey={resetKey}
         filterDebug={filterDebug}
-        initialLocation={initialCity}
-        initialChipIdx={initialCategory ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : undefined}
+        initialLocation={resetKey === 0 ? initialCity : undefined}
+        initialChipIdx={resetKey === 0 ? (initialCategory ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : undefined) : undefined}
       />
     )
   }
@@ -332,8 +332,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         isLoading={isLoading}
         onModeChange={setChatMode}
         autoFocus
-        initialLocation={initialCity}
-        initialChipIdx={initialCategory ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : undefined}
+        initialLocation={resetKey === 0 ? initialCity : undefined}
+        initialChipIdx={resetKey === 0 ? (initialCategory ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : undefined) : undefined}
       />
 
       {/* ── Error banner ── */}
