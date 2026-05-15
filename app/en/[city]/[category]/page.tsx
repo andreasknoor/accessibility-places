@@ -7,7 +7,7 @@ import SeoPageContent    from "@/components/seo/SeoPageContent"
 // ISR: 5.5 days — offset from the DE route (5 days) so both locales don't
 // revalidate simultaneously. No generateStaticParams — avoids a 320-page
 // build-time fetch burst that causes Overpass to return empty results silently.
-export const revalidate = Math.round(5.5 * 24 * 3600) // 475 200 s
+export const revalidate = 475200 // 5.5 days in seconds
 
 type Params = { city: string; category: string }
 
