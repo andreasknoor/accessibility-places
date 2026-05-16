@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { Accessibility } from "lucide-react"
 import type { Place, A11yValue, EntranceDetails, ToiletDetails } from "@/lib/types"
 import { CITIES, SEO_CATEGORY_LABEL, SEO_CATEGORY_TO_CHIP_IDX, type City } from "@/lib/cities"
 import { confidenceLabel } from "@/lib/matching/merge"
@@ -107,7 +108,7 @@ function SeoPlaceCard({ place, locale, searchBaseUrl }: { place: Place; locale: 
     return `https://wheelmap.org/?lat=${place.coordinates.lat}&lon=${place.coordinates.lon}&zoom=19`
   })()
 
-  const openInAppLabel = locale === "de" ? "In App öffnen →" : "Open in app →"
+  const openInAppLabel = locale === "de" ? "Mehr Details in Accessible-Places" : "More details in Accessible-Places"
 
   const entrance    = place.accessibility.entrance
   const toilet      = place.accessibility.toilet
@@ -163,11 +164,10 @@ function SeoPlaceCard({ place, locale, searchBaseUrl }: { place: Place; locale: 
           })}
         </div>
 
-        <span className="text-xs text-blue-600 mt-1">{openInAppLabel}</span>
       </Link>
 
-      {/* External links — separate element, no nested <a> */}
-      <div className="flex gap-3 px-4 py-2 border-t border-gray-100 flex-wrap">
+      {/* Card footer: external links left, CTA right */}
+      <div className="flex items-center gap-3 px-4 py-2 border-t border-gray-100 flex-wrap">
         <a href={wheelmapUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:underline">
           Wheelmap
         </a>
@@ -179,6 +179,13 @@ function SeoPlaceCard({ place, locale, searchBaseUrl }: { place: Place; locale: 
             Website
           </a>
         )}
+        <Link
+          href={placeUrl}
+          className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
+        >
+          <Accessibility className="h-3.5 w-3.5 shrink-0" />
+          {openInAppLabel}
+        </Link>
       </div>
     </article>
   )
