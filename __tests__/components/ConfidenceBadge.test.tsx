@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react"
 import ConfidenceBadge from "@/components/results/ConfidenceBadge"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { buildAttribute, emptyAttribute } from "@/lib/matching/merge"
-import type { Place, SearchFilters } from "@/lib/types"
+import type { Place } from "@/lib/types"
 
 function renderWithProvider(ui: React.ReactElement) {
   return render(<TooltipProvider>{ui}</TooltipProvider>)
@@ -26,10 +26,6 @@ function makePlace(overrides: Partial<Place> = {}): Place {
     sourceRecords: [],
     ...overrides,
   }
-}
-
-const FILTERS: SearchFilters = {
-  entrance: true, toilet: true, parking: true, seating: false, onlyVerified: false, acceptUnknown: false,
 }
 
 describe("ConfidenceBadge", () => {
@@ -63,7 +59,7 @@ describe("ConfidenceBadge", () => {
         parking:  emptyAttribute(),
       },
     })
-    renderWithProvider(<ConfidenceBadge confidence={0.7} place={place} filters={FILTERS} />)
+    renderWithProvider(<ConfidenceBadge confidence={0.7} place={place} />)
     expect(screen.queryByLabelText(/verifiziert|verified/i)).not.toBeInTheDocument()
   })
 
@@ -75,7 +71,7 @@ describe("ConfidenceBadge", () => {
         parking:  emptyAttribute(),
       },
     })
-    renderWithProvider(<ConfidenceBadge confidence={0.7} place={place} filters={FILTERS} />)
+    renderWithProvider(<ConfidenceBadge confidence={0.7} place={place} />)
     expect(screen.getByLabelText(/verifiziert|verified/i)).toBeInTheDocument()
   })
 })

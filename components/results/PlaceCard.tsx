@@ -11,11 +11,10 @@ import PlaceDebugSheet  from "./PlaceDebugSheet"
 import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS }   from "@/lib/config"
 import { cn } from "@/lib/utils"
-import type { Place, SearchFilters } from "@/lib/types"
+import type { Place } from "@/lib/types"
 
 interface Props {
   place:       Place
-  filters?:    SearchFilters
   isSelected?: boolean
   onClick?:    () => void
   distanceM?:  number
@@ -42,7 +41,7 @@ const CATEGORY_ICONS: Record<string, string> = {
 /** Set to false (or delete the footer block below) to revert option A */
 const SHOW_MAP_FOOTER = true
 
-export default function PlaceCard({ place, filters, isSelected, onClick, distanceM }: Props) {
+export default function PlaceCard({ place, isSelected, onClick, distanceM }: Props) {
   const t = useTranslations()
   const [expanded,  setExpanded]  = useState(false)
   const [showDebug, setShowDebug] = useState(false)
@@ -123,7 +122,7 @@ export default function PlaceCard({ place, filters, isSelected, onClick, distanc
               )}
             </div>
           </div>
-          <ConfidenceBadge confidence={place.overallConfidence} place={place} filters={filters} className="shrink-0" />
+          <ConfidenceBadge confidence={place.overallConfidence} place={place} className="shrink-0" />
         </div>
 
         {/* ── Source badge ── */}

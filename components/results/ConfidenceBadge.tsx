@@ -12,12 +12,11 @@ import { useTranslations } from "@/lib/i18n"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { confidenceLabel } from "@/lib/matching/merge"
 import { cn } from "@/lib/utils"
-import type { Place, SearchFilters } from "@/lib/types"
+import type { Place } from "@/lib/types"
 
 interface Props {
   confidence: number
   place?:     Place
-  filters?:   SearchFilters
   className?: string
 }
 
@@ -27,7 +26,7 @@ const COLORS = {
   low:    "bg-red-100 text-red-800 border-red-200",
 }
 
-function ScoreContent({ place, filters }: { place: Place; filters: SearchFilters }) {
+function ScoreContent({ place }: { place: Place }) {
   const t = useTranslations()
   const valueLabel = (key: "entrance" | "toilet" | "parking" | "seating", v: string): string => {
     if (
@@ -49,9 +48,7 @@ function ScoreContent({ place, filters }: { place: Place; filters: SearchFilters
       : []),
   ]
 
-  const included = criteria.filter(
-    (c) => filters[c.key] && c.attr.value !== "unknown",
-  )
+  const included = criteria.filter((c) => c.attr.value !== "unknown")
   const sum = included.reduce((s, c) => s + c.attr.confidence, 0)
   const avg = included.length > 0 ? sum / included.length : 0
 
@@ -59,7 +56,7 @@ function ScoreContent({ place, filters }: { place: Place; filters: SearchFilters
   const formula =
     included.length > 0
       ? `(${formulaParts.join(" + ")}) ÷ ${included.length} = ${Math.round(avg * 100)}%`
-      : t.results.scoreNoActiveCriteria
+      : "—"
 
   return (
     <div className="space-y-2 text-xs">
@@ -75,14 +72,12 @@ function ScoreContent({ place, filters }: { place: Place; filters: SearchFilters
         </thead>
         <tbody>
           {criteria.map(({ key, label, attr }) => {
-            const isActive = filters[key] ?? false
-            const isKnown  = attr.value !== "unknown"
-            const counts   = isActive && isKnown
+            const isKnown = attr.value !== "unknown"
             return (
-              <tr key={key} className={counts ? "" : "opacity-40"}>
-                <td className="py-0.5">{counts ? "✓" : "–"} {label}</td>
+              <tr key={key} className={isKnown ? "" : "opacity-40"}>
+                <td className="py-0.5">{isKnown ? "✓" : "–"} {label}</td>
                 <td className="py-0.5 text-right tabular-nums">
-                  {counts
+                  {isKnown
                     ? `${valueLabel(key, attr.value)} · ${Math.round(attr.confidence * 100)}%`
                     : "—"}
                 </td>
@@ -116,7 +111,7 @@ function latestVerifiedAt(place: Place): string | undefined {
   return dates.slice().sort().pop()
 }
 
-export default function ConfidenceBadge({ confidence, place, filters, className }: Props) {
+export default function ConfidenceBadge({ confidence, place, className }: Props) {
   const t        = useTranslations()
   const isMobile = useIsMobile()
   const level    = confidenceLabel(confidence)
@@ -153,13 +148,13 @@ export default function ConfidenceBadge({ confidence, place, filters, className 
     <span className={cn(
       "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
       COLORS[level],
-      place && filters ? "cursor-pointer" : "cursor-default",
+      place ? "cursor-pointer" : "cursor-default",
     )}>
       {pct}% · {t.results.confidence[level]}
     </span>
   )
 
-  const badgeWithInteraction = place && filters ? (
+  const badgeWithInteraction = place ? (
     isMobile ? (
       <>
         <button onClick={(e) => { e.stopPropagation(); setSheetOpen(true) }} className="leading-none">
@@ -170,14 +165,14 @@ export default function ConfidenceBadge({ confidence, place, filters, className 
           onClose={() => setSheetOpen(false)}
           title={t.results.scoreCalculation}
         >
-          <ScoreContent place={place} filters={filters} />
+          <ScoreContent place={place} />
         </BottomSheet>
       </>
     ) : (
       <Tooltip>
         <TooltipTrigger asChild>{badge}</TooltipTrigger>
         <TooltipContent side="left" className="bg-white text-zinc-900 border border-zinc-200 shadow-lg p-3 w-[min(22rem,90vw)]">
-          <ScoreContent place={place} filters={filters} />
+          <ScoreContent place={place} />
         </TooltipContent>
       </Tooltip>
     )

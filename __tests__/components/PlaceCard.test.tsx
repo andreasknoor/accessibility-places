@@ -1,8 +1,13 @@
 import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 import PlaceCard from "@/components/results/PlaceCard"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { buildAttribute, emptyAttribute } from "@/lib/matching/merge"
 import type { Place } from "@/lib/types"
+
+function renderWithProvider(ui: React.ReactElement) {
+  return render(<TooltipProvider>{ui}</TooltipProvider>)
+}
 
 function makePlace(overrides: Partial<Place> = {}): Place {
   return {
@@ -27,22 +32,22 @@ function makePlace(overrides: Partial<Place> = {}): Place {
 
 describe("PlaceCard", () => {
   it("renders the place name", () => {
-    render(<PlaceCard place={makePlace()} />)
+    renderWithProvider(<PlaceCard place={makePlace()} />)
     expect(screen.getByText("Café Barrierefrei")).toBeInTheDocument()
   })
 
   it("renders address", () => {
-    render(<PlaceCard place={makePlace()} />)
+    renderWithProvider(<PlaceCard place={makePlace()} />)
     expect(screen.getByText(/Hauptstraße/)).toBeInTheDocument()
   })
 
   it("renders confidence badge", () => {
-    render(<PlaceCard place={makePlace()} />)
+    renderWithProvider(<PlaceCard place={makePlace()} />)
     expect(screen.getByText(/72%/)).toBeInTheDocument()
   })
 
   it("renders all three accessibility attributes", () => {
-    render(<PlaceCard place={makePlace()} />)
+    renderWithProvider(<PlaceCard place={makePlace()} />)
     // Uses German labels by default (de SSR default)
     expect(screen.getByText(/Eingang|Entrance/i)).toBeInTheDocument()
     expect(screen.getByText(/Toilette|Toilet/i)).toBeInTheDocument()
@@ -50,20 +55,20 @@ describe("PlaceCard", () => {
   })
 
   it("renders website link", () => {
-    render(<PlaceCard place={makePlace()} />)
+    renderWithProvider(<PlaceCard place={makePlace()} />)
     const link = screen.getByRole("link", { name: /website/i })
     expect(link).toHaveAttribute("href", "https://example.com")
   })
 
   it("calls onClick when card is clicked", () => {
     const onClick = vi.fn()
-    render(<PlaceCard place={makePlace()} onClick={onClick} />)
+    renderWithProvider(<PlaceCard place={makePlace()} onClick={onClick} />)
     fireEvent.click(screen.getByText("Café Barrierefrei"))
     expect(onClick).toHaveBeenCalledOnce()
   })
 
   it("applies selected styling when isSelected", () => {
-    const { container } = render(<PlaceCard place={makePlace()} isSelected />)
+    const { container } = renderWithProvider(<PlaceCard place={makePlace()} isSelected />)
     expect(container.firstChild).toHaveClass("border-primary")
   })
 
@@ -77,7 +82,7 @@ describe("PlaceCard", () => {
       reliabilityWeight: 0.35,
     })
     const place = makePlace({ accessibility: { entrance: conflicted, toilet: emptyAttribute(), parking: emptyAttribute() } })
-    render(<PlaceCard place={place} />)
+    renderWithProvider(<PlaceCard place={place} />)
     // Conflict source values should appear
     expect(screen.getByText(/Google Places/i)).toBeInTheDocument()
   })
@@ -91,7 +96,7 @@ describe("PlaceCard", () => {
     })
     const place = makePlace({ accessibility: { entrance: emptyAttribute(), toilet, parking: emptyAttribute() } })
 
-    render(<PlaceCard place={place} />)
+    renderWithProvider(<PlaceCard place={place} />)
     fireEvent.click(screen.getByText(/Details/))
 
     expect(screen.getByText(/Haltegriffe|Grab bars/i)).toBeInTheDocument()
@@ -107,7 +112,7 @@ describe("PlaceCard", () => {
     })
     const place = makePlace({ accessibility: { entrance: emptyAttribute(), toilet, parking: emptyAttribute() } })
 
-    render(<PlaceCard place={place} />)
+    renderWithProvider(<PlaceCard place={place} />)
     fireEvent.click(screen.getByText(/Details/))
 
     expect(screen.queryByText(/WC im Betrieb vorhanden|On-site accessible toilet/i)).not.toBeInTheDocument()
@@ -124,7 +129,7 @@ describe("PlaceCard", () => {
     })
     const place = makePlace({ accessibility: { entrance: emptyAttribute(), toilet, parking: emptyAttribute() } })
 
-    render(<PlaceCard place={place} />)
+    renderWithProvider(<PlaceCard place={place} />)
     fireEvent.click(screen.getByText(/Details/))
 
     expect(screen.getByText(/^Haltegriffe$|^Grab bars$/i)).toBeInTheDocument()
@@ -135,7 +140,7 @@ describe("PlaceCard", () => {
     const place = makePlace({
       sourceRecords: [{ sourceId: "osm", externalId: "node/12345", fetchedAt: "", raw: {} }],
     })
-    render(<PlaceCard place={place} />)
+    renderWithProvider(<PlaceCard place={place} />)
     const link = screen.getByRole("link", { name: /Wheelmap/i })
     expect(link).toHaveAttribute("href", "https://wheelmap.org/nodes/12345")
   })
@@ -145,7 +150,7 @@ describe("PlaceCard", () => {
       wheelmapUrl: "https://wheelmap.org/nodes/777?from=acloud",
       sourceRecords: [{ sourceId: "osm", externalId: "node/12345", fetchedAt: "", raw: {} }],
     })
-    render(<PlaceCard place={place} />)
+    renderWithProvider(<PlaceCard place={place} />)
     const link = screen.getByRole("link", { name: /Wheelmap/i })
     expect(link).toHaveAttribute("href", "https://wheelmap.org/nodes/777?from=acloud")
   })
@@ -155,39 +160,39 @@ describe("PlaceCard", () => {
       sourceRecords: [{ sourceId: "google_places", externalId: "ChIJ123", fetchedAt: "", raw: {} }],
       coordinates:   { lat: 52.52, lon: 13.405 },
     })
-    render(<PlaceCard place={place} />)
+    renderWithProvider(<PlaceCard place={place} />)
     const link = screen.getByRole("link", { name: /Wheelmap/i })
     expect(link.getAttribute("href")).toMatch(/lat=52\.52/)
     expect(link.getAttribute("href")).toMatch(/lon=13\.405/)
   })
 
   it("shows dog-friendly badge when allowsDogs is true", () => {
-    render(<PlaceCard place={makePlace({ allowsDogs: true })} />)
+    renderWithProvider(<PlaceCard place={makePlace({ allowsDogs: true })} />)
     expect(screen.getByLabelText(/Hunde willkommen|Dogs welcome/i)).toBeInTheDocument()
   })
 
   it("shows no-dogs indicator when allowsDogs is false", () => {
-    render(<PlaceCard place={makePlace({ allowsDogs: false })} />)
+    renderWithProvider(<PlaceCard place={makePlace({ allowsDogs: false })} />)
     expect(screen.getByLabelText(/Keine Hunde|No dogs/i)).toBeInTheDocument()
   })
 
   it("renders nothing dog-related when allowsDogs is undefined", () => {
-    render(<PlaceCard place={makePlace()} />)
+    renderWithProvider(<PlaceCard place={makePlace()} />)
     expect(screen.queryByLabelText(/Hunde|Dogs/i)).not.toBeInTheDocument()
   })
 
   it("shows vegetarian badge when isVegetarianFriendly=true", () => {
-    render(<PlaceCard place={makePlace({ isVegetarianFriendly: true })} />)
+    renderWithProvider(<PlaceCard place={makePlace({ isVegetarianFriendly: true })} />)
     expect(screen.getByLabelText(/Vegetarisch|Vegetarian/i)).toBeInTheDocument()
   })
 
   it("shows vegan badge when isVeganFriendly=true", () => {
-    render(<PlaceCard place={makePlace({ isVeganFriendly: true, isVegetarianFriendly: true })} />)
+    renderWithProvider(<PlaceCard place={makePlace({ isVeganFriendly: true, isVegetarianFriendly: true })} />)
     expect(screen.getByLabelText(/Vegan/i)).toBeInTheDocument()
   })
 
   it("renders no diet badges when both flags are undefined", () => {
-    render(<PlaceCard place={makePlace()} />)
+    renderWithProvider(<PlaceCard place={makePlace()} />)
     expect(screen.queryByLabelText(/Vegetarisch|Vegetarian/i)).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/^Vegan$/i)).not.toBeInTheDocument()
   })
@@ -199,7 +204,7 @@ describe("PlaceCard", () => {
         { sourceId: "accessibility_cloud", externalId: "2", fetchedAt: "", raw: {} },
       ],
     })
-    render(<PlaceCard place={place} />)
+    renderWithProvider(<PlaceCard place={place} />)
     expect(screen.getByText("+1")).toBeInTheDocument()
   })
 })

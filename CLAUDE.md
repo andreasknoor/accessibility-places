@@ -17,7 +17,12 @@ npx vitest run __tests__/lib/llm.test.ts
 
 # Update SEO validity data (which city/category combos have actual data)
 npm run check:seo
+
+# Prime the ISR cache for all SEO pages (run after deploying new city/category combos)
+npm run warm:seo
 ```
+
+A pre-commit hook (`.githooks/pre-commit`, installed via `npm run prepare`) runs `npm test` automatically on every commit — expect commits to take ~10–20 s while tests execute.
 
 **Always run `npm test` before committing or pushing.** No check-ins without a full test run.
 
