@@ -222,11 +222,13 @@ export default function MapView({
       const color      = markerColor(place.overallConfidence)
       const iconHtml   = svgMarker(color, isSelected)
 
+      const iconSz = isSelected ? 46 : 36
       const icon = L!.divIcon({
-        html:      iconHtml,
-        className: "",
-        iconSize:  [isSelected ? 46 : 36, isSelected ? 46 : 36],
-        iconAnchor:[isSelected ? 23 : 18, isSelected ? 46 : 36],
+        html:        iconHtml,
+        className:   "",
+        iconSize:    [iconSz, iconSz],
+        iconAnchor:  [iconSz / 2, iconSz],
+        popupAnchor: [0, -iconSz - 4],
       })
 
       const existing = markers.current.get(place.id)
