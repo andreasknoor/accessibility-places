@@ -37,14 +37,14 @@ function markerColor(confidence: number): string {
 }
 
 function svgParkingMarker() {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 26 26">
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 26 26">
     <rect x="1" y="1" width="24" height="24" rx="5" fill="#1d4ed8" stroke="white" stroke-width="1.5"/>
     <text x="13" y="19" text-anchor="middle" font-size="15" font-weight="bold" fill="white" font-family="sans-serif">P</text>
   </svg>`
 }
 
 function svgMarker(color: string, selected: boolean) {
-  const size   = selected ? 38 : 30
+  const size   = selected ? 46 : 36
   const stroke = selected ? "#1d4ed8" : "#fff"
   const sw     = selected ? 3 : 2
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24">
@@ -187,12 +187,16 @@ export default function MapView({
       const icon = L.divIcon({
         html:       svgParkingMarker(),
         className:  "",
-        iconSize:   [26, 26],
-        iconAnchor: [13, 13],
+        iconSize:   [21, 21],
+        iconAnchor: [10, 10],
       })
-      const label = spot.capacity != null ? `P ${spot.capacity}` : "P"
+      const tooltipEl = document.createElement("div")
+      tooltipEl.style.cssText = "text-align:center;line-height:1.4"
+      tooltipEl.innerHTML = spot.capacity != null
+        ? `<strong>${spot.capacity}</strong> barrierefreie<br>Parkplätze`
+        : "Barrierefreier<br>Parkplatz"
       const marker = L.marker([spot.lat, spot.lon], { icon, zIndexOffset: -200 })
-        .bindTooltip(label, { permanent: false, direction: "top", offset: [0, -14] })
+        .bindTooltip(tooltipEl, { permanent: false, direction: "top", offset: [0, -12] })
         .addTo(mapInst.current)
       parkingMarkersRef.current.push(marker)
     }
@@ -221,8 +225,8 @@ export default function MapView({
       const icon = L!.divIcon({
         html:      iconHtml,
         className: "",
-        iconSize:  [isSelected ? 38 : 30, isSelected ? 38 : 30],
-        iconAnchor:[isSelected ? 19 : 15, isSelected ? 38 : 30],
+        iconSize:  [isSelected ? 46 : 36, isSelected ? 46 : 36],
+        iconAnchor:[isSelected ? 23 : 18, isSelected ? 46 : 36],
       })
 
       const existing = markers.current.get(place.id)
