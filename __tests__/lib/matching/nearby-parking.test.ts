@@ -3,6 +3,7 @@ import {
   enrichWithNearbyParking,
   haversineMeters,
   DEFAULT_MAX_NEARBY_PARKING_M,
+  NEARBY_PARKING_CONFIDENCE,
 } from "@/lib/matching/nearby-parking"
 import type { Place, ParkingDetails } from "@/lib/types"
 
@@ -108,5 +109,24 @@ describe("enrichWithNearbyParking", () => {
 
   it("default threshold matches the documented constant", () => {
     expect(DEFAULT_MAX_NEARBY_PARKING_M).toBe(150)
+  })
+
+  it("sets confidence to NEARBY_PARKING_CONFIDENCE after upgrade", () => {
+    // confidence was 0 before enrichment (no known source attributed parking).
+    // Without this fix, computeFilteredConfidence returns 0 % when parking is
+    // the only active filter — the upgraded value="yes" is included in `known`
+    // but confidence=0 drags the score to zero.
+    const place   = makePlace()
+    const feature = { lat: place.coordinates.lat, lon: place.coordinates.lon }
+    enrichWithNearbyParking([place], [feature])
+
+    expect(place.accessibility.parking.value).toBe("yes")
+    expect(place.accessibility.parking.confidence).toBe(NEARBY_PARKING_CONFIDENCE)
+    expect(NEARBY_PARKING_CONFIDENCE).toBeGreaterThan(0)
+  })
+
+  it("confidence is lower than a direct OSM on-site signal (0.75)", () => {
+    // Nearby parking is a weaker signal than wheelchair=yes on the venue itself.
+    expect(NEARBY_PARKING_CONFIDENCE).toBeLessThan(0.75)
   })
 })

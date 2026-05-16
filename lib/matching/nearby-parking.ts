@@ -7,13 +7,24 @@
 // exists within `maxDistanceM`. We deliberately do NOT add a new
 // SourceAttribution: the source-attributed value list (and thus the
 // per-source filter-pass count from passesFiltersForSource) keeps reflecting
-// what the venue's own data says. Confidence calculations are likewise
-// unaffected because they read from `attr.sources`, which is untouched.
+// what the venue's own data says.
+//
+// Confidence is set explicitly to NEARBY_PARKING_CONFIDENCE (not derived from
+// sources) because computeFilteredConfidence reads attr.confidence directly.
+// Without this, a place enriched to parking="yes" would still show 0 %
+// when parking is the only active filter — the original confidence was 0
+// (no known source attributed parking to the venue itself).
 
 import type { Place } from "../types"
 import type { NearbyParkingFeature } from "../adapters/osm"
 
 export const DEFAULT_MAX_NEARBY_PARKING_M = 150
+
+// Confidence assigned to a parking attribute that was upgraded via a nearby
+// OSM disabled-parking feature. Lower than a direct on-site source (OSM
+// wheelchair=yes gives ~0.75) because it is a spatial correlation, not a tag
+// on the venue itself. 0.5 = "plausible but not confirmed on-site".
+export const NEARBY_PARKING_CONFIDENCE = 0.5
 
 // Haversine distance in meters between two lat/lon points. Plenty accurate at
 // the ~100 m scale we care about; cheaper than a geodesic-correct formula.
@@ -46,8 +57,9 @@ export function enrichWithNearbyParking(
       if (bestDist === 0) break
     }
     if (bestDist > maxDistanceM) continue
-    place.accessibility.parking.value = "yes"
-    place.accessibility.parking.details = {
+    place.accessibility.parking.value      = "yes"
+    place.accessibility.parking.confidence = NEARBY_PARKING_CONFIDENCE
+    place.accessibility.parking.details    = {
       ...place.accessibility.parking.details,
       nearbyOnly:             true,
       nearbyParkingDistanceM: Math.round(bestDist),
