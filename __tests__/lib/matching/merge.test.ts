@@ -499,47 +499,71 @@ describe("computeFilteredConfidence", () => {
   const filtersAll            = { entrance: true, toilet: true, parking: true,  seating: false }
   const filtersNone           = { entrance: false, toilet: false, parking: false, seating: false }
 
-  it("only averages active filter criteria", () => {
+  it("always averages ALL known criteria regardless of active filters", () => {
     const place = makePlace({
       accessibility: {
         entrance: buildAttribute("accessibility_cloud", "yes", "yes", {}), // 0.70
         toilet:   buildAttribute("accessibility_cloud", "yes", "yes", {}), // 0.70
-        parking:  buildAttribute("osm", "no", "no", {}),                  // 0.675 — inactive
+        parking:  buildAttribute("osm", "no", "no", {}),                  // 0.75
       },
     })
-    // parking is inactive → excluded; (0.70 + 0.70) / 2 = 0.70
-    expect(computeFilteredConfidence(place, filtersEntranceToilet)).toBeCloseTo(0.70)
+    // All three criteria are known → score is the same regardless of filter selection.
+    // (0.70 + 0.70 + 0.75) / 3 ≈ 0.717
+    const scorePartial = computeFilteredConfidence(place, filtersEntranceToilet)
+    const scoreAll     = computeFilteredConfidence(place, filtersAll)
+    expect(scorePartial).toBeCloseTo(scoreAll)
+    expect(scorePartial).toBeCloseTo((0.70 + 0.70 + 0.75) / 3, 2)
   })
 
-  it("inactive criteria with low value do not drag score down", () => {
+  it("filter selection does not affect the score — confidence reflects data quality", () => {
+    // Core invariant: a place's confidence badge communicates how well-documented
+    // it is, not which filters the user has toggled. Toggling filters changes
+    // pass/fail (passesFilters), not how reliable the data is.
     const place = makePlace({
       accessibility: {
-        entrance: buildAttribute("accessibility_cloud", "yes", "yes", {}), // 0.70
-        toilet:   buildAttribute("accessibility_cloud", "yes", "yes", {}), // 0.70
-        parking:  buildAttribute("google_places", "no", "no", {}),         // 0.35 — inactive
+        entrance: buildAttribute("osm", "yes", "yes", {}),  // 0.75
+        toilet:   buildAttribute("osm", "yes", "yes", {}),  // 0.75
+        parking:  buildAttribute("google_places", "no", "no", {}), // 0.35
       },
     })
-    const withParking    = computeFilteredConfidence(place, filtersAll)
-    const withoutParking = computeFilteredConfidence(place, filtersEntranceToilet)
-    expect(withoutParking).toBeGreaterThan(withParking)
-    expect(withoutParking).toBeCloseTo(0.70)
+    expect(computeFilteredConfidence(place, filtersNone))
+      .toBeCloseTo(computeFilteredConfidence(place, filtersAll))
+    expect(computeFilteredConfidence(place, filtersEntranceToilet))
+      .toBeCloseTo(computeFilteredConfidence(place, filtersAll))
   })
 
-  it("falls back to all known criteria when no filter is active", () => {
+  it("unknown criteria are excluded from the average", () => {
     const place = makePlace({
       accessibility: {
         entrance: buildAttribute("osm", "yes", "yes", {}),
-        toilet:   emptyAttribute(),
-        parking:  emptyAttribute(),
+        toilet:   emptyAttribute(),   // unknown → excluded
+        parking:  emptyAttribute(),   // unknown → excluded
       },
     })
     const score = computeFilteredConfidence(place, filtersNone)
     expect(score).toBeCloseTo(RELIABILITY_WEIGHTS.osm)
   })
 
-  it("returns 0 when all active criteria are unknown", () => {
+  it("returns 0 when all criteria are unknown", () => {
     const place = makePlace()
     expect(computeFilteredConfidence(place, filtersAll)).toBe(0)
+  })
+
+  it("nearby-parking enrichment raises score above 0 because all known criteria contribute", () => {
+    // OSM node with entrance=yes(0.75), toilet=yes(0.75), parking=yes-nearby(0.5).
+    // With only the parking filter active the old code returned 0.5 (parking only).
+    // Now all three known criteria contribute: (0.75 + 0.75 + 0.5) / 3 ≈ 0.67.
+    const place = makePlace({
+      accessibility: {
+        entrance: buildAttribute("osm", "yes", "yes", {}),                // 0.75
+        toilet:   buildAttribute("osm", "yes", "yes", {}),                // 0.75
+        parking:  { value: "yes", confidence: 0.5, conflict: false, sources: [], details: { nearbyOnly: true } },
+      },
+    })
+    const parkingOnlyFilter = { entrance: false, toilet: false, parking: true, seating: false }
+    const score = computeFilteredConfidence(place, parkingOnlyFilter)
+    expect(score).toBeCloseTo((0.75 + 0.75 + 0.5) / 3, 2)
+    expect(score).toBeGreaterThan(0.5)
   })
 })
 

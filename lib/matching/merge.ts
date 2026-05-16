@@ -174,28 +174,25 @@ function computeOverallConfidence(place: Place): number {
   return attrs.reduce((sum, a) => sum + a.confidence, 0) / attrs.length
 }
 
-// ─── Filtered confidence (only active filter criteria count) ──────────────
-// Inactive criteria (e.g. parking when parking filter is off) are excluded
-// so they neither inflate nor deflate the score.
-// Falls back to all known criteria when no filter is active.
+// ─── Overall data-quality confidence ─────────────────────────────────────
+// Averages the confidence of ALL known (non-unknown) criteria regardless of
+// which filters are active. The filter selection determines pass/fail;
+// confidence communicates how well-documented the place is — a property of
+// the data, not of the current filter state.
+//
+// The filters parameter is retained for API compatibility but is no longer
+// used in the calculation.
 
 export function computeFilteredConfidence(
   place: Place,
-  filters: { entrance: boolean; toilet: boolean; parking: boolean; seating: boolean },
+  _filters: { entrance: boolean; toilet: boolean; parking: boolean; seating: boolean },
 ): number {
-  const active: AccessibilityAttribute[] = []
-  if (filters.entrance) active.push(place.accessibility.entrance)
-  if (filters.toilet)   active.push(place.accessibility.toilet)
-  if (filters.parking)  active.push(place.accessibility.parking)
-  if (filters.seating && place.accessibility.seating) active.push(place.accessibility.seating)
-
-  const pool = active.length > 0 ? active : [
+  const pool = [
     place.accessibility.entrance,
     place.accessibility.toilet,
     place.accessibility.parking,
     ...(place.accessibility.seating ? [place.accessibility.seating] : []),
   ]
-
   const known = pool.filter((a) => a.value !== "unknown")
   if (known.length === 0) return 0
   return known.reduce((sum, a) => sum + a.confidence, 0) / known.length
