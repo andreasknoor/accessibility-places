@@ -370,9 +370,11 @@ export async function fetchOsmDisabledParking(
   // Three orthogonal disabled-parking signals in OSM. We union them so the
   // query catches both "lot with N disabled spaces" and "single dedicated
   // disabled parking space" features.
+  // Keys containing ":" must be quoted in Overpass QL — unquoted colons are
+  // a syntax error and cause a 400 response (silently swallowed by the caller).
   const query = `[out:json][timeout:20];(` +
-    `nwr(around:${r},${lat},${lon})[amenity=parking][capacity:disabled];` +
-    `nwr(around:${r},${lat},${lon})[amenity=parking][capacity:wheelchair];` +
+    `nwr(around:${r},${lat},${lon})[amenity=parking]["capacity:disabled"];` +
+    `nwr(around:${r},${lat},${lon})[amenity=parking]["capacity:wheelchair"];` +
     `nwr(around:${r},${lat},${lon})[amenity=parking_space][parking_space=disabled];` +
     `);out 200 center tags;`
 

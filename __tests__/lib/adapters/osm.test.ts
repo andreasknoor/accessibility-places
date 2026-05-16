@@ -563,4 +563,33 @@ describe("fetchOsmDisabledParking", () => {
     controller.abort()
     expect(capturedSignal!.aborted).toBe(true)
   })
+
+  it("quotes colon keys in Overpass QL to avoid 400 Bad Request", async () => {
+    // Unquoted [capacity:disabled] is a syntax error in Overpass QL — the server
+    // returns 400 and the caller silently falls back to []. Quoted keys are required.
+    let capturedBody = ""
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((_url: unknown, init: RequestInit) => {
+      capturedBody = init?.body as string
+      return Promise.resolve({ ok: true, json: async () => ({ elements: [] }) })
+    }))
+    await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    const decoded = decodeURIComponent(capturedBody.replace(/^data=/, ""))
+    expect(decoded).toContain(`["capacity:disabled"]`)
+    expect(decoded).toContain(`["capacity:wheelchair"]`)
+    expect(decoded).not.toContain(`[capacity:disabled]`)
+    expect(decoded).not.toContain(`[capacity:wheelchair]`)
+  })
+
+  it("caps the search radius at NEARBY_PARKING_MAX_RADIUS_KM regardless of input", async () => {
+    let capturedBody = ""
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((_url: unknown, init: RequestInit) => {
+      capturedBody = init?.body as string
+      return Promise.resolve({ ok: true, json: async () => ({ elements: [] }) })
+    }))
+    await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 50)
+    const decoded = decodeURIComponent(capturedBody.replace(/^data=/, ""))
+    // 50 km capped to 10 km → radius in metres = 10000
+    expect(decoded).toContain("around:10000")
+    expect(decoded).not.toContain("around:50000")
+  })
 })
