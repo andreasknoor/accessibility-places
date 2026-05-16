@@ -315,12 +315,19 @@ export async function POST(req: NextRequest) {
             // parking value from nearby enrichment (nearbyOnly: true).
             // Results that already have direct OSM / adapter parking data don't
             // need a P marker — they're not the reason the spot matters.
-            parkingSpots:  parkingFeatures
-              .filter((f) => filtered.some((p) => {
+            parkingSpots:  (() => {
+              const nearbyOnlyPlaces = filtered.filter((p) => {
                 const det = p.accessibility.parking.details as { nearbyOnly?: boolean } | undefined
-                return det?.nearbyOnly === true &&
-                       haversineMeters(p.coordinates, f) <= NEARBY_PARKING_DISPLAY_RADIUS_M
-              }))
+                return det?.nearbyOnly === true
+              })
+              console.log(`[parking-debug] features=${parkingFeatures.length} nearbyOnlyPlaces=${nearbyOnlyPlaces.length} filtered=${filtered.length}`)
+              nearbyOnlyPlaces.forEach(p => console.log(`  [parking-debug]  place: ${p.name} parking=${p.accessibility.parking.value} nearbyOnly=${(p.accessibility.parking.details as any)?.nearbyOnly}`))
+              const spots = parkingFeatures.filter((f) =>
+                nearbyOnlyPlaces.some((p) => haversineMeters(p.coordinates, f) <= NEARBY_PARKING_DISPLAY_RADIUS_M)
+              )
+              console.log(`[parking-debug] spots to display: ${spots.length}`)
+              return spots
+            })()
               .map((f) => ({
                 lat:      f.lat,
                 lon:      f.lon,
