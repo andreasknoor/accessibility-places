@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { createPortal } from "react-dom"
-import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Info, Accessibility, PawPrint, Salad, Leaf, Map, ShieldCheck } from "lucide-react"
+import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Info, Accessibility, PawPrint, Salad, Leaf, Map, ShieldCheck, Loader2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import ConfidenceBadge  from "./ConfidenceBadge"
@@ -14,10 +14,11 @@ import { cn } from "@/lib/utils"
 import type { Place } from "@/lib/types"
 
 interface Props {
-  place:       Place
-  isSelected?: boolean
-  onClick?:    () => void
-  distanceM?:  number
+  place:                Place
+  isSelected?:          boolean
+  onClick?:             () => void
+  distanceM?:           number
+  onShowNearbyParking?: (place: Place) => Promise<void>
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -41,10 +42,11 @@ const CATEGORY_ICONS: Record<string, string> = {
 /** Set to false (or delete the footer block below) to revert option A */
 const SHOW_MAP_FOOTER = true
 
-export default function PlaceCard({ place, isSelected, onClick, distanceM }: Props) {
+export default function PlaceCard({ place, isSelected, onClick, distanceM, onShowNearbyParking }: Props) {
   const t = useTranslations()
-  const [expanded,  setExpanded]  = useState(false)
-  const [showDebug, setShowDebug] = useState(false)
+  const [expanded,        setExpanded]        = useState(false)
+  const [showDebug,       setShowDebug]       = useState(false)
+  const [loadingParking,  setLoadingParking]  = useState(false)
 
   const addr = [place.address.street, place.address.houseNumber, place.address.city]
     .filter(Boolean).join(" ")
@@ -173,22 +175,34 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
 
         {/* ── Accessibility attributes ── */}
         <div className="flex flex-col gap-1.5">
-          {criteriaKeys.map((key, i) => (
-            <A11yAttribute
-              key={key}
-              label={criteriaLabels[i]}
-              attr={place.accessibility[key]}
-              detailType={key}
-              showDetails={expanded}
-            />
-          ))}
+          <A11yAttribute label={t.criteria.entrance} attr={place.accessibility.entrance} detailType="entrance" showDetails={expanded} />
+          <A11yAttribute label={t.criteria.toilet}   attr={place.accessibility.toilet}   detailType="toilet"   showDetails={expanded} />
+          {/* Parking row — shows inline P button when value is unknown */}
+          <div className="flex items-start gap-2">
+            <div className="flex-1 min-w-0">
+              <A11yAttribute label={t.criteria.parking} attr={place.accessibility.parking} detailType="parking" showDetails={expanded} />
+            </div>
+            {onShowNearbyParking && place.accessibility.parking.value === "unknown" && (
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation()
+                  setLoadingParking(true)
+                  try { await onShowNearbyParking(place) } finally { setLoadingParking(false) }
+                }}
+                disabled={loadingParking}
+                title={t.results.showNearbyParking}
+                className="shrink-0 mt-1 inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors disabled:opacity-50"
+              >
+                {loadingParking
+                  ? <Loader2 className="w-3 h-3 animate-spin" />
+                  : <span className="font-bold leading-none">P</span>
+                }
+                <span>{t.results.showNearbyParking}</span>
+              </button>
+            )}
+          </div>
           {place.accessibility.seating && (
-            <A11yAttribute
-              label={t.criteria.seating}
-              attr={place.accessibility.seating}
-              detailType="seating"
-              showDetails={expanded}
-            />
+            <A11yAttribute label={t.criteria.seating} attr={place.accessibility.seating} detailType="seating" showDetails={expanded} />
           )}
         </div>
 

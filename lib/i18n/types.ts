@@ -95,6 +95,7 @@ export interface Translations {
     adjustFilters:        string
     adjustFiltersHint:    string
     distanceFromHere:     (m: number) => string
+    showNearbyParking:    string
   }
   a11y: {
     yes:        string

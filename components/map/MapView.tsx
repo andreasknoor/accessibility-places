@@ -19,7 +19,8 @@ interface Props {
   selectedId?:   string
   panTrigger?:   number
   onSelect:      (place: Place) => void
-  onShowInResults?: (place: Place) => void
+  onShowInResults?:      (place: Place) => void
+  onShowNearbyParking?:  (place: Place) => void
   isFullscreen:         boolean
   onToggleFullscreen:   () => void
   showFullscreenToggle?: boolean
@@ -62,6 +63,7 @@ export default function MapView({
   panTrigger,
   onSelect,
   onShowInResults,
+  onShowNearbyParking,
   isFullscreen,
   onToggleFullscreen,
   showFullscreenToggle = true,
@@ -78,10 +80,12 @@ export default function MapView({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userMarker = useRef<any>(null)
   const [mapReady, setMapReady] = useState(false)
-  const onShowInResultsRef = useRef(onShowInResults)
-  const placesRef          = useRef(places)
-  const userLocationRef    = useRef(userLocation)
-  useEffect(() => { onShowInResultsRef.current = onShowInResults }, [onShowInResults])
+  const onShowInResultsRef     = useRef(onShowInResults)
+  const onShowNearbyParkingRef = useRef(onShowNearbyParking)
+  const placesRef              = useRef(places)
+  const userLocationRef        = useRef(userLocation)
+  useEffect(() => { onShowInResultsRef.current     = onShowInResults     }, [onShowInResults])
+  useEffect(() => { onShowNearbyParkingRef.current = onShowNearbyParking }, [onShowNearbyParking])
   useEffect(() => { placesRef.current = places }, [places])
   useEffect(() => { userLocationRef.current = userLocation }, [userLocation])
 
@@ -262,8 +266,20 @@ export default function MapView({
           <div style="margin-top:6px;font-size:10px;color:#888">
             ${t.map.source}: ${SOURCE_LABELS[place.primarySource]}
           </div>
+          ${place.accessibility.parking.value === "unknown" ? `<button data-nearby-parking style="display:inline-flex;align-items:center;gap:4px;margin-top:4px;font-size:10px;color:#1d4ed8;background:#eff6ff;border:none;border-radius:4px;cursor:pointer;padding:2px 6px;font-weight:500"><strong>P</strong> ${t.results.showNearbyParking}</button>` : ""}
           ${onShowInResults ? `<button data-show-id style="display:block;margin-top:8px;font-size:11px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-align:left">${t.map.showInResults} →</button>` : ""}
         `
+        {
+          const capturedId = place.id
+          const nearbyBtn  = div.querySelector<HTMLElement>("[data-nearby-parking]")
+          if (nearbyBtn) {
+            L!.DomEvent.on(nearbyBtn, "click", (ev: Event) => {
+              L!.DomEvent.stopPropagation(ev)
+              const p = placesRef.current.find((pl) => pl.id === capturedId)
+              if (p) onShowNearbyParkingRef.current?.(p)
+            })
+          }
+        }
         if (onShowInResults) {
           const btn = div.querySelector<HTMLElement>("[data-show-id]")
           if (btn) {
