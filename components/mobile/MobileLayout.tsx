@@ -41,13 +41,14 @@ interface Props {
   filterDebug?:      FilterDebug
   initialLocation?:  string
   initialChipIdx?:   number
+  scrollToId?:       string
 }
 
 export default function MobileLayout({
   places, selectedId, onSelect, isLoading,
   filters, sources, radiusKm, onFilters, onSources, onRadius,
   sourceStates, searchCenter, onSearch, onRerun, onExpandRadius, onRadiusChange, hasSearched, error,
-  onReset, resetKey, filterDebug, initialLocation, initialChipIdx,
+  onReset, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>("results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -124,7 +125,7 @@ export default function MobileLayout({
             selectedId={selectedId}
             onSelect={(p) => { onSelect(p); setPanTrigger((n) => n + 1); setActiveTab("map") }}
             isLoading={isLoading}
-            scrollToId={scrollToId}
+            scrollToId={scrollToId ?? externalScrollToId}
 
             onRerun={handleRerun}
             onExpandRadius={handleExpandRadius}

@@ -282,6 +282,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         filterDebug={filterDebug}
         initialLocation={resetKey === 0 ? initialCity : undefined}
         initialChipIdx={resetKey === 0 ? (initialCategory ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : undefined) : undefined}
+        scrollToId={scrollToId}
       />
     )
   }
