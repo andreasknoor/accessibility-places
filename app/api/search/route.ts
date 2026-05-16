@@ -311,10 +311,16 @@ export async function POST(req: NextRequest) {
             location:      { lat: geo.lat, lon: geo.lon },
             locationLabel: geo.label,
             filterDebug,
+            // Only show a P marker if a displayed result within 250 m got its
+            // parking value from nearby enrichment (nearbyOnly: true).
+            // Results that already have direct OSM / adapter parking data don't
+            // need a P marker — they're not the reason the spot matters.
             parkingSpots:  parkingFeatures
-              .filter((f) => filtered.some(
-                (p) => haversineMeters(p.coordinates, f) <= NEARBY_PARKING_DISPLAY_RADIUS_M,
-              ))
+              .filter((f) => filtered.some((p) => {
+                const det = p.accessibility.parking.details as { nearbyOnly?: boolean } | undefined
+                return det?.nearbyOnly === true &&
+                       haversineMeters(p.coordinates, f) <= NEARBY_PARKING_DISPLAY_RADIUS_M
+              }))
               .map((f) => ({
                 lat:      f.lat,
                 lon:      f.lon,
