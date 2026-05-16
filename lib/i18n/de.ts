@@ -107,7 +107,6 @@ const de: Translations = {
     scoreDataQualityNote:  "Der Prozentwert beschreibt die Verlässlichkeit der Quelldaten, nicht den Grad der Barrierefreiheit des Ortes.",
     scoreCriterion:        "Kriterium",
     scoreValueWeight:      "Wert · Gewicht",
-    scoreNoActiveCriteria: "Keine bewerteten Kriterien aktiv",
     showRawData:           "Rohdaten anzeigen",
     detailsExpand:         "Details",
     detailsCollapse:       "Weniger",

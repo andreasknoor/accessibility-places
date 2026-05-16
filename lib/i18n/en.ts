@@ -107,7 +107,6 @@ const en: Translations = {
     scoreDataQualityNote:  "The score reflects how reliable the underlying data is, not how accessible the place is.",
     scoreCriterion:        "Criterion",
     scoreValueWeight:      "Value · Weight",
-    scoreNoActiveCriteria: "No scored criteria active",
     showRawData:           "Show raw data",
     detailsExpand:         "Details",
     detailsCollapse:       "Less",

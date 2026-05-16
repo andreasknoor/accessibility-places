@@ -82,7 +82,6 @@ export interface Translations {
     scoreDataQualityNote: string
     scoreCriterion:       string
     scoreValueWeight:     string
-    scoreNoActiveCriteria: string
     showRawData:          string
     detailsExpand:        string
     detailsCollapse:      string
