@@ -18,7 +18,7 @@
 import type { Place } from "../types"
 import type { NearbyParkingFeature } from "../adapters/osm"
 
-export const DEFAULT_MAX_NEARBY_PARKING_M = 100
+export const DEFAULT_MAX_NEARBY_PARKING_M = 150
 
 // Wider radius used only for map display: show parking spots that are within
 // this distance of any found place, even if too far to trigger enrichment.
