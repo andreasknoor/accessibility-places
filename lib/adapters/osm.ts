@@ -353,12 +353,18 @@ export interface NearbyParkingFeature {
   capacity?:  number
 }
 
+// Parking enrichment is capped at 10 km regardless of the main search radius.
+// Disabled parking beyond 10 km is irrelevant to a venue, and large radii
+// (e.g. 50 km) would overflow the out-200 cap with results ordered by OSM
+// node ID rather than distance, causing non-deterministic enrichment gaps.
+export const NEARBY_PARKING_MAX_RADIUS_KM = 10
+
 export async function fetchOsmDisabledParking(
   location: { lat: number; lon: number },
   radiusKm: number,
   signal?: AbortSignal,
 ): Promise<NearbyParkingFeature[]> {
-  const r = radiusKm * 1000
+  const r = Math.min(radiusKm, NEARBY_PARKING_MAX_RADIUS_KM) * 1000
   const { lat, lon } = location
 
   // Three orthogonal disabled-parking signals in OSM. We union them so the
