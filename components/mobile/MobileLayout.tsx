@@ -19,6 +19,7 @@ type Tab = "results" | "map" | "filter"
 
 interface Props {
   places:        Place[]
+  parkingSpots?: { lat: number; lon: number; capacity?: number }[]
   selectedId?:   string
   onSelect:      (place: Place) => void
   isLoading:     boolean
@@ -45,7 +46,7 @@ interface Props {
 }
 
 export default function MobileLayout({
-  places, selectedId, onSelect, isLoading,
+  places, parkingSpots, selectedId, onSelect, isLoading,
   filters, sources, radiusKm, onFilters, onSources, onRadius,
   sourceStates, searchCenter, onSearch, onRerun, onExpandRadius, onRadiusChange, hasSearched, error,
   onReset, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
@@ -143,6 +144,7 @@ export default function MobileLayout({
           {mapMounted && (
             <MapView
               places={places}
+              parkingSpots={parkingSpots}
               center={searchCenter}
               userLocation={chatMode === "nearby" ? searchCenter : undefined}
               selectedId={selectedId}

@@ -108,7 +108,7 @@ describe("enrichWithNearbyParking", () => {
   })
 
   it("default threshold matches the documented constant", () => {
-    expect(DEFAULT_MAX_NEARBY_PARKING_M).toBe(150)
+    expect(DEFAULT_MAX_NEARBY_PARKING_M).toBe(100)
   })
 
   it("sets confidence to NEARBY_PARKING_CONFIDENCE after upgrade", () => {

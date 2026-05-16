@@ -244,8 +244,9 @@ export async function POST(req: NextRequest) {
         // when its own parking value is unknown. Done before the category
         // filter (5b) so the upgraded value is in place for confidence and
         // filter steps that follow.
+        let parkingFeatures: NearbyParkingFeature[] = []
         if (nearbyParkingEnabled) {
-          const parkingFeatures = await nearbyParkingPromise
+          parkingFeatures = await nearbyParkingPromise
           enrichWithNearbyParking(canonical, parkingFeatures)
         }
 
@@ -310,6 +311,11 @@ export async function POST(req: NextRequest) {
             location:      { lat: geo.lat, lon: geo.lon },
             locationLabel: geo.label,
             filterDebug,
+            parkingSpots:  parkingFeatures.map((f) => ({
+              lat:      f.lat,
+              lon:      f.lon,
+              ...(f.capacity != null ? { capacity: f.capacity } : {}),
+            })),
           },
         })
         controller.close()

@@ -54,6 +54,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [sources,       setSources]      = useState<ActiveSources>(DEFAULT_SOURCES)
   const [radiusKm,      setRadiusKm]     = useState(DEFAULT_RADIUS_KM)
   const [places,        setPlaces]       = useState<Place[]>([])
+  const [parkingSpots,  setParkingSpots] = useState<{ lat: number; lon: number; capacity?: number }[]>([])
   const [selectedId,    setSelectedId]   = useState<string | undefined>()
   const [isLoading,     setIsLoading]    = useState(false)
   const [searchCenter,  setSearchCenter] = useState<{ lat: number; lon: number } | undefined>()
@@ -84,6 +85,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setIsLoading(true)
     setError(undefined)
     setPlaces([])
+    setParkingSpots([])
     setSelectedId(undefined)
     setFilterDebug(undefined)
 
@@ -133,6 +135,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           } else if (event.type === "result") {
             const data = event.payload as SearchResult
             setPlaces(data.places)
+            setParkingSpots(data.parkingSpots ?? [])
             setSearchCenter(data.location)
             setFilterDebug(data.filterDebug)
 
@@ -197,6 +200,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setSources(DEFAULT_SOURCES)
     setRadiusKm(DEFAULT_RADIUS_KM)
     setPlaces([])
+    setParkingSpots([])
     setSelectedId(undefined)
     setLastQuery(undefined)
     setSearchCenter(undefined)
@@ -260,6 +264,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     return (
       <MobileLayout
         places={places}
+        parkingSpots={filters.parking ? parkingSpots : []}
         selectedId={selectedId}
         onSelect={(p) => setSelectedId(p.id)}
         isLoading={isLoading}
@@ -293,6 +298,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       <div className="fixed inset-0 z-50 bg-background">
         <MapView
           places={places}
+          parkingSpots={filters.parking ? parkingSpots : []}
           center={searchCenter}
           userLocation={chatMode === "nearby" ? searchCenter : undefined}
           selectedId={selectedId}
@@ -403,6 +409,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         <div className="flex-1 min-h-0 relative">
           <MapView
             places={places}
+            parkingSpots={filters.parking ? parkingSpots : []}
             center={searchCenter}
             userLocation={chatMode === "nearby" ? searchCenter : undefined}
             selectedId={selectedId}

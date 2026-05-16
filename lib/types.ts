@@ -231,4 +231,5 @@ export interface SearchResult {
   locationLabel: string
   filterDebug?: FilterDebug
   nameHint?: string
+  parkingSpots?: { lat: number; lon: number; capacity?: number }[]
 }

@@ -18,7 +18,7 @@
 import type { Place } from "../types"
 import type { NearbyParkingFeature } from "../adapters/osm"
 
-export const DEFAULT_MAX_NEARBY_PARKING_M = 150
+export const DEFAULT_MAX_NEARBY_PARKING_M = 100
 
 // Confidence assigned to a parking attribute that was upgraded via a nearby
 // OSM disabled-parking feature. Lower than a direct on-site source (OSM

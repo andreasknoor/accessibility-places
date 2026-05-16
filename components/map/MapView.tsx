@@ -13,6 +13,7 @@ let L: typeof import("leaflet") | null = null
 
 interface Props {
   places:        Place[]
+  parkingSpots?: { lat: number; lon: number; capacity?: number }[]
   center?:       { lat: number; lon: number }
   userLocation?: { lat: number; lon: number }
   selectedId?:   string
@@ -35,6 +36,13 @@ function markerColor(confidence: number): string {
   return CONFIDENCE_COLORS[confidenceLabel(confidence)]
 }
 
+function svgParkingMarker() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 26 26">
+    <rect x="1" y="1" width="24" height="24" rx="5" fill="#1d4ed8" stroke="white" stroke-width="1.5"/>
+    <text x="13" y="19" text-anchor="middle" font-size="15" font-weight="bold" fill="white" font-family="sans-serif">P</text>
+  </svg>`
+}
+
 function svgMarker(color: string, selected: boolean) {
   const size   = selected ? 38 : 30
   const stroke = selected ? "#1d4ed8" : "#fff"
@@ -47,6 +55,7 @@ function svgMarker(color: string, selected: boolean) {
 
 export default function MapView({
   places,
+  parkingSpots,
   center,
   userLocation,
   selectedId,
@@ -64,6 +73,8 @@ export default function MapView({
   const mapInst  = useRef<any>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markers  = useRef<Map<string, any>>(new Map())
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const parkingMarkersRef = useRef<any[]>([])
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userMarker = useRef<any>(null)
   const [mapReady, setMapReady] = useState(false)
@@ -165,6 +176,28 @@ export default function MapView({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userLocation, mapReady])
+
+  // Parking spot markers — shown only when parkingSpots is a non-empty array
+  useEffect(() => {
+    if (!mapInst.current || !L) return
+    for (const m of parkingMarkersRef.current) m.remove()
+    parkingMarkersRef.current = []
+
+    for (const spot of parkingSpots ?? []) {
+      const icon = L.divIcon({
+        html:       svgParkingMarker(),
+        className:  "",
+        iconSize:   [26, 26],
+        iconAnchor: [13, 13],
+      })
+      const label = spot.capacity != null ? `P ${spot.capacity}` : "P"
+      const marker = L.marker([spot.lat, spot.lon], { icon, zIndexOffset: -200 })
+        .bindTooltip(label, { permanent: false, direction: "top", offset: [0, -14] })
+        .addTo(mapInst.current)
+      parkingMarkersRef.current.push(marker)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parkingSpots, mapReady])
 
   // Update markers when places change
   useEffect(() => {
