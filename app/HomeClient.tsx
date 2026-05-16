@@ -330,7 +330,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         <LanguageSwitcher />
       </header>
 
-      <h1 className="sr-only">Barrierefreie Orte finden in Deutschland, Österreich und der Schweiz</h1>
+      <h1 className="sr-only">{t.app.srHeading}</h1>
 
       {/* ── Chat / search bar ── */}
       <ChatPanel

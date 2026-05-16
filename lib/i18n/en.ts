@@ -2,8 +2,9 @@ import type { Translations } from "./types"
 
 const en: Translations = {
   app: {
-    title: "Accessible Places",
-    subtitle: "Find wheelchair-accessible places",
+    title:     "Accessible Places",
+    subtitle:  "Find wheelchair-accessible places",
+    srHeading: "Find wheelchair-accessible places in Germany, Austria and Switzerland",
   },
   metadata: {
     title:               "Find wheelchair-accessible places | Accessible Places",
@@ -111,6 +112,7 @@ const en: Translations = {
     detailsExpand:         "Details",
     detailsCollapse:       "Less",
     noResultsArea:         "No places found in this area.",
+    networkError:          "Network error",
     noResultsFiltered:     (n: number) => `${n} place${n !== 1 ? "s" : ""} found – none match all active filters.`,
     filterBlockedBy:       "Main reason for exclusion:",
     sortByConfidence:      "Reliability",

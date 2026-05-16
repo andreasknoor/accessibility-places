@@ -2,8 +2,9 @@ import type { Translations } from "./types"
 
 const de: Translations = {
   app: {
-    title: "Accessible Places",
-    subtitle: "Barrierefreie Orte finden",
+    title:     "Accessible Places",
+    subtitle:  "Barrierefreie Orte finden",
+    srHeading: "Barrierefreie Orte finden in Deutschland, Österreich und der Schweiz",
   },
   metadata: {
     title:               "Barrierefreie Orte finden | Accessible Places",
@@ -111,6 +112,7 @@ const de: Translations = {
     detailsExpand:         "Details",
     detailsCollapse:       "Weniger",
     noResultsArea:         "Keine Orte in diesem Bereich gefunden.",
+    networkError:          "Netzwerkfehler",
     noResultsFiltered:     (n: number) => `${n} Ort${n !== 1 ? "e" : ""} gefunden – keiner erfüllt alle aktiven Filter.`,
     filterBlockedBy:       "Hauptausschlussgrund:",
     sortByConfidence:      "Verlässlichkeit",

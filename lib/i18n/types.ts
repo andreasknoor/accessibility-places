@@ -1,7 +1,8 @@
 export interface Translations {
   app: {
-    title:    string
-    subtitle: string
+    title:     string
+    subtitle:  string
+    srHeading: string
   }
   metadata: {
     title:               string
@@ -86,6 +87,7 @@ export interface Translations {
     detailsExpand:        string
     detailsCollapse:      string
     noResultsArea:        string
+    networkError:         string
     noResultsFiltered:    (n: number) => string
     filterBlockedBy:      string
     sortByConfidence:     string

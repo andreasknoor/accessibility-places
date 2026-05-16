@@ -44,7 +44,7 @@ function SourceIndicator({ state }: { state?: SourceState }) {
           </span>
         </TooltipTrigger>
         <TooltipContent side="right" className="max-w-xs text-xs">
-          {state.error || "Netzwerkfehler"}
+          {state.error || t.results.networkError}
         </TooltipContent>
       </Tooltip>
     )
