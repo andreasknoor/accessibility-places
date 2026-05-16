@@ -312,7 +312,7 @@ export async function POST(req: NextRequest) {
             locationLabel: geo.label,
             filterDebug,
             parkingSpots:  parkingFeatures
-              .filter((f) => canonical.some(
+              .filter((f) => filtered.some(
                 (p) => haversineMeters(p.coordinates, f) <= NEARBY_PARKING_DISPLAY_RADIUS_M,
               ))
               .map((f) => ({
