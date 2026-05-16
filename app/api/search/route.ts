@@ -4,7 +4,7 @@ import { startAdapterTasks }            from "@/lib/adapters"
 import { findMatch, filterByNameHint }  from "@/lib/matching/match"
 import { mergePlaces, passesFilters, finalisePlaceConfidence, computeFilteredConfidence, countLimited } from "@/lib/matching/merge"
 import { fetchOsmDisabledParking, type NearbyParkingFeature } from "@/lib/adapters/osm"
-import { enrichWithNearbyParking } from "@/lib/matching/nearby-parking"
+import { enrichWithNearbyParking, haversineMeters, NEARBY_PARKING_DISPLAY_RADIUS_M } from "@/lib/matching/nearby-parking"
 import { parseQuery } from "@/lib/llm"
 import { NOMINATIM_ENDPOINT, RADIUS_MIN_KM, RADIUS_MAX_KM } from "@/lib/config"
 
@@ -311,11 +311,15 @@ export async function POST(req: NextRequest) {
             location:      { lat: geo.lat, lon: geo.lon },
             locationLabel: geo.label,
             filterDebug,
-            parkingSpots:  parkingFeatures.map((f) => ({
-              lat:      f.lat,
-              lon:      f.lon,
-              ...(f.capacity != null ? { capacity: f.capacity } : {}),
-            })),
+            parkingSpots:  parkingFeatures
+              .filter((f) => canonical.some(
+                (p) => haversineMeters(p.coordinates, f) <= NEARBY_PARKING_DISPLAY_RADIUS_M,
+              ))
+              .map((f) => ({
+                lat:      f.lat,
+                lon:      f.lon,
+                ...(f.capacity != null ? { capacity: f.capacity } : {}),
+              })),
           },
         })
         controller.close()
