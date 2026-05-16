@@ -174,6 +174,8 @@ const en: Translations = {
     source:        "Source",
     confidence:    "Reliability",
     showInResults: "Show in results",
+    parkingSpot:   "Accessible parking",
+    parkingSpots:  (n: number) => `${n} accessible parking spaces`,
   },
   categories: {
     cafe:        "Café",

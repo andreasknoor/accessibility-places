@@ -193,8 +193,8 @@ export default function MapView({
       const tooltipEl = document.createElement("div")
       tooltipEl.style.cssText = "text-align:center;line-height:1.4"
       tooltipEl.innerHTML = spot.capacity != null
-        ? `<strong>${spot.capacity}</strong> barrierefreie<br>Parkplätze`
-        : "Barrierefreier<br>Parkplatz"
+        ? t.map.parkingSpots(spot.capacity).replace(/ ([^ ]*)$/, "<br>$1")
+        : t.map.parkingSpot.replace(/ ([^ ]*)$/, "<br>$1")
       const marker = L.marker([spot.lat, spot.lon], { icon, zIndexOffset: -200 })
         .bindTooltip(tooltipEl, { permanent: false, direction: "top", offset: [0, -12] })
         .addTo(mapInst.current)

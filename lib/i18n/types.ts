@@ -144,11 +144,13 @@ export interface Translations {
     }
   }
   map: {
-    fullscreen:      string
-    exitFullscreen:  string
-    source:          string
-    confidence:      string
-    showInResults:   string
+    fullscreen:             string
+    exitFullscreen:         string
+    source:                 string
+    confidence:             string
+    showInResults:          string
+    parkingSpot:            string
+    parkingSpots:           (n: number) => string
   }
   categories: {
     cafe:        string

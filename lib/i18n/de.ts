@@ -174,6 +174,8 @@ const de: Translations = {
     source:        "Quelle",
     confidence:    "Verlässlichkeit",
     showInResults: "Zeige in Ergebnissen",
+    parkingSpot:   "Barrierefreier Parkplatz",
+    parkingSpots:  (n: number) => `${n} barrierefreie Parkplätze`,
   },
   categories: {
     cafe:        "Café",
