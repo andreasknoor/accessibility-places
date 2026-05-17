@@ -182,6 +182,7 @@ const de: Translations = {
     parkingSpot:    "Barrierefreier Parkplatz",
     parkingSpots:   (n: number) => `${n} barrierefreie Parkplätze`,
     toggleParking:  "Rollstuhlparkplätze in Karte anzeigen",
+    nearbyParking:  "Parkplätze in der Nähe",
   },
   categories: {
     cafe:        "Café",

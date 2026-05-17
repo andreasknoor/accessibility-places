@@ -182,6 +182,7 @@ const en: Translations = {
     parkingSpot:    "Accessible parking",
     parkingSpots:   (n: number) => `${n} accessible parking spaces`,
     toggleParking:  "Show wheelchair parking on map",
+    nearbyParking:  "Nearby parking",
   },
   categories: {
     cafe:        "Café",
