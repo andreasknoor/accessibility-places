@@ -7,22 +7,24 @@ import { enrichWithNearbyParking }                           from "./matching/ne
 
 // Fetch without any filter so all sources return their full result set.
 const FETCH_FILTERS: SearchFilters = {
-  entrance:      false,
-  toilet:        false,
-  parking:       false,
-  seating:       false,
-  onlyVerified:  false,
-  acceptUnknown: true,
+  entrance:          false,
+  toilet:            false,
+  parking:           false,
+  seating:           false,
+  onlyVerified:      false,
+  acceptUnknown:     true,
+  alwaysShowParking: false,
 }
 
 // Preferred display filter: entrance + toilet accessible (yes or limited).
 const FILTERS_STRICT: SearchFilters = {
-  entrance:      true,
-  toilet:        true,
-  parking:       false,
-  seating:       false,
-  onlyVerified:  false,
-  acceptUnknown: false,
+  entrance:          true,
+  toilet:            true,
+  parking:           false,
+  seating:           false,
+  onlyVerified:      false,
+  acceptUnknown:     false,
+  alwaysShowParking: false,
 }
 
 const SEO_SOURCES: SearchParams["sources"] = {

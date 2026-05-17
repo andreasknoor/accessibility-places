@@ -35,7 +35,7 @@ function makePlace(overrides: Partial<Place> = {}): Place {
 }
 
 const ALL_FILTERS: SearchFilters = {
-  entrance: true, toilet: true, parking: true, seating: false, onlyVerified: false, acceptUnknown: false,
+  entrance: true, toilet: true, parking: true, seating: false, onlyVerified: false, acceptUnknown: false, alwaysShowParking: false,
 }
 
 // ─── buildAttribute ──────────────────────────────────────────────────────────
@@ -330,7 +330,7 @@ describe("passesFilters", () => {
 
   it("ignores inactive filters", () => {
     const p = place(noAttr, noAttr, noAttr)
-    const noFilters = { entrance: false, toilet: false, parking: false, seating: false, onlyVerified: false, acceptUnknown: false }
+    const noFilters = { entrance: false, toilet: false, parking: false, seating: false, onlyVerified: false, acceptUnknown: false, alwaysShowParking: false }
     expect(passesFilters(p, noFilters)).toBe(true)
   })
 

@@ -17,7 +17,7 @@ const BASE_PARAMS: SearchParams = {
   location: { lat: 52.52, lon: 13.405 },
   radiusKm: 5,
   categories: ["restaurant"],
-  filters: { entrance: true, toilet: true, parking: true, seating: false, onlyVerified: false, acceptUnknown: false },
+  filters: { entrance: true, toilet: true, parking: true, seating: false, onlyVerified: false, acceptUnknown: false, alwaysShowParking: false },
   sources: { accessibility_cloud: true, osm: true, reisen_fuer_alle: true, google_places: true },
 }
 
@@ -96,7 +96,7 @@ describe("buildOverpassQuery", () => {
   })
 
   it("omits wheelchair pre-filter when all accessibility filters are inactive", () => {
-    const noFilters = { entrance: false, toilet: false, parking: false, seating: false, acceptUnknown: false, onlyVerified: false }
+    const noFilters = { entrance: false, toilet: false, parking: false, seating: false, acceptUnknown: false, onlyVerified: false, alwaysShowParking: false }
     const q = buildOverpassQuery({ ...BASE_PARAMS, filters: noFilters })
     expect(q).not.toContain("wheelchair~")
   })

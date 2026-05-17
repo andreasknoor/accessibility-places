@@ -9,7 +9,7 @@ const BASE_PARAMS: SearchParams = {
   location: { lat: 47.376, lon: 8.548 },
   radiusKm: 5,
   categories: ["restaurant"],
-  filters: { entrance: true, toilet: true, parking: true, seating: false, onlyVerified: false, acceptUnknown: false },
+  filters: { entrance: true, toilet: true, parking: true, seating: false, onlyVerified: false, acceptUnknown: false, alwaysShowParking: false },
   sources: { accessibility_cloud: true, osm: true, reisen_fuer_alle: true, google_places: true, ginto: true },
 }
 
