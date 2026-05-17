@@ -54,10 +54,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [sources,       setSources]      = useState<ActiveSources>(DEFAULT_SOURCES)
   const [radiusKm,      setRadiusKm]     = useState(DEFAULT_RADIUS_KM)
   const [places,        setPlaces]       = useState<Place[]>([])
-  const [parkingSpots,        setParkingSpots]        = useState<{ lat: number; lon: number; capacity?: number }[]>([])
-  const [onDemandParkingSpots, setOnDemandParkingSpots] = useState<{ lat: number; lon: number; capacity?: number }[]>([])
-  const [parkingNoResults,     setParkingNoResults]     = useState<Set<string>>(new Set())
-  const [parkingFoundCounts,   setParkingFoundCounts]   = useState<Map<string, number>>(new Map())
+  const [parkingSpots,  setParkingSpots]  = useState<{ lat: number; lon: number; capacity?: number }[]>([])
   const [selectedId,    setSelectedId]   = useState<string | undefined>()
   const [isLoading,     setIsLoading]    = useState(false)
   const [searchCenter,  setSearchCenter] = useState<{ lat: number; lon: number } | undefined>()
@@ -89,9 +86,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setError(undefined)
     setPlaces([])
     setParkingSpots([])
-    setOnDemandParkingSpots([])
-    setParkingNoResults(new Set())
-    setParkingFoundCounts(new Map())
     setSelectedId(undefined)
     setFilterDebug(undefined)
 
@@ -207,8 +201,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setRadiusKm(DEFAULT_RADIUS_KM)
     setPlaces([])
     setParkingSpots([])
-    setOnDemandParkingSpots([])
-    setParkingFoundCounts(new Map())
     setSelectedId(undefined)
     setLastQuery(undefined)
     setSearchCenter(undefined)
@@ -218,20 +210,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setChatMode("text")
     try { localStorage.removeItem("ap_last_search") } catch { /* ignore */ }
     setResetKey((k) => k + 1)
-  }, [])
-
-  const handleShowNearbyParking = useCallback(async (place: Place): Promise<number> => {
-    const { lat, lon } = place.coordinates
-    const res = await fetch(`/api/nearby-parking?lat=${lat}&lon=${lon}&radius=0.3`).catch(() => null)
-    if (!res?.ok) return 0
-    const spots = await res.json().catch(() => [])
-    if (spots.length === 0) {
-      setParkingNoResults((prev) => new Set(prev).add(place.id))
-      return 0
-    }
-    setParkingFoundCounts((prev) => new Map(prev).set(place.id, spots.length))
-    setOnDemandParkingSpots(spots)
-    return spots.length
   }, [])
 
   const handleExpandRadius = useCallback(() => {
@@ -310,9 +288,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         initialLocation={resetKey === 0 ? initialCity : undefined}
         initialChipIdx={resetKey === 0 ? (initialCategory ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : undefined) : undefined}
         scrollToId={scrollToId}
-        onShowNearbyParking={handleShowNearbyParking}
-        parkingNoResults={parkingNoResults}
-        parkingFoundCounts={parkingFoundCounts}
       />
     )
   }
@@ -323,14 +298,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       <div className="fixed inset-0 z-50 bg-background">
         <MapView
           places={places}
-          parkingSpots={filters.parking ? parkingSpots : onDemandParkingSpots}
+          parkingSpots={parkingSpots}
           center={searchCenter}
           userLocation={chatMode === "nearby" ? searchCenter : undefined}
           selectedId={selectedId}
           onSelect={(p) => setSelectedId(p.id)}
-          onShowNearbyParking={handleShowNearbyParking}
-          parkingNoResultIds={parkingNoResults}
-          parkingFoundCounts={parkingFoundCounts}
           isFullscreen
           onToggleFullscreen={() => setIsFullscreen(false)}
         />
@@ -410,9 +382,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             scrollToId={scrollToId}
             filterDebug={filterDebug}
             searchCenter={chatMode === "nearby" ? searchCenter : undefined}
-            onShowNearbyParking={handleShowNearbyParking}
-            parkingNoResults={parkingNoResults}
-            parkingFoundCounts={parkingFoundCounts}
           />
           <div className="shrink-0 border-t border-border px-4 py-2 flex justify-end gap-4">
             <Link href={locale === "en" ? "/en/faq" : "/faq"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
@@ -440,14 +409,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         <div className="flex-1 min-h-0 relative">
           <MapView
             places={places}
-            parkingSpots={filters.parking ? parkingSpots : onDemandParkingSpots}
+            parkingSpots={parkingSpots}
             center={searchCenter}
             userLocation={chatMode === "nearby" ? searchCenter : undefined}
             selectedId={selectedId}
             onSelect={(p) => { setSelectedId(p.id); setScrollToId(p.id) }}
-            onShowNearbyParking={handleShowNearbyParking}
-            parkingNoResultIds={parkingNoResults}
-            parkingFoundCounts={parkingFoundCounts}
             isFullscreen={false}
             onToggleFullscreen={() => setIsFullscreen(true)}
           />

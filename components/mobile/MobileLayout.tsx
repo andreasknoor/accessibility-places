@@ -43,9 +43,6 @@ interface Props {
   initialLocation?:     string
   initialChipIdx?:      number
   scrollToId?:          string
-  onShowNearbyParking?: (place: Place) => Promise<number>
-  parkingNoResults?:    Set<string>
-  parkingFoundCounts?:  Map<string, number>
 }
 
 export default function MobileLayout({
@@ -53,7 +50,6 @@ export default function MobileLayout({
   filters, sources, radiusKm, onFilters, onSources, onRadius,
   sourceStates, searchCenter, onSearch, onRerun, onExpandRadius, onRadiusChange, hasSearched, error,
   onReset, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
-  onShowNearbyParking, parkingNoResults, parkingFoundCounts,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>("results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -71,10 +67,6 @@ export default function MobileLayout({
   const handleSearch = (query: string, coords?: { lat: number; lon: number }, nameHint?: string) => { setActiveTab("results"); onSearch(query, coords, nameHint) }
   const handleRerun = onRerun ? () => { setActiveTab("results"); onRerun() } : undefined
   const handleExpandRadius = onExpandRadius ? () => { setActiveTab("results"); onExpandRadius() } : undefined
-  // Parking: switch to map immediately so P markers are visible while loading
-  const handleShowNearbyParking: ((place: Place) => Promise<number>) | undefined = onShowNearbyParking
-    ? async (place: Place) => { setActiveTab("map"); return onShowNearbyParking(place) }
-    : undefined
   const t = useTranslations()
   const { locale } = useLocale()
 
@@ -135,7 +127,6 @@ export default function MobileLayout({
             onSelect={(p) => { onSelect(p); setPanTrigger((n) => n + 1); setActiveTab("map") }}
             isLoading={isLoading}
             scrollToId={scrollToId ?? externalScrollToId}
-
             onRerun={handleRerun}
             onExpandRadius={handleExpandRadius}
             onAdjustFilters={() => setActiveTab("filter")}
@@ -144,9 +135,6 @@ export default function MobileLayout({
             hasSearched={hasSearched}
             filterDebug={filterDebug}
             searchCenter={searchCenter}
-            onShowNearbyParking={handleShowNearbyParking}
-            parkingNoResults={parkingNoResults}
-            parkingFoundCounts={parkingFoundCounts}
           />
         </div>
 
@@ -162,9 +150,6 @@ export default function MobileLayout({
               panTrigger={panTrigger}
               onSelect={onSelect}
               onShowInResults={handleShowInResults}
-              onShowNearbyParking={onShowNearbyParking}
-              parkingNoResultIds={parkingNoResults}
-              parkingFoundCounts={parkingFoundCounts}
               isFullscreen={false}
               onToggleFullscreen={() => {}}
               showFullscreenToggle={false}

@@ -216,13 +216,11 @@ export async function POST(req: NextRequest) {
         )
 
         // 4a. Kick off the disabled-parking fetch in parallel with the venue
-        // adapters so it doesn't add to the visible latency. Only when the
-        // user actually has the parking filter on (otherwise the result is
-        // never used) and the feature flag is explicitly enabled.
+        // adapters so it doesn't add to the visible latency.
         // ENABLE_NEARBY_PARKING defaults to OFF: only the literal string "1"
         // turns it on. Failure of this fetch is non-fatal — main search
         // proceeds and parking values stay as the adapters reported them.
-        const nearbyParkingEnabled = filters.parking && process.env.ENABLE_NEARBY_PARKING === "1"
+        const nearbyParkingEnabled = process.env.ENABLE_NEARBY_PARKING === "1"
         const nearbyParkingPromise: Promise<NearbyParkingFeature[]> = nearbyParkingEnabled
           ? fetchOsmDisabledParking({ lat: geo.lat, lon: geo.lon }, radiusKm, signal).catch(() => [])
           : Promise.resolve([])

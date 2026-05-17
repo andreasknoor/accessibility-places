@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { createPortal } from "react-dom"
-import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Info, Accessibility, PawPrint, Salad, Leaf, Map, ShieldCheck, Loader2, Search, CheckCircle2 } from "lucide-react"
+import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Info, Accessibility, PawPrint, Salad, Leaf, Map, ShieldCheck, Eye } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import ConfidenceBadge  from "./ConfidenceBadge"
@@ -14,13 +14,10 @@ import { cn } from "@/lib/utils"
 import type { Place } from "@/lib/types"
 
 interface Props {
-  place:                Place
-  isSelected?:          boolean
-  onClick?:             () => void
-  distanceM?:           number
-  onShowNearbyParking?: (place: Place) => Promise<number>
-  parkingNoResult?:     boolean
-  parkingFoundCount?:   number
+  place:       Place
+  isSelected?: boolean
+  onClick?:    () => void
+  distanceM?:  number
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -44,17 +41,13 @@ const CATEGORY_ICONS: Record<string, string> = {
 /** Set to false (or delete the footer block below) to revert option A */
 const SHOW_MAP_FOOTER = true
 
-export default function PlaceCard({ place, isSelected, onClick, distanceM, onShowNearbyParking, parkingNoResult, parkingFoundCount }: Props) {
+export default function PlaceCard({ place, isSelected, onClick, distanceM }: Props) {
   const t = useTranslations()
-  const [expanded,        setExpanded]        = useState(false)
-  const [showDebug,       setShowDebug]       = useState(false)
-  const [loadingParking,  setLoadingParking]  = useState(false)
+  const [expanded,  setExpanded]  = useState(false)
+  const [showDebug, setShowDebug] = useState(false)
 
   const addr = [place.address.street, place.address.houseNumber, place.address.city]
     .filter(Boolean).join(" ")
-
-  const criteriaKeys = ["entrance", "toilet", "parking"] as const
-  const criteriaLabels = [t.criteria.entrance, t.criteria.toilet, t.criteria.parking]
 
   const allAttrs = [
     place.accessibility.entrance,
@@ -75,9 +68,6 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM, onSho
     const gRecord = place.sourceRecords.find((r) => r.sourceId === "google_places")
     const query = [place.name, place.address.city].filter(Boolean).join(" ")
     if (gRecord?.externalId) {
-      // search/?api=1 is the documented cross-platform URL scheme; it works in both
-      // the Google Maps web app and the native iOS app. The undocumented
-      // /maps/place/?q=place_id:... format works on desktop but fails on iOS.
       return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}&query_place_id=${gRecord.externalId}`
     }
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
@@ -92,6 +82,13 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM, onSho
     }
     return `https://wheelmap.org/?lat=${place.coordinates.lat}&lon=${place.coordinates.lon}&zoom=19`
   })()
+
+  // Show eye icon when parking was auto-enriched from a nearby OSM spot.
+  // Desktop: onClick selects the place and pans the map (P markers visible).
+  // Mobile: onClick also switches to the map tab (MobileLayout wires this).
+  const isNearbyParking =
+    place.accessibility.parking.value === "yes" &&
+    (place.accessibility.parking.details as { nearbyOnly?: boolean } | undefined)?.nearbyOnly === true
 
   return (
     <Card
@@ -179,41 +176,24 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM, onSho
         <div className="flex flex-col gap-1.5">
           <A11yAttribute label={t.criteria.entrance} attr={place.accessibility.entrance} detailType="entrance" showDetails={expanded} />
           <A11yAttribute label={t.criteria.toilet}   attr={place.accessibility.toilet}   detailType="toilet"   showDetails={expanded} />
-          {/* Parking row — shows inline search button when value is unknown */}
+          {/* Parking row — eye icon for auto-enriched nearby parking */}
           <div className="flex items-start gap-2">
             <div className="flex-1 min-w-0">
-              {parkingFoundCount != null && parkingFoundCount > 0 ? (
-                <div className="rounded-md px-2.5 py-1.5 flex flex-col gap-1 bg-green-50">
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-green-600" />
-                    <span className="text-xs font-medium text-foreground min-w-0 flex-1 truncate">{t.criteria.parking}</span>
-                    <span className="text-xs shrink-0 text-green-600">{t.results.nearbyParkingCount(parkingFoundCount)}</span>
-                  </div>
-                </div>
-              ) : (
-                <A11yAttribute
-                  label={t.criteria.parking}
-                  attr={parkingNoResult ? { ...place.accessibility.parking, value: "no" } : place.accessibility.parking}
-                  detailType="parking"
-                  showDetails={expanded}
-                />
-              )}
+              <A11yAttribute
+                label={t.criteria.parking}
+                attr={place.accessibility.parking}
+                detailType="parking"
+                showDetails={expanded}
+              />
             </div>
-            {onShowNearbyParking && place.accessibility.parking.value === "unknown" && !parkingNoResult && !(parkingFoundCount && parkingFoundCount > 0) && (
+            {isNearbyParking && onClick && (
               <button
-                onClick={async (e) => {
-                  e.stopPropagation()
-                  setLoadingParking(true)
-                  try { await onShowNearbyParking(place) } finally { setLoadingParking(false) }
-                }}
-                disabled={loadingParking}
-                title={t.results.showNearbyParking}
-                className="shrink-0 mt-1 inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors disabled:opacity-50"
+                onClick={(e) => { e.stopPropagation(); onClick() }}
+                title={t.results.showOnMap}
+                aria-label={t.results.showOnMap}
+                className="shrink-0 mt-1 inline-flex items-center rounded p-1.5 text-blue-600 hover:bg-blue-50 transition-colors"
               >
-                {loadingParking
-                  ? <Loader2 className="w-3 h-3 animate-spin" />
-                  : <Search className="w-3 h-3" />
-                }
+                <Eye className="w-3.5 h-3.5" />
               </button>
             )}
           </div>

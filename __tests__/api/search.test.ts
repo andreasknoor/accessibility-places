@@ -151,3 +151,111 @@ describe("POST /api/search — input validation", () => {
     // Presence of a result event confirms the route processed it without error.
   })
 })
+
+describe("POST /api/search — nearby parking enrichment", () => {
+  // OSM Overpass returns one restaurant with unknown parking and one disabled
+  // parking spot 80 m away. With ENABLE_NEARBY_PARKING=1 the restaurant's
+  // parking value is upgraded to "yes" + nearbyOnly=true, and parkingSpots
+  // is populated in the result payload.
+  const OSM_RESTAURANT = {
+    type: "node",
+    id: 111,
+    lat: 52.52,
+    lon: 13.405,
+    tags: {
+      amenity:    "restaurant",
+      name:       "Enrichment Test",
+      wheelchair: "unknown",
+    },
+  }
+  // ~80 m north of the restaurant
+  const OSM_PARKING_SPOT = {
+    type: "node",
+    id: 999,
+    lat: 52.5207,
+    lon: 13.405,
+    tags: { amenity: "parking_space", "parking_space": "disabled", "capacity:disabled": "2" },
+  }
+
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    vi.stubEnv("ENABLE_NEARBY_PARKING", "1")
+  })
+
+  it("enriches parking to nearbyOnly=true when parking filter is OFF", async () => {
+    // Two fetch calls: one for OSM venues, one for Overpass disabled parking.
+    // We discriminate by URL substring.
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
+      if (url.includes("parking_space")) {
+        return Promise.resolve({ ok: true, json: async () => ({ elements: [OSM_PARKING_SPOT] }) })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ elements: [OSM_RESTAURANT] }) })
+    }))
+
+    const req = makeReq({
+      ...BASE_BODY,
+      // parking filter is explicitly OFF — enrichment must still run
+      filters:  { ...BASE_BODY.filters, parking: false, entrance: false, toilet: false },
+      sources:  { ...BASE_BODY.sources, osm: true },
+    })
+    const res    = await POST(req)
+    const events = await parseEvents(res)
+    const result = events.find((e) => e.type === "result")
+    expect(result).toBeDefined()
+
+    const payload = result!.payload as { places: Array<{ accessibility: { parking: { value: string; details: Record<string, unknown> } } }>; parkingSpots: unknown[] }
+    expect(payload.places).toHaveLength(1)
+    expect(payload.places[0].accessibility.parking.value).toBe("yes")
+    expect(payload.places[0].accessibility.parking.details.nearbyOnly).toBe(true)
+    expect(payload.parkingSpots).toHaveLength(1)
+  })
+
+  it("enriches parking even when parking filter is ON", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
+      if (url.includes("parking_space")) {
+        return Promise.resolve({ ok: true, json: async () => ({ elements: [OSM_PARKING_SPOT] }) })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ elements: [OSM_RESTAURANT] }) })
+    }))
+
+    const req = makeReq({
+      ...BASE_BODY,
+      filters:  { ...BASE_BODY.filters, parking: true, entrance: false, toilet: false },
+      sources:  { ...BASE_BODY.sources, osm: true },
+    })
+    const res    = await POST(req)
+    const events = await parseEvents(res)
+    const result = events.find((e) => e.type === "result")
+    expect(result).toBeDefined()
+
+    const payload = result!.payload as { places: Array<{ accessibility: { parking: { value: string } } }>; parkingSpots: unknown[] }
+    // Place passes the parking filter because enrichment upgraded it to "yes"
+    expect(payload.places).toHaveLength(1)
+    expect(payload.places[0].accessibility.parking.value).toBe("yes")
+    expect(payload.parkingSpots).toHaveLength(1)
+  })
+
+  it("does NOT enrich when ENABLE_NEARBY_PARKING is unset", async () => {
+    vi.unstubAllEnvs()
+    // ENABLE_NEARBY_PARKING is NOT set — only the OSM venue fetch should fire
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok:   true,
+      json: async () => ({ elements: [OSM_RESTAURANT] }),
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const req = makeReq({
+      ...BASE_BODY,
+      filters:  { ...BASE_BODY.filters, parking: false, entrance: false, toilet: false },
+      sources:  { ...BASE_BODY.sources, osm: true },
+    })
+    const res    = await POST(req)
+    const events = await parseEvents(res)
+    const result = events.find((e) => e.type === "result")
+    expect(result).toBeDefined()
+
+    const payload = result!.payload as { places: Array<{ accessibility: { parking: { value: string } } }>; parkingSpots: unknown[] }
+    expect(payload.places[0].accessibility.parking.value).toBe("unknown")
+    expect(payload.parkingSpots).toHaveLength(0)
+  })
+})

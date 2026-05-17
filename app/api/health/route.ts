@@ -107,6 +107,35 @@ type AdapterReport =
   | { status: "skipped_no_key" }
   | { status: "disabled" }
 
+type PhotonReport =
+  | { status: "ok";      featureCount: number; durationMs: number }
+  | { status: "error";   httpStatus?: number;  error: string;     durationMs: number }
+  | { status: "skipped" }
+
+// ─── Photon availability check ───────────────────────────────────────────────
+
+const PHOTON_CHECK_URL =
+  "https://photon.komoot.io/api/?q=Berlin&limit=1&lang=de" +
+  "&bbox=5.87,45.82,17.17,55.06&layer=city&layer=district&layer=locality"
+
+async function checkPhoton(): Promise<PhotonReport> {
+  const t0 = Date.now()
+  try {
+    const res = await fetch(PHOTON_CHECK_URL, {
+      headers: { "User-Agent": "AccessiblePlaces/1.0 (health-check)" },
+      signal:  AbortSignal.timeout(5_000),
+    })
+    const durationMs = Date.now() - t0
+    if (!res.ok) {
+      return { status: "error", httpStatus: res.status, error: res.statusText || `HTTP ${res.status}`, durationMs }
+    }
+    const data = await res.json() as { features?: unknown[] }
+    return { status: "ok", featureCount: data.features?.length ?? 0, durationMs }
+  } catch (err) {
+    return { status: "error", error: String(err), durationMs: Date.now() - t0 }
+  }
+}
+
 // ─── Route handler ───────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -120,8 +149,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 })
   }
 
-  const isMock = req.nextUrl.searchParams.get("mock") === "1"
-  const t0     = Date.now()
+  const isMock      = req.nextUrl.searchParams.get("mock") === "1"
+  const checkPhotonFlag = req.nextUrl.searchParams.get("photon") === "1"
+  const t0          = Date.now()
 
   const adapterReport: Partial<Record<SourceId | "google_places", AdapterReport>> = {
     google_places: { status: "disabled" },
@@ -129,6 +159,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   let results: Place[] = []
   const checks: CheckResult[] = []
+  let photonReport: PhotonReport = { status: "skipped" }
+
+  // Start Photon check in parallel (live mode only; mock skips all external calls)
+  const photonPromise = checkPhotonFlag && !isMock ? checkPhoton() : Promise.resolve<PhotonReport>({ status: "skipped" })
 
   if (isMock) {
     // ── Mock mode: fixture data through the real pipeline, no HTTP calls ──
@@ -188,6 +222,16 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     }
   }
 
+  // ── Photon result ─────────────────────────────────────────────────────────
+  photonReport = await photonPromise
+  if (photonReport.status !== "skipped") {
+    if (photonReport.status === "ok") {
+      checks.push({ name: "photon_available", ok: true, actual: photonReport.durationMs + "ms" })
+    } else {
+      checks.push({ name: "photon_available", ok: false, error: photonReport.error })
+    }
+  }
+
   // ── Shared checks (live and mock) ─────────────────────────────────────────
   if (results.length >= SCENARIO.minResults) {
     checks.push({ name: `result_count_min_${SCENARIO.minResults}`, ok: true, actual: results.length })
@@ -216,6 +260,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       filters:    SCENARIO.filters,
     },
     adapters: adapterReport,
+    photon:   photonReport,
     checks,
     ...(allOk ? {} : { topResults: results.slice(0, 3).map((p) => ({ name: p.name, confidence: p.overallConfidence, entrance: p.accessibility.entrance.value })) }),
   }

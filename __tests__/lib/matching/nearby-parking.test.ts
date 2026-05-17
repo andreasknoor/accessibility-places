@@ -130,3 +130,85 @@ describe("enrichWithNearbyParking", () => {
     expect(NEARBY_PARKING_CONFIDENCE).toBeLessThan(0.75)
   })
 })
+
+describe("nearbyOnly vs on-site parking distinction", () => {
+  it("on-site yes parking has no nearbyOnly flag", () => {
+    const place = makePlace({
+      accessibility: {
+        entrance: { value: "yes", confidence: 1, conflict: false, sources: [], details: {} },
+        toilet:   { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
+        parking:  { value: "yes", confidence: 0.75, conflict: false, sources: [], details: {} },
+      },
+    })
+    const feature = { lat: place.coordinates.lat, lon: place.coordinates.lon }
+    enrichWithNearbyParking([place], [feature])
+
+    // on-site yes must not be overwritten and must not get nearbyOnly flag
+    expect(place.accessibility.parking.value).toBe("yes")
+    expect(parkingDetails(place).nearbyOnly).toBeUndefined()
+  })
+
+  it("on-site limited parking is not changed by enrichment", () => {
+    const place = makePlace({
+      accessibility: {
+        entrance: { value: "yes",     confidence: 1,   conflict: false, sources: [], details: {} },
+        toilet:   { value: "unknown", confidence: 0,   conflict: false, sources: [], details: {} },
+        parking:  { value: "limited", confidence: 0.6, conflict: false, sources: [], details: {} },
+      },
+    })
+    enrichWithNearbyParking([place], [{ lat: place.coordinates.lat, lon: place.coordinates.lon }])
+
+    expect(place.accessibility.parking.value).toBe("limited")
+    expect(parkingDetails(place).nearbyOnly).toBeUndefined()
+  })
+
+  it("only unknown-parking places get enriched; known values are untouched", () => {
+    const placeYes     = makePlace({ id: "yes-place", accessibility: {
+      entrance: { value: "yes", confidence: 1,    conflict: false, sources: [], details: {} },
+      toilet:   { value: "yes", confidence: 1,    conflict: false, sources: [], details: {} },
+      parking:  { value: "yes", confidence: 0.75, conflict: false, sources: [], details: {} },
+    }})
+    const placeNo      = makePlace({ id: "no-place", accessibility: {
+      entrance: { value: "yes", confidence: 1,   conflict: false, sources: [], details: {} },
+      toilet:   { value: "yes", confidence: 1,   conflict: false, sources: [], details: {} },
+      parking:  { value: "no",  confidence: 0.7, conflict: false, sources: [], details: {} },
+    }})
+    const placeUnknown = makePlace({ id: "unknown-place" }) // parking: unknown
+
+    const feature = { lat: placeYes.coordinates.lat, lon: placeYes.coordinates.lon }
+    enrichWithNearbyParking([placeYes, placeNo, placeUnknown], [feature])
+
+    expect(placeYes.accessibility.parking.value).toBe("yes")
+    expect(parkingDetails(placeYes).nearbyOnly).toBeUndefined()
+
+    expect(placeNo.accessibility.parking.value).toBe("no")
+    expect(parkingDetails(placeNo).nearbyOnly).toBeUndefined()
+
+    // only the unknown-parking place is upgraded
+    expect(placeUnknown.accessibility.parking.value).toBe("yes")
+    expect(parkingDetails(placeUnknown).nearbyOnly).toBe(true)
+  })
+
+  it("nearbyOnly=true place records the distance in nearbyParkingDistanceM", () => {
+    const place   = makePlace()
+    const feature = { lat: place.coordinates.lat + 0.001, lon: place.coordinates.lon } // ~111 m
+    enrichWithNearbyParking([place], [feature])
+
+    expect(parkingDetails(place).nearbyOnly).toBe(true)
+    expect(parkingDetails(place).nearbyParkingDistanceM).toBeGreaterThan(100)
+    expect(parkingDetails(place).nearbyParkingDistanceM).toBeLessThan(125)
+  })
+
+  it("on-site parking never has nearbyParkingDistanceM", () => {
+    const place = makePlace({
+      accessibility: {
+        entrance: { value: "yes", confidence: 1,    conflict: false, sources: [], details: {} },
+        toilet:   { value: "yes", confidence: 1,    conflict: false, sources: [], details: {} },
+        parking:  { value: "yes", confidence: 0.75, conflict: false, sources: [], details: {} },
+      },
+    })
+    enrichWithNearbyParking([place], [{ lat: place.coordinates.lat, lon: place.coordinates.lon }])
+
+    expect(parkingDetails(place).nearbyParkingDistanceM).toBeUndefined()
+  })
+})

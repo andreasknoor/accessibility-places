@@ -19,14 +19,11 @@ interface Props {
   selectedId?:   string
   panTrigger?:   number
   onSelect:      (place: Place) => void
-  onShowInResults?:      (place: Place) => void
-  onShowNearbyParking?:  (place: Place) => Promise<number>
-  parkingNoResultIds?:   Set<string>
-  parkingFoundCounts?:   Map<string, number>
-  isFullscreen:         boolean
-  onToggleFullscreen:   () => void
+  onShowInResults?:    (place: Place) => void
+  isFullscreen:        boolean
+  onToggleFullscreen:  () => void
   showFullscreenToggle?: boolean
-  visible?:             boolean
+  visible?:            boolean
 }
 
 const CONFIDENCE_COLORS = {
@@ -65,9 +62,6 @@ export default function MapView({
   panTrigger,
   onSelect,
   onShowInResults,
-  onShowNearbyParking,
-  parkingNoResultIds,
-  parkingFoundCounts,
   isFullscreen,
   onToggleFullscreen,
   showFullscreenToggle = true,
@@ -84,19 +78,12 @@ export default function MapView({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userMarker = useRef<any>(null)
   const [mapReady, setMapReady] = useState(false)
-  const onShowInResultsRef     = useRef(onShowInResults)
-  const onShowNearbyParkingRef = useRef(onShowNearbyParking)
-  const placesRef              = useRef(places)
-  const userLocationRef        = useRef(userLocation)
-  const parkingNoResultIdsRef  = useRef(parkingNoResultIds)
-  const parkingFoundCountsRef  = useRef(parkingFoundCounts)
-  const popupDivs              = useRef<Map<string, HTMLElement>>(new Map())
-  useEffect(() => { onShowInResultsRef.current     = onShowInResults     }, [onShowInResults])
-  useEffect(() => { onShowNearbyParkingRef.current = onShowNearbyParking }, [onShowNearbyParking])
+  const onShowInResultsRef  = useRef(onShowInResults)
+  const placesRef           = useRef(places)
+  const userLocationRef     = useRef(userLocation)
+  useEffect(() => { onShowInResultsRef.current = onShowInResults }, [onShowInResults])
   useEffect(() => { placesRef.current = places }, [places])
   useEffect(() => { userLocationRef.current = userLocation }, [userLocation])
-  useEffect(() => { parkingNoResultIdsRef.current = parkingNoResultIds }, [parkingNoResultIds])
-  useEffect(() => { parkingFoundCountsRef.current = parkingFoundCounts }, [parkingFoundCounts])
 
   // Init map once
   useEffect(() => {
@@ -226,7 +213,6 @@ export default function MapView({
       if (!currentIds.has(id)) {
         m.remove()
         markers.current.delete(id)
-        popupDivs.current.delete(id)
       }
     }
 
@@ -257,6 +243,15 @@ export default function MapView({
         // on mobile because Leaflet intercepts touchstart on the popup container.
         const div = document.createElement("div")
         div.style.cssText = "font-family:sans-serif;font-size:13px;line-height:1.5"
+
+        const parkingText = (() => {
+          const p = place.accessibility.parking
+          if (p.value === "yes" && (p.details as { nearbyOnly?: boolean } | undefined)?.nearbyOnly) {
+            return t.a11y.yesNearby
+          }
+          return t.a11y[p.value] ?? p.value
+        })()
+
         div.innerHTML = `
           <strong style="display:block;margin-bottom:4px">${place.name} <span style="color:${markerColor(place.overallConfidence)};font-weight:normal">(${Math.round(place.overallConfidence * 100)}%)</span></strong>
           ${addr ? `<div style="color:#666;font-size:11px;margin-bottom:6px">${addr}</div>` : ""}
@@ -266,51 +261,14 @@ export default function MapView({
             <span style="color:#888">${t.criteria.toilet}</span>
             <span style="color:${markerColor(place.accessibility.toilet.confidence)}">${t.a11y[place.accessibility.toilet.value] ?? place.accessibility.toilet.value}</span>
             <span style="color:#888">${t.criteria.parking}</span>
-            <span style="display:inline-flex;align-items:center;gap:3px">
-              <span data-parking-value style="color:${
-                parkingNoResultIdsRef.current?.has(place.id) ? "#ef4444"
-                : parkingFoundCountsRef.current?.has(place.id) ? "#16a34a"
-                : markerColor(place.accessibility.parking.confidence)
-              }">${
-                parkingNoResultIdsRef.current?.has(place.id)
-                  ? (t.a11y.no ?? "Nein")
-                  : parkingFoundCountsRef.current?.has(place.id)
-                    ? t.results.nearbyParkingCount(parkingFoundCountsRef.current.get(place.id)!)
-                    : place.accessibility.parking.value === "yes" &&
-                      (place.accessibility.parking.details as { nearbyOnly?: boolean } | undefined)?.nearbyOnly
-                        ? t.a11y.yesNearby
-                        : (t.a11y[place.accessibility.parking.value] ?? place.accessibility.parking.value)
-              }</span>${place.accessibility.parking.value === "unknown" && !parkingNoResultIdsRef.current?.has(place.id) && !parkingFoundCountsRef.current?.has(place.id) ? `<button data-nearby-parking style="display:inline-flex;align-items:center;flex-shrink:0;border:none;background:none;cursor:pointer;padding:0;color:#1d4ed8" title="${t.results.showNearbyParking}"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>` : ""}
-            </span>
+            <span style="color:${markerColor(place.accessibility.parking.confidence)}">${parkingText}</span>
           </div>
           <div style="margin-top:6px;font-size:10px;color:#888">
             ${t.map.source}: ${SOURCE_LABELS[place.primarySource]}
           </div>
           ${onShowInResults ? `<button data-show-id style="display:block;margin-top:8px;font-size:11px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-align:left">${t.map.showInResults} →</button>` : ""}
         `
-        {
-          const capturedId = place.id
-          const nearbyBtn  = div.querySelector<HTMLElement>("[data-nearby-parking]")
-          if (nearbyBtn) {
-            L!.DomEvent.on(nearbyBtn, "click", async (ev: Event) => {
-              L!.DomEvent.stopPropagation(ev)
-              const p = placesRef.current.find((pl) => pl.id === capturedId)
-              if (!p) return
-              const count = await onShowNearbyParkingRef.current?.(p) ?? 0
-              nearbyBtn.remove()
-              const parkingValueEl = div.querySelector<HTMLElement>("[data-parking-value]")
-              if (parkingValueEl) {
-                if (count > 0) {
-                  parkingValueEl.textContent = t.results.nearbyParkingCount(count)
-                  parkingValueEl.style.color = "#16a34a"
-                } else {
-                  parkingValueEl.textContent = t.a11y.no ?? "Nein"
-                  parkingValueEl.style.color = "#ef4444"
-                }
-              }
-            })
-          }
-        }
+
         if (onShowInResults) {
           const btn = div.querySelector<HTMLElement>("[data-show-id]")
           if (btn) {
@@ -322,7 +280,6 @@ export default function MapView({
             })
           }
         }
-        popupDivs.current.set(place.id, div)
         const popup = L!.popup({ maxWidth: 260 }).setContent(div)
 
         const marker = L!.marker(
@@ -346,27 +303,6 @@ export default function MapView({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [places, selectedId, mapReady])
-
-  // Sync parking state into already-built popup DOMs when the state changes
-  // (e.g. user clicked lupe in ResultsList before switching to the map tab).
-  useEffect(() => {
-    for (const [placeId, div] of popupDivs.current) {
-      const valueEl = div.querySelector<HTMLElement>("[data-parking-value]")
-      if (!valueEl) continue
-      const noResult   = parkingNoResultIds?.has(placeId)
-      const foundCount = parkingFoundCounts?.get(placeId)
-      if (noResult) {
-        valueEl.textContent = t.a11y.no
-        valueEl.style.color = "#ef4444"
-        div.querySelector<HTMLElement>("[data-nearby-parking]")?.remove()
-      } else if (foundCount != null && foundCount > 0) {
-        valueEl.textContent = t.results.nearbyParkingCount(foundCount)
-        valueEl.style.color = "#16a34a"
-        div.querySelector<HTMLElement>("[data-nearby-parking]")?.remove()
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parkingFoundCounts, parkingNoResultIds])
 
   // Pan to selected — also re-fires when panTrigger increments so that
   // clicking the same result after manually panning the map still re-centers.
