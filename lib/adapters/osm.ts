@@ -372,11 +372,13 @@ export async function fetchOsmDisabledParking(
   // disabled parking space" features.
   // Keys containing ":" must be quoted in Overpass QL — unquoted colons are
   // a syntax error and cause a 400 response (silently swallowed by the caller).
+  // 500 results: denser cities (Berlin, München) can have hundreds of
+  // disabled-parking features; 200 was silently truncating at high density.
   const query = `[out:json][timeout:20];(` +
     `nwr(around:${r},${lat},${lon})[amenity=parking]["capacity:disabled"];` +
     `nwr(around:${r},${lat},${lon})[amenity=parking]["capacity:wheelchair"];` +
     `nwr(around:${r},${lat},${lon})[amenity=parking_space][parking_space=disabled];` +
-    `);out 200 center tags;`
+    `);out 500 center tags;`
 
   const headers = {
     "Content-Type": "application/x-www-form-urlencoded",
@@ -384,41 +386,42 @@ export async function fetchOsmDisabledParking(
   }
   const body = `data=${encodeURIComponent(query)}`
 
-  // Try endpoints sequentially with short timeout — this is best-effort
-  // enrichment, not a primary data source. Caller treats any failure as
-  // "no nearby parking found" and the main pipeline continues unchanged.
-  for (const endpoint of OVERPASS_ENDPOINTS) {
-    try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        body,
-        headers,
-        signal: signal
-          ? AbortSignal.any([signal, AbortSignal.timeout(15_000)])
-          : AbortSignal.timeout(15_000),
-      })
-      if (!res.ok) continue
-      const json = await res.json()
-      const out: NearbyParkingFeature[] = []
-      for (const el of json.elements ?? []) {
-        // Lat/lon for nodes is on the element; for ways/relations Overpass
-        // returns it under `center` because we requested `out center`.
-        const featLat = el.lat ?? el.center?.lat
-        const featLon = el.lon ?? el.center?.lon
-        if (typeof featLat !== "number" || typeof featLon !== "number") continue
-        const tags = el.tags ?? {}
-        const cap = parseInt(tags["capacity:disabled"] ?? tags["capacity:wheelchair"] ?? "", 10)
-        out.push({
-          lat:       featLat,
-          lon:       featLon,
-          capacity:  Number.isFinite(cap) ? cap : undefined,
-        })
-      }
-      return out
-    } catch {
-      // Swallow and try next endpoint; final fallback is empty array.
-      continue
+  function parseFeatures(json: { elements?: unknown[] }): NearbyParkingFeature[] {
+    const out: NearbyParkingFeature[] = []
+    for (const el of json.elements ?? []) {
+      const e = el as Record<string, unknown>
+      // Lat/lon for nodes is on the element; for ways/relations Overpass
+      // returns it under `center` because we requested `out center`.
+      const center = e.center as Record<string, unknown> | undefined
+      const featLat = typeof e.lat === "number" ? e.lat : typeof center?.lat === "number" ? center.lat : undefined
+      const featLon = typeof e.lon === "number" ? e.lon : typeof center?.lon === "number" ? center.lon : undefined
+      if (featLat === undefined || featLon === undefined) continue
+      const tags = (e.tags ?? {}) as Record<string, string>
+      const cap = parseInt(tags["capacity:disabled"] ?? tags["capacity:wheelchair"] ?? "", 10)
+      out.push({ lat: featLat, lon: featLon, capacity: Number.isFinite(cap) ? cap : undefined })
     }
+    return out
   }
-  return []
+
+  // Race both endpoints in parallel (same strategy as the main OSM venue fetch).
+  // First successful response wins; if both fail the caller gets [].
+  try {
+    const sig = (endpoint: string) => signal
+      ? AbortSignal.any([signal, AbortSignal.timeout(15_000)])
+      : AbortSignal.timeout(15_000)
+
+    return await Promise.any(
+      OVERPASS_ENDPOINTS.map(async (endpoint) => {
+        const res = await fetch(endpoint, { method: "POST", body, headers, signal: sig(endpoint) })
+        if (!res.ok) throw new Error(`[parking] ${endpoint} → HTTP ${res.status}`)
+        return parseFeatures(await res.json())
+      }),
+    )
+  } catch (err) {
+    // AggregateError means both endpoints failed; log so Vercel Function Logs
+    // capture the frequency of parking-fetch failures.
+    const errors = err instanceof AggregateError ? err.errors : [err]
+    for (const e of errors) console.warn("[parking] endpoint failed:", e)
+    return []
+  }
 }
