@@ -57,6 +57,7 @@ export type StatsResult = Partial<Record<SourceId, SourceStats>>
 
 const ALL_SOURCES: SourceId[] = [
   "osm", "accessibility_cloud", "reisen_fuer_alle", "ginto", "google_places",
+  "osm_parking", "nominatim",
 ]
 
 async function sumHourKeys(redis: Redis, prefix: "calls" | "errors", source: SourceId): Promise<{ total: number; hours: number; oldestHour: string | null }> {

@@ -47,19 +47,24 @@ async function geocode(
 ): Promise<{ lat: number; lon: number; label: string } | null> {
   const url = `${NOMINATIM_ENDPOINT}/search?q=${encodeURIComponent(locationQuery)}&format=json&limit=1&countrycodes=de,at,ch`
   try {
+    trackCall("nominatim")
     const res = await fetch(url, {
       headers: { "User-Agent": "AccessiblePlaces/1.0 (contact@accessible-places.org)" },
       signal:  AbortSignal.any([signal, AbortSignal.timeout(8_000)]),
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      trackError("nominatim")
+      return null
+    }
     const data = await res.json()
-    if (!data[0]) return null
+    if (!data[0]) return null  // "not found" is a valid response, not an error
     return {
       lat:   parseFloat(data[0].lat),
       lon:   parseFloat(data[0].lon),
       label: data[0].display_name,
     }
   } catch {
+    trackError("nominatim")
     return null
   }
 }
@@ -226,7 +231,10 @@ export async function POST(req: NextRequest) {
         // proceeds and parking values stay as the adapters reported them.
         const nearbyParkingEnabled = process.env.ENABLE_NEARBY_PARKING === "1"
         const nearbyParkingPromise: Promise<NearbyParkingFeature[]> = nearbyParkingEnabled
-          ? fetchOsmDisabledParking({ lat: geo.lat, lon: geo.lon }, radiusKm, signal).catch(() => [])
+          ? fetchOsmDisabledParking({ lat: geo.lat, lon: geo.lon }, radiusKm, signal).then(
+              (features) => { trackCall("osm_parking"); return features },
+              ()         => { trackCall("osm_parking"); trackError("osm_parking"); return [] },
+            )
           : Promise.resolve([])
 
         const adapterResults = await Promise.all(wrapped)

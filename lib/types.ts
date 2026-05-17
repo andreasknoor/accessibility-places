@@ -7,6 +7,8 @@ export type SourceId =
   | "reisen_fuer_alle"
   | "google_places"
   | "ginto"
+  | "osm_parking"
+  | "nominatim"
 
 export type Category =
   | "cafe" | "restaurant" | "bar" | "pub" | "biergarten" | "fast_food"

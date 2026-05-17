@@ -419,9 +419,9 @@ export async function fetchOsmDisabledParking(
     )
   } catch (err) {
     // AggregateError means both endpoints failed; log so Vercel Function Logs
-    // capture the frequency of parking-fetch failures.
+    // capture the frequency, then re-throw so the caller can record a stat.
     const errors = err instanceof AggregateError ? err.errors : [err]
     for (const e of errors) console.warn("[parking] endpoint failed:", e)
-    return []
+    throw err
   }
 }
