@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { createPortal } from "react-dom"
-import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Info, Accessibility, PawPrint, Salad, Leaf, Map, ShieldCheck, Loader2 } from "lucide-react"
+import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Info, Accessibility, PawPrint, Salad, Leaf, Map, ShieldCheck, Loader2, Search } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import ConfidenceBadge  from "./ConfidenceBadge"
@@ -18,7 +18,8 @@ interface Props {
   isSelected?:          boolean
   onClick?:             () => void
   distanceM?:           number
-  onShowNearbyParking?: (place: Place) => Promise<void>
+  onShowNearbyParking?: (place: Place) => Promise<boolean>
+  parkingNoResult?:     boolean
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -42,7 +43,7 @@ const CATEGORY_ICONS: Record<string, string> = {
 /** Set to false (or delete the footer block below) to revert option A */
 const SHOW_MAP_FOOTER = true
 
-export default function PlaceCard({ place, isSelected, onClick, distanceM, onShowNearbyParking }: Props) {
+export default function PlaceCard({ place, isSelected, onClick, distanceM, onShowNearbyParking, parkingNoResult }: Props) {
   const t = useTranslations()
   const [expanded,        setExpanded]        = useState(false)
   const [showDebug,       setShowDebug]       = useState(false)
@@ -180,9 +181,14 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM, onSho
           {/* Parking row — shows inline P button when value is unknown */}
           <div className="flex items-start gap-2">
             <div className="flex-1 min-w-0">
-              <A11yAttribute label={t.criteria.parking} attr={place.accessibility.parking} detailType="parking" showDetails={expanded} />
+              <A11yAttribute
+                label={t.criteria.parking}
+                attr={parkingNoResult ? { ...place.accessibility.parking, value: "no" } : place.accessibility.parking}
+                detailType="parking"
+                showDetails={expanded}
+              />
             </div>
-            {onShowNearbyParking && place.accessibility.parking.value === "unknown" && (
+            {onShowNearbyParking && place.accessibility.parking.value === "unknown" && !parkingNoResult && (
               <button
                 onClick={async (e) => {
                   e.stopPropagation()
@@ -195,9 +201,8 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM, onSho
               >
                 {loadingParking
                   ? <Loader2 className="w-3 h-3 animate-spin" />
-                  : <span className="font-bold leading-none">P</span>
+                  : <Search className="w-3 h-3" />
                 }
-                <span>{t.results.showNearbyParking}</span>
               </button>
             )}
           </div>

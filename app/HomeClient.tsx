@@ -56,6 +56,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [places,        setPlaces]       = useState<Place[]>([])
   const [parkingSpots,        setParkingSpots]        = useState<{ lat: number; lon: number; capacity?: number }[]>([])
   const [onDemandParkingSpots, setOnDemandParkingSpots] = useState<{ lat: number; lon: number; capacity?: number }[]>([])
+  const [parkingNoResults,     setParkingNoResults]     = useState<Set<string>>(new Set())
   const [selectedId,    setSelectedId]   = useState<string | undefined>()
   const [isLoading,     setIsLoading]    = useState(false)
   const [searchCenter,  setSearchCenter] = useState<{ lat: number; lon: number } | undefined>()
@@ -88,6 +89,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setPlaces([])
     setParkingSpots([])
     setOnDemandParkingSpots([])
+    setParkingNoResults(new Set())
     setSelectedId(undefined)
     setFilterDebug(undefined)
 
@@ -215,12 +217,17 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setResetKey((k) => k + 1)
   }, [])
 
-  const handleShowNearbyParking = useCallback(async (place: Place) => {
+  const handleShowNearbyParking = useCallback(async (place: Place): Promise<boolean> => {
     const { lat, lon } = place.coordinates
     const res = await fetch(`/api/nearby-parking?lat=${lat}&lon=${lon}&radius=0.3`).catch(() => null)
-    if (!res?.ok) return
+    if (!res?.ok) return false
     const spots = await res.json().catch(() => [])
+    if (spots.length === 0) {
+      setParkingNoResults((prev) => new Set(prev).add(place.id))
+      return false
+    }
     setOnDemandParkingSpots(spots)
+    return true
   }, [])
 
   const handleExpandRadius = useCallback(() => {
@@ -300,6 +307,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         initialChipIdx={resetKey === 0 ? (initialCategory ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : undefined) : undefined}
         scrollToId={scrollToId}
         onShowNearbyParking={handleShowNearbyParking}
+        parkingNoResults={parkingNoResults}
       />
     )
   }
@@ -316,6 +324,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           selectedId={selectedId}
           onSelect={(p) => setSelectedId(p.id)}
           onShowNearbyParking={handleShowNearbyParking}
+          parkingNoResultIds={parkingNoResults}
           isFullscreen
           onToggleFullscreen={() => setIsFullscreen(false)}
         />
@@ -396,6 +405,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             filterDebug={filterDebug}
             searchCenter={chatMode === "nearby" ? searchCenter : undefined}
             onShowNearbyParking={handleShowNearbyParking}
+            parkingNoResults={parkingNoResults}
           />
           <div className="shrink-0 border-t border-border px-4 py-2 flex justify-end gap-4">
             <Link href={locale === "en" ? "/en/faq" : "/faq"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
@@ -429,6 +439,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             selectedId={selectedId}
             onSelect={(p) => { setSelectedId(p.id); setScrollToId(p.id) }}
             onShowNearbyParking={handleShowNearbyParking}
+            parkingNoResultIds={parkingNoResults}
             isFullscreen={false}
             onToggleFullscreen={() => setIsFullscreen(true)}
           />
