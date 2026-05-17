@@ -43,7 +43,8 @@ interface Props {
   initialLocation?:     string
   initialChipIdx?:      number
   scrollToId?:          string
-  onActivateParking?:   (place: Place) => void
+  showParking?:         boolean
+  onToggleParking?:     () => void
 }
 
 export default function MobileLayout({
@@ -51,7 +52,7 @@ export default function MobileLayout({
   filters, sources, radiusKm, onFilters, onSources, onRadius,
   sourceStates, searchCenter, onSearch, onRerun, onExpandRadius, onRadiusChange, hasSearched, error,
   onReset, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
-  onActivateParking,
+  showParking, onToggleParking,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>("results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -137,9 +138,6 @@ export default function MobileLayout({
             hasSearched={hasSearched}
             filterDebug={filterDebug}
             searchCenter={searchCenter}
-            onActivateParking={onActivateParking
-              ? (p) => { onActivateParking(p); setPanTrigger((n) => n + 1); setActiveTab("map") }
-              : undefined}
           />
         </div>
 
@@ -159,6 +157,8 @@ export default function MobileLayout({
               onToggleFullscreen={() => {}}
               showFullscreenToggle={false}
               visible={activeTab === "map"}
+              showParking={showParking}
+              onToggleParking={onToggleParking}
             />
           )}
         </div>

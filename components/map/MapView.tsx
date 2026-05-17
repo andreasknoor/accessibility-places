@@ -24,6 +24,8 @@ interface Props {
   onToggleFullscreen:  () => void
   showFullscreenToggle?: boolean
   visible?:            boolean
+  showParking?:        boolean
+  onToggleParking?:    () => void
 }
 
 const CONFIDENCE_COLORS = {
@@ -66,6 +68,8 @@ export default function MapView({
   onToggleFullscreen,
   showFullscreenToggle = true,
   visible,
+  showParking,
+  onToggleParking,
 }: Props) {
   const t        = useTranslations()
   const mapRef   = useRef<HTMLDivElement>(null)
@@ -363,6 +367,23 @@ export default function MapView({
             : <Maximize2 className="w-4 h-4" />
           }
         </Button>
+      )}
+
+      {onToggleParking && (parkingSpots?.length ?? 0) > 0 && (
+        <button
+          onClick={onToggleParking}
+          role="switch"
+          aria-checked={showParking}
+          title={t.map.toggleParking}
+          className="absolute bottom-3 left-3 z-[1000] flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium shadow-md border border-border bg-background/95 backdrop-blur-sm transition-colors hover:bg-muted"
+        >
+          <span aria-hidden>🅿</span>
+          <span className="hidden sm:inline">{t.map.parkingSpot}</span>
+          {/* Toggle track */}
+          <span className={`relative inline-flex h-4 w-7 shrink-0 rounded-full transition-colors ${showParking ? "bg-blue-600" : "bg-muted-foreground/40"}`}>
+            <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${showParking ? "translate-x-3" : "translate-x-0.5"}`} />
+          </span>
+        </button>
       )}
     </div>
   )

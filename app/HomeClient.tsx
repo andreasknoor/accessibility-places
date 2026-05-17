@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef, useEffect, useMemo } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import dynamic from "next/dynamic"
 import Script from "next/script"
 import Link from "next/link"
@@ -15,7 +15,6 @@ import { DEFAULT_RADIUS_KM, RADIUS_MAX_KM } from "@/lib/config"
 import { SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
-import { haversineMeters, NEARBY_PARKING_DISPLAY_RADIUS_M } from "@/lib/matching/nearby-parking"
 import type { Place, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug } from "@/lib/types"
 
 // Leaflet must not run on server
@@ -71,7 +70,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [chatMode,      setChatMode]     = useState<"text" | "nearby">("text")
   const [resetKey,            setResetKey]            = useState(0)
   const [scrollToId,          setScrollToId]          = useState<string | undefined>()
-  const [activeParkingPlaceId, setActiveParkingPlaceId] = useState<string | null>(null)
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
   const selectTarget = useRef(
@@ -91,8 +89,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setParkingSpots([])
     setSelectedId(undefined)
     setFilterDebug(undefined)
-    setActiveParkingPlaceId(null)
-
     // Initialise per-source loading state for each active source so the
     // FilterPanel renders spinners immediately.
     const initial: Partial<Record<SourceId, SourceState>> = {}
@@ -211,7 +207,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setFilterDebug(undefined)
     setError(undefined)
     setSourceStates({})
-    setActiveParkingPlaceId(null)
     setChatMode("text")
     try { localStorage.removeItem("ap_last_search") } catch { /* ignore */ }
     setResetKey((k) => k + 1)
@@ -264,22 +259,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
   }, [])
 
-  // Parking spots to display on the map.
-  // alwaysShowParking: show all spots returned by server (server already capped at 10 km).
-  // Otherwise: show spots only near the place whose eye button was clicked.
-  const visibleParkingSpots = useMemo(() => {
-    if (!parkingSpots.length) return parkingSpots
-    if (filters.alwaysShowParking) return parkingSpots
-    if (!activeParkingPlaceId) return []
-    const place = places.find((p) => p.id === activeParkingPlaceId)
-    if (!place) return []
-    return parkingSpots.filter(
-      (s) => haversineMeters(place.coordinates, s) <= NEARBY_PARKING_DISPLAY_RADIUS_M,
-    )
-  }, [parkingSpots, filters.alwaysShowParking, activeParkingPlaceId, places])
+  const visibleParkingSpots = filters.alwaysShowParking ? parkingSpots : []
 
-  const handleActivateParking = useCallback((place: Place) => {
-    setActiveParkingPlaceId(place.id)
+  const handleToggleParking = useCallback(() => {
+    setFilters((f) => ({ ...f, alwaysShowParking: !f.alwaysShowParking }))
   }, [])
 
   // Mobile layout
@@ -311,7 +294,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         initialLocation={resetKey === 0 ? initialCity : undefined}
         initialChipIdx={resetKey === 0 ? (initialCategory ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : undefined) : undefined}
         scrollToId={scrollToId}
-        onActivateParking={handleActivateParking}
+        showParking={filters.alwaysShowParking}
+        onToggleParking={parkingSpots.length > 0 ? handleToggleParking : undefined}
       />
     )
   }
@@ -329,6 +313,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           onSelect={(p) => setSelectedId(p.id)}
           isFullscreen
           onToggleFullscreen={() => setIsFullscreen(false)}
+          showParking={filters.alwaysShowParking}
+          onToggleParking={parkingSpots.length > 0 ? handleToggleParking : undefined}
         />
       </div>
     )
@@ -406,7 +392,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             scrollToId={scrollToId}
             filterDebug={filterDebug}
             searchCenter={chatMode === "nearby" ? searchCenter : undefined}
-            onActivateParking={handleActivateParking}
           />
           <div className="shrink-0 border-t border-border px-4 py-2 flex justify-end gap-4">
             <Link href={locale === "en" ? "/en/faq" : "/faq"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
@@ -441,6 +426,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             onSelect={(p) => { setSelectedId(p.id); setScrollToId(p.id) }}
             isFullscreen={false}
             onToggleFullscreen={() => setIsFullscreen(true)}
+            showParking={filters.alwaysShowParking}
+            onToggleParking={parkingSpots.length > 0 ? handleToggleParking : undefined}
           />
         </div>
       </div>

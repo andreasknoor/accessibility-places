@@ -209,9 +209,9 @@ describe("PlaceCard", () => {
   })
 })
 
-describe("PlaceCard — nearby parking eye icon", () => {
-  function makeNearbyParkingPlace(): Place {
-    return makePlace({
+describe("PlaceCard — nearby parking label", () => {
+  it("shows 'Ja, in der Nähe' label for nearbyOnly parking in A11yAttribute", () => {
+    const place = makePlace({
       accessibility: {
         entrance: buildAttribute("osm", "yes", "yes", {}),
         toilet:   buildAttribute("osm", "yes", "yes", {}),
@@ -224,62 +224,7 @@ describe("PlaceCard — nearby parking eye icon", () => {
         },
       },
     })
-  }
-
-  it("shows eye icon when parking is auto-enriched via nearbyOnly", () => {
-    const onClick = vi.fn()
-    renderWithProvider(<PlaceCard place={makeNearbyParkingPlace()} onClick={onClick} />)
-    expect(screen.getByRole("button", { name: /Karte|map/i })).toBeInTheDocument()
-  })
-
-  it("clicking the eye icon calls onClick", () => {
-    const onClick = vi.fn()
-    renderWithProvider(<PlaceCard place={makeNearbyParkingPlace()} onClick={onClick} />)
-    const eyeBtn = screen.getByRole("button", { name: /Karte|map/i })
-    fireEvent.click(eyeBtn)
-    expect(onClick).toHaveBeenCalledOnce()
-  })
-
-  it("clicking the eye icon calls onActivateParking", () => {
-    const onClick = vi.fn()
-    const onActivateParking = vi.fn()
-    renderWithProvider(<PlaceCard place={makeNearbyParkingPlace()} onClick={onClick} onActivateParking={onActivateParking} />)
-    fireEvent.click(screen.getByRole("button", { name: /Karte|map/i }))
-    expect(onActivateParking).toHaveBeenCalledOnce()
-  })
-
-  it("does NOT show eye icon for on-site yes parking (no nearbyOnly flag)", () => {
-    const place = makePlace({
-      accessibility: {
-        entrance: buildAttribute("osm", "yes", "yes", {}),
-        toilet:   buildAttribute("osm", "yes", "yes", {}),
-        parking:  buildAttribute("osm", "yes", "yes", {}),
-      },
-    })
     renderWithProvider(<PlaceCard place={place} onClick={vi.fn()} />)
-    // eye button should not be present; "Auf Karte zeigen" text hint is separate
-    expect(screen.queryByRole("button", { name: /Karte|map/i })).not.toBeInTheDocument()
-  })
-
-  it("does NOT show eye icon for unknown parking", () => {
-    const place = makePlace({
-      accessibility: {
-        entrance: buildAttribute("osm", "yes",     "yes",     {}),
-        toilet:   buildAttribute("osm", "yes",     "yes",     {}),
-        parking:  buildAttribute("osm", "unknown", "unknown", {}),
-      },
-    })
-    renderWithProvider(<PlaceCard place={place} onClick={vi.fn()} />)
-    expect(screen.queryByRole("button", { name: /Karte|map/i })).not.toBeInTheDocument()
-  })
-
-  it("does NOT show eye icon when onClick is not provided (no map navigation possible)", () => {
-    renderWithProvider(<PlaceCard place={makeNearbyParkingPlace()} />)
-    expect(screen.queryByRole("button", { name: /Karte|map/i })).not.toBeInTheDocument()
-  })
-
-  it("shows 'Ja, in der Nähe' label for nearbyOnly parking in A11yAttribute", () => {
-    renderWithProvider(<PlaceCard place={makeNearbyParkingPlace()} onClick={vi.fn()} />)
     expect(screen.getByText(/in der Nähe|nearby/i)).toBeInTheDocument()
   })
 })

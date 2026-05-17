@@ -179,8 +179,9 @@ const en: Translations = {
     source:        "Source",
     confidence:    "Reliability",
     showInResults: "Show in results",
-    parkingSpot:   "Accessible parking",
-    parkingSpots:  (n: number) => `${n} accessible parking spaces`,
+    parkingSpot:    "Accessible parking",
+    parkingSpots:   (n: number) => `${n} accessible parking spaces`,
+    toggleParking:  "Show wheelchair parking on map",
   },
   categories: {
     cafe:        "Café",

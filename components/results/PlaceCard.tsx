@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { createPortal } from "react-dom"
-import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Info, Accessibility, PawPrint, Salad, Leaf, Map, ShieldCheck, Eye } from "lucide-react"
+import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Info, Accessibility, PawPrint, Salad, Leaf, Map, ShieldCheck } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import ConfidenceBadge  from "./ConfidenceBadge"
@@ -14,11 +14,10 @@ import { cn } from "@/lib/utils"
 import type { Place } from "@/lib/types"
 
 interface Props {
-  place:               Place
-  isSelected?:         boolean
-  onClick?:            () => void
-  distanceM?:          number
-  onActivateParking?:  () => void
+  place:       Place
+  isSelected?: boolean
+  onClick?:    () => void
+  distanceM?:  number
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -42,7 +41,7 @@ const CATEGORY_ICONS: Record<string, string> = {
 /** Set to false (or delete the footer block below) to revert option A */
 const SHOW_MAP_FOOTER = true
 
-export default function PlaceCard({ place, isSelected, onClick, distanceM, onActivateParking }: Props) {
+export default function PlaceCard({ place, isSelected, onClick, distanceM }: Props) {
   const t = useTranslations()
   const [expanded,  setExpanded]  = useState(false)
   const [showDebug, setShowDebug] = useState(false)
@@ -83,13 +82,6 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM, onAct
     }
     return `https://wheelmap.org/?lat=${place.coordinates.lat}&lon=${place.coordinates.lon}&zoom=19`
   })()
-
-  // Show eye icon when parking was auto-enriched from a nearby OSM spot.
-  // Desktop: onClick selects the place and pans the map (P markers visible).
-  // Mobile: onClick also switches to the map tab (MobileLayout wires this).
-  const isNearbyParking =
-    place.accessibility.parking.value === "yes" &&
-    (place.accessibility.parking.details as { nearbyOnly?: boolean } | undefined)?.nearbyOnly === true
 
   return (
     <Card
@@ -177,27 +169,7 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM, onAct
         <div className="flex flex-col gap-1.5">
           <A11yAttribute label={t.criteria.entrance} attr={place.accessibility.entrance} detailType="entrance" showDetails={expanded} />
           <A11yAttribute label={t.criteria.toilet}   attr={place.accessibility.toilet}   detailType="toilet"   showDetails={expanded} />
-          {/* Parking row — eye icon for auto-enriched nearby parking */}
-          <div className="flex items-start gap-2">
-            <div className="flex-1 min-w-0">
-              <A11yAttribute
-                label={t.criteria.parking}
-                attr={place.accessibility.parking}
-                detailType="parking"
-                showDetails={expanded}
-              />
-            </div>
-            {isNearbyParking && onClick && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onClick(); onActivateParking?.() }}
-                title={t.results.showOnMap}
-                aria-label={t.results.showOnMap}
-                className="shrink-0 mt-1 inline-flex items-center rounded p-1.5 text-blue-600 hover:bg-blue-50 transition-colors"
-              >
-                <Eye className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
+          <A11yAttribute label={t.criteria.parking} attr={place.accessibility.parking} detailType="parking" showDetails={expanded} />
           {place.accessibility.seating && (
             <A11yAttribute label={t.criteria.seating} attr={place.accessibility.seating} detailType="seating" showDetails={expanded} />
           )}

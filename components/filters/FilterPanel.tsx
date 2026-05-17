@@ -238,17 +238,6 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
         <div className="flex flex-col gap-2.5">
           <label className="flex items-start gap-2.5 cursor-pointer">
             <Checkbox
-              checked={filters.alwaysShowParking}
-              onCheckedChange={() => toggleFilter("alwaysShowParking")}
-              id="always-show-parking"
-              className="mt-0.5"
-            />
-            <span className="text-sm text-muted-foreground leading-snug">
-              {t.filters.alwaysShowParking}
-            </span>
-          </label>
-          <label className="flex items-start gap-2.5 cursor-pointer">
-            <Checkbox
               checked={filters.acceptUnknown}
               onCheckedChange={() => toggleFilter("acceptUnknown")}
               id="accept-unknown"

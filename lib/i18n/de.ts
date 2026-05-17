@@ -179,8 +179,9 @@ const de: Translations = {
     source:        "Quelle",
     confidence:    "Verlässlichkeit",
     showInResults: "Zeige in Ergebnissen",
-    parkingSpot:   "Barrierefreier Parkplatz",
-    parkingSpots:  (n: number) => `${n} barrierefreie Parkplätze`,
+    parkingSpot:    "Barrierefreier Parkplatz",
+    parkingSpots:   (n: number) => `${n} barrierefreie Parkplätze`,
+    toggleParking:  "Rollstuhlparkplätze in Karte anzeigen",
   },
   categories: {
     cafe:        "Café",

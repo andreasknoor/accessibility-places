@@ -156,6 +156,7 @@ export interface Translations {
     showInResults:          string
     parkingSpot:            string
     parkingSpots:           (n: number) => string
+    toggleParking:          string
   }
   categories: {
     cafe:        string
