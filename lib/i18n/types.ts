@@ -39,6 +39,8 @@ export interface Translations {
     radius:              string
     radiusLabel:         (km: number) => string
     acceptUnknown:       string
+    displayOptions:      string
+    alwaysShowParking:   string
     sourceCountTooltip:  (raw: number, final: number) => string
     criteriaItems: {
       entrance:     string

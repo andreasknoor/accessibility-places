@@ -14,10 +14,11 @@ import { cn } from "@/lib/utils"
 import type { Place } from "@/lib/types"
 
 interface Props {
-  place:       Place
-  isSelected?: boolean
-  onClick?:    () => void
-  distanceM?:  number
+  place:               Place
+  isSelected?:         boolean
+  onClick?:            () => void
+  distanceM?:          number
+  onActivateParking?:  () => void
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -41,7 +42,7 @@ const CATEGORY_ICONS: Record<string, string> = {
 /** Set to false (or delete the footer block below) to revert option A */
 const SHOW_MAP_FOOTER = true
 
-export default function PlaceCard({ place, isSelected, onClick, distanceM }: Props) {
+export default function PlaceCard({ place, isSelected, onClick, distanceM, onActivateParking }: Props) {
   const t = useTranslations()
   const [expanded,  setExpanded]  = useState(false)
   const [showDebug, setShowDebug] = useState(false)
@@ -188,7 +189,7 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
             </div>
             {isNearbyParking && onClick && (
               <button
-                onClick={(e) => { e.stopPropagation(); onClick() }}
+                onClick={(e) => { e.stopPropagation(); onClick(); onActivateParking?.() }}
                 title={t.results.showOnMap}
                 aria-label={t.results.showOnMap}
                 className="shrink-0 mt-1 inline-flex items-center rounded p-1.5 text-blue-600 hover:bg-blue-50 transition-colors"

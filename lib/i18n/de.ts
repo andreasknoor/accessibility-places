@@ -43,6 +43,8 @@ const de: Translations = {
     radius: "Suchradius",
     radiusLabel: (km: number) => `${km} km`,
     acceptUnknown: "Orte mit unklaren Informationen anzeigen",
+    displayOptions: "Anzeigeoptionen",
+    alwaysShowParking: "Rollstuhlparkplätze immer in Karte anzeigen",
     sourceCountTooltip: (raw: number, final: number) => `Rohtreffer: ${raw} → nach Filter: ${final}`,
     criteriaItems: {
       entrance:     "Rollstuhlgerechter Eingang",

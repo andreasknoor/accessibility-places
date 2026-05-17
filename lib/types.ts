@@ -164,6 +164,9 @@ export interface SearchFilters {
   // marked `verifiedRecently` (= a check_date:wheelchair tag within 2 years).
   onlyVerified: boolean
   acceptUnknown: boolean
+  // Display option: show all disabled-parking OSM nodes in the search area on
+  // the map, capped at 10 km radius. Does not affect filtering or enrichment.
+  alwaysShowParking: boolean
 }
 
 export interface ActiveSources {

@@ -43,6 +43,8 @@ const en: Translations = {
     radius: "Search Radius",
     radiusLabel: (km: number) => `${km} km`,
     acceptUnknown: "Show places with unclear information",
+    displayOptions: "Display options",
+    alwaysShowParking: "Always show wheelchair parking on map",
     sourceCountTooltip: (raw: number, final: number) => `Raw: ${raw} → after filter: ${final}`,
     criteriaItems: {
       entrance:     "Wheelchair-accessible entrance",

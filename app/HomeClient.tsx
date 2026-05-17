@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef, useEffect } from "react"
+import { useState, useCallback, useRef, useEffect, useMemo } from "react"
 import dynamic from "next/dynamic"
 import Script from "next/script"
 import Link from "next/link"
@@ -15,18 +15,20 @@ import { DEFAULT_RADIUS_KM, RADIUS_MAX_KM } from "@/lib/config"
 import { SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
+import { haversineMeters, NEARBY_PARKING_DISPLAY_RADIUS_M } from "@/lib/matching/nearby-parking"
 import type { Place, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug } from "@/lib/types"
 
 // Leaflet must not run on server
 const MapView = dynamic(() => import("@/components/map/MapView"), { ssr: false })
 
 const DEFAULT_FILTERS: SearchFilters = {
-  entrance:      true,
-  toilet:        true,
-  parking:       false,
-  seating:       false,
-  onlyVerified:  false,
-  acceptUnknown: false,
+  entrance:         true,
+  toilet:           true,
+  parking:          false,
+  seating:          false,
+  onlyVerified:     false,
+  acceptUnknown:    false,
+  alwaysShowParking: false,
 }
 
 const DEFAULT_SOURCES: ActiveSources = {
@@ -67,8 +69,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [lastCoords,    setLastCoords]   = useState<{ lat: number; lon: number } | undefined>()
   const [lastNameHint,  setLastNameHint] = useState<string | undefined>()
   const [chatMode,      setChatMode]     = useState<"text" | "nearby">("text")
-  const [resetKey,      setResetKey]     = useState(0)
-  const [scrollToId,    setScrollToId]   = useState<string | undefined>()
+  const [resetKey,            setResetKey]            = useState(0)
+  const [scrollToId,          setScrollToId]          = useState<string | undefined>()
+  const [activeParkingPlaceId, setActiveParkingPlaceId] = useState<string | null>(null)
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
   const selectTarget = useRef(
@@ -88,6 +91,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setParkingSpots([])
     setSelectedId(undefined)
     setFilterDebug(undefined)
+    setActiveParkingPlaceId(null)
 
     // Initialise per-source loading state for each active source so the
     // FilterPanel renders spinners immediately.
@@ -207,6 +211,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setFilterDebug(undefined)
     setError(undefined)
     setSourceStates({})
+    setActiveParkingPlaceId(null)
     setChatMode("text")
     try { localStorage.removeItem("ap_last_search") } catch { /* ignore */ }
     setResetKey((k) => k + 1)
@@ -259,12 +264,30 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
   }, [])
 
+  // Parking spots to display on the map.
+  // alwaysShowParking: show all spots returned by server (server already capped at 10 km).
+  // Otherwise: show spots only near the place whose eye button was clicked.
+  const visibleParkingSpots = useMemo(() => {
+    if (!parkingSpots.length) return parkingSpots
+    if (filters.alwaysShowParking) return parkingSpots
+    if (!activeParkingPlaceId) return []
+    const place = places.find((p) => p.id === activeParkingPlaceId)
+    if (!place) return []
+    return parkingSpots.filter(
+      (s) => haversineMeters(place.coordinates, s) <= NEARBY_PARKING_DISPLAY_RADIUS_M,
+    )
+  }, [parkingSpots, filters.alwaysShowParking, activeParkingPlaceId, places])
+
+  const handleActivateParking = useCallback((place: Place) => {
+    setActiveParkingPlaceId(place.id)
+  }, [])
+
   // Mobile layout
   if (isMobile) {
     return (
       <MobileLayout
         places={places}
-        parkingSpots={filters.parking ? parkingSpots : onDemandParkingSpots}
+        parkingSpots={visibleParkingSpots}
         selectedId={selectedId}
         onSelect={(p) => setSelectedId(p.id)}
         isLoading={isLoading}
@@ -288,6 +311,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         initialLocation={resetKey === 0 ? initialCity : undefined}
         initialChipIdx={resetKey === 0 ? (initialCategory ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : undefined) : undefined}
         scrollToId={scrollToId}
+        onActivateParking={handleActivateParking}
       />
     )
   }
@@ -298,7 +322,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       <div className="fixed inset-0 z-50 bg-background">
         <MapView
           places={places}
-          parkingSpots={parkingSpots}
+          parkingSpots={visibleParkingSpots}
           center={searchCenter}
           userLocation={chatMode === "nearby" ? searchCenter : undefined}
           selectedId={selectedId}
@@ -382,6 +406,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             scrollToId={scrollToId}
             filterDebug={filterDebug}
             searchCenter={chatMode === "nearby" ? searchCenter : undefined}
+            onActivateParking={handleActivateParking}
           />
           <div className="shrink-0 border-t border-border px-4 py-2 flex justify-end gap-4">
             <Link href={locale === "en" ? "/en/faq" : "/faq"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
@@ -409,7 +434,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         <div className="flex-1 min-h-0 relative">
           <MapView
             places={places}
-            parkingSpots={parkingSpots}
+            parkingSpots={visibleParkingSpots}
             center={searchCenter}
             userLocation={chatMode === "nearby" ? searchCenter : undefined}
             selectedId={selectedId}

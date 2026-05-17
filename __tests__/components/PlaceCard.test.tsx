@@ -240,6 +240,14 @@ describe("PlaceCard — nearby parking eye icon", () => {
     expect(onClick).toHaveBeenCalledOnce()
   })
 
+  it("clicking the eye icon calls onActivateParking", () => {
+    const onClick = vi.fn()
+    const onActivateParking = vi.fn()
+    renderWithProvider(<PlaceCard place={makeNearbyParkingPlace()} onClick={onClick} onActivateParking={onActivateParking} />)
+    fireEvent.click(screen.getByRole("button", { name: /Karte|map/i }))
+    expect(onActivateParking).toHaveBeenCalledOnce()
+  })
+
   it("does NOT show eye icon for on-site yes parking (no nearbyOnly flag)", () => {
     const place = makePlace({
       accessibility: {

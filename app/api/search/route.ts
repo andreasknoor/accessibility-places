@@ -135,13 +135,15 @@ export async function POST(req: NextRequest) {
     ? Math.max(RADIUS_MIN_KM, Math.min(RADIUS_MAX_KM, rawRadius))
     : 5
 
+  const rawF = rawFilters && typeof rawFilters === "object" ? rawFilters as Record<string, unknown> : {}
   const filters: SearchParams["filters"] = {
-    entrance:      Boolean(rawFilters && typeof rawFilters === "object" && (rawFilters as Record<string, unknown>).entrance),
-    toilet:        Boolean(rawFilters && typeof rawFilters === "object" && (rawFilters as Record<string, unknown>).toilet),
-    parking:       Boolean(rawFilters && typeof rawFilters === "object" && (rawFilters as Record<string, unknown>).parking),
-    seating:       Boolean(rawFilters && typeof rawFilters === "object" && (rawFilters as Record<string, unknown>).seating),
-    onlyVerified:  Boolean(rawFilters && typeof rawFilters === "object" && (rawFilters as Record<string, unknown>).onlyVerified),
-    acceptUnknown: Boolean(rawFilters && typeof rawFilters === "object" && (rawFilters as Record<string, unknown>).acceptUnknown),
+    entrance:          Boolean(rawF.entrance),
+    toilet:            Boolean(rawF.toilet),
+    parking:           Boolean(rawF.parking),
+    seating:           Boolean(rawF.seating),
+    onlyVerified:      Boolean(rawF.onlyVerified),
+    acceptUnknown:     Boolean(rawF.acceptUnknown),
+    alwaysShowParking: Boolean(rawF.alwaysShowParking),
   }
 
   const sources: SearchParams["sources"] = {
@@ -309,11 +311,17 @@ export async function POST(req: NextRequest) {
             location:      { lat: geo.lat, lon: geo.lon },
             locationLabel: geo.label,
             filterDebug,
-            // Only show a P marker if a displayed result within 250 m got its
-            // parking value from nearby enrichment (nearbyOnly: true).
-            // Results that already have direct OSM / adapter parking data don't
-            // need a P marker — they're not the reason the spot matters.
+            // When alwaysShowParking is on, show all disabled-parking OSM nodes
+            // within min(radiusKm, 10) km regardless of whether any result is nearby.
+            // Otherwise only show markers that are within NEARBY_PARKING_DISPLAY_RADIUS_M
+            // of a result whose parking was auto-enriched (nearbyOnly: true).
             parkingSpots:  (() => {
+              if (filters.alwaysShowParking && nearbyParkingEnabled) {
+                const capM = Math.min(radiusKm, 10) * 1000
+                return parkingFeatures.filter((f) =>
+                  haversineMeters({ lat: geo.lat, lon: geo.lon }, f) <= capM
+                )
+              }
               const nearbyOnlyPlaces = filtered.filter((p) => {
                 const det = p.accessibility.parking.details as { nearbyOnly?: boolean } | undefined
                 return det?.nearbyOnly === true
