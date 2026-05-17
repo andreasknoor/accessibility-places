@@ -99,12 +99,27 @@ function renderHtml(stats: StatsResult): string {
   .legend { margin-top: 16px; font-size: 0.75rem; color: #6b7280; display: flex; gap: 20px }
   .leg { display: flex; align-items: center; gap: 6px }
   .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block }
+  .empty { margin-top: 48px; text-align: center; color: #6b7280 }
+  .empty-icon { font-size: 2.5rem; margin-bottom: 12px }
+  .empty-title { font-size: 1rem; color: #9ca3af; margin-bottom: 6px }
+  .empty-hint { font-size: 0.8rem; line-height: 1.6 }
 </style>
 </head>
 <body>
 <h1>♿ Adapter Stats Dashboard</h1>
 <p class="subtitle">Letztes Update: ${now} &nbsp;·&nbsp; 90-Tage-Fenster &nbsp;·&nbsp; stündliche Granularität</p>
 
+${entries.length === 0 ? `
+<div class="empty">
+  <div class="empty-icon">📭</div>
+  <div class="empty-title">Noch keine stündlichen Daten vorhanden</div>
+  <div class="empty-hint">
+    Die Statistiken wurden auf stündliche Granularität umgestellt.<br>
+    Daten erscheinen hier, sobald die ersten Suchanfragen auf dem Live-System eingehen.<br>
+    <span style="color:#4b5563">Keys: <code>stats:h:calls:&lt;source&gt;:YYYY-MM-DDTHH</code></span>
+  </div>
+</div>
+` : `
 <div class="kpis">
   <div class="kpi">
     <div class="kpi-value">${fmt(totalCalls)}</div>
@@ -144,6 +159,7 @@ function renderHtml(stats: StatsResult): string {
     <tbody>${rows}</tbody>
   </table>
 </div>
+`}
 
 <div class="legend">
   <span class="leg"><span class="dot" style="background:#10b981"></span>&lt; 1 % — OK</span>
