@@ -2,6 +2,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { NextRequest } from "next/server"
 import { POST } from "@/app/api/search/route"
+import { trackCall, trackError } from "@/lib/stats"
+
+vi.mock("@/lib/stats", () => ({
+  trackCall:  vi.fn(),
+  trackError: vi.fn(),
+  getStats:   vi.fn().mockResolvedValue({}),
+}))
 
 // Parse the NDJSON stream into an array of event objects
 async function parseEvents(res: Response): Promise<Array<{ type: string; [k: string]: unknown }>> {
@@ -257,5 +264,45 @@ describe("POST /api/search — nearby parking enrichment", () => {
     const payload = result!.payload as { places: Array<{ accessibility: { parking: { value: string } } }>; parkingSpots: unknown[] }
     expect(payload.places[0].accessibility.parking.value).toBe("unknown")
     expect(payload.parkingSpots).toHaveLength(0)
+  })
+})
+
+describe("POST /api/search — stats tracking", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.stubEnv("GOOGLE_PLACES_API_KEY", "test-key")
+  })
+
+  it("calls trackCall (not trackError) for each source that succeeds", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok:   true,
+      json: async () => ({ places: [GP_PLACE_SEATING_NO] }),
+    }))
+
+    // Use a unique IP to avoid the shared in-memory rate limiter being exhausted
+    // by the 10+ other POST calls that precede this test in the file.
+    const req = new NextRequest("http://localhost/api/search", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json", "x-forwarded-for": "stats-test-1" },
+      body:    JSON.stringify({ ...BASE_BODY, sources: { ...BASE_BODY.sources, google_places: true } }),
+    })
+    await parseEvents(await POST(req))
+
+    expect(trackCall).toHaveBeenCalledWith("google_places")
+    expect(trackError).not.toHaveBeenCalled()
+  })
+
+  it("calls both trackCall and trackError when a source fetch fails", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network error")))
+
+    const req = new NextRequest("http://localhost/api/search", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json", "x-forwarded-for": "stats-test-2" },
+      body:    JSON.stringify({ ...BASE_BODY, sources: { ...BASE_BODY.sources, osm: true } }),
+    })
+    await parseEvents(await POST(req))
+
+    expect(trackCall).toHaveBeenCalledWith("osm")
+    expect(trackError).toHaveBeenCalledWith("osm")
   })
 })
