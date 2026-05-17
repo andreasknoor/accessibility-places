@@ -75,6 +75,22 @@ async function sumHourKeys(redis: Redis, prefix: "calls" | "errors", source: Sou
   return { total, hours: keys.length }
 }
 
+export async function resetStats(): Promise<number> {
+  const redis = getRedis()
+  if (!redis) return 0
+  let cursor = 0
+  const keys: string[] = []
+  do {
+    const [nextCursor, batch] = await redis.scan(cursor, { match: "stats:h:*", count: 100 })
+    cursor = Number(nextCursor)
+    keys.push(...batch)
+  } while (cursor !== 0)
+  if (keys.length === 0) return 0
+  for (let i = 0; i < keys.length; i += 100)
+    await redis.del(...keys.slice(i, i + 100))
+  return keys.length
+}
+
 export async function getStats(): Promise<StatsResult> {
   const redis = getRedis()
   if (!redis) return {}
