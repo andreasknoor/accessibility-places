@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { createPortal } from "react-dom"
-import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Info, Accessibility, PawPrint, Salad, Leaf, Map, ShieldCheck, Loader2, Search } from "lucide-react"
+import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Info, Accessibility, PawPrint, Salad, Leaf, Map, ShieldCheck, Loader2, Search, CheckCircle2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import ConfidenceBadge  from "./ConfidenceBadge"
@@ -18,8 +18,9 @@ interface Props {
   isSelected?:          boolean
   onClick?:             () => void
   distanceM?:           number
-  onShowNearbyParking?: (place: Place) => Promise<boolean>
+  onShowNearbyParking?: (place: Place) => Promise<number>
   parkingNoResult?:     boolean
+  parkingFoundCount?:   number
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -43,7 +44,7 @@ const CATEGORY_ICONS: Record<string, string> = {
 /** Set to false (or delete the footer block below) to revert option A */
 const SHOW_MAP_FOOTER = true
 
-export default function PlaceCard({ place, isSelected, onClick, distanceM, onShowNearbyParking, parkingNoResult }: Props) {
+export default function PlaceCard({ place, isSelected, onClick, distanceM, onShowNearbyParking, parkingNoResult, parkingFoundCount }: Props) {
   const t = useTranslations()
   const [expanded,        setExpanded]        = useState(false)
   const [showDebug,       setShowDebug]       = useState(false)
@@ -178,17 +179,27 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM, onSho
         <div className="flex flex-col gap-1.5">
           <A11yAttribute label={t.criteria.entrance} attr={place.accessibility.entrance} detailType="entrance" showDetails={expanded} />
           <A11yAttribute label={t.criteria.toilet}   attr={place.accessibility.toilet}   detailType="toilet"   showDetails={expanded} />
-          {/* Parking row — shows inline P button when value is unknown */}
+          {/* Parking row — shows inline search button when value is unknown */}
           <div className="flex items-start gap-2">
             <div className="flex-1 min-w-0">
-              <A11yAttribute
-                label={t.criteria.parking}
-                attr={parkingNoResult ? { ...place.accessibility.parking, value: "no" } : place.accessibility.parking}
-                detailType="parking"
-                showDetails={expanded}
-              />
+              {parkingFoundCount != null && parkingFoundCount > 0 ? (
+                <div className="rounded-md px-2.5 py-1.5 flex flex-col gap-1 bg-green-50">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-green-600" />
+                    <span className="text-xs font-medium text-foreground min-w-0 flex-1 truncate">{t.criteria.parking}</span>
+                    <span className="text-xs shrink-0 text-green-600">{t.results.nearbyParkingCount(parkingFoundCount)}</span>
+                  </div>
+                </div>
+              ) : (
+                <A11yAttribute
+                  label={t.criteria.parking}
+                  attr={parkingNoResult ? { ...place.accessibility.parking, value: "no" } : place.accessibility.parking}
+                  detailType="parking"
+                  showDetails={expanded}
+                />
+              )}
             </div>
-            {onShowNearbyParking && place.accessibility.parking.value === "unknown" && !parkingNoResult && (
+            {onShowNearbyParking && place.accessibility.parking.value === "unknown" && !parkingNoResult && !(parkingFoundCount && parkingFoundCount > 0) && (
               <button
                 onClick={async (e) => {
                   e.stopPropagation()

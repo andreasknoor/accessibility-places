@@ -43,8 +43,9 @@ interface Props {
   initialLocation?:     string
   initialChipIdx?:      number
   scrollToId?:          string
-  onShowNearbyParking?: (place: Place) => Promise<boolean>
+  onShowNearbyParking?: (place: Place) => Promise<number>
   parkingNoResults?:    Set<string>
+  parkingFoundCounts?:  Map<string, number>
 }
 
 export default function MobileLayout({
@@ -52,7 +53,7 @@ export default function MobileLayout({
   filters, sources, radiusKm, onFilters, onSources, onRadius,
   sourceStates, searchCenter, onSearch, onRerun, onExpandRadius, onRadiusChange, hasSearched, error,
   onReset, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
-  onShowNearbyParking, parkingNoResults,
+  onShowNearbyParking, parkingNoResults, parkingFoundCounts,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>("results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -71,7 +72,7 @@ export default function MobileLayout({
   const handleRerun = onRerun ? () => { setActiveTab("results"); onRerun() } : undefined
   const handleExpandRadius = onExpandRadius ? () => { setActiveTab("results"); onExpandRadius() } : undefined
   // Parking: switch to map immediately so P markers are visible while loading
-  const handleShowNearbyParking: ((place: Place) => Promise<boolean>) | undefined = onShowNearbyParking
+  const handleShowNearbyParking: ((place: Place) => Promise<number>) | undefined = onShowNearbyParking
     ? async (place: Place) => { setActiveTab("map"); return onShowNearbyParking(place) }
     : undefined
   const t = useTranslations()
@@ -145,6 +146,7 @@ export default function MobileLayout({
             searchCenter={searchCenter}
             onShowNearbyParking={handleShowNearbyParking}
             parkingNoResults={parkingNoResults}
+            parkingFoundCounts={parkingFoundCounts}
           />
         </div>
 
@@ -162,6 +164,7 @@ export default function MobileLayout({
               onShowInResults={handleShowInResults}
               onShowNearbyParking={onShowNearbyParking}
               parkingNoResultIds={parkingNoResults}
+              parkingFoundCounts={parkingFoundCounts}
               isFullscreen={false}
               onToggleFullscreen={() => {}}
               showFullscreenToggle={false}

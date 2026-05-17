@@ -20,8 +20,9 @@ interface Props {
   panTrigger?:   number
   onSelect:      (place: Place) => void
   onShowInResults?:      (place: Place) => void
-  onShowNearbyParking?:  (place: Place) => Promise<boolean>
+  onShowNearbyParking?:  (place: Place) => Promise<number>
   parkingNoResultIds?:   Set<string>
+  parkingFoundCounts?:   Map<string, number>
   isFullscreen:         boolean
   onToggleFullscreen:   () => void
   showFullscreenToggle?: boolean
@@ -66,6 +67,7 @@ export default function MapView({
   onShowInResults,
   onShowNearbyParking,
   parkingNoResultIds,
+  parkingFoundCounts,
   isFullscreen,
   onToggleFullscreen,
   showFullscreenToggle = true,
@@ -87,11 +89,13 @@ export default function MapView({
   const placesRef              = useRef(places)
   const userLocationRef        = useRef(userLocation)
   const parkingNoResultIdsRef  = useRef(parkingNoResultIds)
+  const parkingFoundCountsRef  = useRef(parkingFoundCounts)
   useEffect(() => { onShowInResultsRef.current     = onShowInResults     }, [onShowInResults])
   useEffect(() => { onShowNearbyParkingRef.current = onShowNearbyParking }, [onShowNearbyParking])
   useEffect(() => { placesRef.current = places }, [places])
   useEffect(() => { userLocationRef.current = userLocation }, [userLocation])
   useEffect(() => { parkingNoResultIdsRef.current = parkingNoResultIds }, [parkingNoResultIds])
+  useEffect(() => { parkingFoundCountsRef.current = parkingFoundCounts }, [parkingFoundCounts])
 
   // Init map once
   useEffect(() => {
@@ -260,19 +264,26 @@ export default function MapView({
             <span style="color:#888">${t.criteria.toilet}</span>
             <span style="color:${markerColor(place.accessibility.toilet.confidence)}">${t.a11y[place.accessibility.toilet.value] ?? place.accessibility.toilet.value}</span>
             <span style="color:#888">${t.criteria.parking}</span>
-            <span data-parking-value style="color:${parkingNoResultIdsRef.current?.has(place.id) ? "#ef4444" : markerColor(place.accessibility.parking.confidence)}">${
-              parkingNoResultIdsRef.current?.has(place.id)
-                ? (t.a11y.no ?? "Nein")
-                : place.accessibility.parking.value === "yes" &&
-                  (place.accessibility.parking.details as { nearbyOnly?: boolean } | undefined)?.nearbyOnly
-                    ? t.a11y.yesNearby
-                    : (t.a11y[place.accessibility.parking.value] ?? place.accessibility.parking.value)
-            }</span>
+            <span style="display:inline-flex;align-items:center;gap:3px">
+              <span data-parking-value style="color:${
+                parkingNoResultIdsRef.current?.has(place.id) ? "#ef4444"
+                : parkingFoundCountsRef.current?.has(place.id) ? "#16a34a"
+                : markerColor(place.accessibility.parking.confidence)
+              }">${
+                parkingNoResultIdsRef.current?.has(place.id)
+                  ? (t.a11y.no ?? "Nein")
+                  : parkingFoundCountsRef.current?.has(place.id)
+                    ? t.results.nearbyParkingCount(parkingFoundCountsRef.current.get(place.id)!)
+                    : place.accessibility.parking.value === "yes" &&
+                      (place.accessibility.parking.details as { nearbyOnly?: boolean } | undefined)?.nearbyOnly
+                        ? t.a11y.yesNearby
+                        : (t.a11y[place.accessibility.parking.value] ?? place.accessibility.parking.value)
+              }</span>${place.accessibility.parking.value === "unknown" && !parkingNoResultIdsRef.current?.has(place.id) && !parkingFoundCountsRef.current?.has(place.id) ? `<button data-nearby-parking style="display:inline-flex;align-items:center;flex-shrink:0;border:none;background:none;cursor:pointer;padding:0;color:#1d4ed8" title="${t.results.showNearbyParking}"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>` : ""}
+            </span>
           </div>
           <div style="margin-top:6px;font-size:10px;color:#888">
             ${t.map.source}: ${SOURCE_LABELS[place.primarySource]}
           </div>
-          ${place.accessibility.parking.value === "unknown" && !parkingNoResultIdsRef.current?.has(place.id) ? `<button data-nearby-parking style="display:inline-flex;align-items:center;gap:4px;margin-top:4px;font-size:10px;color:#1d4ed8;background:#eff6ff;border:none;border-radius:4px;cursor:pointer;padding:2px 6px" title="${t.results.showNearbyParking}"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>` : ""}
           ${onShowInResults ? `<button data-show-id style="display:block;margin-top:8px;font-size:11px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-align:left">${t.map.showInResults} →</button>` : ""}
         `
         {
@@ -283,11 +294,14 @@ export default function MapView({
               L!.DomEvent.stopPropagation(ev)
               const p = placesRef.current.find((pl) => pl.id === capturedId)
               if (!p) return
-              const found = await onShowNearbyParkingRef.current?.(p)
-              if (found === false) {
-                nearbyBtn.remove()
-                const parkingValueEl = div.querySelector<HTMLElement>("[data-parking-value]")
-                if (parkingValueEl) {
+              const count = await onShowNearbyParkingRef.current?.(p) ?? 0
+              nearbyBtn.remove()
+              const parkingValueEl = div.querySelector<HTMLElement>("[data-parking-value]")
+              if (parkingValueEl) {
+                if (count > 0) {
+                  parkingValueEl.textContent = t.results.nearbyParkingCount(count)
+                  parkingValueEl.style.color = "#16a34a"
+                } else {
                   parkingValueEl.textContent = t.a11y.no ?? "Nein"
                   parkingValueEl.style.color = "#ef4444"
                 }

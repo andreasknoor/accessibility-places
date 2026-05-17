@@ -27,11 +27,12 @@ interface Props {
   filterDebug?:         FilterDebug
   searchCenter?:        { lat: number; lon: number }
   onAdjustFilters?:     () => void
-  onShowNearbyParking?: (place: Place) => Promise<boolean>
+  onShowNearbyParking?: (place: Place) => Promise<number>
   parkingNoResults?:    Set<string>
+  parkingFoundCounts?:  Map<string, number>
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, onShowNearbyParking, parkingNoResults }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, onShowNearbyParking, parkingNoResults, parkingFoundCounts }: Props) {
   const t = useTranslations()
   const [mapHintSeen, setMapHintSeen] = useState(() =>
     typeof window !== "undefined" && !!localStorage.getItem("ap_map_hint_seen")
@@ -276,6 +277,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
                 distanceM={searchCenter ? haversineMetres(searchCenter, place.coordinates) : undefined}
                 onShowNearbyParking={onShowNearbyParking}
                 parkingNoResult={parkingNoResults?.has(place.id)}
+                parkingFoundCount={parkingFoundCounts?.get(place.id)}
               />
             </div>
           ))}
