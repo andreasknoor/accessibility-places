@@ -30,6 +30,10 @@ A pre-commit hook (`.githooks/pre-commit`, installed via `npm run prepare`) runs
 
 This project uses **Next.js 16.2.4**, which contains breaking changes from prior versions. APIs, conventions, and file structure may differ from training-data knowledge. Before writing Next.js-specific code, read the relevant guide in `node_modules/next/dist/docs/` and heed any deprecation notices in the build output.
 
+## Tailwind v4 note
+
+This project uses **Tailwind CSS v4**, which differs significantly from v3. There is **no `tailwind.config.ts`** — all theme customisation lives in `app/globals.css` via `@import "tailwindcss"` and `@theme inline { … }` blocks. shadcn/ui CSS variables are defined there too and mapped into Tailwind tokens via `@theme`. Do not create a `tailwind.config.ts`; consult `app/globals.css` first when working with design tokens or adding new utilities.
+
 ## Architecture
 
 ### Search pipeline (`app/api/search/route.ts`)
@@ -41,7 +45,7 @@ The `/api/search` POST endpoint is a **streaming NDJSON** response. It emits new
 {"type":"result", "payload": { places, location, … }}
 ```
 
-Client reads this as a `ReadableStream` in `HomeClient.tsx` and updates state incrementally. The route accepts an optional `coordinates` field to bypass Nominatim geocoding (used for the "Nearby" GPS mode) and an optional `nameHint` string that is applied as a post-filter on the merged results via `filterByNameHint()`.
+Client reads this as a `ReadableStream` in `app/HomeClient.tsx` and updates state incrementally. `HomeClient.tsx` lives directly under `app/` (not under `components/`) — it is the root client component for the home page, managing search state, layout switching, and streaming event dispatch. The route accepts an optional `coordinates` field to bypass Nominatim geocoding (used for the "Nearby" GPS mode) and an optional `nameHint` string that is applied as a post-filter on the merged results via `filterByNameHint()`.
 
 ### Query parsing (`lib/llm.ts`)
 
@@ -70,7 +74,9 @@ where `addrScore = streetTrigram × 0.6 + cityMatch × 0.25 + zipMatch × 0.15`.
 
 `passesFilters` treats both `"yes"` and `"limited"` as passing for any active criterion. This is intentional: `"limited"` (eingeschränkt) means potentially usable, not inaccessible. Only `"no"` fails; `"unknown"` fails unless `acceptUnknown` is true.
 
-`nearby-parking.ts` – post-merge enrichment controlled by the `ENABLE_NEARBY_PARKING` flag. `enrichWithNearbyParking()` upgrades `parking.value` from `"unknown"` to `"yes"` with `details.nearbyOnly = true` when a disabled-parking OSM node (capacity:disabled > 0 or parking_space=disabled) is found within 150 m (`DEFAULT_MAX_NEARBY_PARKING_M`). Deliberately does **not** add a `SourceAttribution`, so confidence and per-source filter counts are unaffected.
+`nearby-parking.ts` – post-merge enrichment controlled by the `ENABLE_NEARBY_PARKING` flag. `enrichWithNearbyParking()` upgrades `parking.value` from `"unknown"` to `"yes"` with `details.nearbyOnly = true` when a disabled-parking OSM node (capacity:disabled > 0 or parking_space=disabled) is found within `DEFAULT_MAX_NEARBY_PARKING_M = 300 m`. Deliberately does **not** add a `SourceAttribution`, so confidence and per-source filter counts are unaffected. Confidence is set to `NEARBY_PARKING_CONFIDENCE = 0.5` (lower than a direct on-site source — spatial correlation, not a tag on the venue). Map display uses a wider `NEARBY_PARKING_DISPLAY_RADIUS_M = 500 m`: parking markers are shown near any enriched result within this radius, even if slightly too far to trigger enrichment.
+
+**`alwaysShowParking` filter** (`SearchFilters.alwaysShowParking`) — when enabled, the search result payload includes `parkingSpots` covering all disabled-parking OSM nodes within `min(radiusKm, 10)` km, regardless of enrichment. When disabled, `parkingSpots` only includes markers within `NEARBY_PARKING_DISPLAY_RADIUS_M` of an enriched (`nearbyOnly`) result. `parkingSpots` is a field on the `result` event payload (`{ lat, lon, capacity? }[]`); `HomeClient` holds it in state and passes it to `MapView`.
 
 `buildAttribute(…, weightMultiplier)` — when `weightMultiplier > 1.0` the source gets `verifiedRecently: true`. Currently only the OSM adapter sets this (via `check_date:wheelchair` ≤ 2 years old). The `onlyVerified` filter in `SearchFilters` requires at least one attribution to carry this flag.
 
@@ -179,7 +185,7 @@ Each place card on an SEO page links to:
 - `REISEN_FUER_ALLE_API_KEY` — optional; source is silently skipped if absent. Request access from DSFT/Natko at reisen-fuer-alle.de (non-commercial use available on request).
 - `REISEN_FUER_ALLE_API_BASE` — base URL for the RfA API (e.g. `https://api.reisen-fuer-alle.de/v1`); required alongside the key
 - `GOOGLE_PLACES_API_KEY` — optional; source is silently skipped if absent
-- `ENABLE_NEARBY_PARKING=1` — feature flag; enables the optional disabled-parking enrichment fetch (off by default)
+- `ENABLE_NEARBY_PARKING=1` — feature flag; enables the disabled-parking enrichment fetch in both the main `/api/search` route and SEO pages (off by default). When active, a parallel OSM fetch for disabled-parking nodes runs alongside the venue adapters and the results are used for enrichment and `parkingSpots` map markers.
 - `GINTO_API_KEY` — optional; Ginto GraphQL API (Swiss accessibility data, CH only). Contact support@ginto.guide. Source silently skipped if absent.
 - `HEALTH_CHECK_SECRET` — required to activate `GET /api/health`; requests without a matching `?token=` get 401. If unset the endpoint returns 503.
 - `KV_REST_API_URL` / `KV_REST_API_TOKEN` — optional; Upstash Redis credentials for adapter call/error stats. If absent, `lib/stats.ts` is a no-op and `GET /api/stats` returns 503.

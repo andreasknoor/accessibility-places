@@ -58,7 +58,9 @@ export async function fetchPlacesForSeoPage(
     ? fetchOsmDisabledParking({ lat, lon }, radiusKm, AbortSignal.timeout(20_000)).catch(() => [])
     : Promise.resolve([] as Awaited<ReturnType<typeof fetchOsmDisabledParking>>)
 
-  const results = await fetchAllSources(params)
+  // skipStats=true: ISR pages must not trigger no-store Upstash fetches or
+  // Next.js will promote the page from static to dynamic at runtime.
+  const results = await fetchAllSources(params, true)
 
   const canonical: Place[] = []
   for (const { places } of results) {
