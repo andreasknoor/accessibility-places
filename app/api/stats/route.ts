@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { timingSafeEqual }           from "crypto"
 import { getStats, resetStats }      from "@/lib/stats"
-import type { StatsResult }          from "@/lib/stats"
+import type { StatsResult, StatsResponse } from "@/lib/stats"
 
 function safeEqual(a: string, b: string): boolean {
   const ba = Buffer.from(a)
@@ -34,7 +34,15 @@ function errorDot(rate: number): string {
   return `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${c};margin-right:8px;flex-shrink:0"></span>`
 }
 
-function renderHtml(stats: StatsResult): string {
+function formatHour(h: string): string {
+  // "2026-05-17T14" → "May 17, 2026, 14:00"
+  const [date, hour] = h.split("T")
+  const [y, m, d] = date.split("-")
+  const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+  return `${monthNames[parseInt(m, 10) - 1]} ${parseInt(d, 10)}, ${y}, ${hour}:00`
+}
+
+function renderHtml({ sources: stats, oldestHour }: StatsResponse): string {
   const entries = SOURCE_ORDER
     .map(id => ({ id, s: stats[id as keyof StatsResult] }))
     .filter(e => e.s != null) as { id: string; s: NonNullable<StatsResult[keyof StatsResult]> }[]
@@ -108,15 +116,15 @@ function renderHtml(stats: StatsResult): string {
 </head>
 <body>
 <h1>♿ Adapter Stats Dashboard</h1>
-<p class="subtitle">Letztes Update: ${now} &nbsp;·&nbsp; 90-Tage-Fenster &nbsp;·&nbsp; stündliche Granularität</p>
+<p class="subtitle">Last updated: ${now} &nbsp;·&nbsp; 90-day window &nbsp;·&nbsp; hourly granularity${oldestHour ? ` &nbsp;·&nbsp; Since: ${formatHour(oldestHour)}` : ""}</p>
 
 ${entries.length === 0 ? `
 <div class="empty">
   <div class="empty-icon">📭</div>
-  <div class="empty-title">Noch keine stündlichen Daten vorhanden</div>
+  <div class="empty-title">No hourly data yet</div>
   <div class="empty-hint">
-    Die Statistiken wurden auf stündliche Granularität umgestellt.<br>
-    Daten erscheinen hier, sobald die ersten Suchanfragen auf dem Live-System eingehen.<br>
+    Stats were migrated to hourly granularity.<br>
+    Data will appear here once the first searches reach the live system.<br>
     <span style="color:#4b5563">Keys: <code>stats:h:calls:&lt;source&gt;:YYYY-MM-DDTHH</code></span>
   </div>
 </div>
@@ -124,23 +132,23 @@ ${entries.length === 0 ? `
 <div class="kpis">
   <div class="kpi">
     <div class="kpi-value">${fmt(totalCalls)}</div>
-    <div class="kpi-label">Calls gesamt</div>
+    <div class="kpi-label">Total Calls</div>
   </div>
   <div class="kpi">
     <div class="kpi-value" style="color:${kpiColor}">${globalRate.toFixed(1)} %</div>
-    <div class="kpi-label">Globale Fehlerrate</div>
+    <div class="kpi-label">Global Error Rate</div>
   </div>
   <div class="kpi">
     <div class="kpi-value">${totalCallHour.toFixed(1)}</div>
-    <div class="kpi-label">Calls/Std (Ø)</div>
+    <div class="kpi-label">Calls/hr (avg)</div>
   </div>
   <div class="kpi">
     <div class="kpi-value" style="color:${errorColor(totalErrHour > 0 ? 10 : 0)}">${totalErrHour.toFixed(1)}</div>
-    <div class="kpi-label">Fehler/Std (Ø)</div>
+    <div class="kpi-label">Errors/hr (avg)</div>
   </div>
   <div class="kpi">
     <div class="kpi-value">${entries.length} / 5</div>
-    <div class="kpi-label">Aktive Sources</div>
+    <div class="kpi-label">Active Sources</div>
   </div>
 </div>
 
@@ -149,11 +157,11 @@ ${entries.length === 0 ? `
     <thead>
       <tr>
         <th>Source</th>
-        <th>Calls gesamt</th>
-        <th>Fehler gesamt</th>
-        <th>Fehlerrate</th>
-        <th>Calls/Std Ø</th>
-        <th>Fehler/Std Ø</th>
+        <th>Total Calls</th>
+        <th>Total Errors</th>
+        <th>Error Rate</th>
+        <th>Calls/hr avg</th>
+        <th>Errors/hr avg</th>
       </tr>
     </thead>
     <tbody>${rows}</tbody>
@@ -163,18 +171,18 @@ ${entries.length === 0 ? `
 
 <div class="legend">
   <span class="leg"><span class="dot" style="background:#10b981"></span>&lt; 1 % — OK</span>
-  <span class="leg"><span class="dot" style="background:#f59e0b"></span>1–5 % — Erhöht</span>
-  <span class="leg"><span class="dot" style="background:#ef4444"></span>&gt; 5 % — Kritisch</span>
+  <span class="leg"><span class="dot" style="background:#f59e0b"></span>1–5 % — Elevated</span>
+  <span class="leg"><span class="dot" style="background:#ef4444"></span>&gt; 5 % — Critical</span>
 </div>
 
 <button class="reset-btn" onclick="
-  if (!confirm('Alle Statistiken unwiderruflich löschen?\\n\\nDieser Vorgang kann nicht rückgängig gemacht werden.')) return;
+  if (!confirm('Permanently delete all statistics?\\n\\nThis cannot be undone.')) return;
   const token = new URLSearchParams(location.search).get('token') ?? '';
   fetch('/api/stats?token=' + encodeURIComponent(token), { method: 'DELETE' })
     .then(r => r.json())
-    .then(d => { alert(d.deleted + ' Keys gelöscht.'); location.reload(); })
-    .catch(() => alert('Fehler beim Zurücksetzen.'));
-">Statistik zurücksetzen</button>
+    .then(d => { alert(d.deleted + ' keys deleted.'); location.reload(); })
+    .catch(() => alert('Reset failed.'));
+">Reset statistics</button>
 </body>
 </html>`
 }
@@ -201,7 +209,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     })
   }
 
-  return NextResponse.json({ ok: true, stats }, {
+  return NextResponse.json({ ok: true, ...stats }, {
     headers: { "Cache-Control": "no-store" },
   })
 }

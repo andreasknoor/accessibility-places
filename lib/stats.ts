@@ -59,7 +59,7 @@ const ALL_SOURCES: SourceId[] = [
   "osm", "accessibility_cloud", "reisen_fuer_alle", "ginto", "google_places",
 ]
 
-async function sumHourKeys(redis: Redis, prefix: "calls" | "errors", source: SourceId): Promise<{ total: number; hours: number }> {
+async function sumHourKeys(redis: Redis, prefix: "calls" | "errors", source: SourceId): Promise<{ total: number; hours: number; oldestHour: string | null }> {
   const pattern = `stats:h:${prefix}:${source}:*`
   let cursor = 0
   const keys: string[] = []
@@ -69,10 +69,12 @@ async function sumHourKeys(redis: Redis, prefix: "calls" | "errors", source: Sou
     keys.push(...batch)
   } while (cursor !== 0)
 
-  if (keys.length === 0) return { total: 0, hours: 0 }
+  if (keys.length === 0) return { total: 0, hours: 0, oldestHour: null }
   const values = await redis.mget<(number | null)[]>(...keys)
   const total = values.reduce<number>((sum, v) => sum + (Number(v) || 0), 0)
-  return { total, hours: keys.length }
+  // Key tail is always YYYY-MM-DDTHH (13 chars); lexicographic min = oldest hour.
+  const oldestHour = keys.map(k => k.slice(-13)).sort()[0] ?? null
+  return { total, hours: keys.length, oldestHour }
 }
 
 export async function resetStats(): Promise<number> {
@@ -91,11 +93,17 @@ export async function resetStats(): Promise<number> {
   return keys.length
 }
 
-export async function getStats(): Promise<StatsResult> {
-  const redis = getRedis()
-  if (!redis) return {}
+export interface StatsResponse {
+  sources:    StatsResult
+  oldestHour: string | null  // YYYY-MM-DDTHH of the oldest key across all sources
+}
 
-  const result: StatsResult = {}
+export async function getStats(): Promise<StatsResponse> {
+  const redis = getRedis()
+  if (!redis) return { sources: {}, oldestHour: null }
+
+  const sources: StatsResult = {}
+  const oldestHours: string[] = []
 
   await Promise.all(ALL_SOURCES.map(async (source) => {
     const [calls, errors] = await Promise.all([
@@ -104,14 +112,17 @@ export async function getStats(): Promise<StatsResult> {
     ])
     if (calls.total === 0 && errors.total === 0) return
     const hours = Math.max(calls.hours, errors.hours) || 1
-    result[source] = {
+    sources[source] = {
       totalCalls:       calls.total,
       totalErrors:      errors.total,
       avgCallsPerHour:  Math.round((calls.total  / hours) * 10) / 10,
       avgErrorsPerHour: Math.round((errors.total / hours) * 10) / 10,
       hours,
     }
+    if (calls.oldestHour)  oldestHours.push(calls.oldestHour)
+    if (errors.oldestHour) oldestHours.push(errors.oldestHour)
   }))
 
-  return result
+  const oldestHour = oldestHours.length > 0 ? oldestHours.sort()[0] : null
+  return { sources, oldestHour }
 }
