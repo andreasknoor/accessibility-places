@@ -147,12 +147,13 @@ export async function POST(req: NextRequest) {
     alwaysShowParking: Boolean(rawF.alwaysShowParking),
   }
 
+  const req_s = rawSources && typeof rawSources === "object" ? rawSources as Record<string, unknown> : {}
   const sources: SearchParams["sources"] = {
-    accessibility_cloud: Boolean(rawSources && typeof rawSources === "object" && (rawSources as Record<string, unknown>).accessibility_cloud),
-    osm:                 Boolean(rawSources && typeof rawSources === "object" && (rawSources as Record<string, unknown>).osm),
-    reisen_fuer_alle:    Boolean(rawSources && typeof rawSources === "object" && (rawSources as Record<string, unknown>).reisen_fuer_alle),
-    ginto:               Boolean(rawSources && typeof rawSources === "object" && (rawSources as Record<string, unknown>).ginto),
-    google_places:       Boolean(rawSources && typeof rawSources === "object" && (rawSources as Record<string, unknown>).google_places),
+    accessibility_cloud: Boolean(req_s.accessibility_cloud) && Boolean(process.env.ACCESSIBILITY_CLOUD_API_KEY),
+    osm:                 Boolean(req_s.osm),
+    reisen_fuer_alle:    Boolean(req_s.reisen_fuer_alle)    && Boolean(process.env.REISEN_FUER_ALLE_API_KEY),
+    ginto:               Boolean(req_s.ginto)               && Boolean(process.env.GINTO_API_KEY),
+    google_places:       Boolean(req_s.google_places)       && Boolean(process.env.GOOGLE_PLACES_API_KEY),
   }
 
   if (isGooglePlacesRateLimited(ip, sources.google_places)) {
