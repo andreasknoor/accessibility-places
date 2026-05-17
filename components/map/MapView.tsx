@@ -369,7 +369,7 @@ export default function MapView({
         </Button>
       )}
 
-      {onToggleParking && (parkingSpots?.length ?? 0) > 0 && (
+      {onToggleParking && (
         <button
           onClick={onToggleParking}
           role="switch"

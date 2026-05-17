@@ -265,6 +265,13 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setFilters((f) => ({ ...f, alwaysShowParking: !f.alwaysShowParking }))
   }, [])
 
+  // Show the parking toggle whenever the server returned spots OR any result
+  // has parking enriched from a nearby OSM node (nearbyOnly flag). Both signal
+  // that disabled-parking data exists for this search area.
+  const hasParkingToggle = parkingSpots.length > 0 || places.some(
+    (p) => (p.accessibility.parking.details as { nearbyOnly?: boolean } | undefined)?.nearbyOnly === true,
+  )
+
   // Mobile layout
   if (isMobile) {
     return (
@@ -295,7 +302,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         initialChipIdx={resetKey === 0 ? (initialCategory ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : undefined) : undefined}
         scrollToId={scrollToId}
         showParking={filters.alwaysShowParking}
-        onToggleParking={parkingSpots.length > 0 ? handleToggleParking : undefined}
+        onToggleParking={hasParkingToggle ? handleToggleParking : undefined}
       />
     )
   }
@@ -314,7 +321,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           isFullscreen
           onToggleFullscreen={() => setIsFullscreen(false)}
           showParking={filters.alwaysShowParking}
-          onToggleParking={parkingSpots.length > 0 ? handleToggleParking : undefined}
+          onToggleParking={hasParkingToggle ? handleToggleParking : undefined}
         />
       </div>
     )
@@ -392,6 +399,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             scrollToId={scrollToId}
             filterDebug={filterDebug}
             searchCenter={chatMode === "nearby" ? searchCenter : undefined}
+            onToggleParking={hasParkingToggle ? handleToggleParking : undefined}
           />
           <div className="shrink-0 border-t border-border px-4 py-2 flex justify-end gap-4">
             <Link href={locale === "en" ? "/en/faq" : "/faq"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
@@ -427,7 +435,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             isFullscreen={false}
             onToggleFullscreen={() => setIsFullscreen(true)}
             showParking={filters.alwaysShowParking}
-            onToggleParking={parkingSpots.length > 0 ? handleToggleParking : undefined}
+            onToggleParking={hasParkingToggle ? handleToggleParking : undefined}
           />
         </div>
       </div>
