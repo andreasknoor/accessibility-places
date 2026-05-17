@@ -90,6 +90,7 @@ export default function MapView({
   const userLocationRef        = useRef(userLocation)
   const parkingNoResultIdsRef  = useRef(parkingNoResultIds)
   const parkingFoundCountsRef  = useRef(parkingFoundCounts)
+  const popupDivs              = useRef<Map<string, HTMLElement>>(new Map())
   useEffect(() => { onShowInResultsRef.current     = onShowInResults     }, [onShowInResults])
   useEffect(() => { onShowNearbyParkingRef.current = onShowNearbyParking }, [onShowNearbyParking])
   useEffect(() => { placesRef.current = places }, [places])
@@ -225,6 +226,7 @@ export default function MapView({
       if (!currentIds.has(id)) {
         m.remove()
         markers.current.delete(id)
+        popupDivs.current.delete(id)
       }
     }
 
@@ -320,6 +322,7 @@ export default function MapView({
             })
           }
         }
+        popupDivs.current.set(place.id, div)
         const popup = L!.popup({ maxWidth: 260 }).setContent(div)
 
         const marker = L!.marker(
@@ -343,6 +346,27 @@ export default function MapView({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [places, selectedId, mapReady])
+
+  // Sync parking state into already-built popup DOMs when the state changes
+  // (e.g. user clicked lupe in ResultsList before switching to the map tab).
+  useEffect(() => {
+    for (const [placeId, div] of popupDivs.current) {
+      const valueEl = div.querySelector<HTMLElement>("[data-parking-value]")
+      if (!valueEl) continue
+      const noResult   = parkingNoResultIds?.has(placeId)
+      const foundCount = parkingFoundCounts?.get(placeId)
+      if (noResult) {
+        valueEl.textContent = t.a11y.no
+        valueEl.style.color = "#ef4444"
+        div.querySelector<HTMLElement>("[data-nearby-parking]")?.remove()
+      } else if (foundCount != null && foundCount > 0) {
+        valueEl.textContent = t.results.nearbyParkingCount(foundCount)
+        valueEl.style.color = "#16a34a"
+        div.querySelector<HTMLElement>("[data-nearby-parking]")?.remove()
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parkingFoundCounts, parkingNoResultIds])
 
   // Pan to selected — also re-fires when panTrigger increments so that
   // clicking the same result after manually panning the map still re-centers.
