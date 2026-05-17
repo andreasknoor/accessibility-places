@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server"
 import type { SearchParams, SearchResult, SourceId, FilterDebug, A11yValue, Place } from "@/lib/types"
 import { startAdapterTasks }            from "@/lib/adapters"
+import { trackCall, trackError }        from "@/lib/stats"
 import { findMatch, filterByNameHint }  from "@/lib/matching/match"
 import { mergePlaces, passesFilters, finalisePlaceConfidence, computeFilteredConfidence, countLimited } from "@/lib/matching/merge"
 import { fetchOsmDisabledParking, type NearbyParkingFeature } from "@/lib/adapters/osm"
@@ -229,6 +230,13 @@ export async function POST(req: NextRequest) {
 
         const adapterResults = await Promise.all(wrapped)
         if (signal.aborted) { controller.close(); return }
+
+        // Fire-and-forget: stats belong here (API boundary), not inside safeRun,
+        // so that fetchAllSources stays side-effect-free and safe to call from ISR.
+        for (const r of adapterResults) {
+          trackCall(r.sourceId)
+          if (r.error) trackError(r.sourceId)
+        }
 
         // ── 5. Match & merge ─────────────────────────────────────────────────
         const canonical: ReturnType<typeof mergePlaces>[] = []
