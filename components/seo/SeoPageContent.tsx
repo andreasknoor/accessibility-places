@@ -1,6 +1,6 @@
 import Link from "next/link"
-import { Accessibility } from "lucide-react"
-import type { Place, A11yValue, EntranceDetails, ToiletDetails } from "@/lib/types"
+import { Accessibility, Map, Globe } from "lucide-react"
+import type { Place, A11yValue, EntranceDetails, ToiletDetails, ParkingDetails } from "@/lib/types"
 import { CITIES, SEO_CATEGORY_LABEL, SEO_CATEGORY_TO_CHIP_IDX, type City } from "@/lib/cities"
 import { confidenceLabel } from "@/lib/matching/merge"
 import { hasData } from "@/lib/seo-validity"
@@ -69,6 +69,24 @@ function toiletDetailItems(d: ToiletDetails, locale: Locale): string[] {
   return items
 }
 
+function parkingDetailItems(d: ParkingDetails, locale: Locale): string[] {
+  const de = locale === "de"
+  const items: string[] = []
+  if (d.hasWheelchairSpaces)             items.push(de ? "Behindertenparkplätze vorhanden" : "Disabled parking available")
+  if (d.spaceCount         !== undefined) items.push(de ? `${d.spaceCount} Plätze`          : `${d.spaceCount} spaces`)
+  if (d.distanceToEntranceM !== undefined) items.push(de ? `Abstand zum Eingang: ${d.distanceToEntranceM} m` : `Distance to entrance: ${d.distanceToEntranceM} m`)
+  return items
+}
+
+function parkingValueLabel(attr: { value: A11yValue; details?: unknown }, locale: Locale): string {
+  const d = attr.details as ParkingDetails | undefined
+  if (attr.value === "yes" && d?.nearbyOnly) {
+    const dist = d.nearbyParkingDistanceM != null ? ` (${d.nearbyParkingDistanceM}m)` : ""
+    return locale === "de" ? `Ja, in der Nähe${dist}` : `Yes, nearby${dist}`
+  }
+  return VALUE_LABEL[attr.value][locale]
+}
+
 // ─── Confidence badge ────────────────────────────────────────────────────────
 
 const CONFIDENCE_COLORS: Record<"high" | "medium" | "low", string> = {
@@ -112,12 +130,14 @@ function SeoPlaceCard({ place, locale, searchBaseUrl }: { place: Place; locale: 
 
   const entrance    = place.accessibility.entrance
   const toilet      = place.accessibility.toilet
+  const parking     = place.accessibility.parking.value !== "unknown" ? place.accessibility.parking : null
   const entrItems   = entrance?.details ? entranceDetailItems(entrance.details as EntranceDetails, locale) : []
   const toiletItems = toilet?.details   ? toiletDetailItems(toilet.details     as ToiletDetails,  locale) : []
+  const parkItems   = parking?.details  ? parkingDetailItems(parking.details   as ParkingDetails, locale) : []
 
   const criteriaLabel = locale === "de"
-    ? { entrance: "Eingang", toilet: "Toilette" }
-    : { entrance: "Entrance", toilet: "Toilet"  }
+    ? { entrance: "Eingang", toilet: "Toilette", parking: "Rollst.-Parkplatz" }
+    : { entrance: "Entrance", toilet: "Toilet",  parking: "Parking"           }
 
   return (
     <article className="rounded-lg border border-gray-200 bg-white shadow-sm flex flex-col overflow-hidden">
@@ -142,15 +162,16 @@ function SeoPlaceCard({ place, locale, searchBaseUrl }: { place: Place; locale: 
 
         <div className="flex flex-col gap-1.5">
           {([
-            { key: "entrance" as const, attr: entrance, items: entrItems   },
-            { key: "toilet"   as const, attr: toilet,   items: toiletItems },
-          ]).map(({ key, attr, items }) => {
+            { key: "entrance" as const, attr: entrance, items: entrItems,   valueLabel: entrance ? a11yLabel(entrance.value, locale) : "" },
+            { key: "toilet"   as const, attr: toilet,   items: toiletItems, valueLabel: toilet   ? a11yLabel(toilet.value,   locale) : "" },
+            { key: "parking"  as const, attr: parking,  items: parkItems,   valueLabel: parking  ? parkingValueLabel(parking, locale) : "" },
+          ]).map(({ key, attr, items, valueLabel }) => {
             if (!attr) return null
             return (
               <div key={key}>
                 <div className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${VALUE_CLASSES[attr.value]}`}>
                   <span className="font-medium">{criteriaLabel[key]}:</span>
-                  <span>{a11yLabel(attr.value, locale)}</span>
+                  <span>{valueLabel}</span>
                 </div>
                 {items.length > 0 && (
                   <ul className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0">
@@ -168,15 +189,36 @@ function SeoPlaceCard({ place, locale, searchBaseUrl }: { place: Place; locale: 
 
       {/* Card footer: external links left, CTA right */}
       <div className="flex items-center gap-3 px-4 py-2 border-t border-gray-100 flex-wrap">
-        <a href={wheelmapUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:underline">
-          Wheelmap
+        <a
+          href={wheelmapUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={locale === "de" ? "Auf Wheelmap.org prüfen" : "Check on Wheelmap.org"}
+          title={locale === "de" ? "Auf Wheelmap.org prüfen" : "Check on Wheelmap.org"}
+          className="p-1 -m-1 text-gray-400 hover:text-gray-700 transition-colors"
+        >
+          <Accessibility className="w-[1.1rem] h-[1.1rem]" />
         </a>
-        <a href={gmapsUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:underline">
-          Google Maps
+        <a
+          href={gmapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={locale === "de" ? "In Google Maps öffnen" : "Open in Google Maps"}
+          title={locale === "de" ? "In Google Maps öffnen" : "Open in Google Maps"}
+          className="p-1 -m-1 text-gray-400 hover:text-gray-700 transition-colors"
+        >
+          <Map className="w-[1.1rem] h-[1.1rem]" />
         </a>
         {place.website && /^https?:\/\//i.test(place.website) && (
-          <a href={place.website} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:underline">
-            Website
+          <a
+            href={place.website}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={locale === "de" ? "Website besuchen" : "Visit website"}
+            title={locale === "de" ? "Website besuchen" : "Visit website"}
+            className="p-1 -m-1 text-gray-400 hover:text-gray-700 transition-colors"
+          >
+            <Globe className="w-[1.1rem] h-[1.1rem]" />
           </a>
         )}
         <Link

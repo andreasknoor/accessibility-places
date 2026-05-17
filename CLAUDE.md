@@ -130,6 +130,8 @@ In production, `raw` adapter response data is stripped from `sourceRecords` befo
 
 `POST /api/log-error` — client-side error forwarding. `HomeClient` calls this fire-and-forget in its search `catch` block; the route logs via `console.error` (appears as Error in Vercel Function Logs).
 
+`GET /api/stats?token=SECRET` — token-protected adapter usage stats (requires `KV_REST_API_URL`). `lib/stats.ts` tracks per-source call and error counts in Upstash Redis using day-granularity keys (`stats:calls:<sourceId>:YYYY-MM-DD`) with a 90-day TTL. `safeRun` in `lib/adapters/index.ts` calls `trackCall`/`trackError` fire-and-forget after every adapter attempt (both on success and on error).
+
 `GET /api/health?token=SECRET` — token-protected E2E health check. Live mode runs a real OSM search (Cafés, Berlin Mitte, entrance + toilet filter). Mock mode (`?mock=1`) runs fixture data through the real pipeline without external calls — suitable for load testing. Google Places is hardcoded off. Ginto is hardcoded off (CH-only, separate concern). Returns 200/503 with structured JSON.
 
 ### Local SEO pages (`app/[city]/[category]/` and `app/en/[city]/[category]/`)
@@ -145,10 +147,10 @@ ISR landing pages for 32 DACH cities × 10 categories × 2 locales = **640 pages
 - `CITY_MAP` — `Map<CitySlug, City>` for O(1) lookup in page routes.
 
 **Data fetching — `lib/seo-search.ts`:**
-`fetchPlacesForSeoPage(lat, lon, category, radiusKm=5)` calls `fetchAllSources` directly (no HTTP round-trip). Fetches with all filters off (`acceptUnknown: true`) and `SEO_SOURCES` (excludes Google Places). After merging, always applies `FILTERS_STRICT` (entrance=true, toilet=true, acceptUnknown=false). Recomputes `computeFilteredConfidence` using these filters, sorts descending, returns top 25.
+`fetchPlacesForSeoPage(lat, lon, category, radiusKm=5)` calls `fetchAllSources` directly (no HTTP round-trip). Fetches with all filters off (`acceptUnknown: true`) and `SEO_SOURCES` (excludes Google Places). When `ENABLE_NEARBY_PARKING=1`, also fetches disabled-parking OSM nodes in parallel and runs `enrichWithNearbyParking()` before filtering. After merging, always applies `FILTERS_STRICT` (entrance=true, toilet=true, acceptUnknown=false). Recomputes `computeFilteredConfidence` using these filters, sorts descending (tiebreaker: `name.localeCompare`), returns top 25.
 
 **Rendering — `components/seo/SeoPageContent.tsx`:**
-Server component shared by DE and EN routes. Includes Schema.org `ItemList` + `BreadcrumbList` JSON-LD, hreflang language switcher, related categories (chip-backed only — `SEO_CATEGORY_TO_CHIP_IDX !== undefined` — and filtered by `hasData`), and related cities (filtered by `hasData`). The confidence badge format matches the main app exactly: `"X% · Verlässlich/Mittel/Unsicher"` via `confidenceLabel()` from `merge.ts`. Source attribution names the active adapters (`"OpenStreetMap, accessibility.cloud, Ginto (CH)"`) — exclude adapters that require keys absent in the deployment.
+Server component shared by DE and EN routes. Includes Schema.org `ItemList` + `BreadcrumbList` JSON-LD, hreflang language switcher, related categories (chip-backed only — `SEO_CATEGORY_TO_CHIP_IDX !== undefined` — and filtered by `hasData`), and related cities (filtered by `hasData`). The confidence badge format matches the main app exactly: `"X% · Verlässlich/Mittel/Unsicher"` via `confidenceLabel()` from `merge.ts`. Source attribution names the active adapters (`"OpenStreetMap, accessibility.cloud, Ginto (CH)"`) — exclude adapters that require keys absent in the deployment. Place cards show entrance, toilet, and parking attributes (parking is only shown when its value is not `"unknown"`); the `nearbyOnly` parking case renders as `"Ja, in der Nähe (Xm)"`. External links (Wheelmap, Google Maps, website) are icon-only (`Accessibility`, `Map`, `Globe` from lucide-react).
 
 **Validity data — `lib/generated/seo-validity.json` + `lib/seo-validity.ts`:**
 A 320-entry JSON file (`citySlug/categorySlug → boolean`) that records which combinations actually have accessible places. Updated by `npm run check:seo` (or the daily GitHub Actions cron `.github/workflows/check-seo-validity.yml`). Safety rules: failed checks never overwrite an existing `true` (Overpass downtime cannot remove confirmed pages); the file is not written if < 50% of checks succeed. `hasData(citySlug, categorySlug)` defaults to `true` for unknown combos (conservative). `VALID_SEO_PATHS` is a `Set<string>` used by both the sitemap and `SeoPageContent`.
@@ -180,6 +182,7 @@ Each place card on an SEO page links to:
 - `ENABLE_NEARBY_PARKING=1` — feature flag; enables the optional disabled-parking enrichment fetch (off by default)
 - `GINTO_API_KEY` — optional; Ginto GraphQL API (Swiss accessibility data, CH only). Contact support@ginto.guide. Source silently skipped if absent.
 - `HEALTH_CHECK_SECRET` — required to activate `GET /api/health`; requests without a matching `?token=` get 401. If unset the endpoint returns 503.
+- `KV_REST_API_URL` / `KV_REST_API_TOKEN` — optional; Upstash Redis credentials for adapter call/error stats. If absent, `lib/stats.ts` is a no-op and `GET /api/stats` returns 503.
 
 ## Tests
 

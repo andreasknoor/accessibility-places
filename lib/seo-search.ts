@@ -1,7 +1,9 @@
 import type { Place, SearchParams, SearchFilters, Category } from "./types"
-import { fetchAllSources }          from "./adapters"
-import { findMatch }                from "./matching/match"
+import { fetchAllSources }                                   from "./adapters"
+import { fetchOsmDisabledParking }                           from "./adapters/osm"
+import { findMatch }                                         from "./matching/match"
 import { mergePlaces, finalisePlaceConfidence, computeFilteredConfidence, passesFilters } from "./matching/merge"
+import { enrichWithNearbyParking }                           from "./matching/nearby-parking"
 
 // Fetch without any filter so all sources return their full result set.
 const FETCH_FILTERS: SearchFilters = {
@@ -47,6 +49,13 @@ export async function fetchPlacesForSeoPage(
     signal:     AbortSignal.timeout(30_000),
   }
 
+  // Kick off nearby-parking fetch in parallel with the adapter fetches.
+  // Non-fatal: failure leaves parking values as the adapters reported them.
+  const nearbyParkingEnabled = process.env.ENABLE_NEARBY_PARKING === "1"
+  const nearbyParkingPromise = nearbyParkingEnabled
+    ? fetchOsmDisabledParking({ lat, lon }, radiusKm, AbortSignal.timeout(20_000)).catch(() => [])
+    : Promise.resolve([] as Awaited<ReturnType<typeof fetchOsmDisabledParking>>)
+
   const results = await fetchAllSources(params)
 
   const canonical: Place[] = []
@@ -58,11 +67,15 @@ export async function fetchPlacesForSeoPage(
     }
   }
 
+  if (nearbyParkingEnabled) {
+    enrichWithNearbyParking(canonical, await nearbyParkingPromise)
+  }
+
   const base = canonical.filter((p) => !p.dogPolicyOnly && p.category === category)
   const filtered = base.filter((p) => passesFilters(p, FILTERS_STRICT))
 
   return filtered
     .map((p) => ({ ...p, overallConfidence: computeFilteredConfidence(p, FILTERS_STRICT) }))
-    .sort((a, b) => b.overallConfidence - a.overallConfidence)
+    .sort((a, b) => b.overallConfidence - a.overallConfidence || a.name.localeCompare(b.name))
     .slice(0, 25)
 }

@@ -4,6 +4,7 @@ import { fetchAccessibilityCloud }   from "./accessibility-cloud"
 import { fetchReisenFuerAlle }       from "./reisen-fuer-alle"
 import { fetchGooglePlaces }         from "./google-places"
 import { fetchGinto }                from "./ginto"
+import { trackCall, trackError }     from "../stats"
 
 export type AdapterResult = {
   sourceId: SourceId
@@ -19,9 +20,12 @@ export async function safeRun(
   const t0 = Date.now()
   try {
     const places = await fn()
+    trackCall(sourceId)
     return { sourceId, places, durationMs: Date.now() - t0 }
   } catch (err) {
     console.error(`[adapter:${sourceId}]`, err)
+    trackCall(sourceId)
+    trackError(sourceId)
     return { sourceId, places: [], error: String(err), durationMs: Date.now() - t0 }
   }
 }
