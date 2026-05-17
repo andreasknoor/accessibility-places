@@ -27,10 +27,9 @@ interface Props {
   filterDebug?:         FilterDebug
   searchCenter?:        { lat: number; lon: number }
   onAdjustFilters?:     () => void
-  onToggleParking?:     () => void
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, onToggleParking }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters }: Props) {
   const t = useTranslations()
   const [mapHintSeen, setMapHintSeen] = useState(() =>
     typeof window !== "undefined" && !!localStorage.getItem("ap_map_hint_seen")
@@ -164,27 +163,6 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
             )}
           >
             {t.results.sortByDistance}
-          </button>
-        </div>
-      )}
-
-      {/* Parking toggle — shown when nearby disabled parking was found */}
-      {onToggleParking && !isLoading && places.length > 0 && (
-        <div className="px-4 py-1.5 border-b border-border shrink-0 flex items-center justify-between gap-2">
-          <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <span aria-hidden>🅿</span>
-            {t.map.toggleParking}
-          </span>
-          <button
-            role="switch"
-            aria-checked={filters?.alwaysShowParking}
-            onClick={onToggleParking}
-            className="shrink-0 flex items-center"
-            aria-label={t.map.toggleParking}
-          >
-            <span className={`relative inline-flex h-4 w-7 rounded-full transition-colors ${filters?.alwaysShowParking ? "bg-blue-600" : "bg-muted-foreground/40"}`}>
-              <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${filters?.alwaysShowParking ? "translate-x-3" : "translate-x-0.5"}`} />
-            </span>
           </button>
         </div>
       )}

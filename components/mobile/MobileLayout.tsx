@@ -138,7 +138,6 @@ export default function MobileLayout({
             hasSearched={hasSearched}
             filterDebug={filterDebug}
             searchCenter={searchCenter}
-            onToggleParking={onToggleParking}
           />
         </div>
 
