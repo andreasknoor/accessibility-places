@@ -136,7 +136,7 @@ In production, `raw` adapter response data is stripped from `sourceRecords` befo
 
 `POST /api/log-error` — client-side error forwarding. `HomeClient` calls this fire-and-forget in its search `catch` block; the route logs via `console.error` (appears as Error in Vercel Function Logs).
 
-`GET /api/stats?token=SECRET` — token-protected adapter usage stats (requires `KV_REST_API_URL`). `lib/stats.ts` tracks per-source call and error counts in Upstash Redis using day-granularity keys (`stats:calls:<sourceId>:YYYY-MM-DD`) with a 90-day TTL. `safeRun` in `lib/adapters/index.ts` calls `trackCall`/`trackError` fire-and-forget after every adapter attempt (both on success and on error).
+`GET /api/stats?token=SECRET` — token-protected adapter usage stats (requires `KV_REST_API_URL`). `lib/stats.ts` tracks per-source call and error counts in Upstash Redis using day-granularity keys (`stats:calls:<sourceId>:YYYY-MM-DD`) with a 90-day TTL. `trackCall`/`trackError` are called fire-and-forget from `app/api/search/route.ts` after all adapters complete — **not** from `safeRun`. This keeps `safeRun` and `fetchAllSources` side-effect-free so they can be called safely from ISR pages (a `no-store` Upstash fetch inside an ISR page would demote it to dynamic at runtime).
 
 `GET /api/health?token=SECRET` — token-protected E2E health check. Live mode runs a real OSM search (Cafés, Berlin Mitte, entrance + toilet filter). Mock mode (`?mock=1`) runs fixture data through the real pipeline without external calls — suitable for load testing. Google Places is hardcoded off. Ginto is hardcoded off (CH-only, separate concern). Returns 200/503 with structured JSON.
 
@@ -198,3 +198,5 @@ Each place card on an SEO page links to:
 - `__tests__/integration/` — live network tests; skip themselves when API keys or network are absent. Not required for CI.
 
 `vitest.setup.ts` mocks `window.matchMedia` (always returns `matches: false`), `localStorage`, and `ResizeObserver` for jsdom tests.
+
+**Rate-limiter pitfall in `search.test.ts`:** The `/api/search` route holds a module-level in-memory sliding-window counter keyed by `x-forwarded-for` (falls back to `"unknown"`). Tests that call `POST()` without setting this header all share the `"unknown"` bucket; the 11th call in the same file returns 429 before the stream starts. Fix: set a distinct `x-forwarded-for` header on requests in test groups that run after the first ~10 POST calls in that file.

@@ -39,10 +39,10 @@ function renderHtml(stats: StatsResult): string {
     .map(id => ({ id, s: stats[id as keyof StatsResult] }))
     .filter(e => e.s != null) as { id: string; s: NonNullable<StatsResult[keyof StatsResult]> }[]
 
-  const totalCalls  = entries.reduce((a, e) => a + e.s.totalCalls,      0)
-  const totalErrors = entries.reduce((a, e) => a + e.s.totalErrors,     0)
-  const totalErrDay = entries.reduce((a, e) => a + e.s.avgErrorsPerDay, 0)
-  const totalCallDay= entries.reduce((a, e) => a + e.s.avgCallsPerDay,  0)
+  const totalCalls  = entries.reduce((a, e) => a + e.s.totalCalls,       0)
+  const totalErrors = entries.reduce((a, e) => a + e.s.totalErrors,      0)
+  const totalErrHour= entries.reduce((a, e) => a + e.s.avgErrorsPerHour, 0)
+  const totalCallHour=entries.reduce((a, e) => a + e.s.avgCallsPerHour,  0)
   const globalRate  = totalCalls > 0 ? (totalErrors / totalCalls) * 100 : 0
 
   const now = new Date().toLocaleString("de-DE", {
@@ -63,9 +63,9 @@ function renderHtml(stats: StatsResult): string {
         <td style="padding:12px 16px;text-align:right">
           <span style="background:${color}22;color:${color};padding:2px 8px;border-radius:4px;font-weight:600">${rate.toFixed(1)} %</span>
         </td>
-        <td style="padding:12px 16px;text-align:right">${s.avgCallsPerDay.toFixed(1)}</td>
-        <td style="padding:12px 16px;text-align:right">${s.avgErrorsPerDay.toFixed(1)}</td>
-        <td style="padding:12px 16px;text-align:right;color:#6b7280">${s.days}</td>
+        <td style="padding:12px 16px;text-align:right">${s.avgCallsPerHour.toFixed(1)}</td>
+        <td style="padding:12px 16px;text-align:right">${s.avgErrorsPerHour.toFixed(1)}</td>
+        <td style="padding:12px 16px;text-align:right;color:#6b7280">${s.hours}</td>
       </tr>`
   }).join("")
 
@@ -103,7 +103,7 @@ function renderHtml(stats: StatsResult): string {
 </head>
 <body>
 <h1>♿ Adapter Stats Dashboard</h1>
-<p class="subtitle">Letztes Update: ${now} &nbsp;·&nbsp; 90-Tage-Fenster</p>
+<p class="subtitle">Letztes Update: ${now} &nbsp;·&nbsp; 90-Tage-Fenster &nbsp;·&nbsp; stündliche Granularität</p>
 
 <div class="kpis">
   <div class="kpi">
@@ -115,12 +115,12 @@ function renderHtml(stats: StatsResult): string {
     <div class="kpi-label">Globale Fehlerrate</div>
   </div>
   <div class="kpi">
-    <div class="kpi-value">${totalCallDay.toFixed(1)}</div>
-    <div class="kpi-label">Calls/Tag (Ø)</div>
+    <div class="kpi-value">${totalCallHour.toFixed(1)}</div>
+    <div class="kpi-label">Calls/Std (Ø)</div>
   </div>
   <div class="kpi">
-    <div class="kpi-value" style="color:${errorColor(totalErrDay > 0 ? 10 : 0)}">${totalErrDay.toFixed(1)}</div>
-    <div class="kpi-label">Fehler/Tag (Ø)</div>
+    <div class="kpi-value" style="color:${errorColor(totalErrHour > 0 ? 10 : 0)}">${totalErrHour.toFixed(1)}</div>
+    <div class="kpi-label">Fehler/Std (Ø)</div>
   </div>
   <div class="kpi">
     <div class="kpi-value">${entries.length} / 5</div>
@@ -136,9 +136,9 @@ function renderHtml(stats: StatsResult): string {
         <th>Calls gesamt</th>
         <th>Fehler gesamt</th>
         <th>Fehlerrate</th>
-        <th>Calls/Tag Ø</th>
-        <th>Fehler/Tag Ø</th>
-        <th>Tage</th>
+        <th>Calls/Std Ø</th>
+        <th>Fehler/Std Ø</th>
+        <th>Stunden</th>
       </tr>
     </thead>
     <tbody>${rows}</tbody>
