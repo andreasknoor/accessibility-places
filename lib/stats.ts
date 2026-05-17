@@ -69,7 +69,7 @@ async function sumDayKeys(redis: Redis, prefix: "calls" | "errors", source: Sour
 
   if (keys.length === 0) return { total: 0, days: 0 }
   const values = await redis.mget<(number | null)[]>(...keys)
-  const total = values.reduce((sum, v) => sum + (Number(v) || 0), 0)
+  const total = values.reduce<number>((sum, v) => sum + (Number(v) || 0), 0)
   return { total, days: keys.length }
 }
 
