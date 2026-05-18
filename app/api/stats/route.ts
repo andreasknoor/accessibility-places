@@ -15,7 +15,7 @@ const SOURCE_LABELS: Record<string, string> = {
   reisen_fuer_alle:   "Reisen für Alle",
   ginto:              "Ginto",
   google_places:      "Google Places",
-  osm_parking:        "OSM Parking (disabled)",
+  osm_parking:        "OSM Wheelchair Parking",
 }
 
 const SOURCE_ORDER = ["osm", "accessibility_cloud", "reisen_fuer_alle", "ginto", "google_places", "osm_parking"]
