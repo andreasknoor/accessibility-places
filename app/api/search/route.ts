@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
     seating:           Boolean(rawF.seating),
     onlyVerified:      Boolean(rawF.onlyVerified),
     acceptUnknown:     Boolean(rawF.acceptUnknown),
-    alwaysShowParking: Boolean(rawF.alwaysShowParking),
+    alwaysShowParking: false,
   }
 
   const req_s = rawSources && typeof rawSources === "object" ? rawSources as Record<string, unknown> : {}
@@ -328,17 +328,10 @@ export async function POST(req: NextRequest) {
             location:      { lat: geo.lat, lon: geo.lon },
             locationLabel: geo.label,
             filterDebug,
-            // When alwaysShowParking is on, show all disabled-parking OSM nodes
-            // within min(radiusKm, 10) km regardless of whether any result is nearby.
-            // Otherwise only show markers that are within NEARBY_PARKING_DISPLAY_RADIUS_M
+            // Only include parking markers that are within NEARBY_PARKING_DISPLAY_RADIUS_M
             // of a result whose parking was auto-enriched (nearbyOnly: true).
+            // The client toggle controls visibility; the server always sends the filtered set.
             parkingSpots:  (() => {
-              if (filters.alwaysShowParking && nearbyParkingEnabled) {
-                const capM = Math.min(radiusKm, 10) * 1000
-                return parkingFeatures.filter((f) =>
-                  haversineMeters({ lat: geo.lat, lon: geo.lon }, f) <= capM
-                )
-              }
               const nearbyOnlyPlaces = filtered.filter((p) => {
                 const det = p.accessibility.parking.details as { nearbyOnly?: boolean } | undefined
                 return det?.nearbyOnly === true
