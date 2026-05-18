@@ -39,6 +39,10 @@ const FAQ_DE = [
     a: "Die App kombiniert Daten aus drei Quellen: OpenStreetMap (OSM), accessibility.cloud (einschließlich Wheelmap.org) und Google Places. Jede Quelle wird mit einem Verlässlichkeitswert gewichtet — von manuell verifizierten Einträgen bis hin zu automatisch erhobenen Daten. Der farbige Kreis bei jedem Eintrag zeigt auf einen Blick, wie gut die Datenlage ist.",
   },
   {
+    q: "Warum dauert die Suche manchmal über 20 Sekunden?",
+    a: "Accessible Places nutzt die öffentliche Overpass-API von OpenStreetMap, um Daten zu Restaurants, Cafés und anderen Orten abzurufen. Diese Schnittstelle ist kostenlos und wird von der Community betrieben — sie steht allen Entwicklern weltweit offen. Das bedeutet aber auch, dass die Server gelegentlich stark ausgelastet sind, besonders in den Abendstunden oder wenn viele Anfragen gleichzeitig eingehen. In solchen Momenten kann eine Suchanfrage 20 Sekunden oder länger dauern, bevor die ersten Ergebnisse erscheinen. Als Hobby-Projekt ohne kommerzielles Budget ist der Einsatz eigener, schnellerer Server leider nicht möglich.",
+  },
+  {
     q: "Was bedeutet der farbige Kreis bei jedem Eintrag?",
     a: "Grün steht für eine verlässliche Barrierefreiheitsinformation, Gelb für eine mittelgute Datenlage und Rot für eine unsichere oder unvollständige Datenlage. Die Farbe gibt also an, wie verlässlich die verfügbaren Informationen sind — nicht ob ein Ort barrierefrei ist oder nicht.",
   },
