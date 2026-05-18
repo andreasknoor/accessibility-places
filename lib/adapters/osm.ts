@@ -367,7 +367,7 @@ export async function fetchOsmDisabledParking(
   const r = Math.min(radiusKm, NEARBY_PARKING_MAX_RADIUS_KM) * 1000
   const { lat, lon } = location
 
-  // Three orthogonal disabled-parking signals in OSM. We union them so the
+  // Four orthogonal disabled-parking signals in OSM. We union them so the
   // query catches both "lot with N disabled spaces" and "single dedicated
   // disabled parking space" features.
   // Keys containing ":" must be quoted in Overpass QL — unquoted colons are
@@ -378,6 +378,7 @@ export async function fetchOsmDisabledParking(
     `nwr(around:${r},${lat},${lon})[amenity=parking]["capacity:disabled"];` +
     `nwr(around:${r},${lat},${lon})[amenity=parking]["capacity:wheelchair"];` +
     `nwr(around:${r},${lat},${lon})[amenity=parking_space][parking_space=disabled];` +
+    `nwr(around:${r},${lat},${lon})[amenity=parking_space][wheelchair=designated];` +
     `);out 500 center tags;`
 
   const headers = {
@@ -398,7 +399,12 @@ export async function fetchOsmDisabledParking(
       if (featLat === undefined || featLon === undefined) continue
       const tags = (e.tags ?? {}) as Record<string, string>
       const cap = parseInt(tags["capacity:disabled"] ?? tags["capacity:wheelchair"] ?? "", 10)
-      out.push({ lat: featLat, lon: featLon, capacity: Number.isFinite(cap) ? cap : undefined })
+      // Skip features that explicitly declare zero (or negative) disabled spaces.
+      // capacity:disabled=0 is a valid but contradictory tag; honour it by dropping
+      // the feature rather than treating it as an implicit single space.
+      const hasCapacityTag = "capacity:disabled" in tags || "capacity:wheelchair" in tags
+      if (hasCapacityTag && Number.isFinite(cap) && cap <= 0) continue
+      out.push({ lat: featLat, lon: featLon, capacity: cap > 0 ? cap : undefined })
     }
     return out
   }
