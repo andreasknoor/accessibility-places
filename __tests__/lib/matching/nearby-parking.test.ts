@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest"
 import {
   enrichWithNearbyParking,
   haversineMeters,
+  nearbyParkingConfidence,
   DEFAULT_MAX_NEARBY_PARKING_M,
-  NEARBY_PARKING_CONFIDENCE,
 } from "@/lib/matching/nearby-parking"
 import type { Place, ParkingDetails } from "@/lib/types"
 
@@ -111,7 +111,7 @@ describe("enrichWithNearbyParking", () => {
     expect(DEFAULT_MAX_NEARBY_PARKING_M).toBe(300)
   })
 
-  it("sets confidence to NEARBY_PARKING_CONFIDENCE after upgrade", () => {
+  it("sets distance-based confidence after upgrade", () => {
     // confidence was 0 before enrichment (no known source attributed parking).
     // Without this fix, computeFilteredConfidence returns 0 % when parking is
     // the only active filter — the upgraded value="yes" is included in `known`
@@ -121,13 +121,27 @@ describe("enrichWithNearbyParking", () => {
     enrichWithNearbyParking([place], [feature])
 
     expect(place.accessibility.parking.value).toBe("yes")
-    expect(place.accessibility.parking.confidence).toBe(NEARBY_PARKING_CONFIDENCE)
-    expect(NEARBY_PARKING_CONFIDENCE).toBeGreaterThan(0)
+    // Feature is at distance 0 → maximum nearby confidence (0.65)
+    expect(place.accessibility.parking.confidence).toBe(nearbyParkingConfidence(0))
+    expect(place.accessibility.parking.confidence).toBeGreaterThan(0)
   })
 
   it("confidence is lower than a direct OSM on-site signal (0.75)", () => {
-    // Nearby parking is a weaker signal than wheelchair=yes on the venue itself.
-    expect(NEARBY_PARKING_CONFIDENCE).toBeLessThan(0.75)
+    // Even at 0 m, nearby parking is a weaker signal than wheelchair=yes on the venue.
+    expect(nearbyParkingConfidence(0)).toBeLessThan(0.75)
+  })
+
+  it("confidence decreases with distance", () => {
+    expect(nearbyParkingConfidence(0)).toBeGreaterThan(nearbyParkingConfidence(150))
+    expect(nearbyParkingConfidence(150)).toBeGreaterThan(nearbyParkingConfidence(300))
+  })
+
+  it("confidence at midpoint equals 0.50", () => {
+    expect(nearbyParkingConfidence(150)).toBe(0.50)
+  })
+
+  it("confidence at max distance equals 0.35", () => {
+    expect(nearbyParkingConfidence(300)).toBe(0.35)
   })
 })
 

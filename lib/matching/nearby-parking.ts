@@ -25,11 +25,22 @@ export const DEFAULT_MAX_NEARBY_PARKING_M = 300
 // Gives users a useful "parking nearby" overview without polluting the whole city.
 export const NEARBY_PARKING_DISPLAY_RADIUS_M = 500
 
-// Confidence assigned to a parking attribute that was upgraded via a nearby
-// OSM disabled-parking feature. Lower than a direct on-site source (OSM
-// wheelchair=yes gives ~0.75) because it is a spatial correlation, not a tag
-// on the venue itself. 0.5 = "plausible but not confirmed on-site".
-export const NEARBY_PARKING_CONFIDENCE = 0.5
+// Confidence for a parking attribute upgraded via a nearby OSM spot.
+// Interpolates linearly between CONF_NEAR (at 0 m) and CONF_FAR (at maxDistanceM).
+// Lower than a direct on-site source (OSM wheelchair=yes ≈ 0.75) because this
+// is a spatial correlation, not a tag on the venue itself.
+// Midpoint (150 m out of 300 m) lands at 0.50, matching the former fixed value.
+const NEARBY_PARKING_CONF_NEAR = 0.65
+const NEARBY_PARKING_CONF_FAR  = 0.35
+
+export function nearbyParkingConfidence(
+  distanceM:    number,
+  maxDistanceM: number = DEFAULT_MAX_NEARBY_PARKING_M,
+): number {
+  const t = Math.min(distanceM / maxDistanceM, 1)
+  const raw = NEARBY_PARKING_CONF_NEAR - t * (NEARBY_PARKING_CONF_NEAR - NEARBY_PARKING_CONF_FAR)
+  return Math.round(raw * 100) / 100
+}
 
 // Haversine distance in meters between two lat/lon points. Plenty accurate at
 // the ~100 m scale we care about; cheaper than a geodesic-correct formula.
@@ -63,7 +74,7 @@ export function enrichWithNearbyParking(
     }
     if (bestDist > maxDistanceM) continue
     place.accessibility.parking.value      = "yes"
-    place.accessibility.parking.confidence = NEARBY_PARKING_CONFIDENCE
+    place.accessibility.parking.confidence = nearbyParkingConfidence(bestDist, maxDistanceM)
     place.accessibility.parking.details    = {
       ...place.accessibility.parking.details,
       nearbyOnly:             true,
