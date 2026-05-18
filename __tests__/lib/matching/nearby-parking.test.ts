@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest"
 import {
   enrichWithNearbyParking,
   haversineMeters,
-  nearbyParkingConfidence,
+  NEARBY_PARKING_CONFIDENCE,
   DEFAULT_MAX_NEARBY_PARKING_M,
 } from "@/lib/matching/nearby-parking"
 import type { Place, ParkingDetails } from "@/lib/types"
@@ -108,7 +108,7 @@ describe("enrichWithNearbyParking", () => {
   })
 
   it("default threshold matches the documented constant", () => {
-    expect(DEFAULT_MAX_NEARBY_PARKING_M).toBe(300)
+    expect(DEFAULT_MAX_NEARBY_PARKING_M).toBe(250)
   })
 
   it("sets distance-based confidence after upgrade", () => {
@@ -121,30 +121,12 @@ describe("enrichWithNearbyParking", () => {
     enrichWithNearbyParking([place], [feature])
 
     expect(place.accessibility.parking.value).toBe("yes")
-    // Feature is at distance 0 → maximum nearby confidence (0.75)
-    expect(place.accessibility.parking.confidence).toBe(nearbyParkingConfidence(0))
+    expect(place.accessibility.parking.confidence).toBe(NEARBY_PARKING_CONFIDENCE)
     expect(place.accessibility.parking.confidence).toBeGreaterThan(0)
   })
 
-  it("confidence at 0 m equals 0.75 (equal to direct OSM on-site signal)", () => {
-    expect(nearbyParkingConfidence(0)).toBe(0.75)
-  })
-
-  it("confidence at 100 m equals 0.70", () => {
-    expect(nearbyParkingConfidence(100)).toBe(0.70)
-  })
-
-  it("confidence decreases with distance", () => {
-    expect(nearbyParkingConfidence(0)).toBeGreaterThan(nearbyParkingConfidence(150))
-    expect(nearbyParkingConfidence(150)).toBeGreaterThan(nearbyParkingConfidence(300))
-  })
-
-  it("confidence at midpoint equals 0.50", () => {
-    expect(nearbyParkingConfidence(150)).toBe(0.50)
-  })
-
-  it("confidence at max distance equals 0.25", () => {
-    expect(nearbyParkingConfidence(300)).toBe(0.25)
+  it("confidence equals the OSM reliability weight (0.75) regardless of distance", () => {
+    expect(NEARBY_PARKING_CONFIDENCE).toBe(0.75)
   })
 })
 

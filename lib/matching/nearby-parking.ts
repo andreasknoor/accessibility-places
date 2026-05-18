@@ -14,43 +14,22 @@
 // Without this, a place enriched to parking="yes" would still show 0 %
 // when parking is the only active filter — the original confidence was 0
 // (no known source attributed parking to the venue itself).
+// The value equals the OSM reliability weight: the data quality of a parking
+// spot is the same regardless of how far away it sits from the venue.
 
 import type { Place } from "../types"
 import type { NearbyParkingFeature } from "../adapters/osm"
 
-export const DEFAULT_MAX_NEARBY_PARKING_M = 300
+export const DEFAULT_MAX_NEARBY_PARKING_M = 250
 
 // Wider radius used only for map display: show parking spots that are within
 // this distance of any found place, even if too far to trigger enrichment.
 // Gives users a useful "parking nearby" overview without polluting the whole city.
 export const NEARBY_PARKING_DISPLAY_RADIUS_M = 500
 
-// Confidence for a parking attribute upgraded via a nearby OSM spot.
-// Piecewise linear through four calibrated points — steepest drop in the
-// 100–150 m zone where "around the corner" becomes "somewhat far away".
-// Always lower than a direct on-site source (OSM wheelchair=yes ≈ 0.75).
-const NEARBY_PARKING_BREAKPOINTS: [number, number][] = [
-  [0,   0.75],
-  [100, 0.70],
-  [150, 0.50],
-  [300, 0.25],
-]
-
-export function nearbyParkingConfidence(
-  distanceM:    number,
-  maxDistanceM: number = DEFAULT_MAX_NEARBY_PARKING_M,
-): number {
-  const d = Math.min(distanceM, maxDistanceM)
-  for (let i = 1; i < NEARBY_PARKING_BREAKPOINTS.length; i++) {
-    const [x0, y0] = NEARBY_PARKING_BREAKPOINTS[i - 1]
-    const [x1, y1] = NEARBY_PARKING_BREAKPOINTS[i]
-    if (d <= x1) {
-      const t = (d - x0) / (x1 - x0)
-      return Math.round((y0 + t * (y1 - y0)) * 100) / 100
-    }
-  }
-  return NEARBY_PARKING_BREAKPOINTS[NEARBY_PARKING_BREAKPOINTS.length - 1][1]
-}
+// OSM parking data quality is constant regardless of distance to the venue;
+// only the spatial relevance changes, and that is already gated by maxDistanceM.
+export const NEARBY_PARKING_CONFIDENCE = 0.75 // matches OSM reliability weight
 
 // Haversine distance in meters between two lat/lon points. Plenty accurate at
 // the ~100 m scale we care about; cheaper than a geodesic-correct formula.
@@ -84,7 +63,7 @@ export function enrichWithNearbyParking(
     }
     if (bestDist > maxDistanceM) continue
     place.accessibility.parking.value      = "yes"
-    place.accessibility.parking.confidence = nearbyParkingConfidence(bestDist, maxDistanceM)
+    place.accessibility.parking.confidence = NEARBY_PARKING_CONFIDENCE
     place.accessibility.parking.details    = {
       ...place.accessibility.parking.details,
       nearbyOnly:             true,
