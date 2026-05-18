@@ -121,14 +121,17 @@ describe("enrichWithNearbyParking", () => {
     enrichWithNearbyParking([place], [feature])
 
     expect(place.accessibility.parking.value).toBe("yes")
-    // Feature is at distance 0 → maximum nearby confidence (0.65)
+    // Feature is at distance 0 → maximum nearby confidence (0.75)
     expect(place.accessibility.parking.confidence).toBe(nearbyParkingConfidence(0))
     expect(place.accessibility.parking.confidence).toBeGreaterThan(0)
   })
 
-  it("confidence is lower than a direct OSM on-site signal (0.75)", () => {
-    // Even at 0 m, nearby parking is a weaker signal than wheelchair=yes on the venue.
-    expect(nearbyParkingConfidence(0)).toBeLessThan(0.75)
+  it("confidence at 0 m equals 0.75 (equal to direct OSM on-site signal)", () => {
+    expect(nearbyParkingConfidence(0)).toBe(0.75)
+  })
+
+  it("confidence at 100 m equals 0.70", () => {
+    expect(nearbyParkingConfidence(100)).toBe(0.70)
   })
 
   it("confidence decreases with distance", () => {
@@ -140,8 +143,8 @@ describe("enrichWithNearbyParking", () => {
     expect(nearbyParkingConfidence(150)).toBe(0.50)
   })
 
-  it("confidence at max distance equals 0.35", () => {
-    expect(nearbyParkingConfidence(300)).toBe(0.35)
+  it("confidence at max distance equals 0.25", () => {
+    expect(nearbyParkingConfidence(300)).toBe(0.25)
   })
 })
 

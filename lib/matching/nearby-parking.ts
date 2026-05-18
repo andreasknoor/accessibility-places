@@ -26,20 +26,30 @@ export const DEFAULT_MAX_NEARBY_PARKING_M = 300
 export const NEARBY_PARKING_DISPLAY_RADIUS_M = 500
 
 // Confidence for a parking attribute upgraded via a nearby OSM spot.
-// Interpolates linearly between CONF_NEAR (at 0 m) and CONF_FAR (at maxDistanceM).
-// Lower than a direct on-site source (OSM wheelchair=yes ≈ 0.75) because this
-// is a spatial correlation, not a tag on the venue itself.
-// Midpoint (150 m out of 300 m) lands at 0.50, matching the former fixed value.
-const NEARBY_PARKING_CONF_NEAR = 0.65
-const NEARBY_PARKING_CONF_FAR  = 0.35
+// Piecewise linear through four calibrated points — steepest drop in the
+// 100–150 m zone where "around the corner" becomes "somewhat far away".
+// Always lower than a direct on-site source (OSM wheelchair=yes ≈ 0.75).
+const NEARBY_PARKING_BREAKPOINTS: [number, number][] = [
+  [0,   0.75],
+  [100, 0.70],
+  [150, 0.50],
+  [300, 0.25],
+]
 
 export function nearbyParkingConfidence(
   distanceM:    number,
   maxDistanceM: number = DEFAULT_MAX_NEARBY_PARKING_M,
 ): number {
-  const t = Math.min(distanceM / maxDistanceM, 1)
-  const raw = NEARBY_PARKING_CONF_NEAR - t * (NEARBY_PARKING_CONF_NEAR - NEARBY_PARKING_CONF_FAR)
-  return Math.round(raw * 100) / 100
+  const d = Math.min(distanceM, maxDistanceM)
+  for (let i = 1; i < NEARBY_PARKING_BREAKPOINTS.length; i++) {
+    const [x0, y0] = NEARBY_PARKING_BREAKPOINTS[i - 1]
+    const [x1, y1] = NEARBY_PARKING_BREAKPOINTS[i]
+    if (d <= x1) {
+      const t = (d - x0) / (x1 - x0)
+      return Math.round((y0 + t * (y1 - y0)) * 100) / 100
+    }
+  }
+  return NEARBY_PARKING_BREAKPOINTS[NEARBY_PARKING_BREAKPOINTS.length - 1][1]
 }
 
 // Haversine distance in meters between two lat/lon points. Plenty accurate at
