@@ -1,6 +1,14 @@
-import data from "./generated/seo-validity.json"
+import rawData from "./generated/seo-validity.json"
 
-const map = data as Record<string, boolean>
+const raw = rawData as Record<string, unknown>
+
+/** ISO timestamp of the last data refresh written by the check:seo script. */
+export const SEO_DATA_DATE: Date =
+  typeof raw._generatedAt === "string" ? new Date(raw._generatedAt) : new Date()
+
+const map: Record<string, boolean> = Object.fromEntries(
+  Object.entries(raw).filter(([k, v]) => !k.startsWith("_") && typeof v === "boolean"),
+) as Record<string, boolean>
 
 /** Returns true when the city/category combo is known to have accessible places. */
 export function hasData(citySlug: string, categorySlug: string): boolean {

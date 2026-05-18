@@ -92,7 +92,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     // Initialise per-source loading state for each active source so the
     // FilterPanel renders spinners immediately.
     const initial: Partial<Record<SourceId, SourceState>> = {}
-    for (const id of Object.keys(sources) as SourceId[]) {
+    for (const id of Object.keys(sources) as (keyof ActiveSources)[]) {
       if (sources[id]) initial[id] = { status: "loading" }
     }
     setSourceStates(initial)
@@ -160,7 +160,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             // standalone via multiple sources — that's the honest answer.
             const finalCounts: Partial<Record<SourceId, number>> = {}
             for (const p of data.places) {
-              for (const sid of Object.keys(sources) as SourceId[]) {
+              for (const sid of Object.keys(sources) as (keyof ActiveSources)[]) {
                 if (!sources[sid]) continue
                 if (passesFiltersForSource(p, sid, filters)) {
                   finalCounts[sid] = (finalCounts[sid] ?? 0) + 1

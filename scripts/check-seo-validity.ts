@@ -20,9 +20,13 @@ const CONCURRENCY   = 2
 const DELAY_MS      = 2000
 
 async function main() {
-  const existing: Record<string, boolean> = existsSync(VALIDITY_PATH)
+  const existingRaw: Record<string, unknown> = existsSync(VALIDITY_PATH)
     ? JSON.parse(readFileSync(VALIDITY_PATH, "utf-8"))
     : {}
+  // Strip meta fields (keys prefixed with "_") before treating data as boolean map
+  const existing: Record<string, boolean> = Object.fromEntries(
+    Object.entries(existingRaw).filter(([k, v]) => !k.startsWith("_") && typeof v === "boolean"),
+  ) as Record<string, boolean>
 
   const updated = { ...existing }
 
@@ -75,14 +79,19 @@ async function main() {
   }
 
   mkdirSync(join(process.cwd(), "lib/generated"), { recursive: true })
-  const newContent = JSON.stringify(updated, null, 2) + "\n"
-  const oldContent = existsSync(VALIDITY_PATH) ? readFileSync(VALIDITY_PATH, "utf-8") : ""
 
-  if (newContent === oldContent) {
+  // Only write (and update timestamp) when the boolean data actually changed.
+  // Comparing just the data without meta fields avoids a noisy git commit on
+  // every cron run even when no city/category results changed.
+  const newDataJson = JSON.stringify(updated, null, 2)
+  const oldDataJson = JSON.stringify(existing, null, 2)
+  if (newDataJson === oldDataJson) {
     console.log("\nNo changes — file unchanged.")
     return
   }
 
+  const output = { _generatedAt: new Date().toISOString(), ...updated }
+  const newContent = JSON.stringify(output, null, 2) + "\n"
   const tmpPath = VALIDITY_PATH + ".tmp"
   writeFileSync(tmpPath, newContent)
   renameSync(tmpPath, VALIDITY_PATH)

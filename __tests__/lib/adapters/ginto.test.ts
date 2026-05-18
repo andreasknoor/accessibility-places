@@ -21,7 +21,7 @@ const BASE_NODE = {
   accessibilityInfo: { defaultRatings: [{ key: "completely_wheelchair_accessible" }, { key: "toilet_completely_wheelchair_accessible" }] },
   publication: { linkUrl: "https://www.ginto.guide/entries/abc-123" },
   updatedAt: new Date(Date.now() - 3 * 365 * 24 * 60 * 60 * 1000).toISOString(), // 3 years ago → NOT recently verified
-  qualityInfo: { detailLevels: [] },
+  qualityInfo: { detailLevels: [] as string[] },
 }
 
 function mockFetch(node: typeof BASE_NODE) {

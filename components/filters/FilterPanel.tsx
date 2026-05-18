@@ -76,14 +76,14 @@ function SourceIndicator({ state }: { state?: SourceState }) {
   )
 }
 
-const SOURCE_ORDER: SourceId[] = [
+const SOURCE_ORDER: (keyof ActiveSources)[] = [
   "osm",
   "accessibility_cloud",
   "ginto",
   "google_places",
 ]
 
-const SOURCE_RELIABILITY: Record<SourceId, string> = {
+const SOURCE_RELIABILITY: Partial<Record<SourceId, string>> = {
   osm:                 "bg-yellow-500",
   accessibility_cloud: "bg-lime-500",
   reisen_fuer_alle:    "bg-green-500",
@@ -96,7 +96,7 @@ const SOURCE_DISABLED: Partial<Record<SourceId, true>> = {}
 export default function FilterPanel({ filters, sources, radiusKm, onFilters, onSources, onRadius, sourceStates, onRerun, isLoading }: Props) {
   const t = useTranslations()
 
-  function toggleSource(id: SourceId) {
+  function toggleSource(id: keyof ActiveSources) {
     onSources({ ...sources, [id]: !sources[id] })
   }
 

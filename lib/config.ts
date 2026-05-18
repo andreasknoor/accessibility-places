@@ -2,7 +2,7 @@ import type { SourceId, Category } from "./types"
 
 // User-visible app version, shown in the header next to the subtitle.
 // Bump on every meaningful release.
-export const APP_VERSION = "1.80"
+export const APP_VERSION = "1.81"
 
 export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
   reisen_fuer_alle:    1.00,
@@ -10,6 +10,8 @@ export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
   accessibility_cloud: 0.70,
   osm:                 0.75,
   google_places:       0.35,
+  osm_parking:         0,  // stats-only; never used as a place-attribution source
+  nominatim:           0,  // stats-only
 }
 
 // Ginto entries get higher weights for more thoroughly documented detail levels
@@ -44,6 +46,8 @@ export const SOURCE_LABELS: Record<SourceId, string> = {
   reisen_fuer_alle:    "Reisen für Alle",
   ginto:               "Ginto",
   google_places:       "Google Places",
+  osm_parking:         "OSM Parking",
+  nominatim:           "Nominatim",
 }
 
 // Both are raced in parallel — the first successful response wins.

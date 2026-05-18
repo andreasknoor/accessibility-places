@@ -8,7 +8,7 @@ const BASE_PARAMS: SearchParams = {
   radiusKm: 5,
   categories: ["restaurant"],
   filters: { entrance: true, toilet: true, parking: true, seating: false, onlyVerified: false, acceptUnknown: false, alwaysShowParking: false },
-  sources: { accessibility_cloud: true, osm: true, reisen_fuer_alle: true, google_places: true },
+  sources: { accessibility_cloud: true, osm: true, reisen_fuer_alle: true, ginto: true, google_places: true },
 }
 
 // ─── localStr ────────────────────────────────────────────────────────────────

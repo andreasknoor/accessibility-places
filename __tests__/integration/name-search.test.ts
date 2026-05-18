@@ -152,7 +152,7 @@ describe('Name-search E2E – restaurants in Berlin Mitte (no LLM)', () => {
       radiusKm:   1,
       categories: ["restaurant", "cafe"],
       filters:    { entrance: false, toilet: false, parking: false, seating: false, onlyVerified: false, acceptUnknown: true, alwaysShowParking: false },
-      sources:    { accessibility_cloud: false, osm: true, reisen_fuer_alle: false, google_places: false },
+      sources:    { accessibility_cloud: false, osm: true, reisen_fuer_alle: false, ginto: false, google_places: false },
     }
 
     let places: Awaited<ReturnType<typeof fetchOsm>>

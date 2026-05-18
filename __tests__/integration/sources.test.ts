@@ -44,7 +44,7 @@ const PARAMS: SearchParams = {
   radiusKm: 2,
   categories: ["restaurant"],
   filters: { entrance: true, toilet: true, parking: true, seating: false, onlyVerified: false, acceptUnknown: true, alwaysShowParking: false },
-  sources:  { accessibility_cloud: true, osm: true, reisen_fuer_alle: true, google_places: true },
+  sources:  { accessibility_cloud: true, osm: true, reisen_fuer_alle: true, ginto: true, google_places: true },
 }
 
 function isPlaceholder(val: string | undefined): boolean {
