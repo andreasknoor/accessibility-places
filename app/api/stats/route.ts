@@ -15,9 +15,10 @@ const SOURCE_LABELS: Record<string, string> = {
   reisen_fuer_alle:   "Reisen für Alle",
   ginto:              "Ginto",
   google_places:      "Google Places",
+  osm_parking:        "OSM Parking (disabled)",
 }
 
-const SOURCE_ORDER = ["osm", "accessibility_cloud", "reisen_fuer_alle", "ginto", "google_places"]
+const SOURCE_ORDER = ["osm", "accessibility_cloud", "reisen_fuer_alle", "ginto", "google_places", "osm_parking"]
 
 function fmt(n: number): string {
   return n.toLocaleString("de-DE")
@@ -147,7 +148,7 @@ ${entries.length === 0 ? `
     <div class="kpi-label">Errors/hr (avg)</div>
   </div>
   <div class="kpi">
-    <div class="kpi-value">${entries.length} / 5</div>
+    <div class="kpi-value">${entries.length} / ${SOURCE_ORDER.length}</div>
     <div class="kpi-label">Active Sources</div>
   </div>
 </div>

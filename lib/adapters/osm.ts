@@ -413,8 +413,8 @@ export async function fetchOsmDisabledParking(
   // First successful response wins; if both fail the caller gets [].
   try {
     const sig = (endpoint: string) => signal
-      ? AbortSignal.any([signal, AbortSignal.timeout(15_000)])
-      : AbortSignal.timeout(15_000)
+      ? AbortSignal.any([signal, AbortSignal.timeout(25_000)])
+      : AbortSignal.timeout(25_000)
 
     return await Promise.any(
       OVERPASS_ENDPOINTS.map(async (endpoint) => {
