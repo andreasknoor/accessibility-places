@@ -60,7 +60,7 @@ const FAQ_EN = [
   },
   {
     q: "How can I give feedback or report a bug?",
-    a: "Use the \"Feedback\" link at the bottom of the page to open a GitHub issue directly. You'll need a free GitHub account to submit.",
+    a: "Use the \"Feedback\" link at the bottom of the page to open a short form. No account or registration required.",
   },
 ]
 

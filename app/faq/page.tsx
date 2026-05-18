@@ -60,7 +60,7 @@ const FAQ_DE = [
   },
   {
     q: "Wie kann ich Feedback geben oder einen Fehler melden?",
-    a: 'Über den "Feedback"-Link am unteren Rand der Seite kannst du direkt ein GitHub-Issue erstellen. Dafür benötigst du einen kostenlosen GitHub-Account.',
+    a: 'Über den „Feedback"-Link am unteren Rand der Seite öffnet sich ein kurzes Formular. Kein Account, keine Registrierung notwendig.',
   },
 ]
 
