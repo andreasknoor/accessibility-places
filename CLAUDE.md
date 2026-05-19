@@ -28,7 +28,7 @@ A pre-commit hook (`.githooks/pre-commit`, installed via `npm run prepare`) runs
 
 ## Next.js version note
 
-This project uses **Next.js 16.2.4**, which contains breaking changes from prior versions. APIs, conventions, and file structure may differ from training-data knowledge. Before writing Next.js-specific code, read the relevant guide in `node_modules/next/dist/docs/` and heed any deprecation notices in the build output.
+This project uses **Next.js 16.2.6**, which contains breaking changes from prior versions. APIs, conventions, and file structure may differ from training-data knowledge. Before writing Next.js-specific code, read the relevant guide in `node_modules/next/dist/docs/` and heed any deprecation notices in the build output.
 
 ## Tailwind v4 note
 
@@ -60,6 +60,31 @@ Five adapters run in parallel via `startAdapterTasks()`:
 - **Ginto** (`ginto.ts`): GraphQL API (`POST https://api.ginto.guide/graphql`), Switzerland only (all results have `countryCode: "CH"`). `defaultRatings[].key` prefix convention maps to A11yValue: no prefix → entrance, `toilet_` → toilet, `parking_` → parking. Paginates up to 2 pages (100 results). Base weight 0.90; LEVEL_2 entries use 0.95, LEVEL_3 entries use 0.97 (via `qualityInfo.detailLevels`). `updatedAt` is a system republish timestamp, not a human verification date — stored in `metadata` only, never sets `verifiedRecently`.
 - **Google Places** (`google-places.ts`): Lowest reliability weight (0.35); fires one POST per category. **Disabled by default** in `DEFAULT_SOURCES`.
 
+### Categories (`lib/config.ts`)
+
+16 search categories, each with dedicated OSM tag mappings:
+
+```
+cafe          amenity=cafe
+restaurant    amenity=restaurant
+bar           amenity=bar
+pub           amenity=pub
+biergarten    amenity=biergarten
+fast_food     amenity=fast_food | food_court
+hotel         tourism=hotel | motel | guest_house
+hostel        tourism=hostel
+apartment     tourism=apartment
+museum        tourism=museum
+theater       amenity=theatre
+cinema        amenity=cinema
+library       amenity=library
+gallery       tourism=gallery | amenity=arts_centre
+attraction    tourism=attraction | theme_park
+ice_cream     amenity=ice_cream
+```
+
+Only 10 of these have SEO landing pages (`SEO_CATEGORY_SLUGS` in `lib/cities.ts`); `hostel`, `apartment`, `biergarten`, `pub`, `bar`, and `ice_cream` are search-only.
+
 ### Matching & merging (`lib/matching/`)
 
 `match.ts` – a candidate place is considered the same as an existing canonical place when a weighted score exceeds `MATCH_SCORE_THRESHOLD = 0.72`. The formula is:
@@ -88,7 +113,11 @@ ginto:               0.90  // LEVEL_2 entries → 0.95, LEVEL_3 → 0.97
 accessibility_cloud: 0.70
 osm:                 0.75
 google_places:       0.35
+osm_parking:         0     // stats-only; never used as a place-attribution source
+nominatim:           0     // stats-only
 ```
+
+`CONFIDENCE_THRESHOLDS`: `high = 0.70`, `medium = 0.40`. These map directly to the `confidenceLabel()` output — `"high"` → "Verlässlich", `"medium"` → "Mittel", below → "Unsicher".
 
 `OSM_ENTRANCE_WEIGHT_FACTOR = 0.90` applies an extra reduction when OSM's whole-place `wheelchair=*` tag stands in for the entrance criterion specifically.
 
@@ -140,6 +169,8 @@ In production, `raw` adapter response data is stripped from `sourceRecords` befo
 
 `GET /api/stats?token=SECRET` — token-protected adapter usage stats (requires `KV_REST_API_URL`). `lib/stats.ts` tracks per-source call and error counts in Upstash Redis using day-granularity keys (`stats:calls:<sourceId>:YYYY-MM-DD`) with a 90-day TTL. `trackCall`/`trackError` are called fire-and-forget from `app/api/search/route.ts` after all adapters complete — **not** from `safeRun`. This keeps `safeRun` and `fetchAllSources` side-effect-free so they can be called safely from ISR pages (a `no-store` Upstash fetch inside an ISR page would demote it to dynamic at runtime).
 
+`GET /api/nearby-parking?lat=&lon=&radius=` — fetches disabled-parking OSM nodes within `radius` km (0.05–1.0 km, default 0.3). Used by the map when `alwaysShowParking` is active to load markers without a full search.
+
 `GET /api/health?token=SECRET` — token-protected E2E health check. Live mode runs a real OSM search (Cafés, Berlin Mitte, entrance + toilet filter). Mock mode (`?mock=1`) runs fixture data through the real pipeline without external calls — suitable for load testing. Google Places is hardcoded off. Ginto is hardcoded off (CH-only, separate concern). Returns 200/503 with structured JSON.
 
 ### Local SEO pages (`app/[city]/[category]/` and `app/en/[city]/[category]/`)
@@ -175,7 +206,9 @@ Each place card on an SEO page links to:
 
 ### PWA / Service Worker
 
-`app/sw.ts` + `@serwist/next`. The service worker is **disabled in development** (`disable: process.env.NODE_ENV === "development"` in `next.config.ts`). Adding new external domains also requires updating the `connect-src` allowlist in the CSP headers defined in `next.config.ts`.
+`app/sw.ts` + `@serwist/next`. The service worker is **disabled in development** (`disable: process.env.NODE_ENV === "development"` in `next.config.ts`).
+
+**CSP**: `next.config.ts` defines the `Content-Security-Policy` header. **Any new external domain** — whether a new API, CDN, or map tile server — requires adding it to the appropriate directive (`connect-src` for fetch/XHR, `img-src` for images). Forgetting this causes silent failures in production.
 
 ## Versioning
 
@@ -191,6 +224,8 @@ Each place card on an SEO page links to:
 - `GINTO_API_KEY` — optional; Ginto GraphQL API (Swiss accessibility data, CH only). Contact support@ginto.guide. Source silently skipped if absent.
 - `HEALTH_CHECK_SECRET` — required to activate `GET /api/health`; requests without a matching `?token=` get 401. If unset the endpoint returns 503.
 - `KV_REST_API_URL` / `KV_REST_API_TOKEN` — optional; Upstash Redis credentials for adapter call/error stats. If absent, `lib/stats.ts` is a no-op and `GET /api/stats` returns 503.
+- `OVERPASS_ENDPOINTS` — optional; comma-separated list of Overpass API URLs to override the two public mirrors. Multiple URLs retain the parallel-race behaviour. E.g. `https://overpass.example.com/api/interpreter` for a private server.
+- `NOMINATIM_ENDPOINT` — optional; base URL of a private Nominatim instance, e.g. `https://nominatim.example.com`. Trailing slash is stripped automatically. Applies to all three geocode routes and the search pipeline.
 
 ## Tests
 

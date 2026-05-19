@@ -53,12 +53,29 @@ export const SOURCE_LABELS: Record<SourceId, string> = {
 // Both are raced in parallel — the first successful response wins.
 // overpass.osm.ch removed: returns 0 results for any non-CH query (Swiss-only data).
 // overpass.private.coffee removed: same operator as kumi.systems, unreachable.
-export const OVERPASS_ENDPOINTS = [
-  "https://overpass-api.de/api/interpreter",
-  "https://overpass.kumi.systems/api/interpreter",
-]
+//
+// Set OVERPASS_ENDPOINTS (comma-separated) to point to a private Overpass server,
+// e.g. "https://overpass.example.com/api/interpreter". Multiple URLs retain the
+// parallel-race behaviour. When unset, the two public mirrors are used.
+const _overpassEnv = process.env.OVERPASS_ENDPOINTS
+  ?.split(",")
+  .map((s) => s.trim())
+  .filter(Boolean)
+
+export const OVERPASS_ENDPOINTS: string[] = _overpassEnv?.length
+  ? _overpassEnv
+  : [
+      "https://overpass-api.de/api/interpreter",
+      "https://overpass.kumi.systems/api/interpreter",
+    ]
+
 export const OVERPASS_ENDPOINT = OVERPASS_ENDPOINTS[0]
-export const NOMINATIM_ENDPOINT = "https://nominatim.openstreetmap.org"
+
+// Set NOMINATIM_ENDPOINT to point to a private Nominatim instance.
+// Trailing slash is stripped to keep URL construction consistent.
+export const NOMINATIM_ENDPOINT =
+  process.env.NOMINATIM_ENDPOINT?.replace(/\/$/, "") ??
+  "https://nominatim.openstreetmap.org"
 
 // OSM category → amenity/tourism tags
 export const CATEGORY_OSM_TAGS: Record<Category, { amenity?: readonly string[]; tourism?: readonly string[] }> = {
