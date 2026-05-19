@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import type { Place, SearchParams, SourceId } from "@/lib/types"
+import { OVERPASS_ENDPOINTS } from "@/lib/config"
 import { startAdapterTasks } from "@/lib/adapters"
 import { findMatch } from "@/lib/matching/match"
 import {

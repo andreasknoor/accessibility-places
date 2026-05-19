@@ -106,6 +106,8 @@ google_places:       0.35
 
 `MapView` (`components/map/MapView.tsx`) uses Leaflet and is loaded via `dynamic(..., { ssr: false })` to prevent server-side rendering errors.
 
+**Filter/source/radius persistence** — `HomeClient.tsx` persists the active filter criteria, source toggles, and radius to `localStorage` via lazy `useState` initialisers, so user preferences survive page reloads. `alwaysShowParking` is intentionally excluded (it is a per-session display toggle). `handleReset` restores defaults and writes them back, so the stored value self-heals on reset.
+
 ### Name filter (ChatPanel → API)
 
 The name field is a separate input, **not** embedded in the query string. `ChatPanel.onSearch` signature: `(query: string, coords?: Coords, nameHint?: string)`. The `nameHint` is passed in the API request body and applied as a JS post-filter (`filterByNameHint` — substring + trigram ≥ 0.6) after the merge step. This means accessibility filters apply independently of name searches.

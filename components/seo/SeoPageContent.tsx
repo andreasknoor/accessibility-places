@@ -417,15 +417,7 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
             </section>
           )}
 
-          <div className="flex flex-wrap gap-4 mt-2">
-            <Link href={homeUrl} className="text-sm text-blue-600 hover:underline">{backLabel}</Link>
-            <Link
-              href={`${prefix}/${city.slug}/${locale === "de" ? "barrierefrei" : "accessible"}`}
-              className="text-sm text-gray-500 hover:underline"
-            >
-              {locale === "de" ? `Alle barrierefreien Orte in ${cityName} →` : `All accessible places in ${cityName} →`}
-            </Link>
-          </div>
+          <Link href={homeUrl} className="text-sm text-blue-600 hover:underline">{backLabel}</Link>
         </main>
       </div>
     </>

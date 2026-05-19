@@ -82,33 +82,3 @@ export async function fetchPlacesForSeoPage(
     .sort((a, b) => b.overallConfidence - a.overallConfidence || a.name.localeCompare(b.name))
     .slice(0, 25)
 }
-
-// ─── City guide ───────────────────────────────────────────────────────────────
-
-export const CITY_GUIDE_PLACES_PER_CATEGORY = 4
-
-export interface CityGuideSection {
-  categorySlug: string
-  places: Place[]
-}
-
-// Fetch top places for every SEO category in parallel and return non-empty
-// sections sorted by the canonical SEO category order.
-// Each category is independent: a failure in one leaves the others unaffected.
-export async function fetchPlacesForCityGuide(
-  lat:     number,
-  lon:     number,
-  radiusKm = 5,
-): Promise<CityGuideSection[]> {
-  const entries = Object.entries(SEO_CATEGORY_SLUGS)
-  const settled = await Promise.allSettled(
-    entries.map(async ([slug, category]) => {
-      const places = await fetchPlacesForSeoPage(lat, lon, category as Category, radiusKm)
-      return { categorySlug: slug, places: places.slice(0, CITY_GUIDE_PLACES_PER_CATEGORY) }
-    }),
-  )
-  return settled
-    .filter((r): r is PromiseFulfilledResult<CityGuideSection> => r.status === "fulfilled")
-    .map((r) => r.value)
-    .filter((s) => s.places.length > 0)
-}
