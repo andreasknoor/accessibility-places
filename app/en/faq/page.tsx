@@ -59,6 +59,10 @@ const FAQ_EN = [
     a: "Yes — Accessible Places can be installed as an app on your phone without the App Store or Play Store. On iPhone/iPad: open Safari → tap the Share icon → select \"Add to Home Screen\". On Android: open Chrome → tap the menu (three dots) → \"Install app\" or \"Add to home screen\". Once installed it behaves like a native app — with its own icon, full screen and no browser bar.",
   },
   {
+    q: "How do I find the best accessible places in a specific city?",
+    a: 'Every city has a dedicated guide page listing the top wheelchair-accessible places across all categories — restaurants, hotels, museums, cafés and more at a glance. For example: <a href="https://accessible-places.org/en/muenchen/accessible">accessible Munich</a> or <a href="https://accessible-places.org/en/berlin/accessible">accessible Berlin</a>. These pages are ideal for trip planning and show the most reliably documented venues first.',
+  },
+  {
     q: "How can I give feedback or report a bug?",
     a: "Use the \"Feedback\" link at the bottom of the page to open a short form. No account or registration required.",
   },

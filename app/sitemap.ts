@@ -26,5 +26,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
       ]),
   )
 
-  return [...staticPages, ...seoPages]
+  // City guide pages — one per city that has at least one valid SEO category.
+  const citiesWithData = new Set([...VALID_SEO_PATHS].map((p) => p.split("/")[0]))
+  const cityGuidePages: MetadataRoute.Sitemap = CITIES
+    .filter((city) => citiesWithData.has(city.slug))
+    .flatMap((city) => [
+      { url: `${BASE}/${city.slug}/barrierefrei`, lastModified: SEO_DATA_DATE, changeFrequency: "weekly" as const, priority: 0.8 },
+      { url: `${BASE}/en/${city.slug}/accessible`, lastModified: SEO_DATA_DATE, changeFrequency: "weekly" as const, priority: 0.8 },
+    ])
+
+  return [...staticPages, ...cityGuidePages, ...seoPages]
 }

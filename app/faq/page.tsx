@@ -59,6 +59,10 @@ const FAQ_DE = [
     a: 'Ja — Accessible Places kann als App auf dem Smartphone installiert werden, ohne App Store oder Play Store. Auf iPhone/iPad: Safari öffnen → Teilen-Symbol antippen → "Zum Home-Bildschirm" wählen. Auf Android: Chrome öffnen → Menü (drei Punkte) → "App installieren" oder "Zum Startbildschirm hinzufügen". Die App funktioniert danach wie eine native App — mit eigenem Icon, Vollbild und ohne Browser-Leiste.',
   },
   {
+    q: "Wie finde ich die besten barrierefreien Orte in einer bestimmten Stadt?",
+    a: 'Für jede Stadt gibt es eine eigene Übersichtsseite mit den top-bewerteten barrierefreien Orten aus allen Kategorien — Restaurants, Hotels, Museen, Cafés und mehr auf einen Blick. Zum Beispiel: <a href="https://accessible-places.org/muenchen/barrierefrei">barrierefrei in München</a> oder <a href="https://accessible-places.org/berlin/barrierefrei">barrierefrei in Berlin</a>. Diese Seiten sind ideal für die Reiseplanung und zeigen die Orte mit der verlässlichsten Datenlage zuerst.',
+  },
+  {
     q: "Wie kann ich Feedback geben oder einen Fehler melden?",
     a: 'Über den „Feedback"-Link am unteren Rand der Seite öffnet sich ein kurzes Formular. Kein Account, keine Registrierung notwendig.',
   },
