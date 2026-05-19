@@ -38,6 +38,26 @@ const DEFAULT_SOURCES: ActiveSources = {
   google_places:       false,
 }
 
+const PREFS_KEY = "ap_prefs"
+
+function loadSavedPrefs(): { filters: SearchFilters; sources: ActiveSources; radiusKm: number } {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY)
+    if (!raw) return { filters: DEFAULT_FILTERS, sources: DEFAULT_SOURCES, radiusKm: DEFAULT_RADIUS_KM }
+    const saved = JSON.parse(raw)
+    return {
+      // Spread saved values onto defaults so new keys added in future always
+      // have a fallback. alwaysShowParking is a per-session display toggle —
+      // never restore it from storage.
+      filters:  { ...DEFAULT_FILTERS,  ...(saved.filters  ?? {}), alwaysShowParking: false },
+      sources:  { ...DEFAULT_SOURCES,  ...(saved.sources  ?? {}) },
+      radiusKm: typeof saved.radiusKm === "number" ? saved.radiusKm : DEFAULT_RADIUS_KM,
+    }
+  } catch {
+    return { filters: DEFAULT_FILTERS, sources: DEFAULT_SOURCES, radiusKm: DEFAULT_RADIUS_KM }
+  }
+}
+
 interface Props {
   initialCity?:       string
   initialCategory?:   string
@@ -51,9 +71,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const { locale } = useLocale()
   const isMobile = useIsMobile()
 
-  const [filters,       setFilters]      = useState<SearchFilters>(DEFAULT_FILTERS)
-  const [sources,       setSources]      = useState<ActiveSources>(DEFAULT_SOURCES)
-  const [radiusKm,      setRadiusKm]     = useState(DEFAULT_RADIUS_KM)
+  const [filters,       setFilters]      = useState<SearchFilters>(() => loadSavedPrefs().filters)
+  const [sources,       setSources]      = useState<ActiveSources>(() => loadSavedPrefs().sources)
+  const [radiusKm,      setRadiusKm]     = useState<number>(() => loadSavedPrefs().radiusKm)
   const [places,        setPlaces]       = useState<Place[]>([])
   const [parkingSpots,  setParkingSpots]  = useState<{ lat: number; lon: number; capacity?: number }[]>([])
   const [selectedId,    setSelectedId]   = useState<string | undefined>()
@@ -78,6 +98,15 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       : null,
   )
   const hasAutoSelected = useRef(false)
+
+  // Persist filter/source/radius preferences across sessions.
+  // alwaysShowParking is intentionally excluded — it's a per-session display toggle.
+  useEffect(() => {
+    try {
+      const { alwaysShowParking: _ap, ...persistableFilters } = filters
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ filters: persistableFilters, sources, radiusKm }))
+    } catch { /* ignore — localStorage unavailable (private mode, quota) */ }
+  }, [filters, sources, radiusKm])
 
   const handleSearch = useCallback(async (query: string, radiusKmOverride?: number, coords?: { lat: number; lon: number }, nameHint?: string) => {
     setLastQuery(query)
