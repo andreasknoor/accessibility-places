@@ -605,7 +605,7 @@ describe("fetchOsmDisabledParking", () => {
     expect(decoded).toContain("around:1500")
   })
 
-  it("uses node (not nwr) for parking_space conditions", async () => {
+  it("uses way (not nwr) for capacity conditions and node for parking_space conditions", async () => {
     let capturedBody = ""
     vi.stubGlobal("fetch", vi.fn().mockImplementation((_url: unknown, init: RequestInit) => {
       capturedBody = init?.body as string
@@ -613,12 +613,16 @@ describe("fetchOsmDisabledParking", () => {
     }))
     await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
     const decoded = decodeURIComponent(capturedBody.replace(/^data=/, ""))
+    // capacity:disabled / capacity:wheelchair → way only (not nwr — avoids relation scan overhead)
+    expect(decoded).toContain("way(around:")
+    expect(decoded).not.toMatch(/nwr[^)]*capacity:disabled/)
+    expect(decoded).not.toMatch(/nwr[^)]*capacity:wheelchair/)
+    // parking_space conditions → node only
     expect(decoded).toContain("node(around:")
-    // parking lot conditions still use nwr (lots are often mapped as ways/areas)
-    expect(decoded).toContain("nwr(around:")
-    // parking_space conditions must NOT use nwr
     expect(decoded).not.toMatch(/nwr[^)]*parking_space=disabled/)
     expect(decoded).not.toMatch(/nwr[^)]*wheelchair=designated/)
+    // nwr must not appear anywhere in the parking query
+    expect(decoded).not.toContain("nwr(around:")
   })
 
   it("uses [timeout:15] in the Overpass QL query", async () => {

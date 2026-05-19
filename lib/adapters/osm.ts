@@ -374,9 +374,12 @@ export async function fetchOsmDisabledParking(
   // a syntax error and cause a 400 response (silently swallowed by the caller).
   // 500 results: denser cities (Berlin, München) can have hundreds of
   // disabled-parking features; 200 was silently truncating at high density.
+  // way only (not nwr): amenity=parking with capacity data is almost always a
+  // polygon way; relations are rare multipolygons (<5% of DACH features) and
+  // scanning them causes disproportionate Overpass load → 504s.
   const query = `[out:json][timeout:15];(` +
-    `nwr(around:${r},${lat},${lon})[amenity=parking]["capacity:disabled"];` +
-    `nwr(around:${r},${lat},${lon})[amenity=parking]["capacity:wheelchair"];` +
+    `way(around:${r},${lat},${lon})[amenity=parking]["capacity:disabled"];` +
+    `way(around:${r},${lat},${lon})[amenity=parking]["capacity:wheelchair"];` +
     `node(around:${r},${lat},${lon})[amenity=parking_space][parking_space=disabled];` +
     `node(around:${r},${lat},${lon})[amenity=parking_space][wheelchair=designated];` +
     `);out 500 center tags;`
