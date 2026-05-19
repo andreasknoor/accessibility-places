@@ -588,8 +588,154 @@ describe("fetchOsmDisabledParking", () => {
     }))
     await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 50)
     const decoded = decodeURIComponent(capturedBody.replace(/^data=/, ""))
-    // 50 km capped to 10 km → radius in metres = 10000
-    expect(decoded).toContain("around:10000")
+    // 50 km + 0.5 km buffer, capped to 5 km → radius in metres = 5000
+    expect(decoded).toContain("around:5000")
     expect(decoded).not.toContain("around:50000")
+  })
+
+  it("adds 0.5 km buffer to small search radii", async () => {
+    let capturedBody = ""
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((_url: unknown, init: RequestInit) => {
+      capturedBody = init?.body as string
+      return Promise.resolve({ ok: true, json: async () => ({ elements: [] }) })
+    }))
+    await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    const decoded = decodeURIComponent(capturedBody.replace(/^data=/, ""))
+    // 1 km + 0.5 km buffer = 1.5 km → 1500 m
+    expect(decoded).toContain("around:1500")
+  })
+
+  it("uses node (not nwr) for parking_space conditions", async () => {
+    let capturedBody = ""
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((_url: unknown, init: RequestInit) => {
+      capturedBody = init?.body as string
+      return Promise.resolve({ ok: true, json: async () => ({ elements: [] }) })
+    }))
+    await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    const decoded = decodeURIComponent(capturedBody.replace(/^data=/, ""))
+    expect(decoded).toContain("node(around:")
+    // parking lot conditions still use nwr (lots are often mapped as ways/areas)
+    expect(decoded).toContain("nwr(around:")
+    // parking_space conditions must NOT use nwr
+    expect(decoded).not.toMatch(/nwr[^)]*parking_space=disabled/)
+    expect(decoded).not.toMatch(/nwr[^)]*wheelchair=designated/)
+  })
+
+  it("uses [timeout:15] in the Overpass QL query", async () => {
+    let capturedBody = ""
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((_url: unknown, init: RequestInit) => {
+      capturedBody = init?.body as string
+      return Promise.resolve({ ok: true, json: async () => ({ elements: [] }) })
+    }))
+    await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    const decoded = decodeURIComponent(capturedBody.replace(/^data=/, ""))
+    expect(decoded).toContain("[timeout:15]")
+  })
+
+  it("parses capacity:wheelchair tag", async () => {
+    const element = {
+      type: "node", id: 3, lat: 52.52, lon: 13.405,
+      tags: { amenity: "parking", "capacity:wheelchair": "5" },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ elements: [element] }),
+    }))
+    const [f] = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    expect(f.capacity).toBe(5)
+  })
+
+  it("parses parking_space=disabled node (no capacity tag → capacity undefined)", async () => {
+    const element = {
+      type: "node", id: 4, lat: 52.521, lon: 13.406,
+      tags: { amenity: "parking_space", parking_space: "disabled" },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ elements: [element] }),
+    }))
+    const [f] = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    expect(f.lat).toBe(52.521)
+    expect(f.capacity).toBeUndefined()
+  })
+
+  it("parses wheelchair=designated node", async () => {
+    const element = {
+      type: "node", id: 5, lat: 52.522, lon: 13.407,
+      tags: { amenity: "parking_space", wheelchair: "designated" },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ elements: [element] }),
+    }))
+    const [f] = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    expect(f.lat).toBe(52.522)
+    expect(f.capacity).toBeUndefined()
+  })
+
+  it("drops features where capacity:disabled=0", async () => {
+    const elements = [
+      { type: "node", id: 6, lat: 52.52, lon: 13.405,
+        tags: { amenity: "parking", "capacity:disabled": "0" } },
+      { type: "node", id: 7, lat: 52.521, lon: 13.406,
+        tags: { amenity: "parking", "capacity:disabled": "2" } },
+    ]
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ elements }),
+    }))
+    const result = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    expect(result).toHaveLength(1)
+    expect(result[0].capacity).toBe(2)
+  })
+
+  it("drops features where capacity:disabled is negative", async () => {
+    const element = {
+      type: "node", id: 8, lat: 52.52, lon: 13.405,
+      tags: { amenity: "parking", "capacity:disabled": "-1" },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ elements: [element] }),
+    }))
+    const result = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    expect(result).toHaveLength(0)
+  })
+
+  it("skips elements with no resolvable coordinates", async () => {
+    const elements = [
+      // node without lat/lon
+      { type: "node", id: 9, tags: { amenity: "parking", "capacity:disabled": "1" } },
+      // way without center
+      { type: "way", id: 10, tags: { amenity: "parking", "capacity:disabled": "1" } },
+      // valid node
+      { type: "node", id: 11, lat: 52.52, lon: 13.405,
+        tags: { amenity: "parking", "capacity:disabled": "1" } },
+    ]
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ elements }),
+    }))
+    const result = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    expect(result).toHaveLength(1)
+    expect(result[0].lat).toBe(52.52)
+  })
+
+  it("re-throws when both endpoints fail so the caller can track the error", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network error")))
+    await expect(fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)).rejects.toThrow()
+  })
+
+  it("capacity:disabled takes precedence over capacity:wheelchair when both present", async () => {
+    const element = {
+      type: "node", id: 12, lat: 52.52, lon: 13.405,
+      tags: { amenity: "parking", "capacity:disabled": "4", "capacity:wheelchair": "2" },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ elements: [element] }),
+    }))
+    const [f] = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    expect(f.capacity).toBe(4)
   })
 })

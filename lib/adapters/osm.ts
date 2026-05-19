@@ -357,14 +357,14 @@ export interface NearbyParkingFeature {
 // Disabled parking beyond 10 km is irrelevant to a venue, and large radii
 // (e.g. 50 km) would overflow the out-200 cap with results ordered by OSM
 // node ID rather than distance, causing non-deterministic enrichment gaps.
-export const NEARBY_PARKING_MAX_RADIUS_KM = 10
+export const NEARBY_PARKING_MAX_RADIUS_KM = 5
 
 export async function fetchOsmDisabledParking(
   location: { lat: number; lon: number },
   radiusKm: number,
   signal?: AbortSignal,
 ): Promise<NearbyParkingFeature[]> {
-  const r = Math.min(radiusKm, NEARBY_PARKING_MAX_RADIUS_KM) * 1000
+  const r = Math.min(radiusKm + 0.5, NEARBY_PARKING_MAX_RADIUS_KM) * 1000
   const { lat, lon } = location
 
   // Four orthogonal disabled-parking signals in OSM. We union them so the
@@ -374,11 +374,11 @@ export async function fetchOsmDisabledParking(
   // a syntax error and cause a 400 response (silently swallowed by the caller).
   // 500 results: denser cities (Berlin, München) can have hundreds of
   // disabled-parking features; 200 was silently truncating at high density.
-  const query = `[out:json][timeout:20];(` +
+  const query = `[out:json][timeout:15];(` +
     `nwr(around:${r},${lat},${lon})[amenity=parking]["capacity:disabled"];` +
     `nwr(around:${r},${lat},${lon})[amenity=parking]["capacity:wheelchair"];` +
-    `nwr(around:${r},${lat},${lon})[amenity=parking_space][parking_space=disabled];` +
-    `nwr(around:${r},${lat},${lon})[amenity=parking_space][wheelchair=designated];` +
+    `node(around:${r},${lat},${lon})[amenity=parking_space][parking_space=disabled];` +
+    `node(around:${r},${lat},${lon})[amenity=parking_space][wheelchair=designated];` +
     `);out 500 center tags;`
 
   const headers = {
@@ -413,8 +413,8 @@ export async function fetchOsmDisabledParking(
   // First successful response wins; if both fail the caller gets [].
   try {
     const sig = (endpoint: string) => signal
-      ? AbortSignal.any([signal, AbortSignal.timeout(25_000)])
-      : AbortSignal.timeout(25_000)
+      ? AbortSignal.any([signal, AbortSignal.timeout(20_000)])
+      : AbortSignal.timeout(20_000)
 
     return await Promise.any(
       OVERPASS_ENDPOINTS.map(async (endpoint) => {
