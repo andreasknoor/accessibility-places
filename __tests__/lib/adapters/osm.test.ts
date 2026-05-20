@@ -588,8 +588,8 @@ describe("fetchOsmDisabledParking", () => {
     }))
     await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 50)
     const decoded = decodeURIComponent(capturedBody.replace(/^data=/, ""))
-    // 50 km + 0.5 km buffer, capped to 5 km → radius in metres = 5000
-    expect(decoded).toContain("around:5000")
+    // 50 km + 0.5 km buffer, capped to 25 km → radius in metres = 25000
+    expect(decoded).toContain("around:25000")
     expect(decoded).not.toContain("around:50000")
   })
 
@@ -625,7 +625,7 @@ describe("fetchOsmDisabledParking", () => {
     expect(decoded).not.toContain("nwr(around:")
   })
 
-  it("uses [timeout:15] in the Overpass QL query", async () => {
+  it("uses [timeout:30] in the Overpass QL query", async () => {
     let capturedBody = ""
     vi.stubGlobal("fetch", vi.fn().mockImplementation((_url: unknown, init: RequestInit) => {
       capturedBody = init?.body as string
@@ -633,7 +633,7 @@ describe("fetchOsmDisabledParking", () => {
     }))
     await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
     const decoded = decodeURIComponent(capturedBody.replace(/^data=/, ""))
-    expect(decoded).toContain("[timeout:15]")
+    expect(decoded).toContain("[timeout:30]")
   })
 
   it("parses capacity:wheelchair tag", async () => {

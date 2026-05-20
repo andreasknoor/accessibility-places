@@ -78,9 +78,7 @@ export function buildOverpassQuery(params: SearchParams): string {
   if (clauses.length === 0) return ""
 
   // timeout:12 — fail fast so the parallel endpoint race can declare a winner.
-  // maxsize:67108864 — 64 MB cap signals low RAM demand; raises acceptance
-  // probability when the server is under high load (default assumption: 512 MB).
-  return `[out:json][timeout:12][maxsize:67108864];(${clauses.join("")});out 200 center tags;`
+  return `[out:json][timeout:12];(${clauses.join("")});out 200 center tags;`
 }
 
 // ─── OSM tag → A11yValue mapping ──────────────────────────────────────────
@@ -363,11 +361,10 @@ export interface NearbyParkingFeature {
   capacity?:  number
 }
 
-// Parking enrichment is capped at 10 km regardless of the main search radius.
-// Disabled parking beyond 10 km is irrelevant to a venue, and large radii
-// (e.g. 50 km) would overflow the out-200 cap with results ordered by OSM
-// node ID rather than distance, causing non-deterministic enrichment gaps.
-export const NEARBY_PARKING_MAX_RADIUS_KM = 5
+// Parking enrichment is capped at 25 km regardless of the main search radius.
+// Disabled parking beyond 25 km is irrelevant to a venue; the out-2000 cap
+// is sufficient for dense DACH cities within this radius.
+export const NEARBY_PARKING_MAX_RADIUS_KM = 25
 
 export async function fetchOsmDisabledParking(
   location: { lat: number; lon: number },
@@ -387,12 +384,12 @@ export async function fetchOsmDisabledParking(
   // way only (not nwr): amenity=parking with capacity data is almost always a
   // polygon way; relations are rare multipolygons (<5% of DACH features) and
   // scanning them causes disproportionate Overpass load → 504s.
-  const query = `[out:json][timeout:15];(` +
+  const query = `[out:json][timeout:30];(` +
     `way(around:${r},${lat},${lon})[amenity=parking]["capacity:disabled"];` +
     `way(around:${r},${lat},${lon})[amenity=parking]["capacity:wheelchair"];` +
     `node(around:${r},${lat},${lon})[amenity=parking_space][parking_space=disabled];` +
     `node(around:${r},${lat},${lon})[amenity=parking_space][wheelchair=designated];` +
-    `);out 500 center tags;`
+    `);out 2000 center tags;`
 
   const headers = {
     "Content-Type": "application/x-www-form-urlencoded",
