@@ -22,6 +22,8 @@ npm run check:seo
 npm run warm:seo
 ```
 
+`check:seo` runs automatically via GitHub Actions daily at 03:00 UTC (`.github/workflows/check-seo-validity.yml`); `warm:seo` runs at 03:30 UTC (`.github/workflows/warm-seo-cache.yml`). Both support `workflow_dispatch` for manual runs.
+
 A pre-commit hook (`.githooks/pre-commit`, installed via `npm run prepare`) runs `npm test` automatically on every commit — expect commits to take ~10–20 s while tests execute.
 
 **Always run `npm test` before committing or pushing.** No check-ins without a full test run.
@@ -95,7 +97,7 @@ effectiveName × 0.5 + addrScore × 0.3 + geoScore × 0.2
 
 where `addrScore = streetTrigram × 0.6 + cityMatch × 0.25 + zipMatch × 0.15`. A fast reject fires when distance > 3 × `GEO_MATCH_RADIUS_M` (240 m). Name containment (one normalised name substring of the other within 80 m) raises the effective name score to ≥ 0.9.
 
-`merge.ts` – winning `A11yValue` is determined by summed source reliability weight. Toilet confidence is boosted to 1.0 when `isDesignated` or `hasGrabBars` is true; capped at 0.9 for weaker toilet signals. The `computeFilteredConfidence()` function averages **only the criteria the user has active**, so deactivating parking doesn't drag down scores. `passesFiltersForSource(place, sourceId, filters)` answers "would this place pass if only this one source were active?" — used by `FilterPanel` to show a predictive per-source result count. Note: `seating` is an optional criterion — not all adapters populate it, so `Place.accessibility.seating` may be `undefined`.
+`merge.ts` – winning `A11yValue` is determined by summed source reliability weight. Toilet confidence is boosted to 1.0 when `isDesignated` or `hasGrabBars` is true; capped at 0.9 for weaker toilet signals. The `computeFilteredConfidence()` function averages criteria that are either active or have a non-unknown value — active-but-unknown criteria are included in the denominator so that enabling `acceptUnknown` doesn't artificially inflate scores to 100%. `passesFiltersForSource(place, sourceId, filters)` answers "would this place pass if only this one source were active?" — used by `FilterPanel` to show a predictive per-source result count. Note: `seating` is an optional criterion — not all adapters populate it, so `Place.accessibility.seating` may be `undefined`.
 
 `passesFilters` treats both `"yes"` and `"limited"` as passing for any active criterion. This is intentional: `"limited"` (eingeschränkt) means potentially usable, not inaccessible. Only `"no"` fails; `"unknown"` fails unless `acceptUnknown` is true.
 
@@ -163,7 +165,7 @@ The `countrycodes=de,at,ch` constraint in Nominatim calls and the Photon boundin
 
 `/api/search` applies in-memory sliding-window rate limits per IP: 10 searches/min general, 3/min for Google Places. These reset on serverless cold start — not suitable for multi-instance without a shared store.
 
-In production, `raw` adapter response data is stripped from `sourceRecords` before the response is sent (see `stripRaw()`). In development the raw data is preserved for debugging. Adapters can populate `SourceRecord.metadata` (a plain object) for key fields that should survive `stripRaw()` and remain visible in the debug sheet in production — currently only the Ginto adapter does this.
+In production, `raw` adapter response data is stripped from `sourceRecords` before the response is sent (see `stripRaw()`). In development the raw data is preserved for debugging. Adapters must also populate `SourceRecord.metadata` (a plain object mirroring the key fields from `raw`) so the info sheet can display data in production — all five adapters do this. When adding a new adapter, always set both `raw` and `metadata`.
 
 `POST /api/log-error` — client-side error forwarding. `HomeClient` calls this fire-and-forget in its search `catch` block; the route logs via `console.error` (appears as Error in Vercel Function Logs).
 
