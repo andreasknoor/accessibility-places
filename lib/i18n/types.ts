@@ -205,6 +205,7 @@ export interface Translations {
     wifi:           string
     yes:            string
     accessibility:  string
+    reliability:    string
     description:    string
     externalLinks:  string
     showRawData:    string

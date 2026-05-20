@@ -230,6 +230,7 @@ const de: Translations = {
     wifi:           "WLAN",
     yes:            "Ja",
     accessibility:  "Barrierefreiheit",
+    reliability:    "Verlässlichkeit",
     description:    "Beschreibung",
     externalLinks:  "Externe Links",
     showRawData:    "Rohdaten anzeigen",

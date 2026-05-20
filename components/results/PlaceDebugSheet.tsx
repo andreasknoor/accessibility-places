@@ -139,7 +139,24 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
   const osmLink    = osmRecord?.externalId
     ? `https://www.openstreetmap.org/${osmRecord.externalId}`
     : null
-  const googleMapsLink = `https://www.google.com/maps/search/?api=1&query=${place.coordinates.lat},${place.coordinates.lon}`
+
+  const googleMapsLink = (() => {
+    const gRecord = place.sourceRecords.find((r) => r.sourceId === "google_places")
+    const query = [place.name, place.address.city].filter(Boolean).join(" ")
+    if (gRecord?.externalId) {
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}&query_place_id=${gRecord.externalId}`
+    }
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
+  })()
+
+  const wheelmapLink = (() => {
+    if (place.wheelmapUrl) return place.wheelmapUrl
+    if (osmRecord) {
+      const [type, id] = osmRecord.externalId.split("/")
+      if (type === "node" && id) return `https://wheelmap.org/nodes/${id}`
+    }
+    return `https://wheelmap.org/?lat=${place.coordinates.lat}&lon=${place.coordinates.lon}&zoom=19`
+  })()
 
   return (
     <div onClick={(e) => e.stopPropagation()}>
@@ -239,7 +256,7 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
           )}
 
           {/* ── Barrierefreiheit ── */}
-          <Section title={ti.accessibility}>
+          <Section title={`${ti.accessibility} (${ti.reliability}: ${Math.round(place.overallConfidence * 100)}%)`}>
             {wheelchairDesc && (
               <InfoRow icon={MessageSquare} label={ti.description}>{wheelchairDesc}</InfoRow>
             )}
@@ -266,13 +283,11 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
                 </a>
               </InfoRow>
             )}
-            {place.wheelmapUrl && (
-              <InfoRow icon={Accessibility} label="Wheelmap">
-                <a href={place.wheelmapUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                  Wheelmap.org
-                </a>
-              </InfoRow>
-            )}
+            <InfoRow icon={Accessibility} label="Wheelmap">
+              <a href={wheelmapLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                Wheelmap.org
+              </a>
+            </InfoRow>
             {place.gintoUrl && (
               <InfoRow icon={ShieldCheck} label="Ginto">
                 <a href={place.gintoUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
@@ -328,6 +343,16 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
             )}
           </div>
 
+        </div>
+
+        {/* Sticky close button */}
+        <div className="shrink-0 px-4 py-3 border-t border-border">
+          <button
+            onClick={onClose}
+            className="w-full py-2 rounded-md border border-border text-sm text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"
+          >
+            {t.common.close}
+          </button>
         </div>
       </div>
     </div>

@@ -230,6 +230,7 @@ const en: Translations = {
     wifi:           "Wi-Fi",
     yes:            "Yes",
     accessibility:  "Accessibility",
+    reliability:    "Reliability",
     description:    "Description",
     externalLinks:  "External links",
     showRawData:    "Show raw data",
