@@ -2,12 +2,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { NextRequest } from "next/server"
 import { POST } from "@/app/api/search/route"
-import { trackCall, trackError } from "@/lib/stats"
+import { trackCall, trackError, trackDuration } from "@/lib/stats"
 
 vi.mock("@/lib/stats", () => ({
-  trackCall:  vi.fn(),
-  trackError: vi.fn(),
-  getStats:   vi.fn().mockResolvedValue({}),
+  trackCall:     vi.fn(),
+  trackError:    vi.fn(),
+  trackDuration: vi.fn(),
+  getStats:      vi.fn().mockResolvedValue({}),
 }))
 
 // Parse the NDJSON stream into an array of event objects

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { timingSafeEqual }           from "crypto"
 import { getStats, resetStats }      from "@/lib/stats"
-import type { StatsResult, StatsResponse } from "@/lib/stats"
+import type { StatsResult, StatsResponse, SourceStats } from "@/lib/stats"
 
 function safeEqual(a: string, b: string): boolean {
   const ba = Buffer.from(a)
@@ -10,19 +10,16 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 const SOURCE_LABELS: Record<string, string> = {
-  osm:                "OpenStreetMap (gesamt)",
-  osm_private:        "↳ Privater Server",
-  osm_public:         "↳ Öffentliche Mirrors",
-  accessibility_cloud:"accessibility.cloud",
-  reisen_fuer_alle:   "Reisen für Alle",
-  ginto:              "Ginto",
-  google_places:      "Google Places",
-  osm_parking:         "OSM Wheelchair Parking",
-  osm_parking_private: "↳ Parking privat",
-  osm_parking_public:  "↳ Parking öffentlich",
+  osm_private:         "OSM - private server",
+  osm_parking_private: "OSM parking - private server",
+  osm_public:          "OSM - public server",
+  osm_parking_public:  "OSM parking - public server",
+  accessibility_cloud: "Accessibility Cloud",
+  ginto:               "Ginto",
+  google_places:       "Google Places",
 }
 
-const SOURCE_ORDER = ["osm_private", "osm_public", "accessibility_cloud", "reisen_fuer_alle", "ginto", "google_places", "osm_parking_private", "osm_parking_public"]
+const SOURCE_ORDER = ["osm_private", "osm_parking_private", "osm_public", "osm_parking_public", "accessibility_cloud", "ginto", "google_places"]
 
 function fmt(n: number): string {
   return n.toLocaleString("de-DE")
@@ -63,7 +60,9 @@ function renderHtml({ sources: stats, oldestHour }: StatsResponse): string {
     hour: "2-digit", minute: "2-digit", second: "2-digit",
   })
 
-  const rows = entries.map(({ id, s }) => {
+  const fmtMs = (v: number | null) => v != null ? `${fmt(v)} ms` : "–"
+
+  const rows = entries.map(({ id, s }: { id: string; s: SourceStats }) => {
     const rate    = s.totalCalls > 0 ? (s.totalErrors / s.totalCalls) * 100 : 0
     const color   = errorColor(rate)
     const dot     = errorDot(rate)
@@ -78,6 +77,9 @@ function renderHtml({ sources: stats, oldestHour }: StatsResponse): string {
         </td>
         <td style="padding:12px 16px;text-align:right">${s.avgCallsPerHour.toFixed(1)}</td>
         <td style="padding:12px 16px;text-align:right">${s.avgErrorsPerHour.toFixed(1)}</td>
+        <td style="padding:12px 16px;text-align:right;color:#9ca3af">${fmtMs(s.minMs)}</td>
+        <td style="padding:12px 16px;text-align:right;color:#9ca3af">${fmtMs(s.avgMs)}</td>
+        <td style="padding:12px 16px;text-align:right;color:#9ca3af">${fmtMs(s.maxMs)}</td>
       </tr>`
   }).join("")
 
@@ -167,6 +169,9 @@ ${entries.length === 0 ? `
         <th>Error Rate</th>
         <th>Calls/hr avg</th>
         <th>Errors/hr avg</th>
+        <th>Min (ms)</th>
+        <th>Avg (ms)</th>
+        <th>Max (ms)</th>
       </tr>
     </thead>
     <tbody>${rows}</tbody>

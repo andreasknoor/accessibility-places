@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
 import type { SearchParams, SearchResult, SourceId, FilterDebug, A11yValue, Place } from "@/lib/types"
 import { startAdapterTasks }            from "@/lib/adapters"
-import { trackCall, trackError }        from "@/lib/stats"
+import { trackCall, trackError, trackDuration } from "@/lib/stats"
 import { findMatch, filterByNameHint }  from "@/lib/matching/match"
 import { mergePlaces, passesFilters, finalisePlaceConfidence, computeFilteredConfidence, countLimited } from "@/lib/matching/merge"
 import { fetchOsmDisabledParking, type NearbyParkingFeature } from "@/lib/adapters/osm"
@@ -237,8 +237,10 @@ export async function POST(req: NextRequest) {
         const nearbyParkingEnabled = process.env.ENABLE_NEARBY_PARKING === "1"
         const nearbyParkingPromise: Promise<NearbyParkingFeature[]> = nearbyParkingEnabled
           ? fetchOsmDisabledParking({ lat: geo.lat, lon: geo.lon }, radiusKm, signal).then(
-              ({ features, winnerEndpoint }) => {
-                trackCall(PUBLIC_OVERPASS.has(winnerEndpoint) ? "osm_parking_public" : "osm_parking_private")
+              ({ features, winnerEndpoint, durationMs }) => {
+                const parkingSrc = PUBLIC_OVERPASS.has(winnerEndpoint) ? "osm_parking_public" : "osm_parking_private"
+                trackCall(parkingSrc)
+                trackDuration(parkingSrc, durationMs)
                 return features
               },
               () => { trackCall("osm_parking_public"); trackError("osm_parking_public"); return [] },
@@ -251,12 +253,12 @@ export async function POST(req: NextRequest) {
         // Fire-and-forget: stats belong here (API boundary), not inside safeRun,
         // so that fetchAllSources stays side-effect-free and safe to call from ISR.
         for (const r of adapterResults) {
-          if (r.sourceId === "osm" && r.winnerEndpoint) {
-            trackCall(PUBLIC_OVERPASS.has(r.winnerEndpoint) ? "osm_public" : "osm_private")
-          } else {
-            trackCall(r.sourceId)
-          }
-          if (r.error) trackError(r.sourceId)
+          const statSrc: SourceId = (r.sourceId === "osm" && r.winnerEndpoint)
+            ? (PUBLIC_OVERPASS.has(r.winnerEndpoint) ? "osm_public" : "osm_private")
+            : r.sourceId
+          trackCall(statSrc)
+          trackDuration(statSrc, r.durationMs)
+          if (r.error) trackError(statSrc)
         }
 
         // ── 5. Match & merge ─────────────────────────────────────────────────

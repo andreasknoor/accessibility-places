@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   }
 
   const radiusKm  = Math.min(Math.max(radius, RADIUS_MIN_KM), RADIUS_MAX_KM)
-  const { features } = await fetchOsmDisabledParking({ lat, lon }, radiusKm).catch(() => ({ features: [], winnerEndpoint: "" }))
+  const { features } = await fetchOsmDisabledParking({ lat, lon }, radiusKm).catch(() => ({ features: [], winnerEndpoint: "", durationMs: 0 }))
 
   return Response.json(features, {
     headers: { "Cache-Control": "public, max-age=300, s-maxage=300" },

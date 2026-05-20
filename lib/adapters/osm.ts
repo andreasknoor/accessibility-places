@@ -318,6 +318,15 @@ export async function fetchOsm(params: SearchParams): Promise<{ places: Place[];
           throw new Error(`Overpass ${endpoint} returned ${res.status}`)
         if (!res.ok) throw new Error(`Overpass API error: ${res.status}`)
 
+        // Overpass sends an XML error page when it fails to parse the query
+        // (before it sees [out:json]).  Detect and reject early so the race
+        // can fall through to the other endpoint rather than surfacing a
+        // confusing SyntaxError from res.json().
+        // Only reject when content-type is explicitly non-JSON; when absent
+        // (e.g. in test mocks) we try to parse anyway.
+        const ct = res.headers?.get("content-type") ?? ""
+        if (ct && !ct.includes("json")) throw new Error(`Overpass ${endpoint} returned non-JSON content-type: ${ct}`)
+
         return { json: await res.json(), winner: endpoint }
       }),
     )
@@ -365,7 +374,7 @@ export async function fetchOsmDisabledParking(
   location: { lat: number; lon: number },
   radiusKm: number,
   signal?: AbortSignal,
-): Promise<{ features: NearbyParkingFeature[]; winnerEndpoint: string }> {
+): Promise<{ features: NearbyParkingFeature[]; winnerEndpoint: string; durationMs: number }> {
   const r = Math.min(radiusKm + 0.5, NEARBY_PARKING_MAX_RADIUS_KM) * 1000
   const { lat, lon } = location
 
@@ -426,11 +435,14 @@ export async function fetchOsmDisabledParking(
       OVERPASS_ENDPOINTS.map(async (endpoint) => {
         const res = await fetch(endpoint, { method: "POST", body, headers, signal: sig(endpoint) })
         if (!res.ok) throw new Error(`[parking] ${endpoint} → HTTP ${res.status}`)
+        const ct = res.headers?.get("content-type") ?? ""
+        if (ct && !ct.includes("json")) throw new Error(`[parking] ${endpoint} returned non-JSON content-type: ${ct}`)
         return { features: parseFeatures(await res.json()), winner: endpoint }
       }),
     )
-    console.log(`[osm] parking endpoint winner: ${parkingWinner} (${Date.now() - t0parking}ms)`)
-    return { features, winnerEndpoint: parkingWinner }
+    const durationMs = Date.now() - t0parking
+    console.log(`[osm] parking endpoint winner: ${parkingWinner} (${durationMs}ms)`)
+    return { features, winnerEndpoint: parkingWinner, durationMs }
   } catch (err) {
     // AggregateError means both endpoints failed; log so Vercel Function Logs
     // capture the frequency, then re-throw so the caller can record a stat.
