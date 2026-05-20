@@ -161,11 +161,9 @@ export async function POST(req: NextRequest) {
     google_places:       Boolean(req_s.google_places)       && Boolean(process.env.GOOGLE_PLACES_API_KEY),
   }
 
-  if (isGooglePlacesRateLimited(ip, sources.google_places)) {
-    return new Response(JSON.stringify({ error: "Too many Google Places requests. Please wait a minute." }), {
-      status:  429,
-      headers: { "Content-Type": "application/json", "Retry-After": "60" },
-    })
+  const gpRateLimited = isGooglePlacesRateLimited(ip, sources.google_places)
+  if (gpRateLimited) {
+    sources.google_places = false
   }
 
   const encoder = new TextEncoder()
@@ -213,6 +211,9 @@ export async function POST(req: NextRequest) {
         }
 
         // ── 4. Fire all adapters ──────────────────────────────────────────────
+        if (gpRateLimited) {
+          emit({ type: "source", sourceId: "google_places", status: "error", error: "Rate limited", durationMs: 0 })
+        }
         const tasks = startAdapterTasks(params)
         const wrapped = tasks.map(({ sourceId, promise }) =>
           promise.then((r) => {
