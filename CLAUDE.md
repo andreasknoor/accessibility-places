@@ -224,7 +224,7 @@ Each place card on an SEO page links to:
 - `GINTO_API_KEY` — optional; Ginto GraphQL API (Swiss accessibility data, CH only). Contact support@ginto.guide. Source silently skipped if absent.
 - `HEALTH_CHECK_SECRET` — required to activate `GET /api/health`; requests without a matching `?token=` get 401. If unset the endpoint returns 503.
 - `KV_REST_API_URL` / `KV_REST_API_TOKEN` — optional; Upstash Redis credentials for adapter call/error stats. If absent, `lib/stats.ts` is a no-op and `GET /api/stats` returns 503.
-- `OVERPASS_ENDPOINTS` — optional; comma-separated list of Overpass API URLs to override the two public mirrors. Multiple URLs retain the parallel-race behaviour. E.g. `https://overpass.example.com/api/interpreter` for a private server.
+- `OVERPASS_ENDPOINTS` — optional; comma-separated list of Overpass API URLs to override the two public mirrors. Multiple URLs retain the parallel-race behaviour. Production value includes the private Hetzner server first, then both public mirrors as fallback: `https://overpass.accessible-places.org/api/interpreter,https://overpass-api.de/api/interpreter,https://overpass.kumi.systems/api/interpreter`.
 - `NOMINATIM_ENDPOINT` — optional; base URL of a private Nominatim instance, e.g. `https://nominatim.example.com`. Trailing slash is stripped automatically. Applies to all three geocode routes and the search pipeline.
 
 ## Tests
@@ -237,3 +237,40 @@ Each place card on an SEO page links to:
 `vitest.setup.ts` mocks `window.matchMedia` (always returns `matches: false`), `localStorage`, and `ResizeObserver` for jsdom tests.
 
 **Rate-limiter pitfall in `search.test.ts`:** The `/api/search` route holds a module-level in-memory sliding-window counter keyed by `x-forwarded-for` (falls back to `"unknown"`). Tests that call `POST()` without setting this header all share the `"unknown"` bucket; the 11th call in the same file returns 429 before the stream starts. Fix: set a distinct `x-forwarded-for` header on requests in test groups that run after the first ~10 POST calls in that file.
+
+## Private Overpass server (Hetzner)
+
+Self-hosted Overpass API for DACH at `overpass.accessible-places.org` (Caddy → Docker on Hetzner CAX21, Helsinki). Eliminates public-mirror rate limits and reduces latency from 2–15 s to ~50–200 ms.
+
+**Server:** `65.109.1.63` — `ssh root@overpass.accessible-places.org`
+
+**Docker container:** `overpass` — image `wiktorn/overpass-api`, data at `/overpass-data:/db`, port 8080 → Caddy → HTTPS.
+
+**Critical Docker env vars** (wrong defaults cause failures under load):
+
+| Variable | Production value | Why |
+|---|---|---|
+| `OVERPASS_RATE_LIMIT` | `32` | Default 4–8; "slots occupied" HTML at peak |
+| `OVERPASS_SPACE` | `6442450944` | Default 512 MB; CAX21 has 8 GB |
+| `OVERPASS_TIME` | `300` | Default 1000 s; queries use `[timeout:12]` anyway |
+| `OVERPASS_ALLOW_DUPLICATE_QUERIES` | `yes` | Default `no` rejects identical concurrent queries immediately with HTML 200 — primary cause of load-test failures |
+
+**Restart command** (e.g. after config change):
+```bash
+docker stop overpass && docker rm overpass
+docker run -d --name overpass --restart always -p 8080:80 \
+  -v /overpass-data:/db \
+  -e OVERPASS_META=yes \
+  -e OVERPASS_MODE=clone \
+  -e OVERPASS_REPLICATION_URL=https://download.geofabrik.de/europe/dach-updates/ \
+  -e OVERPASS_REPLICATION_DELAY=3600 \
+  -e OVERPASS_USE_AREAS=true \
+  -e OVERPASS_RULES_LOAD=1 \
+  -e OVERPASS_ALLOW_DUPLICATE_QUERIES=yes \
+  -e OVERPASS_RATE_LIMIT=32 \
+  -e OVERPASS_SPACE=6442450944 \
+  -e OVERPASS_TIME=300 \
+  wiktorn/overpass-api
+```
+
+**Overpass HTML 200 responses:** when the daemon is overloaded it returns `Content-Type: text/html` with HTTP 200 (not 5xx). The OSM adapter guard (`res.headers?.get("content-type")`) detects this and rejects the endpoint so the parallel race falls through to the public mirrors.
