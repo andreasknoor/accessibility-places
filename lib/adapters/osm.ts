@@ -301,6 +301,7 @@ export async function fetchOsm(params: SearchParams): Promise<Place[]> {
   // the rest are aborted. This removes the sequential worst-case latency
   // (28 s × 3 = 84 s) and naturally deprioritises slow mirrors at runtime.
   const cancelRace = new AbortController()
+  const t0 = Date.now()
 
   try {
     const { json, winner } = await Promise.any(
@@ -322,7 +323,7 @@ export async function fetchOsm(params: SearchParams): Promise<Place[]> {
     )
 
     cancelRace.abort() // cancel any still-running fetches
-    console.log(`[osm] endpoint winner: ${winner}`)
+    console.log(`[osm] endpoint winner: ${winner} (${Date.now() - t0}ms)`)
 
     const places: Place[] = []
     for (const el of json.elements ?? []) {
@@ -415,6 +416,7 @@ export async function fetchOsmDisabledParking(
 
   // Race both endpoints in parallel (same strategy as the main OSM venue fetch).
   // First successful response wins; if both fail the caller gets [].
+  const t0parking = Date.now()
   try {
     const sig = (endpoint: string) => signal
       ? AbortSignal.any([signal, AbortSignal.timeout(20_000)])
@@ -427,7 +429,7 @@ export async function fetchOsmDisabledParking(
         return { features: parseFeatures(await res.json()), winner: endpoint }
       }),
     )
-    console.log(`[osm] parking endpoint winner: ${parkingWinner}`)
+    console.log(`[osm] parking endpoint winner: ${parkingWinner} (${Date.now() - t0parking}ms)`)
     return features
   } catch (err) {
     // AggregateError means both endpoints failed; log so Vercel Function Logs
