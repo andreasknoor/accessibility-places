@@ -105,6 +105,7 @@ function toPlace(item: any, category: Category): Place | null {
       externalId: item.id ?? item.name ?? "",
       fetchedAt:  new Date().toISOString(),
       raw:        item,
+      metadata:   item,
     }],
   }
 }

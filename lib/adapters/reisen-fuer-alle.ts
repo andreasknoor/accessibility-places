@@ -141,6 +141,7 @@ function toPlace(item: any): Place | null {
       externalId: String(item.id ?? item.businessId ?? ""),
       fetchedAt:  new Date().toISOString(),
       raw:        item,
+      metadata:   item,
     }],
   }
 }

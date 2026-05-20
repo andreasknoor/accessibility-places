@@ -206,6 +206,7 @@ function toPlace(feature: any): Place | null {
       externalId: feature._id ?? feature.id ?? "",
       fetchedAt:  new Date().toISOString(),
       raw:        props,
+      metadata:   props,
     }],
   }
 }
