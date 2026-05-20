@@ -303,7 +303,7 @@ export async function fetchOsm(params: SearchParams): Promise<Place[]> {
   const cancelRace = new AbortController()
 
   try {
-    const json = await Promise.any(
+    const { json, winner } = await Promise.any(
       OVERPASS_ENDPOINTS.map(async (endpoint) => {
         const signal = params.signal
           ? AbortSignal.any([params.signal, cancelRace.signal, AbortSignal.timeout(20_000)])
@@ -317,11 +317,12 @@ export async function fetchOsm(params: SearchParams): Promise<Place[]> {
           throw new Error(`Overpass ${endpoint} returned ${res.status}`)
         if (!res.ok) throw new Error(`Overpass API error: ${res.status}`)
 
-        return res.json()
+        return { json: await res.json(), winner: endpoint }
       }),
     )
 
     cancelRace.abort() // cancel any still-running fetches
+    console.log(`[osm] endpoint winner: ${winner}`)
 
     const places: Place[] = []
     for (const el of json.elements ?? []) {
@@ -419,13 +420,15 @@ export async function fetchOsmDisabledParking(
       ? AbortSignal.any([signal, AbortSignal.timeout(20_000)])
       : AbortSignal.timeout(20_000)
 
-    return await Promise.any(
+    const { features, winner: parkingWinner } = await Promise.any(
       OVERPASS_ENDPOINTS.map(async (endpoint) => {
         const res = await fetch(endpoint, { method: "POST", body, headers, signal: sig(endpoint) })
         if (!res.ok) throw new Error(`[parking] ${endpoint} → HTTP ${res.status}`)
-        return parseFeatures(await res.json())
+        return { features: parseFeatures(await res.json()), winner: endpoint }
       }),
     )
+    console.log(`[osm] parking endpoint winner: ${parkingWinner}`)
+    return features
   } catch (err) {
     // AggregateError means both endpoints failed; log so Vercel Function Logs
     // capture the frequency, then re-throw so the caller can record a stat.
