@@ -243,7 +243,7 @@ export async function POST(req: NextRequest) {
                 trackDuration(parkingSrc, durationMs)
                 return features
               },
-              () => { trackCall("osm_parking_public"); trackError("osm_parking_public"); return [] },
+              () => { trackError("osm_parking"); return [] },
             )
           : Promise.resolve([])
 
