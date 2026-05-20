@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { createPortal } from "react-dom"
-import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Info, Accessibility, PawPrint, Salad, Leaf, Map, ShieldCheck } from "lucide-react"
+import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Accessibility, PawPrint, Salad, Leaf, Map, ShieldCheck } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import ConfidenceBadge  from "./ConfidenceBadge"
@@ -37,9 +37,6 @@ const CATEGORY_ICONS: Record<string, string> = {
   gallery:     "🎨",
   attraction:  "🎡",
 }
-
-/** Set to false (or delete the footer block below) to revert option A */
-const SHOW_MAP_FOOTER = true
 
 export default function PlaceCard({ place, isSelected, onClick, distanceM }: Props) {
   const t = useTranslations()
@@ -89,7 +86,7 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
         "cursor-pointer transition-all hover:shadow-md border overflow-hidden",
         isSelected ? "border-primary ring-1 ring-primary" : "border-border",
       )}
-      onClick={onClick}
+      onClick={() => setShowDebug(true)}
     >
       <CardContent className="p-3 flex flex-col gap-2">
         {/* ── Header ── */}
@@ -178,14 +175,6 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
         {/* ── Expand / contact ── */}
         <div className="flex items-center justify-between mt-0.5">
           <div className="flex items-center gap-3">
-            <button
-              onClick={(e) => { e.stopPropagation(); setShowDebug(true) }}
-              aria-label={t.results.showRawData}
-              title={t.results.showRawData}
-              className="p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Info className="w-[1.1rem] h-[1.1rem]" />
-            </button>
             {place.gintoUrl && (
               <a
                 href={place.gintoUrl}
@@ -245,12 +234,16 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
             >
               <Map className="w-[1.1rem] h-[1.1rem]" />
             </a>
-            {/* ── Map CTA inline (option A) — set SHOW_MAP_FOOTER=false above to revert ── */}
-            {SHOW_MAP_FOOTER && onClick && (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground ml-1 pl-2 border-l border-border">
+            {onClick && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onClick() }}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-1 pl-2 border-l border-border"
+                aria-label={t.results.showOnMap}
+                title={t.results.showOnMap}
+              >
                 <MapPin className="w-[1.1rem] h-[1.1rem] shrink-0 text-primary" />
                 {t.results.showOnMap}
-              </span>
+              </button>
             )}
           </div>
 

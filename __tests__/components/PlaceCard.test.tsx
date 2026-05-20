@@ -60,10 +60,16 @@ describe("PlaceCard", () => {
     expect(link).toHaveAttribute("href", "https://example.com")
   })
 
-  it("calls onClick when card is clicked", () => {
+  it("opens info sheet when card is clicked", async () => {
+    renderWithProvider(<PlaceCard place={makePlace()} onClick={vi.fn()} />)
+    fireEvent.click(screen.getByText("Café Barrierefrei"))
+    expect(await screen.findByText(/Grunddaten|Basic information/i)).toBeInTheDocument()
+  })
+
+  it("calls onClick when map button is clicked", () => {
     const onClick = vi.fn()
     renderWithProvider(<PlaceCard place={makePlace()} onClick={onClick} />)
-    fireEvent.click(screen.getByText("Café Barrierefrei"))
+    fireEvent.click(screen.getByRole("button", { name: /Auf Karte zeigen|Show on map/i }))
     expect(onClick).toHaveBeenCalledOnce()
   })
 
