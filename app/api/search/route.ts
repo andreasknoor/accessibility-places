@@ -242,8 +242,16 @@ export async function POST(req: NextRequest) {
 
         // Fire-and-forget: stats belong here (API boundary), not inside safeRun,
         // so that fetchAllSources stays side-effect-free and safe to call from ISR.
+        const PUBLIC_OVERPASS = new Set([
+          "https://overpass-api.de/api/interpreter",
+          "https://overpass.kumi.systems/api/interpreter",
+        ])
         for (const r of adapterResults) {
-          trackCall(r.sourceId)
+          if (r.sourceId === "osm" && r.winnerEndpoint) {
+            trackCall(PUBLIC_OVERPASS.has(r.winnerEndpoint) ? "osm_public" : "osm_private")
+          } else {
+            trackCall(r.sourceId)
+          }
           if (r.error) trackError(r.sourceId)
         }
 

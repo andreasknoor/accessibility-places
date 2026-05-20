@@ -287,9 +287,9 @@ function elementToPlace(el: any): Place | null {
 
 // ─── Public adapter function ───────────────────────────────────────────────
 
-export async function fetchOsm(params: SearchParams): Promise<Place[]> {
+export async function fetchOsm(params: SearchParams): Promise<{ places: Place[]; winnerEndpoint: string }> {
   const query = buildOverpassQuery(params)
-  if (!query) return []
+  if (!query) return { places: [], winnerEndpoint: "" }
 
   const headers = {
     "Content-Type": "application/x-www-form-urlencoded",
@@ -330,7 +330,7 @@ export async function fetchOsm(params: SearchParams): Promise<Place[]> {
       const place = elementToPlace(el)
       if (place) places.push(place)
     }
-    return places
+    return { places, winnerEndpoint: winner }
   } catch (err) {
     cancelRace.abort()
     // Unwrap AggregateError so the first underlying error (e.g. "returned 429",

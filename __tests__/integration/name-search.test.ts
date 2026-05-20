@@ -155,9 +155,9 @@ describe('Name-search E2E – restaurants in Berlin Mitte (no LLM)', () => {
       sources:    { accessibility_cloud: false, osm: true, reisen_fuer_alle: false, ginto: false, google_places: false },
     }
 
-    let places: Awaited<ReturnType<typeof fetchOsm>>
+    let places: Awaited<ReturnType<typeof fetchOsm>>["places"]
     try {
-      places = await fetchOsm(params)
+      ({ places } = await fetchOsm(params))
     } catch {
       console.log("[skip] Overpass nicht erreichbar")
       return

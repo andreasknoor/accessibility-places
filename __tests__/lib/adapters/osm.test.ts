@@ -168,7 +168,7 @@ describe("osmAllowsDogs", () => {
       tags: { name: "Hundefreundliches Café", amenity: "cafe", dog: "yes" },
     }
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ elements: [element] }) }))
-    const [p] = await fetchOsm(BASE_PARAMS)
+    const { places: [p] } = await fetchOsm(BASE_PARAMS)
     expect(p.allowsDogs).toBe(true)
   })
 })
@@ -216,7 +216,7 @@ describe("osmDiet", () => {
       tags: { name: "Veg Café", amenity: "cafe", "diet:vegetarian": "only", "diet:vegan": "yes" },
     }
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ elements: [element] }) }))
-    const [p] = await fetchOsm(BASE_PARAMS)
+    const { places: [p] } = await fetchOsm(BASE_PARAMS)
     expect(p.isVegetarianFriendly).toBe(true)
     expect(p.isVeganFriendly).toBe(true)
   })
@@ -276,7 +276,7 @@ describe("fetchOsm", () => {
   })
 
   it("returns empty array when query is empty (no categories)", async () => {
-    const result = await fetchOsm({ ...BASE_PARAMS, categories: [] as never[] } as unknown as SearchParams)
+    const { places: result } = await fetchOsm({ ...BASE_PARAMS, categories: [] as never[] } as unknown as SearchParams)
     expect(result).toEqual([])
   })
 
@@ -285,7 +285,7 @@ describe("fetchOsm", () => {
       ok: true,
       json: async () => ({ elements: [] }),
     }))
-    const result = await fetchOsm(BASE_PARAMS)
+    const { places: result } = await fetchOsm(BASE_PARAMS)
     expect(result).toEqual([])
   })
 
@@ -322,7 +322,7 @@ describe("fetchOsm", () => {
       json: async () => ({ elements: [element] }),
     }))
 
-    const result = await fetchOsm(BASE_PARAMS)
+    const { places: result } = await fetchOsm(BASE_PARAMS)
     expect(result).toHaveLength(1)
     const place = result[0]
     expect(place.name).toBe("Café am See")
@@ -339,7 +339,7 @@ describe("fetchOsm", () => {
       ok: true,
       json: async () => ({ elements: [element] }),
     }))
-    const result = await fetchOsm(BASE_PARAMS)
+    const { places: result } = await fetchOsm(BASE_PARAMS)
     expect(result).toHaveLength(0)
   })
 
@@ -350,7 +350,7 @@ describe("fetchOsm", () => {
       tags: { name: "X", amenity: "restaurant", wheelchair: "yes", "check_date:wheelchair": recent },
     }
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ elements: [element] }) }))
-    const [p] = await fetchOsm(BASE_PARAMS)
+    const { places: [p] } = await fetchOsm(BASE_PARAMS)
     const src = p.accessibility.entrance.sources[0]
     expect(src.verifiedRecently).toBe(true)
     expect(src.verifiedAt).toBe(recent)
@@ -363,7 +363,7 @@ describe("fetchOsm", () => {
       tags: { name: "Recent", amenity: "restaurant", wheelchair: "yes", "check_date:wheelchair": recent },
     }
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ elements: [element] }) }))
-    const [boosted] = await fetchOsm(BASE_PARAMS)
+    const { places: [boosted] } = await fetchOsm(BASE_PARAMS)
     const w = boosted.accessibility.entrance.sources[0].reliabilityWeight
     // base 0.75, isOsmOverall ×0.85, boost ×1.2 → 0.765, capped <= 1.0
     expect(w).toBeGreaterThan(0.75 * 0.85)
@@ -377,7 +377,7 @@ describe("fetchOsm", () => {
       tags: { name: "Old", amenity: "restaurant", wheelchair: "yes", "check_date:wheelchair": old },
     }
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ elements: [element] }) }))
-    const [unboosted] = await fetchOsm(BASE_PARAMS)
+    const { places: [unboosted] } = await fetchOsm(BASE_PARAMS)
     const w = unboosted.accessibility.entrance.sources[0].reliabilityWeight
     expect(w).toBeCloseTo(0.75 * 0.90, 5) // base × OSM_ENTRANCE_WEIGHT_FACTOR (0.90), no boost
   })
@@ -385,7 +385,7 @@ describe("fetchOsm", () => {
   it("encodes OSM type into externalId so consumers can build deep links", async () => {
     const node = { id: 99, type: "node", lat: 52.52, lon: 13.405, tags: { name: "X", amenity: "cafe" } }
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ elements: [node] }) }))
-    const [p] = await fetchOsm(BASE_PARAMS)
+    const { places: [p] } = await fetchOsm(BASE_PARAMS)
     expect(p.sourceRecords[0].externalId).toBe("node/99")
   })
 
@@ -400,7 +400,7 @@ describe("fetchOsm", () => {
       ok: true,
       json: async () => ({ elements: [element] }),
     }))
-    const result = await fetchOsm({ ...BASE_PARAMS, categories: ["hotel"] })
+    const { places: result } = await fetchOsm({ ...BASE_PARAMS, categories: ["hotel"] })
     expect(result[0].coordinates.lat).toBe(52.530)
   })
 
@@ -423,7 +423,7 @@ describe("fetchOsm", () => {
       ok: true,
       json: async () => ({ elements: [element] }),
     }))
-    const result = await fetchOsm(BASE_PARAMS)
+    const { places: result } = await fetchOsm(BASE_PARAMS)
     // Both endpoints return the same element. If results were concatenated we'd
     // get 2 identical places. The race must process only the first resolved response.
     expect(result).toHaveLength(1)
@@ -453,7 +453,7 @@ describe("fetchOsm", () => {
       }
       return Promise.resolve({ ok: true, json: async () => ({ elements: [] }) })
     }))
-    const result = await fetchOsm(BASE_PARAMS)
+    const { places: result } = await fetchOsm(BASE_PARAMS)
     expect(result).toEqual([]) // 2nd endpoint succeeded
     expect(calls).toBe(2)      // both were initiated in parallel
   })

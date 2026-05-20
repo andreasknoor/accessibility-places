@@ -2,7 +2,7 @@ import type { SourceId, Category } from "./types"
 
 // User-visible app version, shown in the header next to the subtitle.
 // Bump on every meaningful release.
-export const APP_VERSION = "1.95"
+export const APP_VERSION = "1.96"
 
 export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
   reisen_fuer_alle:    1.00,
@@ -11,6 +11,8 @@ export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
   osm:                 0.75,
   google_places:       0.35,
   osm_parking:         0,  // stats-only; never used as a place-attribution source
+  osm_private:         0,  // stats-only; tracks requests won by private Overpass server
+  osm_public:          0,  // stats-only; tracks requests won by public Overpass mirrors
   nominatim:           0,  // stats-only
 }
 
@@ -47,6 +49,8 @@ export const SOURCE_LABELS: Record<SourceId, string> = {
   ginto:               "Ginto",
   google_places:       "Google Places",
   osm_parking:         "OSM Parking",
+  osm_private:         "OpenStreetMap (privat)",
+  osm_public:          "OpenStreetMap (öffentlich)",
   nominatim:           "Nominatim",
 }
 

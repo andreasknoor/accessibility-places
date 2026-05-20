@@ -56,7 +56,8 @@ export interface SourceStats {
 export type StatsResult = Partial<Record<SourceId, SourceStats>>
 
 const ALL_SOURCES: SourceId[] = [
-  "osm", "accessibility_cloud", "reisen_fuer_alle", "ginto", "google_places",
+  "osm", "osm_private", "osm_public",
+  "accessibility_cloud", "reisen_fuer_alle", "ginto", "google_places",
   "osm_parking", "nominatim",
 ]
 

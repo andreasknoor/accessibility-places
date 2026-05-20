@@ -55,9 +55,9 @@ function isPlaceholder(val: string | undefined): boolean {
 
 describe("OSM adapter – live search", () => {
   it("returns restaurants in Berlin Mitte", { timeout: 35_000 }, async () => {
-    let places: Awaited<ReturnType<typeof fetchOsm>>
+    let places: Awaited<ReturnType<typeof fetchOsm>>["places"]
     try {
-      places = await fetchOsm(PARAMS)
+      ({ places } = await fetchOsm(PARAMS))
     } catch {
       console.log("[skip] Overpass nicht erreichbar")
       return

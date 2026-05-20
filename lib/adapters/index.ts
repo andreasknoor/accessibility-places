@@ -10,6 +10,7 @@ export type AdapterResult = {
   places: Place[]
   error?: string
   durationMs: number
+  winnerEndpoint?: string  // OSM only: which Overpass endpoint won the race
 }
 
 export async function safeRun(
@@ -34,7 +35,16 @@ export function startAdapterTasks(
   const { sources } = params
   const tasks: Array<{ sourceId: SourceId; promise: Promise<AdapterResult> }> = []
   if (sources.osm)
-    tasks.push({ sourceId: "osm",                 promise: safeRun("osm",                 () => fetchOsm(params)) })
+    tasks.push({ sourceId: "osm", promise: (async (): Promise<AdapterResult> => {
+      const t0 = Date.now()
+      try {
+        const { places, winnerEndpoint } = await fetchOsm(params)
+        return { sourceId: "osm", places, durationMs: Date.now() - t0, winnerEndpoint }
+      } catch (err) {
+        console.error("[adapter:osm]", err)
+        return { sourceId: "osm", places: [], error: String(err), durationMs: Date.now() - t0 }
+      }
+    })() })
   if (sources.accessibility_cloud)
     tasks.push({ sourceId: "accessibility_cloud", promise: safeRun("accessibility_cloud", () => fetchAccessibilityCloud(params)) })
   if (sources.reisen_fuer_alle)

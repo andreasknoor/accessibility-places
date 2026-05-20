@@ -10,7 +10,9 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 const SOURCE_LABELS: Record<string, string> = {
-  osm:                "OpenStreetMap",
+  osm:                "OpenStreetMap (gesamt)",
+  osm_private:        "↳ Privater Server",
+  osm_public:         "↳ Öffentliche Mirrors",
   accessibility_cloud:"accessibility.cloud",
   reisen_fuer_alle:   "Reisen für Alle",
   ginto:              "Ginto",
@@ -18,7 +20,7 @@ const SOURCE_LABELS: Record<string, string> = {
   osm_parking:        "OSM Wheelchair Parking",
 }
 
-const SOURCE_ORDER = ["osm", "accessibility_cloud", "reisen_fuer_alle", "ginto", "google_places", "osm_parking"]
+const SOURCE_ORDER = ["osm_private", "osm_public", "accessibility_cloud", "reisen_fuer_alle", "ginto", "google_places", "osm_parking"]
 
 function fmt(n: number): string {
   return n.toLocaleString("de-DE")

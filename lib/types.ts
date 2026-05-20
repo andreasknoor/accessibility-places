@@ -4,6 +4,8 @@ export type A11yValue = "yes" | "limited" | "no" | "unknown"
 export type SourceId =
   | "accessibility_cloud"
   | "osm"
+  | "osm_private"
+  | "osm_public"
   | "reisen_fuer_alle"
   | "google_places"
   | "ginto"
