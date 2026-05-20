@@ -365,7 +365,7 @@ export async function fetchOsmDisabledParking(
   location: { lat: number; lon: number },
   radiusKm: number,
   signal?: AbortSignal,
-): Promise<NearbyParkingFeature[]> {
+): Promise<{ features: NearbyParkingFeature[]; winnerEndpoint: string }> {
   const r = Math.min(radiusKm + 0.5, NEARBY_PARKING_MAX_RADIUS_KM) * 1000
   const { lat, lon } = location
 
@@ -430,7 +430,7 @@ export async function fetchOsmDisabledParking(
       }),
     )
     console.log(`[osm] parking endpoint winner: ${parkingWinner} (${Date.now() - t0parking}ms)`)
-    return features
+    return { features, winnerEndpoint: parkingWinner }
   } catch (err) {
     // AggregateError means both endpoints failed; log so Vercel Function Logs
     // capture the frequency, then re-throw so the caller can record a stat.

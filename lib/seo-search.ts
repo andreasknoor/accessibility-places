@@ -1,7 +1,7 @@
 import type { Place, SearchParams, SearchFilters, Category } from "./types"
 import { SEO_CATEGORY_SLUGS } from "./cities"
 import { fetchAllSources }                                   from "./adapters"
-import { fetchOsmDisabledParking }                           from "./adapters/osm"
+import { fetchOsmDisabledParking, type NearbyParkingFeature } from "./adapters/osm"
 import { findMatch }                                         from "./matching/match"
 import { mergePlaces, finalisePlaceConfidence, computeFilteredConfidence, passesFilters } from "./matching/merge"
 import { enrichWithNearbyParking }                           from "./matching/nearby-parking"
@@ -56,8 +56,10 @@ export async function fetchPlacesForSeoPage(
   // Non-fatal: failure leaves parking values as the adapters reported them.
   const nearbyParkingEnabled = process.env.ENABLE_NEARBY_PARKING === "1"
   const nearbyParkingPromise = nearbyParkingEnabled
-    ? fetchOsmDisabledParking({ lat, lon }, radiusKm, AbortSignal.timeout(20_000)).catch(() => [])
-    : Promise.resolve([] as Awaited<ReturnType<typeof fetchOsmDisabledParking>>)
+    ? fetchOsmDisabledParking({ lat, lon }, radiusKm, AbortSignal.timeout(20_000))
+        .then(r => r.features)
+        .catch(() => [])
+    : Promise.resolve([] as NearbyParkingFeature[])
 
   const results = await fetchAllSources(params)
 

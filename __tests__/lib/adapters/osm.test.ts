@@ -504,7 +504,7 @@ describe("fetchOsmDisabledParking", () => {
       ok: true,
       json: async () => ({ elements: [] }),
     }))
-    const result = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    const { features: result } = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
     expect(result).toEqual([])
   })
 
@@ -517,7 +517,7 @@ describe("fetchOsmDisabledParking", () => {
       ok: true,
       json: async () => ({ elements: [element] }),
     }))
-    const [f] = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    const { features: [f] } = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
     expect(f.lat).toBe(52.52)
     expect(f.capacity).toBe(3)
   })
@@ -532,7 +532,7 @@ describe("fetchOsmDisabledParking", () => {
       ok: true,
       json: async () => ({ elements: [element] }),
     }))
-    const [f] = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    const { features: [f] } = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
     expect(f.lat).toBe(52.530)
   })
 
@@ -543,7 +543,7 @@ describe("fetchOsmDisabledParking", () => {
       if (calls < 2) return Promise.resolve({ ok: false, status: 503 })
       return Promise.resolve({ ok: true, json: async () => ({ elements: [] }) })
     }))
-    const result = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    const { features: result } = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
     expect(calls).toBe(2) // 2 endpoints: first fails (503), second succeeds
     expect(result).toEqual([])
   })
@@ -645,7 +645,7 @@ describe("fetchOsmDisabledParking", () => {
       ok: true,
       json: async () => ({ elements: [element] }),
     }))
-    const [f] = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    const { features: [f] } = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
     expect(f.capacity).toBe(5)
   })
 
@@ -658,7 +658,7 @@ describe("fetchOsmDisabledParking", () => {
       ok: true,
       json: async () => ({ elements: [element] }),
     }))
-    const [f] = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    const { features: [f] } = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
     expect(f.lat).toBe(52.521)
     expect(f.capacity).toBeUndefined()
   })
@@ -672,7 +672,7 @@ describe("fetchOsmDisabledParking", () => {
       ok: true,
       json: async () => ({ elements: [element] }),
     }))
-    const [f] = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    const { features: [f] } = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
     expect(f.lat).toBe(52.522)
     expect(f.capacity).toBeUndefined()
   })
@@ -688,7 +688,7 @@ describe("fetchOsmDisabledParking", () => {
       ok: true,
       json: async () => ({ elements }),
     }))
-    const result = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    const { features: result } = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
     expect(result).toHaveLength(1)
     expect(result[0].capacity).toBe(2)
   })
@@ -702,7 +702,7 @@ describe("fetchOsmDisabledParking", () => {
       ok: true,
       json: async () => ({ elements: [element] }),
     }))
-    const result = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    const { features: result } = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
     expect(result).toHaveLength(0)
   })
 
@@ -720,7 +720,7 @@ describe("fetchOsmDisabledParking", () => {
       ok: true,
       json: async () => ({ elements }),
     }))
-    const result = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    const { features: result } = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
     expect(result).toHaveLength(1)
     expect(result[0].lat).toBe(52.52)
   })
@@ -739,7 +739,7 @@ describe("fetchOsmDisabledParking", () => {
       ok: true,
       json: async () => ({ elements: [element] }),
     }))
-    const [f] = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    const { features: [f] } = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
     expect(f.capacity).toBe(4)
   })
 })

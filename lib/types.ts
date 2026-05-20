@@ -10,6 +10,8 @@ export type SourceId =
   | "google_places"
   | "ginto"
   | "osm_parking"
+  | "osm_parking_private"
+  | "osm_parking_public"
   | "nominatim"
 
 export type Category =

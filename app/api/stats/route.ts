@@ -17,10 +17,12 @@ const SOURCE_LABELS: Record<string, string> = {
   reisen_fuer_alle:   "Reisen für Alle",
   ginto:              "Ginto",
   google_places:      "Google Places",
-  osm_parking:        "OSM Wheelchair Parking",
+  osm_parking:         "OSM Wheelchair Parking",
+  osm_parking_private: "↳ Parking privat",
+  osm_parking_public:  "↳ Parking öffentlich",
 }
 
-const SOURCE_ORDER = ["osm_private", "osm_public", "accessibility_cloud", "reisen_fuer_alle", "ginto", "google_places", "osm_parking"]
+const SOURCE_ORDER = ["osm_private", "osm_public", "accessibility_cloud", "reisen_fuer_alle", "ginto", "google_places", "osm_parking_private", "osm_parking_public"]
 
 function fmt(n: number): string {
   return n.toLocaleString("de-DE")

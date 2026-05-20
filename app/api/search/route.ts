@@ -229,11 +229,19 @@ export async function POST(req: NextRequest) {
         // ENABLE_NEARBY_PARKING defaults to OFF: only the literal string "1"
         // turns it on. Failure of this fetch is non-fatal — main search
         // proceeds and parking values stay as the adapters reported them.
+        const PUBLIC_OVERPASS = new Set([
+          "https://overpass-api.de/api/interpreter",
+          "https://overpass.kumi.systems/api/interpreter",
+        ])
+
         const nearbyParkingEnabled = process.env.ENABLE_NEARBY_PARKING === "1"
         const nearbyParkingPromise: Promise<NearbyParkingFeature[]> = nearbyParkingEnabled
           ? fetchOsmDisabledParking({ lat: geo.lat, lon: geo.lon }, radiusKm, signal).then(
-              (features) => { trackCall("osm_parking"); return features },
-              ()         => { trackCall("osm_parking"); trackError("osm_parking"); return [] },
+              ({ features, winnerEndpoint }) => {
+                trackCall(PUBLIC_OVERPASS.has(winnerEndpoint) ? "osm_parking_public" : "osm_parking_private")
+                return features
+              },
+              () => { trackCall("osm_parking_public"); trackError("osm_parking_public"); return [] },
             )
           : Promise.resolve([])
 
@@ -242,10 +250,6 @@ export async function POST(req: NextRequest) {
 
         // Fire-and-forget: stats belong here (API boundary), not inside safeRun,
         // so that fetchAllSources stays side-effect-free and safe to call from ISR.
-        const PUBLIC_OVERPASS = new Set([
-          "https://overpass-api.de/api/interpreter",
-          "https://overpass.kumi.systems/api/interpreter",
-        ])
         for (const r of adapterResults) {
           if (r.sourceId === "osm" && r.winnerEndpoint) {
             trackCall(PUBLIC_OVERPASS.has(r.winnerEndpoint) ? "osm_public" : "osm_private")
