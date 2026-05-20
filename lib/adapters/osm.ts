@@ -279,6 +279,7 @@ function elementToPlace(el: any): Place | null {
       externalId: `${el.type ?? "node"}/${el.id}`,
       fetchedAt:  new Date().toISOString(),
       raw:        tags,
+      metadata:   tags,
     }],
   }
 }
