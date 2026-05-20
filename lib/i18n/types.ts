@@ -175,6 +175,40 @@ export interface Translations {
     library:     string
     gallery:     string
     attraction:  string
+    ice_cream:   string
+  }
+  info: {
+    basicInfo:      string
+    address:        string
+    phone:          string
+    website:        string
+    category:       string
+    email:          string
+    openingHours:   string
+    offer:          string
+    cuisine:        string
+    stars:          string
+    rating:         string
+    reviews:        string
+    priceLevel:     string
+    diet:           string
+    vegetarian:     string
+    vegan:          string
+    dogs:           string
+    dogsYes:        string
+    dogsNo:         string
+    dogsLeashed:    string
+    dogsOutside:    string
+    takeaway:       string
+    takeawayOnly:   string
+    delivery:       string
+    wifi:           string
+    yes:            string
+    accessibility:  string
+    description:    string
+    externalLinks:  string
+    showRawData:    string
+    hideRawData:    string
   }
   impressum: {
     title:      string
