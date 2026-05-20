@@ -332,7 +332,6 @@ export async function fetchOsm(params: SearchParams): Promise<{ places: Place[];
     )
 
     cancelRace.abort() // cancel any still-running fetches
-    console.log(`[osm] endpoint winner: ${winner} (${Date.now() - t0}ms)`)
 
     const places: Place[] = []
     for (const el of json.elements ?? []) {
@@ -441,7 +440,6 @@ export async function fetchOsmDisabledParking(
       }),
     )
     const durationMs = Date.now() - t0parking
-    console.log(`[osm] parking endpoint winner: ${parkingWinner} (${durationMs}ms)`)
     return { features, winnerEndpoint: parkingWinner, durationMs }
   } catch (err) {
     // AggregateError means both endpoints failed; log so Vercel Function Logs
