@@ -175,27 +175,29 @@ function computeOverallConfidence(place: Place): number {
 }
 
 // ─── Overall data-quality confidence ─────────────────────────────────────
-// Averages the confidence of ALL known (non-unknown) criteria regardless of
-// which filters are active. The filter selection determines pass/fail;
-// confidence communicates how well-documented the place is — a property of
-// the data, not of the current filter state.
-//
-// The filters parameter is retained for API compatibility but is no longer
-// used in the calculation.
+// Active filter criteria always participate in the average — unknown values
+// contribute 0. This prevents a single high-confidence criterion from
+// inflating the score when other active criteria are unknown (which happens
+// when acceptUnknown lets through places with incomplete data).
+// Inactive criteria are included only when they have a known value.
 
 export function computeFilteredConfidence(
   place: Place,
-  _filters: { entrance: boolean; toilet: boolean; parking: boolean; seating: boolean },
+  filters: { entrance: boolean; toilet: boolean; parking: boolean; seating: boolean },
 ): number {
-  const pool = [
-    place.accessibility.entrance,
-    place.accessibility.toilet,
-    place.accessibility.parking,
-    ...(place.accessibility.seating ? [place.accessibility.seating] : []),
+  const candidates = [
+    { attr: place.accessibility.entrance,  active: filters.entrance },
+    { attr: place.accessibility.toilet,    active: filters.toilet   },
+    { attr: place.accessibility.parking,   active: filters.parking  },
+    ...(place.accessibility.seating
+      ? [{ attr: place.accessibility.seating, active: filters.seating }]
+      : []),
   ]
-  const known = pool.filter((a) => a.value !== "unknown")
-  if (known.length === 0) return 0
-  return known.reduce((sum, a) => sum + a.confidence, 0) / known.length
+  // Active criteria: always in pool (unknown → confidence 0)
+  // Inactive criteria: only if they have a known value
+  const pool = candidates.filter(({ attr, active }) => active || attr.value !== "unknown")
+  if (pool.length === 0) return 0
+  return pool.reduce((sum, { attr }) => sum + attr.confidence, 0) / pool.length
 }
 
 // ─── Count "limited" values among active filter criteria ──────────────────

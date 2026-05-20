@@ -39,10 +39,6 @@ const FAQ_EN = [
     a: "The app combines data from three sources: OpenStreetMap (OSM), accessibility.cloud (including Wheelmap.org) and Google Places. Each source is weighted by its trustworthiness — from manually verified entries to automatically collected data. The coloured circle next to each entry shows at a glance how solid the data is.",
   },
   {
-    q: "Why does the search sometimes take more than 20 seconds?",
-    a: "Accessible Places uses the public Overpass API from OpenStreetMap to retrieve data about restaurants, cafés and other venues. This interface is free and community-operated — open to all developers worldwide. That also means the servers are sometimes under heavy load, particularly in the evenings or when many requests arrive at once. In those moments a search may take 20 seconds or more before the first results appear. As a hobby project without a commercial budget, running dedicated, faster servers isn't an option.",
-  },
-  {
     q: "What does the coloured circle next to each entry mean?",
     a: "Green means reliable accessibility information, yellow means moderate data quality, and red means uncertain or incomplete data. The colour reflects how trustworthy the available information is — not whether a place is accessible or not.",
   },
