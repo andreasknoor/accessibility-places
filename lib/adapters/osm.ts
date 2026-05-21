@@ -103,6 +103,7 @@ export function osmParking(tags: Record<string, string>): A11yValue {
   const cap = parseInt(tags["capacity:disabled"] ?? tags["capacity:wheelchair"] ?? "0", 10)
   if (cap > 0) return "yes"
   if (tags["parking_space"] === "disabled") return "yes"
+  if (tags["disabled"] === "designated") return "yes"
   return "unknown"
 }
 
@@ -388,6 +389,7 @@ export async function fetchOsmDisabledParking(
   const query = `[out:json][timeout:30];(` +
     `way(around:${r},${lat},${lon})[amenity=parking]["capacity:disabled"];` +
     `way(around:${r},${lat},${lon})[amenity=parking]["capacity:wheelchair"];` +
+    `way(around:${r},${lat},${lon})[amenity=parking][disabled=designated];` +
     `node(around:${r},${lat},${lon})[amenity=parking_space][parking_space=disabled];` +
     `node(around:${r},${lat},${lon})[amenity=parking_space][wheelchair=designated];` +
     `);out 2000 center tags;`
