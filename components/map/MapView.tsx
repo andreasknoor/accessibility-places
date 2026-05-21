@@ -189,18 +189,36 @@ export default function MapView({
 
     for (const spot of parkingSpots ?? []) {
       const icon = L.divIcon({
-        html:       svgParkingMarker(),
-        className:  "",
-        iconSize:   [21, 21],
-        iconAnchor: [10, 10],
+        html:        svgParkingMarker(),
+        className:   "",
+        iconSize:    [21, 21],
+        iconAnchor:  [10, 10],
+        popupAnchor: [0, -11],
       })
-      const tooltipEl = document.createElement("div")
-      tooltipEl.style.cssText = "text-align:center;line-height:1.4"
-      tooltipEl.innerHTML = spot.capacity != null
-        ? t.map.parkingSpots(spot.capacity).replace(/ ([^ ]*)$/, "<br>$1")
-        : t.map.parkingSpot.replace(/ ([^ ]*)$/, "<br>$1")
+
+      const div = document.createElement("div")
+      div.style.cssText = "font-family:sans-serif;font-size:12px;line-height:1.5;min-width:130px"
+      const title   = spot.capacity != null ? t.map.parkingSpots(spot.capacity) : t.map.parkingSpot
+      const mapsUrl = `https://www.google.com/maps?q=${spot.lat},${spot.lon}`
+      div.innerHTML = `
+        <div style="font-weight:600;margin-bottom:6px">${title}</div>
+        <span data-gmaps style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#2563eb;cursor:pointer;text-decoration:underline">
+          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          ${t.results.googleMapsLink}
+        </span>
+      `
+      // Use L.DomEvent.on (not addEventListener) — plain addEventListener and
+      // inline onclick fail on mobile because Leaflet intercepts touchstart.
+      const gmapsBtn = div.querySelector<HTMLElement>("[data-gmaps]")
+      if (gmapsBtn) {
+        L!.DomEvent.on(gmapsBtn, "click", (ev: Event) => {
+          L!.DomEvent.stopPropagation(ev)
+          window.open(mapsUrl, "_blank", "noopener,noreferrer")
+        })
+      }
+
       const marker = L.marker([spot.lat, spot.lon], { icon, zIndexOffset: -200 })
-        .bindTooltip(tooltipEl, { permanent: false, direction: "top", offset: [0, -12] })
+        .bindPopup(div, { maxWidth: 220 })
         .addTo(mapInst.current)
       parkingMarkersRef.current.push(marker)
     }
@@ -298,15 +316,20 @@ export default function MapView({
       }
     }
 
-    // Fit bounds to show all results; include user location when in nearby mode
-    if (places.length > 0) {
-      const latlngs: [number, number][] = places.map((p) => [p.coordinates.lat, p.coordinates.lon])
-      const ul = userLocationRef.current
-      if (ul) latlngs.push([ul.lat, ul.lon])
-      mapInst.current.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 15 })
-    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [places, selectedId, mapReady])
+
+  // Fit bounds to show all results — runs only when places changes, not on marker click.
+  // Separating this from the selectedId effect prevents fitBounds from firing when the
+  // user clicks a marker (which changes selectedId but not places).
+  useEffect(() => {
+    if (!mapInst.current || !L || places.length === 0) return
+    const latlngs: [number, number][] = places.map((p) => [p.coordinates.lat, p.coordinates.lon])
+    const ul = userLocationRef.current
+    if (ul) latlngs.push([ul.lat, ul.lon])
+    mapInst.current.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 15 })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [places, mapReady])
 
   // Pan to selected — also re-fires when panTrigger increments so that
   // clicking the same result after manually panning the map still re-centers.
