@@ -84,6 +84,12 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
       }
       return
     }
+    const applyDefaultChip = () => {
+      if (initialChipIdx !== undefined && initialChipIdx >= 0 && initialChipIdx < CHIPS.length) {
+        setSelectedIdx(initialChipIdx)
+        selectedIdxRef.current = initialChipIdx
+      }
+    }
     try {
       const saved = localStorage.getItem("ap_last_search")
       if (saved) {
@@ -91,13 +97,17 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
         if (typeof idx === "number" && idx >= 0 && idx < CHIPS.length) {
           setSelectedIdx(idx)
           selectedIdxRef.current = idx
+        } else {
+          applyDefaultChip()
         }
         if (typeof loc === "string" && loc.trim()) {
           restoredLocRef.current = loc
           setLocation(loc)
         }
+      } else {
+        applyDefaultChip()
       }
-    } catch { /* ignore malformed storage */ }
+    } catch { applyDefaultChip() }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
