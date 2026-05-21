@@ -439,7 +439,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         autoFocus
         initialLocation={resetKey === 0 ? initialCity : undefined}
         initialChipIdx={initialCategory && resetKey === 0 ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : settings.defaultChipIdx ?? undefined}
-        initialMode={resetKey === 0 ? settings.defaultSearchMode : undefined}
+        initialMode={settings.defaultSearchMode}
       />
 
       {/* ── Error banner ── */}
