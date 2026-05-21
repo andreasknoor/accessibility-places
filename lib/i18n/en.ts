@@ -279,7 +279,6 @@ const en: Translations = {
     mobileView:        "Default search view",
     mobileViewList:    "List",
     mobileViewMap:     "Map",
-    nextSession:       "Takes effect next session",
   },
 } as const
 

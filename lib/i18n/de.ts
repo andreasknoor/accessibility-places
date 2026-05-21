@@ -279,7 +279,6 @@ const de: Translations = {
     mobileView:        "Standard-Suchansicht",
     mobileViewList:    "Liste",
     mobileViewMap:     "Karte",
-    nextSession:       "Gilt ab nächster Sitzung",
   },
 }
 

@@ -93,7 +93,7 @@ function SettingsPanel({ settings, onUpdate, onClose }: Props & { onClose: () =>
           {/* ── Allgemein ── */}
           <SectionTitle>{ts.sectionGeneral}</SectionTitle>
           <div className="divide-y divide-border/60">
-            <Row label={ts.searchMode} hint={ts.nextSession}>
+            <Row label={ts.searchMode}>
               <SelectInput
                 value={settings.defaultSearchMode}
                 onChange={(v) => onUpdate({ defaultSearchMode: v as "text" | "nearby" })}
@@ -102,7 +102,7 @@ function SettingsPanel({ settings, onUpdate, onClose }: Props & { onClose: () =>
                 <option value="nearby">{ts.searchModeNearby}</option>
               </SelectInput>
             </Row>
-            <Row label={ts.defaultCategory} hint={ts.nextSession}>
+            <Row label={ts.defaultCategory}>
               <SelectInput
                 value={settings.defaultChipIdx ?? -1}
                 onChange={(v) => {

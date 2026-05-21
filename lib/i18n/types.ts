@@ -254,6 +254,5 @@ export interface Translations {
     mobileView:        string
     mobileViewList:    string
     mobileViewMap:     string
-    nextSession:       string
   }
 }
