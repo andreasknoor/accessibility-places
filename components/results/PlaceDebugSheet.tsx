@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import {
   X, MapPin, Phone, Globe, Tag, Clock, Mail,
   Utensils, Leaf, Dog, Wifi, Star, DollarSign,
@@ -75,6 +75,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function PlaceDebugSheet({ place, onClose }: Props) {
   const [linkCopied, setLinkCopied] = useState(false)
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function handleCopyLink() {
     const homePath = window.location.pathname.startsWith("/en") ? "/en/" : "/"
@@ -86,7 +87,8 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
     })
     void navigator.clipboard.writeText(`${window.location.origin}${homePath}?${params}`).then(() => {
       setLinkCopied(true)
-      setTimeout(() => setLinkCopied(false), 2000)
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = setTimeout(() => setLinkCopied(false), 2000)
     })
   }
   const t  = useTranslations()
