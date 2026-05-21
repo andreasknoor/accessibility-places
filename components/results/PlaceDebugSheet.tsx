@@ -64,7 +64,7 @@ function InfoRow({
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section>
+    <section className="py-4">
       <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
         {title}
       </p>
@@ -184,7 +184,7 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5 text-xs">
+        <div className="flex-1 overflow-y-auto px-4 text-xs divide-y divide-border">
 
           {/* ── Grunddaten ── */}
           <Section title={ti.basicInfo}>
@@ -308,7 +308,7 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
           </Section>
 
           {/* ── Rohdaten (ausklappbar) ── */}
-          <div className="pt-1 border-t border-border">
+          <div className="py-4">
             <button
               onClick={() => setShowRaw((v) => !v)}
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1"

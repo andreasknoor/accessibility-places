@@ -22,7 +22,7 @@ npm run check:seo
 npm run warm:seo
 ```
 
-`check:seo` runs automatically via GitHub Actions daily at 03:00 UTC (`.github/workflows/check-seo-validity.yml`); `warm:seo` runs at 03:30 UTC (`.github/workflows/warm-seo-cache.yml`). Both support `workflow_dispatch` for manual runs.
+`check:seo` runs automatically via GitHub Actions daily at 03:00 UTC (`.github/workflows/check-seo-validity.yml`); `warm:seo` runs at 03:30 UTC (`.github/workflows/warm-seo-cache.yml`). Both support `workflow_dispatch` for manual runs. `warm:seo` appends failed URLs to `warm-failures.txt` in the repo root — this file is tracked by git and should not be deleted.
 
 A pre-commit hook (`.githooks/pre-commit`, installed via `npm run prepare`) runs `npm test` automatically on every commit — expect commits to take ~10–20 s while tests execute.
 
@@ -60,7 +60,7 @@ Five adapters run in parallel via `startAdapterTasks()`:
 - **accessibility.cloud** (`accessibility-cloud.ts`): A11yJSON-shaped records. Always uses `accessibilityPreset=at-least-partially-accessible-by-wheelchair`.
 - **Reisen für Alle** (`reisen-fuer-alle.ts`): Highest reliability weight (1.0). Hidden from FilterPanel UI (not in `SOURCE_ORDER`) but always active when the key is set.
 - **Ginto** (`ginto.ts`): GraphQL API (`POST https://api.ginto.guide/graphql`), Switzerland only (all results have `countryCode: "CH"`). `defaultRatings[].key` prefix convention maps to A11yValue: no prefix → entrance, `toilet_` → toilet, `parking_` → parking. Paginates up to 2 pages (100 results). Base weight 0.90; LEVEL_2 entries use 0.95, LEVEL_3 entries use 0.97 (via `qualityInfo.detailLevels`). `updatedAt` is a system republish timestamp, not a human verification date — stored in `metadata` only, never sets `verifiedRecently`.
-- **Google Places** (`google-places.ts`): Lowest reliability weight (0.35); fires one POST per category. **Disabled by default** in `DEFAULT_SOURCES`.
+- **Google Places** (`google-places.ts`): Lowest reliability weight (0.35); fires one POST per category. **Disabled by default** in `DEFAULT_SOURCES` (defined in `app/HomeClient.tsx`).
 
 ### Categories (`lib/config.ts`)
 
@@ -116,6 +116,8 @@ accessibility_cloud: 0.70
 osm:                 0.75
 google_places:       0.35
 osm_parking:         0     // stats-only; never used as a place-attribution source
+osm_private:         0     // stats-only; tracks requests won by private Overpass server
+osm_public:          0     // stats-only; tracks requests won by public mirrors
 nominatim:           0     // stats-only
 ```
 
@@ -224,7 +226,7 @@ Each place card on an SEO page links to:
 - `GOOGLE_PLACES_API_KEY` — optional; source is silently skipped if absent
 - `ENABLE_NEARBY_PARKING=1` — feature flag; enables the disabled-parking enrichment fetch in both the main `/api/search` route and SEO pages (off by default). When active, a parallel OSM fetch for disabled-parking nodes runs alongside the venue adapters and the results are used for enrichment and `parkingSpots` map markers.
 - `GINTO_API_KEY` — optional; Ginto GraphQL API (Swiss accessibility data, CH only). Contact support@ginto.guide. Source silently skipped if absent.
-- `HEALTH_CHECK_SECRET` — required to activate `GET /api/health`; requests without a matching `?token=` get 401. If unset the endpoint returns 503.
+- `HEALTH_CHECK_SECRET` — required to activate `GET /api/health` and `GET /api/stats`; requests without a matching `?token=` get 401. If unset both endpoints return 503.
 - `KV_REST_API_URL` / `KV_REST_API_TOKEN` — optional; Upstash Redis credentials for adapter call/error stats. If absent, `lib/stats.ts` is a no-op and `GET /api/stats` returns 503.
 - `OVERPASS_ENDPOINTS` — optional; comma-separated list of Overpass API URLs to override the two public mirrors. Multiple URLs retain the parallel-race behaviour. Production value includes the private Hetzner server first, then both public mirrors as fallback: `https://overpass.accessible-places.org/api/interpreter,https://overpass-api.de/api/interpreter,https://overpass.kumi.systems/api/interpreter`.
 - `NOMINATIM_ENDPOINT` — optional; base URL of a private Nominatim instance, e.g. `https://nominatim.example.com`. Trailing slash is stripped automatically. Applies to all three geocode routes and the search pipeline.
