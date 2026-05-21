@@ -267,17 +267,20 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   }, [])
 
   // Auto-trigger search when arriving via a place deep-link (selectLat/selectLon without a
-  // city query). Uses the coordinates directly as the search centre, bypassing Nominatim.
-  // The category keyword (e.g. "fast food" from "fast_food") narrows the Overpass query;
-  // without it all 16 categories are searched — slower but still correct.
+  // city query). nameHint = place name bypasses passesFilters server-side, so the linked place
+  // always appears regardless of its accessibility values or the receiver's filter settings.
   useEffect(() => {
     if (initialCity || !initialSelectLat || !initialSelectLon || autoSearchFiredRef.current) return
     autoSearchFiredRef.current = true
     const query = initialCategory
       ? initialCategory.replace(/_/g, " ")
       : (initialSelectName ?? "orte")
-    handleSearch(query, undefined, { lat: initialSelectLat, lon: initialSelectLon }, undefined,
-      { acceptUnknown: true, onlyVerified: false },
+    handleSearch(
+      query,
+      undefined,
+      { lat: initialSelectLat, lon: initialSelectLon },
+      initialSelectName,
+      undefined,
       { osm: true, accessibility_cloud: true, reisen_fuer_alle: true, ginto: true, google_places: true },
     )
   // Only run once on mount — URL params are stable
