@@ -108,7 +108,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     } catch { /* ignore — localStorage unavailable (private mode, quota) */ }
   }, [filters, sources, radiusKm])
 
-  const handleSearch = useCallback(async (query: string, radiusKmOverride?: number, coords?: { lat: number; lon: number }, nameHint?: string) => {
+  const handleSearch = useCallback(async (query: string, radiusKmOverride?: number, coords?: { lat: number; lon: number }, nameHint?: string, filtersOverride?: Partial<SearchFilters>) => {
     setLastQuery(query)
     setLastCoords(coords)
     setLastNameHint(nameHint)
@@ -130,7 +130,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       const res = await fetch("/api/search", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ userQuery: query, radiusKm: radiusKmOverride ?? radiusKm, filters, sources, locale, coordinates: coords, nameHint }),
+        body:    JSON.stringify({ userQuery: query, radiusKm: radiusKmOverride ?? radiusKm, filters: { ...filters, ...filtersOverride }, sources, locale, coordinates: coords, nameHint }),
       })
 
       if (!res.ok || !res.body) {
@@ -276,7 +276,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     const query = initialCategory
       ? initialCategory.replace(/_/g, " ")
       : (initialSelectName ?? "orte")
-    handleSearch(query, undefined, { lat: initialSelectLat, lon: initialSelectLon })
+    handleSearch(query, undefined, { lat: initialSelectLat, lon: initialSelectLon }, undefined, { acceptUnknown: true, onlyVerified: false })
   // Only run once on mount — URL params are stable
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
