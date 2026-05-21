@@ -276,7 +276,7 @@ const de: Translations = {
     autoZoom:          "Automatischer Zoom nach Suche",
     autoZoomHint:      "Kartenausschnitt auf alle Ergebnisse anpassen",
     alwaysShowParking: "Rollstuhlparkplätze immer in Karte",
-    mobileView:        "Standard-Startansicht",
+    mobileView:        "Standard-Suchansicht",
     mobileViewList:    "Liste",
     mobileViewMap:     "Karte",
     nextSession:       "Gilt ab nächster Sitzung",

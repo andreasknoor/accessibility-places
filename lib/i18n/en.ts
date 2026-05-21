@@ -276,7 +276,7 @@ const en: Translations = {
     autoZoom:          "Auto-zoom after search",
     autoZoomHint:      "Fit map to all results after each search",
     alwaysShowParking: "Always show wheelchair parking on map",
-    mobileView:        "Default start view",
+    mobileView:        "Default search view",
     mobileViewList:    "List",
     mobileViewMap:     "Map",
     nextSession:       "Takes effect next session",

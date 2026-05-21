@@ -75,10 +75,10 @@ export default function MobileLayout({
     setScrollToId(place.id)
   }
 
-  // All search-triggering actions switch to the results tab
-  const handleSearch = (query: string, coords?: { lat: number; lon: number }, nameHint?: string) => { setActiveTab("results"); onSearch(query, coords, nameHint) }
-  const handleRerun = onRerun ? () => { setActiveTab("results"); onRerun() } : undefined
-  const handleExpandRadius = onExpandRadius ? () => { setActiveTab("results"); onExpandRadius() } : undefined
+  // All search-triggering actions switch to the configured default view
+  const handleSearch = (query: string, coords?: { lat: number; lon: number }, nameHint?: string) => { setActiveTab(defaultMobileView ?? "results"); onSearch(query, coords, nameHint) }
+  const handleRerun = onRerun ? () => { setActiveTab(defaultMobileView ?? "results"); onRerun() } : undefined
+  const handleExpandRadius = onExpandRadius ? () => { setActiveTab(defaultMobileView ?? "results"); onExpandRadius() } : undefined
   const t = useTranslations()
   const { locale } = useLocale()
 

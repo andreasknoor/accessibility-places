@@ -154,7 +154,7 @@ function SettingsPanel({ settings, onUpdate, onClose }: Props & { onClose: () =>
           {/* ── Mobil ── */}
           <SectionTitle>{ts.sectionMobile}</SectionTitle>
           <div className="divide-y divide-border/60">
-            <Row label={ts.mobileView} hint={ts.nextSession}>
+            <Row label={ts.mobileView}>
               <SelectInput
                 value={settings.defaultMobileView}
                 onChange={(v) => onUpdate({ defaultMobileView: v as "results" | "map" })}
