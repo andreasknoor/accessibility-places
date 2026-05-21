@@ -211,3 +211,25 @@ describe("nearbyOnly vs on-site parking distinction", () => {
     expect(parkingDetails(place).nearbyParkingDistanceM).toBeUndefined()
   })
 })
+
+describe("NearbyParkingFeature extra fields (fee, maxstay, access)", () => {
+  it("enrichment is not affected by presence of fee/maxstay/access on the feature", () => {
+    const place = makePlace()
+    const feature = {
+      lat: place.coordinates.lat,
+      lon: place.coordinates.lon,
+      fee: "no",
+      maxstay: "2 hours",
+      access: "customers",
+    }
+    enrichWithNearbyParking([place], [feature])
+    expect(place.accessibility.parking.value).toBe("yes")
+  })
+
+  it("enrichment still upgrades parking when only fee is present (no capacity)", () => {
+    const place = makePlace()
+    enrichWithNearbyParking([place], [{ lat: place.coordinates.lat, lon: place.coordinates.lon, fee: "yes" }])
+    expect(place.accessibility.parking.value).toBe("yes")
+    expect(parkingDetails(place).nearbyOnly).toBe(true)
+  })
+})

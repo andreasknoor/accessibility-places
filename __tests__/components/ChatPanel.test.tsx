@@ -284,6 +284,78 @@ describe("ChatPanel clear button", () => {
   })
 })
 
+// ─── initialChipIdx / defaultChipIdx restore ────────────────────────────────
+
+describe("ChatPanel initialChipIdx restore", () => {
+  it("selects the chip at initialChipIdx when no saved last-search exists", () => {
+    localStorage.clear()
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialChipIdx={2} />)
+    // chip index 2 = Hotels
+    const buttons = screen.getAllByRole("button")
+    const hotelChip = buttons.find((b) => b.textContent?.includes("Hotels"))
+    expect(hotelChip).toBeDefined()
+    expect(hotelChip).toHaveClass("bg-primary")
+  })
+
+  it("saved last-search chip overrides initialChipIdx", () => {
+    localStorage.setItem("ap_last_search", JSON.stringify({ idx: 1, loc: "Berlin" }))
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialChipIdx={2} />)
+    const buttons = screen.getAllByRole("button")
+    const cafeChip  = buttons.find((b) => b.textContent?.includes("Cafés"))
+    const hotelChip = buttons.find((b) => b.textContent?.includes("Hotels"))
+    expect(cafeChip).toHaveClass("bg-primary")
+    expect(hotelChip).not.toHaveClass("bg-primary")
+  })
+
+  it("falls back to initialChipIdx when saved idx is invalid", () => {
+    localStorage.setItem("ap_last_search", JSON.stringify({ idx: 999, loc: "Berlin" }))
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialChipIdx={3} />)
+    const buttons = screen.getAllByRole("button")
+    // chip index 3 = Biergärten
+    const biergartChip = buttons.find((b) => b.textContent?.includes("Biergärten"))
+    expect(biergartChip).toHaveClass("bg-primary")
+  })
+
+  it("defaults to chip 0 (Restaurant) when neither saved search nor initialChipIdx exist", () => {
+    localStorage.clear()
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
+    const buttons = screen.getAllByRole("button")
+    const restaurantChip = buttons.find((b) => b.textContent?.includes("Restaurants"))
+    expect(restaurantChip).toHaveClass("bg-primary")
+  })
+})
+
+// ─── initialMode ─────────────────────────────────────────────────────────────
+
+describe("ChatPanel initialMode", () => {
+  it("defaults to text mode when initialMode is not passed", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
+    const textTab = screen.getByText(/^Suche$/)
+    expect(textTab.closest("button")).toHaveClass("bg-background")
+  })
+
+  it("shows nearby mode tab as active when initialMode='nearby'", () => {
+    vi.stubGlobal("navigator", { geolocation: { getCurrentPosition: vi.fn() }, clipboard: navigator.clipboard })
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="nearby" />)
+    const nearbyTab = screen.getByText(/In der Nähe/)
+    expect(nearbyTab.closest("button")).toHaveClass("bg-background")
+  })
+
+  it("calls geolocation.getCurrentPosition on mount when initialMode='nearby'", () => {
+    const getCurrentPosition = vi.fn()
+    vi.stubGlobal("navigator", { geolocation: { getCurrentPosition }, clipboard: navigator.clipboard })
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="nearby" />)
+    expect(getCurrentPosition).toHaveBeenCalledOnce()
+  })
+
+  it("does not call getCurrentPosition when initialMode='text'", () => {
+    const getCurrentPosition = vi.fn()
+    vi.stubGlobal("navigator", { geolocation: { getCurrentPosition }, clipboard: navigator.clipboard })
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
+    expect(getCurrentPosition).not.toHaveBeenCalled()
+  })
+})
+
 // ─── Quoted-name stripping ───────────────────────────────────────────────────
 
 describe("ChatPanel autocomplete — quote stripping", () => {

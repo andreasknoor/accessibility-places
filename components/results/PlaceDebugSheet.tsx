@@ -190,7 +190,7 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
             <p className="font-semibold text-sm truncate">{place.name}</p>
             {addrStr && <p className="text-xs text-muted-foreground mt-0.5 truncate">{addrStr}</p>}
           </div>
-          <div className="flex items-center gap-1 shrink-0 mt-0.5">
+          <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
             {linkCopied ? (
               <span className="text-xs text-green-600 px-1">{t.results.linkCopied}</span>
             ) : (

@@ -742,4 +742,94 @@ describe("fetchOsmDisabledParking", () => {
     const { features: [f] } = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
     expect(f.capacity).toBe(4)
   })
+
+  it("parses fee tag into feature", async () => {
+    const element = {
+      type: "node", id: 20, lat: 52.52, lon: 13.405,
+      tags: { amenity: "parking_space", parking_space: "disabled", fee: "no" },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true, json: async () => ({ elements: [element] }),
+    }))
+    const { features: [f] } = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    expect(f.fee).toBe("no")
+  })
+
+  it("parses maxstay tag into feature", async () => {
+    const element = {
+      type: "node", id: 21, lat: 52.52, lon: 13.405,
+      tags: { amenity: "parking_space", parking_space: "disabled", maxstay: "2 hours" },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true, json: async () => ({ elements: [element] }),
+    }))
+    const { features: [f] } = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    expect(f.maxstay).toBe("2 hours")
+  })
+
+  it("parses access tag into feature", async () => {
+    const element = {
+      type: "node", id: 22, lat: 52.52, lon: 13.405,
+      tags: { amenity: "parking_space", parking_space: "disabled", access: "customers" },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true, json: async () => ({ elements: [element] }),
+    }))
+    const { features: [f] } = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    expect(f.access).toBe("customers")
+  })
+
+  it("leaves fee/maxstay/access undefined when tags are absent", async () => {
+    const element = {
+      type: "node", id: 23, lat: 52.52, lon: 13.405,
+      tags: { amenity: "parking_space", parking_space: "disabled" },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true, json: async () => ({ elements: [element] }),
+    }))
+    const { features: [f] } = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    expect(f.fee).toBeUndefined()
+    expect(f.maxstay).toBeUndefined()
+    expect(f.access).toBeUndefined()
+  })
+
+  it("parses parking_space=disabled way element using center coordinates", async () => {
+    const element = {
+      type: "way", id: 24,
+      center: { lat: 52.531, lon: 13.411 },
+      tags: { amenity: "parking_space", parking_space: "disabled" },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true, json: async () => ({ elements: [element] }),
+    }))
+    const { features: [f] } = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    expect(f.lat).toBe(52.531)
+    expect(f.lon).toBe(13.411)
+  })
+
+  it("parses wheelchair=designated way element using center coordinates", async () => {
+    const element = {
+      type: "way", id: 25,
+      center: { lat: 52.532, lon: 13.412 },
+      tags: { amenity: "parking_space", wheelchair: "designated" },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true, json: async () => ({ elements: [element] }),
+    }))
+    const { features: [f] } = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    expect(f.lat).toBe(52.532)
+  })
+
+  it("query includes way statements for parking_space=disabled and wheelchair=designated", async () => {
+    let capturedBody = ""
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((_url: unknown, init: RequestInit) => {
+      capturedBody = init?.body as string
+      return Promise.resolve({ ok: true, json: async () => ({ elements: [] }) })
+    }))
+    await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    const decoded = decodeURIComponent(capturedBody.replace(/^data=/, ""))
+    expect(decoded).toContain(`way(around:`)
+    expect(decoded).toContain(`parking_space=disabled`)
+    expect(decoded).toContain(`wheelchair=designated`)
+  })
 })
