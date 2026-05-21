@@ -103,7 +103,10 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
 
   // Auto-trigger geolocation when defaultSearchMode = "nearby"
   useEffect(() => {
-    if (initialMode === "nearby") handleLocate()
+    if (initialMode === "nearby") {
+      onModeChange?.("nearby")
+      handleLocate()
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

@@ -66,7 +66,7 @@ export default function MobileLayout({
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
   const [panTrigger,  setPanTrigger]  = useState(0)
-  const [chatMode,    setChatMode]    = useState<"text" | "nearby">("text")
+  const [chatMode,    setChatMode]    = useState<"text" | "nearby">(settings.defaultSearchMode)
   const [scrollToId,  setScrollToId]  = useState<string | undefined>()
 
   function handleShowInResults(place: Place) {
