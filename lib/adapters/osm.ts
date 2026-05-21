@@ -376,7 +376,7 @@ export async function fetchOsmDisabledParking(
   const r = Math.min(radiusKm + 0.5, NEARBY_PARKING_MAX_RADIUS_KM) * 1000
   const { lat, lon } = location
 
-  // Four orthogonal disabled-parking signals in OSM. We union them so the
+  // Six orthogonal disabled-parking signals in OSM. We union them so the
   // query catches both "lot with N disabled spaces" and "single dedicated
   // disabled parking space" features.
   // Keys containing ":" must be quoted in Overpass QL — unquoted colons are
@@ -386,12 +386,16 @@ export async function fetchOsmDisabledParking(
   // way only (not nwr): amenity=parking with capacity data is almost always a
   // polygon way; relations are rare multipolygons (<5% of DACH features) and
   // scanning them causes disproportionate Overpass load → 504s.
+  // amenity=parking_space covers both node and way: iD editor creates polygon
+  // ways for individual spaces when drawn as areas, not just point nodes.
   const query = `[out:json][timeout:30];(` +
     `way(around:${r},${lat},${lon})[amenity=parking]["capacity:disabled"];` +
     `way(around:${r},${lat},${lon})[amenity=parking]["capacity:wheelchair"];` +
     `way(around:${r},${lat},${lon})[amenity=parking][disabled=designated];` +
     `node(around:${r},${lat},${lon})[amenity=parking_space][parking_space=disabled];` +
     `node(around:${r},${lat},${lon})[amenity=parking_space][wheelchair=designated];` +
+    `way(around:${r},${lat},${lon})[amenity=parking_space][parking_space=disabled];` +
+    `way(around:${r},${lat},${lon})[amenity=parking_space][wheelchair=designated];` +
     `);out 2000 center tags;`
 
   const headers = {
