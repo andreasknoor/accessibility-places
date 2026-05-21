@@ -231,7 +231,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   }, [filters, sources, radiusKm, t])
 
   const handleReset = useCallback(() => {
-    setFilters(DEFAULT_FILTERS)
+    setFilters({ ...DEFAULT_FILTERS, alwaysShowParking: settings.alwaysShowParking })
     setSources(DEFAULT_SOURCES)
     setRadiusKm(DEFAULT_RADIUS_KM)
     setPlaces([])
@@ -246,7 +246,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setSortBy(settings.sortOrder)
     try { localStorage.removeItem("ap_last_search") } catch { /* ignore */ }
     setResetKey((k) => k + 1)
-  }, [])
+  }, [settings])
 
   const handleExpandRadius = useCallback(() => {
     if (!lastQuery) return
@@ -333,6 +333,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
     if (patch.sortOrder !== undefined) {
       setSortBy(patch.sortOrder)
+    }
+    if (patch.defaultSearchMode !== undefined) {
+      setChatMode(patch.defaultSearchMode)
     }
   }, [updateSettings])
 
@@ -439,7 +442,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         autoFocus
         initialLocation={resetKey === 0 ? initialCity : undefined}
         initialChipIdx={initialCategory && resetKey === 0 ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : settings.defaultChipIdx ?? undefined}
-        initialMode={settings.defaultSearchMode}
+        initialMode={resetKey === 0 ? settings.defaultSearchMode : undefined}
       />
 
       {/* ── Error banner ── */}

@@ -63,6 +63,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
   const debounceRef       = useRef<ReturnType<typeof setTimeout>>(undefined)
   const suggestAbortRef   = useRef<AbortController>(undefined)
   const skipSuggestRef    = useRef(false)
+  const locatingRef       = useRef(false)
   // Holds the location value that was set programmatically on restore.
   // Autocomplete is suppressed as long as location equals this value —
   // survives locale re-renders that would otherwise consume the one-shot
@@ -247,10 +248,13 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
   }
 
   function handleLocate() {
+    if (locatingRef.current) return
     if (!("geolocation" in navigator)) { setNearbyPhase("error"); return }
+    locatingRef.current = true
     setNearbyPhase("locating")
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
+        locatingRef.current = false
         const { latitude: lat, longitude: lon } = pos.coords
         try {
           const d = await reverseGeocode(lat, lon)
@@ -262,7 +266,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
           setNearbyPhase("error")
         }
       },
-      () => setNearbyPhase("error"),
+      () => { locatingRef.current = false; setNearbyPhase("error") },
       { timeout: 10_000, enableHighAccuracy: true },
     )
   }
