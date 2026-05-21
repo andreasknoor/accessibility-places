@@ -6,7 +6,7 @@ import {
   Utensils, Leaf, Dog, Wifi, Star, DollarSign,
   MessageSquare, ExternalLink, Accessibility,
   ShieldCheck, Award, ChevronDown, ChevronUp,
-  Truck, ShoppingBag,
+  Truck, ShoppingBag, Link2,
 } from "lucide-react"
 import { SOURCE_LABELS } from "@/lib/config"
 import { useTranslations } from "@/lib/i18n"
@@ -74,6 +74,21 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function PlaceDebugSheet({ place, onClose }: Props) {
+  const [linkCopied, setLinkCopied] = useState(false)
+
+  function handleCopyLink() {
+    const homePath = window.location.pathname.startsWith("/en") ? "/en/" : "/"
+    const params = new URLSearchParams({
+      selectLat:  String(place.coordinates.lat),
+      selectLon:  String(place.coordinates.lon),
+      selectName: place.name,
+      cat:        place.category,
+    })
+    void navigator.clipboard.writeText(`${window.location.origin}${homePath}?${params}`).then(() => {
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 2000)
+    })
+  }
   const t  = useTranslations()
   const ti = t.info
   const [showRaw, setShowRaw] = useState(false)
@@ -173,14 +188,28 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
             <p className="font-semibold text-sm truncate">{place.name}</p>
             {addrStr && <p className="text-xs text-muted-foreground mt-0.5 truncate">{addrStr}</p>}
           </div>
-          <button
-            onClick={onClose}
-            onTouchEnd={(e) => { e.preventDefault(); onClose() }}
-            className="shrink-0 text-muted-foreground hover:text-foreground transition-colors mt-0.5"
-            aria-label={t.common.close}
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1 shrink-0 mt-0.5">
+            {linkCopied ? (
+              <span className="text-xs text-green-600 px-1">{t.results.linkCopied}</span>
+            ) : (
+              <button
+                onClick={handleCopyLink}
+                className="text-muted-foreground hover:text-foreground transition-colors p-0.5"
+                aria-label={t.results.copyLink}
+                title={t.results.copyLink}
+              >
+                <Link2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              onTouchEnd={(e) => { e.preventDefault(); onClose() }}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={t.common.close}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable content */}

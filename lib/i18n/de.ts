@@ -124,6 +124,8 @@ const de: Translations = {
     adjustFiltersHint:     "Passe die Filterkriterien links an, um mehr Ergebnisse zu sehen.",
     distanceFromHere:      (m: number) => m < 1000 ? `${m} m entfernt` : `${(m / 1000).toFixed(1).replace(".", ",")} km entfernt`,
     showNearbyParking:     "Parkplätze in der Nähe",
+    copyLink:              "Link kopieren",
+    linkCopied:            "Link kopiert",
   },
   a11y: {
     yes:       "Ja",

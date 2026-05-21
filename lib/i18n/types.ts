@@ -99,6 +99,8 @@ export interface Translations {
     adjustFiltersHint:    string
     distanceFromHere:     (m: number) => string
     showNearbyParking:    string
+    copyLink:             string
+    linkCopied:           string
   }
   a11y: {
     yes:        string

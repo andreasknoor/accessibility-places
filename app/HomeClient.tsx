@@ -266,6 +266,21 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Auto-trigger search when arriving via a place deep-link (selectLat/selectLon without a
+  // city query). Uses the coordinates directly as the search centre, bypassing Nominatim.
+  // The category keyword (e.g. "fast food" from "fast_food") narrows the Overpass query;
+  // without it all 16 categories are searched — slower but still correct.
+  useEffect(() => {
+    if (initialCity || !initialSelectLat || !initialSelectLon || autoSearchFiredRef.current) return
+    autoSearchFiredRef.current = true
+    const query = initialCategory
+      ? initialCategory.replace(/_/g, " ")
+      : (initialSelectName ?? "orte")
+    handleSearch(query, undefined, { lat: initialSelectLat, lon: initialSelectLon })
+  // Only run once on mount — URL params are stable
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     isDragging.current = true
     dragStart.current  = { x: e.clientX, width: resultsWidth }
