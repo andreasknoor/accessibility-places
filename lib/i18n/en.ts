@@ -58,7 +58,8 @@ const en: Translations = {
     title: "Results",
     titleRadius: (km: number) => `(${km} km radius)`,
     radiusPickerLabel: "Change search radius",
-    count: (n: number) => `${n} place${n !== 1 ? "s" : ""} found`,
+    count:        (n: number) => `${n} place${n !== 1 ? "s" : ""} found`,
+    parkingCount: (n: number) => `(${n} parking spot${n !== 1 ? "s" : ""})`,
     showMap: "Show map",
     confidence: {
       high:   "Reliable",

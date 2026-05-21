@@ -45,6 +45,7 @@ interface Props {
   scrollToId?:          string
   showParking?:         boolean
   onToggleParking?:     () => void
+  parkingSpotCount?:    number
 }
 
 export default function MobileLayout({
@@ -52,7 +53,7 @@ export default function MobileLayout({
   filters, sources, radiusKm, onFilters, onSources, onRadius,
   sourceStates, searchCenter, onSearch, onRerun, onExpandRadius, onRadiusChange, hasSearched, error,
   onReset, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
-  showParking, onToggleParking,
+  showParking, onToggleParking, parkingSpotCount,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>("results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -138,6 +139,7 @@ export default function MobileLayout({
             hasSearched={hasSearched}
             filterDebug={filterDebug}
             searchCenter={searchCenter}
+            parkingSpotCount={parkingSpotCount}
           />
         </div>
 

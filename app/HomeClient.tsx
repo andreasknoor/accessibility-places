@@ -332,6 +332,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         scrollToId={scrollToId}
         showParking={filters.alwaysShowParking}
         onToggleParking={hasParkingToggle ? handleToggleParking : undefined}
+        parkingSpotCount={parkingSpots.length > 0 ? parkingSpots.length : undefined}
       />
     )
   }
@@ -428,6 +429,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             scrollToId={scrollToId}
             filterDebug={filterDebug}
             searchCenter={chatMode === "nearby" ? searchCenter : undefined}
+            parkingSpotCount={parkingSpots.length > 0 ? parkingSpots.length : undefined}
           />
           <div className="shrink-0 border-t border-border px-4 py-2 flex justify-end gap-4">
             <Link href={locale === "en" ? "/en/faq" : "/faq"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">

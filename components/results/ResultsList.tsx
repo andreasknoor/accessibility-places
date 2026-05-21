@@ -27,9 +27,10 @@ interface Props {
   filterDebug?:         FilterDebug
   searchCenter?:        { lat: number; lon: number }
   onAdjustFilters?:     () => void
+  parkingSpotCount?:    number
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount }: Props) {
   const t = useTranslations()
   const [mapHintSeen, setMapHintSeen] = useState(() =>
     typeof window !== "undefined" && !!localStorage.getItem("ap_map_hint_seen")
@@ -125,6 +126,9 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
             {!isLoading && places.length > 0 && (
               <span className="text-xs text-muted-foreground">
                 {t.results.count(places.length)}
+                {parkingSpotCount != null && parkingSpotCount > 0 && (
+                  <> {t.results.parkingCount(parkingSpotCount)}</>
+                )}
               </span>
             )}
             {onRerun && !isLoading && (

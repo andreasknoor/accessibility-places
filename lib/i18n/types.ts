@@ -55,6 +55,7 @@ export interface Translations {
     titleRadius:        (km: number) => string
     radiusPickerLabel:  string
     count:              (n: number) => string
+    parkingCount:       (n: number) => string
     showMap:     string
     confidence: {
       high:   string
