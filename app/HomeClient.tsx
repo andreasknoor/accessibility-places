@@ -9,12 +9,15 @@ import FilterPanel  from "@/components/filters/FilterPanel"
 import ResultsList  from "@/components/results/ResultsList"
 import LanguageSwitcher from "@/components/LanguageSwitcher"
 import MobileLayout from "@/components/mobile/MobileLayout"
+import SettingsSheet from "@/components/settings/SettingsSheet"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { DEFAULT_RADIUS_KM, RADIUS_MAX_KM } from "@/lib/config"
 import { SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
+import { useSettings, loadSettings } from "@/lib/settings"
+import type { AppSettings } from "@/lib/settings"
 import type { Place, ParkingSpot, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug } from "@/lib/types"
 
 // Leaflet must not run on server
@@ -43,13 +46,13 @@ const PREFS_KEY = "ap_prefs"
 function loadSavedPrefs(): { filters: SearchFilters; sources: ActiveSources; radiusKm: number } {
   try {
     const raw = localStorage.getItem(PREFS_KEY)
-    if (!raw) return { filters: DEFAULT_FILTERS, sources: DEFAULT_SOURCES, radiusKm: DEFAULT_RADIUS_KM }
+    const initialParking = loadSettings().alwaysShowParking
+    if (!raw) return { filters: { ...DEFAULT_FILTERS, alwaysShowParking: initialParking }, sources: DEFAULT_SOURCES, radiusKm: DEFAULT_RADIUS_KM }
     const saved = JSON.parse(raw)
     return {
       // Spread saved values onto defaults so new keys added in future always
-      // have a fallback. alwaysShowParking is a per-session display toggle —
-      // never restore it from storage.
-      filters:  { ...DEFAULT_FILTERS,  ...(saved.filters  ?? {}), alwaysShowParking: false },
+      // have a fallback. alwaysShowParking comes from app settings, not prefs.
+      filters:  { ...DEFAULT_FILTERS,  ...(saved.filters  ?? {}), alwaysShowParking: initialParking },
       sources:  { ...DEFAULT_SOURCES,  ...(saved.sources  ?? {}) },
       radiusKm: typeof saved.radiusKm === "number" ? saved.radiusKm : DEFAULT_RADIUS_KM,
     }
@@ -71,6 +74,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const { locale } = useLocale()
   const isMobile = useIsMobile()
 
+  const [settings, updateSettings] = useSettings()
+
   const [filters,       setFilters]      = useState<SearchFilters>(() => loadSavedPrefs().filters)
   const [sources,       setSources]      = useState<ActiveSources>(() => loadSavedPrefs().sources)
   const [radiusKm,      setRadiusKm]     = useState<number>(() => loadSavedPrefs().radiusKm)
@@ -87,7 +92,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [lastQuery,     setLastQuery]    = useState<string | undefined>()
   const [lastCoords,    setLastCoords]   = useState<{ lat: number; lon: number } | undefined>()
   const [lastNameHint,  setLastNameHint] = useState<string | undefined>()
-  const [chatMode,      setChatMode]     = useState<"text" | "nearby">("text")
+  const [chatMode,      setChatMode]     = useState<"text" | "nearby">(() => loadSettings().defaultSearchMode)
+  const [sortBy,        setSortBy]       = useState<"confidence" | "distance">(() => loadSettings().sortOrder)
   const [resetKey,            setResetKey]            = useState(0)
   const [scrollToId,          setScrollToId]          = useState<string | undefined>()
   const isDragging   = useRef(false)
@@ -236,7 +242,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setFilterDebug(undefined)
     setError(undefined)
     setSourceStates({})
-    setChatMode("text")
+    setChatMode(settings.defaultSearchMode)
+    setSortBy(settings.sortOrder)
     try { localStorage.removeItem("ap_last_search") } catch { /* ignore */ }
     setResetKey((k) => k + 1)
   }, [])
@@ -312,8 +319,22 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const visibleParkingSpots = filters.alwaysShowParking ? parkingSpots : []
 
   const handleToggleParking = useCallback(() => {
-    setFilters((f) => ({ ...f, alwaysShowParking: !f.alwaysShowParking }))
-  }, [])
+    setFilters((f) => {
+      const next = !f.alwaysShowParking
+      updateSettings({ alwaysShowParking: next })
+      return { ...f, alwaysShowParking: next }
+    })
+  }, [updateSettings])
+
+  const handleUpdateSettings = useCallback((patch: Partial<AppSettings>) => {
+    updateSettings(patch)
+    if (patch.alwaysShowParking !== undefined) {
+      setFilters((f) => ({ ...f, alwaysShowParking: patch.alwaysShowParking! }))
+    }
+    if (patch.sortOrder !== undefined) {
+      setSortBy(patch.sortOrder)
+    }
+  }, [updateSettings])
 
   // Show the parking toggle whenever the server returned spots OR any result
   // has parking enriched from a nearby OSM node (nearbyOnly flag). Both signal
@@ -349,11 +370,16 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         resetKey={resetKey}
         filterDebug={filterDebug}
         initialLocation={resetKey === 0 ? initialCity : undefined}
-        initialChipIdx={resetKey === 0 ? (initialCategory ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : undefined) : undefined}
+        initialChipIdx={initialCategory && resetKey === 0 ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : settings.defaultChipIdx ?? undefined}
         scrollToId={scrollToId}
         showParking={filters.alwaysShowParking}
         onToggleParking={hasParkingToggle ? handleToggleParking : undefined}
         parkingSpotCount={parkingSpots.length > 0 ? parkingSpots.length : undefined}
+        settings={settings}
+        onUpdateSettings={handleUpdateSettings}
+        sortBy={sortBy}
+        onSortChange={(s) => { setSortBy(s); updateSettings({ sortOrder: s }) }}
+        defaultMobileView={settings.defaultMobileView}
       />
     )
   }
@@ -373,6 +399,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           onToggleFullscreen={() => setIsFullscreen(false)}
           showParking={filters.alwaysShowParking}
           onToggleParking={hasParkingToggle ? handleToggleParking : undefined}
+          autoZoom={settings.autoZoom}
         />
       </div>
     )
@@ -395,7 +422,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             <p className="text-xs text-muted-foreground mt-0.5">{t.app.subtitle}</p>
           </div>
         </button>
-        <LanguageSwitcher />
+        <div className="flex items-center gap-1">
+          <SettingsSheet settings={settings} onUpdate={handleUpdateSettings} />
+          <LanguageSwitcher />
+        </div>
       </header>
 
       <h1 className="sr-only">{t.app.srHeading}</h1>
@@ -408,7 +438,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onModeChange={setChatMode}
         autoFocus
         initialLocation={resetKey === 0 ? initialCity : undefined}
-        initialChipIdx={resetKey === 0 ? (initialCategory ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : undefined) : undefined}
+        initialChipIdx={initialCategory && resetKey === 0 ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : settings.defaultChipIdx ?? undefined}
       />
 
       {/* ── Error banner ── */}
@@ -451,6 +481,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             filterDebug={filterDebug}
             searchCenter={chatMode === "nearby" ? searchCenter : undefined}
             parkingSpotCount={parkingSpots.length > 0 ? parkingSpots.length : undefined}
+            sortBy={sortBy}
+            onSortChange={(s) => { setSortBy(s); updateSettings({ sortOrder: s }) }}
           />
           <div className="shrink-0 border-t border-border px-4 py-2 flex justify-end gap-4">
             <Link href={locale === "en" ? "/en/faq" : "/faq"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
@@ -487,6 +519,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             onToggleFullscreen={() => setIsFullscreen(true)}
             showParking={filters.alwaysShowParking}
             onToggleParking={hasParkingToggle ? handleToggleParking : undefined}
+            autoZoom={settings.autoZoom}
           />
         </div>
       </div>

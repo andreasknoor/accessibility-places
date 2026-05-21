@@ -116,6 +116,8 @@ accessibility_cloud: 0.70
 osm:                 0.75
 google_places:       0.35
 osm_parking:         0     // stats-only; never used as a place-attribution source
+osm_parking_private: 0     // stats-only; tracks parking requests won by private Overpass server
+osm_parking_public:  0     // stats-only; tracks parking requests won by public mirrors
 osm_private:         0     // stats-only; tracks requests won by private Overpass server
 osm_public:          0     // stats-only; tracks requests won by public mirrors
 nominatim:           0     // stats-only
@@ -134,6 +136,8 @@ nominatim:           0     // stats-only
 `useIsMobile()` (`hooks/useIsMobile.ts` — pointer: coarse or max-width 767px) gates layout branching in `HomeClient.tsx`. Mobile uses `MobileLayout` (tab bar: results / map / filter). Desktop has a resizable results column with a drag handle. In tests, `matchMedia` is mocked to always return `false` (desktop), so both inputs in the search bar are always rendered.
 
 **Empty state actions** — `ResultsList` accepts an optional `onAdjustFilters?: () => void` prop. When present (mobile only), a primary "Filter anpassen" button is rendered alongside the expand-radius button; clicking it calls the callback. `MobileLayout` passes `() => setActiveTab("filter")`. When absent (desktop), a text hint is shown instead — the filter panel is already visible.
+
+**PlaceCard interaction** — Clicking the card body opens `PlaceDebugSheet` (the place info sheet) via `createPortal`. The info sheet is a full user-facing panel: structured accessibility details, enriched metadata (hours, cuisine, ratings, dogs, etc.), external links (Wheelmap, OSM, Google Maps, website, Ginto), and a copy-link button. A separate map-pin button on the card (`onClick` prop) selects the place on the map without opening the sheet.
 
 **Distance display** — `PlaceCard` shows inline distance (`t.results.distanceFromHere`) when `distanceM` prop is provided. `HomeClient` passes `searchCenter` to `ResultsList` **only when `chatMode === "nearby"`** — distance is intentionally not shown for text-search results.
 
@@ -201,12 +205,21 @@ A 320-entry JSON file (`citySlug/categorySlug → boolean`) that records which c
 **Sitemap — `app/sitemap.ts`:**
 Filters SEO pages through `VALID_SEO_PATHS` — only confirmed combos appear in the sitemap. Adding a city to `CITIES` (and `CitySlug`) automatically includes it once the validity cron runs.
 
-**Deep-link flow (SEO page → main app):**
-Each place card on an SEO page links to:
+**Deep-link flow — two entry points:**
+
+*SEO page → main app:* Each place card on an SEO page links to:
 ```
 /?q={cityName}&cat={categorySlug}&selectLat={lat}&selectLon={lon}&selectName={name}
 ```
-`app/page.tsx` (and `app/en/page.tsx`) reads these params and passes them as props to `HomeClient`. On mount, `HomeClient` auto-fires the city+category search, then after results arrive it selects the nearest place within 100 m via Haversine distance (`haversineMetres` from `lib/matching/match.ts`) — setting `selectedId` and `scrollToId` to trigger the same highlight+scroll behaviour as clicking a map marker.
+On mount, `HomeClient` auto-fires the city+category search (geocoded via Nominatim), then after results arrive selects the nearest place within 100 m via Haversine distance — setting `selectedId` and `scrollToId` to trigger highlight+scroll.
+
+*Info sheet copy-link:* The place info sheet (`PlaceDebugSheet`) has a copy-link button that writes to the clipboard:
+```
+/?selectLat={lat}&selectLon={lon}&selectName={name}&cat={category}
+```
+No `q=` (no city name). On mount, `HomeClient` detects `selectLat`/`selectLon` without `initialCity` and fires a coordinate-centred search with **all sources enabled** (ignoring the receiver's source toggles) and `nameHint = selectName` to bypass `passesFilters` — so the linked place always appears regardless of the receiver's active filters.
+
+`app/page.tsx` (and `app/en/page.tsx`) reads all five params and passes them as props to `HomeClient`.
 
 ### PWA / Service Worker
 

@@ -27,6 +27,7 @@ interface Props {
   visible?:            boolean
   showParking?:        boolean
   onToggleParking?:    () => void
+  autoZoom?:           boolean
 }
 
 const CONFIDENCE_COLORS = {
@@ -71,6 +72,7 @@ export default function MapView({
   visible,
   showParking,
   onToggleParking,
+  autoZoom = true,
 }: Props) {
   const t        = useTranslations()
   const mapRef   = useRef<HTMLDivElement>(null)
@@ -352,14 +354,15 @@ export default function MapView({
   // Fit bounds to show all results — runs only when places changes, not on marker click.
   // Separating this from the selectedId effect prevents fitBounds from firing when the
   // user clicks a marker (which changes selectedId but not places).
+  // Skipped entirely when autoZoom is disabled.
   useEffect(() => {
-    if (!mapInst.current || !L || places.length === 0) return
+    if (!mapInst.current || !L || places.length === 0 || !autoZoom) return
     const latlngs: [number, number][] = places.map((p) => [p.coordinates.lat, p.coordinates.lon])
     const ul = userLocationRef.current
     if (ul) latlngs.push([ul.lat, ul.lon])
     mapInst.current.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 15 })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [places, mapReady])
+  }, [places, mapReady, autoZoom])
 
   // Pan to selected — also re-fires when panTrigger increments so that
   // clicking the same result after manually panning the map still re-centers.

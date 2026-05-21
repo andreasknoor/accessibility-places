@@ -259,6 +259,28 @@ const de: Translations = {
     disclaimer: "Dieses Projekt ist ein privates, nicht-kommerzielles Hobby-Projekt. Für die Vollständigkeit, Richtigkeit und Aktualität der angezeigten Barrierefreiheitsinformationen wird keine Haftung übernommen.",
     linkLabel:  "Impressum",
   },
+  settings: {
+    title:             "Einstellungen",
+    sectionGeneral:    "Allgemein",
+    sectionMap:        "Karte",
+    sectionResults:    "Ergebnisse",
+    sectionMobile:     "Mobil",
+    searchMode:        "Standard-Suchmodus",
+    searchModeText:    "Texteingabe",
+    searchModeNearby:  "In der Nähe",
+    defaultCategory:   "Standardkategorie",
+    categoryNone:      "Keine Vorauswahl",
+    sortOrder:         "Sortierung",
+    sortConfidence:    "Verlässlichkeit",
+    sortDistance:      "Entfernung",
+    autoZoom:          "Automatischer Zoom nach Suche",
+    autoZoomHint:      "Kartenausschnitt auf alle Ergebnisse anpassen",
+    alwaysShowParking: "Rollstuhlparkplätze immer in Karte",
+    mobileView:        "Standard-Startansicht",
+    mobileViewList:    "Liste",
+    mobileViewMap:     "Karte",
+    nextSession:       "Gilt ab nächster Sitzung",
+  },
 }
 
 export default de

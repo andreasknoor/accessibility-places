@@ -259,6 +259,28 @@ const en: Translations = {
     disclaimer: "This is a private, non-commercial hobby project. No liability is assumed for the completeness, accuracy or timeliness of the accessibility information displayed.",
     linkLabel:  "Legal Notice",
   },
+  settings: {
+    title:             "Settings",
+    sectionGeneral:    "General",
+    sectionMap:        "Map",
+    sectionResults:    "Results",
+    sectionMobile:     "Mobile",
+    searchMode:        "Default search mode",
+    searchModeText:    "Text search",
+    searchModeNearby:  "Nearby",
+    defaultCategory:   "Default category",
+    categoryNone:      "No default",
+    sortOrder:         "Sort order",
+    sortConfidence:    "Reliability",
+    sortDistance:      "Distance",
+    autoZoom:          "Auto-zoom after search",
+    autoZoomHint:      "Fit map to all results after each search",
+    alwaysShowParking: "Always show wheelchair parking on map",
+    mobileView:        "Default start view",
+    mobileViewList:    "List",
+    mobileViewMap:     "Map",
+    nextSession:       "Takes effect next session",
+  },
 } as const
 
 export default en

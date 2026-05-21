@@ -11,7 +11,9 @@ import ChatPanel       from "@/components/chat/ChatPanel"
 import FilterPanel     from "@/components/filters/FilterPanel"
 import ResultsList     from "@/components/results/ResultsList"
 import LanguageSwitcher from "@/components/LanguageSwitcher"
+import SettingsSheet   from "@/components/settings/SettingsSheet"
 import type { Place, SearchFilters, ActiveSources, SourceId, SourceState, FilterDebug } from "@/lib/types"
+import type { AppSettings } from "@/lib/settings"
 
 const MapView = dynamic(() => import("@/components/map/MapView"), { ssr: false })
 
@@ -46,6 +48,11 @@ interface Props {
   showParking?:         boolean
   onToggleParking?:     () => void
   parkingSpotCount?:    number
+  settings:             AppSettings
+  onUpdateSettings:     (patch: Partial<AppSettings>) => void
+  sortBy:               "confidence" | "distance"
+  onSortChange:         (s: "confidence" | "distance") => void
+  defaultMobileView:    "results" | "map"
 }
 
 export default function MobileLayout({
@@ -54,8 +61,9 @@ export default function MobileLayout({
   sourceStates, searchCenter, onSearch, onRerun, onExpandRadius, onRadiusChange, hasSearched, error,
   onReset, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
   showParking, onToggleParking, parkingSpotCount,
+  settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
 }: Props) {
-  const [activeTab,   setActiveTab]   = useState<Tab>("results")
+  const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
   const [panTrigger,  setPanTrigger]  = useState(0)
   const [chatMode,    setChatMode]    = useState<"text" | "nearby">("text")
@@ -104,7 +112,10 @@ export default function MobileLayout({
             <p className="text-xs text-muted-foreground mt-0.5">{t.app.subtitle}</p>
           </div>
         </button>
-        <LanguageSwitcher />
+        <div className="flex items-center gap-1">
+          <SettingsSheet settings={settings} onUpdate={onUpdateSettings} />
+          <LanguageSwitcher />
+        </div>
       </header>
 
       <h1 className="sr-only">{t.app.srHeading}</h1>
@@ -140,6 +151,8 @@ export default function MobileLayout({
             filterDebug={filterDebug}
             searchCenter={searchCenter}
             parkingSpotCount={parkingSpotCount}
+            sortBy={sortBy}
+            onSortChange={onSortChange}
           />
         </div>
 
@@ -161,6 +174,7 @@ export default function MobileLayout({
               visible={activeTab === "map"}
               showParking={showParking}
               onToggleParking={onToggleParking}
+              autoZoom={settings.autoZoom}
             />
           )}
         </div>

@@ -234,4 +234,26 @@ export interface Translations {
     linkLabel:     string
     feedbackLabel: string
   }
+  settings: {
+    title:             string
+    sectionGeneral:    string
+    sectionMap:        string
+    sectionResults:    string
+    sectionMobile:     string
+    searchMode:        string
+    searchModeText:    string
+    searchModeNearby:  string
+    defaultCategory:   string
+    categoryNone:      string
+    sortOrder:         string
+    sortConfidence:    string
+    sortDistance:      string
+    autoZoom:          string
+    autoZoomHint:      string
+    alwaysShowParking: string
+    mobileView:        string
+    mobileViewList:    string
+    mobileViewMap:     string
+    nextSession:       string
+  }
 }

@@ -28,15 +28,24 @@ interface Props {
   searchCenter?:        { lat: number; lon: number }
   onAdjustFilters?:     () => void
   parkingSpotCount?:    number
+  sortBy?:              "confidence" | "distance"
+  onSortChange?:        (s: "confidence" | "distance") => void
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange }: Props) {
   const t = useTranslations()
   const [mapHintSeen, setMapHintSeen] = useState(() =>
     typeof window !== "undefined" && !!localStorage.getItem("ap_map_hint_seen")
   )
-  const [sortBy, setSortBy] = useState<"confidence" | "distance">("confidence")
+  const [localSortBy, setLocalSortBy] = useState<"confidence" | "distance">("confidence")
+  const sortBy = sortByProp ?? localSortBy
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+
+  function handleSortToggle() {
+    const next = sortBy === "confidence" ? "distance" : "confidence"
+    if (sortByProp === undefined) setLocalSortBy(next)
+    onSortChange?.(next)
+  }
 
   const displayedPlaces = useMemo(() => {
     if (sortBy === "distance" && searchCenter) {
@@ -151,7 +160,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
           <ArrowUpDown className="w-3 h-3 text-muted-foreground mr-1 shrink-0" />
           <button
             type="button"
-            onClick={() => setSortBy("confidence")}
+            onClick={() => { if (sortByProp === undefined) setLocalSortBy("confidence"); onSortChange?.("confidence") }}
             className={cn("px-1.5 py-0.5 rounded transition-colors cursor-pointer",
               sortBy === "confidence" ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
             )}
@@ -161,7 +170,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
           <span className="text-muted-foreground">·</span>
           <button
             type="button"
-            onClick={() => setSortBy("distance")}
+            onClick={() => { if (sortByProp === undefined) setLocalSortBy("distance"); onSortChange?.("distance") }}
             className={cn("px-1.5 py-0.5 rounded transition-colors cursor-pointer",
               sortBy === "distance" ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
             )}
