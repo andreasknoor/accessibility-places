@@ -26,7 +26,8 @@ function slidingCount(map: Map<string, number[]>, ip: string, push = true): numb
   const cutoff = now - RATE_LIMIT_WINDOW_MS
   const times  = (map.get(ip) ?? []).filter((t) => t > cutoff)
   if (push) times.push(now)
-  map.set(ip, times)
+  if (times.length === 0) map.delete(ip)
+  else map.set(ip, times)
   return times.length
 }
 
