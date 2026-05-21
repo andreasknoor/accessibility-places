@@ -16,6 +16,7 @@ interface Props {
   autoFocus?:       boolean
   initialLocation?: string
   initialChipIdx?:  number
+  initialMode?:     "text" | "nearby"
 }
 
 const CHIPS = [
@@ -44,11 +45,11 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
   return data.district ?? ""
 }
 
-export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx }: Props) {
+export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
   const isMobile = useIsMobile()
-  const [mode,           setMode]           = useState<Mode>("text")
+  const [mode,           setMode]           = useState<Mode>(initialMode ?? "text")
   const [nearbyPhase,    setNearbyPhase]    = useState<NearbyPhase>("idle")
   const [location,       setLocation]       = useState("")
   const [name,           setName]           = useState("")
@@ -97,6 +98,12 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
         }
       }
     } catch { /* ignore malformed storage */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Auto-trigger geolocation when defaultSearchMode = "nearby"
+  useEffect(() => {
+    if (initialMode === "nearby") handleLocate()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
