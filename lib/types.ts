@@ -232,6 +232,15 @@ export interface FilterDebug {
   toiletValueCounts: Record<A11yValue, number>
 }
 
+export interface ParkingSpot {
+  lat:       number
+  lon:       number
+  capacity?: number
+  fee?:      string   // "yes" | "no" | raw charge string
+  maxstay?:  string   // e.g. "2 hours"
+  access?:   string   // "private" | "customers" | …
+}
+
 export interface SearchResult {
   places: Place[]
   durationMs: number
@@ -240,5 +249,5 @@ export interface SearchResult {
   locationLabel: string
   filterDebug?: FilterDebug
   nameHint?: string
-  parkingSpots?: { lat: number; lon: number; capacity?: number }[]
+  parkingSpots?: ParkingSpot[]
 }

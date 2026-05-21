@@ -6,14 +6,15 @@ import { Button } from "@/components/ui/button"
 import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS } from "@/lib/config"
 import { confidenceLabel } from "@/lib/matching/merge"
-import type { Place } from "@/lib/types"
+import { haversineMetres } from "@/lib/matching/match"
+import type { Place, ParkingSpot } from "@/lib/types"
 
 // Leaflet is ESM-only — loaded dynamically to avoid SSR issues
 let L: typeof import("leaflet") | null = null
 
 interface Props {
   places:        Place[]
-  parkingSpots?: { lat: number; lon: number; capacity?: number }[]
+  parkingSpots?: ParkingSpot[]
   center?:       { lat: number; lon: number }
   userLocation?: { lat: number; lon: number }
   selectedId?:   string
@@ -196,12 +197,41 @@ export default function MapView({
         popupAnchor: [0, -11],
       })
 
-      const div = document.createElement("div")
-      div.style.cssText = "font-family:sans-serif;font-size:12px;line-height:1.5;min-width:130px"
+      // Distance to nearest place in current results (placesRef updated before this effect runs)
+      const nearestDist = placesRef.current.reduce((min, p) => {
+        const d = haversineMetres(spot, p.coordinates)
+        return d < min ? d : min
+      }, Infinity)
+      const distText = Number.isFinite(nearestDist)
+        ? t.results.distanceFromHere(Math.round(nearestDist))
+        : null
+
+      // Fee badge: show only when tag is present
+      const feeText = spot.fee === "no"  ? t.map.parkingFree
+                    : spot.fee === "yes" ? t.map.parkingPaid
+                    : spot.fee ?? null   // raw value (rare price strings like "EUR 1.00")
+
+      // Access badge: show only when non-public restriction is present
+      const accessText = spot.access === "private"   ? t.map.parkingPrivate
+                       : spot.access === "customers" ? t.map.parkingCustomers
+                       : null
+
+      // Max-stay label + raw OSM value (already human-readable: "2 hours", "30 minutes")
+      const maxstayText = spot.maxstay ?? null
+
       const title   = spot.capacity != null ? t.map.parkingSpots(spot.capacity) : t.map.parkingSpot
       const mapsUrl = `https://www.google.com/maps?q=${spot.lat},${spot.lon}`
+
+      const div = document.createElement("div")
+      div.style.cssText = "font-family:sans-serif;font-size:12px;line-height:1.6;min-width:140px"
       div.innerHTML = `
-        <div style="font-weight:600;margin-bottom:6px">${title}</div>
+        <div style="font-weight:600;margin-bottom:5px">${title}</div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:11px;margin-bottom:6px">
+          ${distText     ? `<span style="color:#888">↔</span><span>${distText}</span>` : ""}
+          ${feeText      ? `<span style="color:#888">€</span><span>${feeText}</span>` : ""}
+          ${maxstayText  ? `<span style="color:#888">${t.map.parkingMaxstay}</span><span>${maxstayText}</span>` : ""}
+          ${accessText   ? `<span style="color:#888">🔒</span><span style="color:#b45309">${accessText}</span>` : ""}
+        </div>
         <span data-gmaps style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#2563eb;cursor:pointer;text-decoration:underline">
           <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           ${t.results.googleMapsLink}
@@ -218,7 +248,7 @@ export default function MapView({
       }
 
       const marker = L.marker([spot.lat, spot.lon], { icon, zIndexOffset: -200 })
-        .bindPopup(div, { maxWidth: 220 })
+        .bindPopup(div, { maxWidth: 240 })
         .addTo(mapInst.current)
       parkingMarkersRef.current.push(marker)
     }

@@ -161,6 +161,11 @@ export interface Translations {
     parkingSpots:           (n: number) => string
     toggleParking:          string
     nearbyParking:          string
+    parkingFree:            string
+    parkingPaid:            string
+    parkingMaxstay:         string
+    parkingPrivate:         string
+    parkingCustomers:       string
   }
   categories: {
     cafe:        string

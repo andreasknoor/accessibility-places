@@ -359,6 +359,9 @@ export async function POST(req: NextRequest) {
                 lat:      f.lat,
                 lon:      f.lon,
                 ...(f.capacity != null ? { capacity: f.capacity } : {}),
+                ...(f.fee      != null ? { fee:      f.fee }      : {}),
+                ...(f.maxstay  != null ? { maxstay:  f.maxstay }  : {}),
+                ...(f.access   != null ? { access:   f.access }   : {}),
               })),
           },
         })

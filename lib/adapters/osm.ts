@@ -361,6 +361,9 @@ export interface NearbyParkingFeature {
   lat:        number
   lon:        number
   capacity?:  number
+  fee?:       string
+  maxstay?:   string
+  access?:    string
 }
 
 // Parking enrichment is capped at 25 km regardless of the main search radius.
@@ -421,7 +424,10 @@ export async function fetchOsmDisabledParking(
       // the feature rather than treating it as an implicit single space.
       const hasCapacityTag = "capacity:disabled" in tags || "capacity:wheelchair" in tags
       if (hasCapacityTag && Number.isFinite(cap) && cap <= 0) continue
-      out.push({ lat: featLat, lon: featLon, capacity: cap > 0 ? cap : undefined })
+      const fee     = tags["fee"]     || undefined
+      const maxstay = tags["maxstay"] || undefined
+      const access  = tags["access"]  || undefined
+      out.push({ lat: featLat, lon: featLon, capacity: cap > 0 ? cap : undefined, fee, maxstay, access })
     }
     return out
   }

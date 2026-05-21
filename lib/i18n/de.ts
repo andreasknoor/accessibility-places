@@ -58,8 +58,8 @@ const de: Translations = {
     title: "Ergebnisse",
     titleRadius: (km: number) => `(${km} km Radius)`,
     radiusPickerLabel: "Suchradius ändern",
-    count:        (n: number) => `${n} Ort${n !== 1 ? "e" : ""} gefunden`,
-    parkingCount: (n: number) => `(${n} Parkplatz${n !== 1 ? "plätze" : ""})`,
+    count:        (n: number) => `${n} Ort${n !== 1 ? "e" : ""}`,
+    parkingCount: (n: number) => `(${n}x Parken)`,
     showMap: "Karte anzeigen",
     confidence: {
       high:    "Verlässlich",
@@ -186,6 +186,11 @@ const de: Translations = {
     parkingSpots:   (n: number) => `${n} barrierefreie Parkplätze`,
     toggleParking:  "Rollstuhlparkplätze in Karte anzeigen",
     nearbyParking:  "Parkplätze in der Nähe",
+    parkingFree:      "Kostenlos",
+    parkingPaid:      "Kostenpflichtig",
+    parkingMaxstay:   "Max. Parkzeit",
+    parkingPrivate:   "Privat",
+    parkingCustomers: "Nur Kunden",
   },
   categories: {
     cafe:        "Café",

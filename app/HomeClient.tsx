@@ -15,7 +15,7 @@ import { DEFAULT_RADIUS_KM, RADIUS_MAX_KM } from "@/lib/config"
 import { SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
-import type { Place, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug } from "@/lib/types"
+import type { Place, ParkingSpot, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug } from "@/lib/types"
 
 // Leaflet must not run on server
 const MapView = dynamic(() => import("@/components/map/MapView"), { ssr: false })
@@ -75,7 +75,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [sources,       setSources]      = useState<ActiveSources>(() => loadSavedPrefs().sources)
   const [radiusKm,      setRadiusKm]     = useState<number>(() => loadSavedPrefs().radiusKm)
   const [places,        setPlaces]       = useState<Place[]>([])
-  const [parkingSpots,  setParkingSpots]  = useState<{ lat: number; lon: number; capacity?: number }[]>([])
+  const [parkingSpots,  setParkingSpots]  = useState<ParkingSpot[]>([])
   const [selectedId,    setSelectedId]   = useState<string | undefined>()
   const [isLoading,     setIsLoading]    = useState(false)
   const [searchCenter,  setSearchCenter] = useState<{ lat: number; lon: number } | undefined>()
