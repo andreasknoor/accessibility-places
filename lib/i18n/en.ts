@@ -279,6 +279,7 @@ const en: Translations = {
     mobileView:        "Default search view",
     mobileViewList:    "List",
     mobileViewMap:     "Map",
+    resetToDefaults:   "Reset to defaults",
   },
 } as const
 

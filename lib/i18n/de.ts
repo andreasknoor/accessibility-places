@@ -279,6 +279,7 @@ const de: Translations = {
     mobileView:        "Standard-Suchansicht",
     mobileViewList:    "Liste",
     mobileViewMap:     "Karte",
+    resetToDefaults:   "Auf Standard zurücksetzen",
   },
 }
 

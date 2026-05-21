@@ -4,7 +4,7 @@ import { useState } from "react"
 import { createPortal } from "react-dom"
 import { Settings, X } from "lucide-react"
 import { useTranslations, useLocale } from "@/lib/i18n"
-import { SETTING_CHIPS } from "@/lib/settings"
+import { SETTING_CHIPS, DEFAULT_APP_SETTINGS } from "@/lib/settings"
 import type { AppSettings } from "@/lib/settings"
 
 interface Props {
@@ -163,6 +163,17 @@ function SettingsPanel({ settings, onUpdate, onClose }: Props & { onClose: () =>
                 <option value="map">{ts.mobileViewMap}</option>
               </SelectInput>
             </Row>
+          </div>
+
+          {/* ── Reset ── */}
+          <div className="border-t border-border mt-6 pt-4 flex justify-end">
+            <button
+              type="button"
+              onClick={() => onUpdate(DEFAULT_APP_SETTINGS)}
+              className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+            >
+              {ts.resetToDefaults}
+            </button>
           </div>
 
         </div>
