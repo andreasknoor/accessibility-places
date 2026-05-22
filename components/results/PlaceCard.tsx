@@ -237,11 +237,11 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
             {onClick && (
               <button
                 onClick={(e) => { e.stopPropagation(); onClick() }}
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-1 pl-2 border-l border-border"
+                className="flex items-center gap-1 text-xs text-primary bg-primary/10 hover:bg-primary/20 transition-colors rounded-full px-2.5 py-1 ml-1"
                 aria-label={t.results.showOnMap}
                 title={t.results.showOnMap}
               >
-                <MapPin className="w-[1.1rem] h-[1.1rem] shrink-0 text-primary" />
+                <MapPin className="w-[1.1rem] h-[1.1rem] shrink-0" />
                 {t.results.showOnMap}
               </button>
             )}
