@@ -12,8 +12,9 @@ export async function GET(req: NextRequest) {
 
   if (!q || q.length < 2) return NextResponse.json([])
 
-  // No layer restriction — include POIs (hotels, restaurants, offices, …)
-  let url = `${PHOTON_URL}?q=${encodeURIComponent(q)}&limit=6&lang=${lang}&bbox=${DACH_BBOX}`
+  // No layer restriction — include POIs (hotels, restaurants, offices, …).
+  // Ask for more candidates than needed so deduplication still yields 5 results.
+  let url = `${PHOTON_URL}?q=${encodeURIComponent(q)}&limit=20&lang=${lang}&bbox=${DACH_BBOX}`
   if (lat && lon) url += `&lat=${lat}&lon=${lon}`
 
   try {
@@ -29,8 +30,10 @@ export async function GET(req: NextRequest) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const suggestions = (data.features ?? []).flatMap((f: any) => {
+      // countrycode is often absent for POIs — trust the bbox filter instead.
+      // Only hard-exclude results with an explicit non-DACH country code.
       const cc = (f.properties?.countrycode ?? "").toUpperCase()
-      if (!DACH_CODES.has(cc)) return []
+      if (cc && !DACH_CODES.has(cc)) return []
 
       const p    = f.properties ?? {}
       const name = (p.name ?? "").trim()
@@ -38,7 +41,7 @@ export async function GET(req: NextRequest) {
 
       const city    = (p.city ?? p.county ?? "").trim()
       const base    = city && city !== name ? `${name}, ${city}` : name
-      const display = `${base} (${cc})`
+      const display = cc ? `${base} (${cc})` : base
       if (seen.has(display)) return []
       seen.add(display)
 
@@ -48,7 +51,7 @@ export async function GET(req: NextRequest) {
       const pLat   = typeof coords?.[1] === "number" ? coords[1] : null
 
       return [{ display, name, lat: pLat, lon: pLon }]
-    })
+    }).slice(0, 5)
 
     return NextResponse.json(suggestions)
   } catch {
