@@ -25,12 +25,14 @@ export interface Translations {
     errorGeneric:  string
     modeText:      string
     modeNearby:    string
+    modePlace:     string
     locateButton:  string
     locationError: string
     nearbyIn:        (district: string) => string
-    namePlaceholder:   string
-    nameToggleShow:    string
-    nameToggleHide:    string
+    namePlaceholder:      string
+    nameToggleShow:       string
+    nameToggleHide:       string
+    placeModePlaceholder: string
     placeSearchHint:   string
     placeNotFound:     string
     placeNoData:       (name: string) => string
@@ -247,6 +249,7 @@ export interface Translations {
     searchMode:        string
     searchModeText:    string
     searchModeNearby:  string
+    searchModePlace:   string
     defaultCategory:   string
     categoryNone:      string
     sortOrder:         string

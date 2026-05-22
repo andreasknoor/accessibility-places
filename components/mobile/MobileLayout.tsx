@@ -73,7 +73,7 @@ export default function MobileLayout({
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
   const [panTrigger,  setPanTrigger]  = useState(0)
-  const [chatMode,    setChatMode]    = useState<"text" | "nearby">(settings.defaultSearchMode)
+  const [chatMode,    setChatMode]    = useState<"text" | "nearby" | "place">(settings.defaultSearchMode)
   const [scrollToId,  setScrollToId]  = useState<string | undefined>()
 
   function handleShowInResults(place: Place) {
@@ -99,11 +99,18 @@ export default function MobileLayout({
     if (activeTab === "map") setMapMounted(true)
   }, [activeTab])
 
-  const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
+  // When switching to place mode, redirect away from the (now-hidden) filter tab
+  useEffect(() => {
+    if (chatMode === "place" && activeTab === "filter") setActiveTab("results")
+  }, [chatMode, activeTab])
+
+  const allTabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "results", label: t.results.title ?? "Ergebnisse", icon: <List className="w-5 h-5" /> },
     { id: "map",     label: t.results.showMap ?? "Karte",     icon: <Map  className="w-5 h-5" /> },
     { id: "filter",  label: t.filters?.title  ?? "Filter",    icon: <SlidersHorizontal className="w-5 h-5" /> },
   ]
+  // Filter tab is irrelevant in place mode — hide it and redirect if currently active
+  const tabs = chatMode === "place" ? allTabs.filter((tab) => tab.id !== "filter") : allTabs
 
   return (
     <>

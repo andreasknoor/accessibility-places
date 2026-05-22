@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react"
 
 export interface AppSettings {
-  defaultSearchMode:  "text" | "nearby"
+  defaultSearchMode:  "text" | "nearby" | "place"
   defaultMobileView:  "results" | "map"
   defaultChipIdx:     number | null   // null = first chip (Restaurants), same as current default
   sortOrder:          "confidence" | "distance"

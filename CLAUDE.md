@@ -20,6 +20,9 @@ npm run check:seo
 
 # Prime the ISR cache for all SEO pages (run after deploying new city/category combos)
 npm run warm:seo
+
+# Compare result counts / latency between Overpass endpoints (useful when diagnosing private vs public mirror divergence)
+node scripts/compare-overpass-parking.mjs
 ```
 
 `check:seo` runs automatically via GitHub Actions daily at 03:00 UTC (`.github/workflows/check-seo-validity.yml`); `warm:seo` runs at 03:30 UTC (`.github/workflows/warm-seo-cache.yml`). Both support `workflow_dispatch` for manual runs. `warm:seo` appends failed URLs to `warm-failures.txt` in the repo root — this file is tracked by git and should not be deleted.
@@ -143,6 +146,8 @@ nominatim:           0     // stats-only
 
 `MapView` (`components/map/MapView.tsx`) uses Leaflet and is loaded via `dynamic(..., { ssr: false })` to prevent server-side rendering errors.
 
+**CSS stacking context invariant**: the desktop map container div has `isolation: isolate` (`<div className="flex-1 min-h-0 relative isolate">`). Leaflet injects pane z-indexes of 200–700 directly; without isolation these leak into the page stacking context and paint over ChatPanel (`z-20`), hiding autocomplete dropdowns. `isolate` traps all Leaflet z-indexes inside the map container. Do not remove it.
+
 **Filter/source/radius persistence** — `HomeClient.tsx` persists the active filter criteria, source toggles, and radius to `localStorage` via lazy `useState` initialisers, so user preferences survive page reloads. `alwaysShowParking` is intentionally excluded (it is a per-session display toggle). `handleReset` restores defaults and writes them back, so the stored value self-heals on reset.
 
 ### User settings (`lib/settings.ts`)
@@ -155,9 +160,23 @@ Fields: `defaultSearchMode` (`"text"` | `"nearby"`), `defaultMobileView` (`"resu
 
 `SettingsSheet` (`components/settings/SettingsSheet.tsx`) renders via `createPortal` and is triggered from a gear icon in `HomeClient`. It receives `settings` and `onUpdate`; `HomeClient.handleUpdateSettings` applies the patch and syncs derived state (e.g. propagates `sortOrder` → `sortBy`).
 
-### Name filter (ChatPanel → API)
+### Name filter & place search (ChatPanel → API)
 
 The name field is a separate input, **not** embedded in the query string. `ChatPanel.onSearch` signature: `(query: string, coords?: Coords, nameHint?: string)`. The `nameHint` is passed in the API request body and applied as a JS post-filter (`filterByNameHint` — substring + trigram ≥ 0.6) after the merge step. This means accessibility filters apply independently of name searches.
+
+**Place-search mode** (`placeSearch: true` on `SearchParams`) is a second path for looking up a specific venue by name without city/category. Triggered either via the explicit `"place"` chat mode (third tab: "Ort suchen" / "Find Place") or from text mode when the name field is filled and the location field is empty (power-user shortcut).
+
+`HomeClient.handlePlaceSearch(nameHint, preResolvedCoords?)` flow:
+1. If Photon autocomplete provided coordinates, skip Nominatim and use them directly
+2. Otherwise resolve a location: `searchCenter` → `gpsCoordRef` → `navigator.geolocation` (5 s timeout, 60 s cache) → Nominatim with optional viewbox bias
+3. If Nominatim returns 404: sets `place_not_found` error. If the stream completes with zero places: sets `place_no_data` error (distinct states).
+4. If exactly one result: auto-selects it (opens the info sheet)
+
+**OSM adapter** in `placeSearch` mode replaces the tag-based Overpass query with a name-regex query across node/way/relation within 500 m. Uses character-class case-insensitive regex (`[hH][oO][tT]...`) — not the `,i` flag which is broken on some Overpass mirrors. Radius is capped at 0.5 km server-side regardless of user setting. Other adapters are unchanged; they search by bbox and the `nameHint` post-filter applies as usual.
+
+**`skipNameSuggestRef`** (ref in ChatPanel) — one-shot flag set in `selectNameSuggestion` before calling `setName()`, consumed at the top of the name-suggestion `useEffect`. Prevents the debounced Photon fetch from re-firing (and re-showing the dropdown) immediately after a suggestion is selected. Same pattern as `skipSuggestRef` for the location field.
+
+**`chatMode` union** — `"text" | "nearby" | "place"`. In `place` mode: `FilterPanel` is hidden on desktop (HomeClient), the filter tab is hidden on mobile (MobileLayout), and `switchMode("place")` clears the location field so the name-suggestion `useEffect` fires unconditionally. `defaultSearchMode` in `AppSettings` and `SettingsSheet` also accept `"place"`.
 
 ### Supplementary Place fields
 
@@ -170,9 +189,10 @@ The name field is a separate input, **not** embedded in the query string. `ChatP
 
 ### Geocoding API routes
 
-Three proxy routes forward to external geocoding services (all restricted to DACH):
-- `GET /api/geocode?q=` — Nominatim forward geocoding; returns `{ lat, lon, displayName }`.
-- `GET /api/geocode/suggest?q=&lang=` — Photon/Komoot autocomplete (bbox: DE+AT+CH); returns `[{ display, name }]`.
+Four proxy routes forward to external geocoding services (all restricted to DACH):
+- `GET /api/geocode?q=` — Nominatim forward geocoding; returns `{ lat, lon, displayName }`. Accepts optional `?lat=&lon=` to bias results via a ±0.2° viewbox (`bounded=0` so it falls back globally).
+- `GET /api/geocode/suggest?q=&lang=` — Photon/Komoot autocomplete restricted to `layer=city,district,locality`; returns `[{ display, name }]`. Used by the location field.
+- `GET /api/geocode/place-suggest?q=&lang=` — Photon/Komoot POI autocomplete **without** layer restrictions; returns `[{ display, name, lat, lon }]`. Used by the name field. Requests 20 candidates, deduplicates, slices to 5. Photon often omits `countrycode` for POIs — the filter is `if (cc && !DACH_CODES.has(cc))` (only hard-exclude explicit non-DACH), trusting the bbox for geographic containment.
 - `GET /api/geocode/reverse?lat=&lon=` — Nominatim reverse geocoding; returns `{ district }` for the "Nearby" label.
 
 The `countrycodes=de,at,ch` constraint in Nominatim calls and the Photon bounding box must both be updated when expanding beyond DACH.
@@ -230,6 +250,10 @@ On mount, `HomeClient` auto-fires the city+category search (geocoded via Nominat
 No `q=` (no city name). On mount, `HomeClient` detects `selectLat`/`selectLon` without `initialCity` and fires a coordinate-centred search with **all sources enabled** (ignoring the receiver's source toggles) and `nameHint = selectName` to bypass `passesFilters` — so the linked place always appears regardless of the receiver's active filters.
 
 `app/page.tsx` (and `app/en/page.tsx`) reads all five params and passes them as props to `HomeClient`.
+
+### Static pages
+
+`app/faq/page.tsx` — FAQ page, rendered statically. Contains bilingual content (DE/EN inline, not via the i18n system). `app/impressum/page.tsx` — Legal notice; includes obfuscated contact email to avoid scraping.
 
 ### PWA / Service Worker
 

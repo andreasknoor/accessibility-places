@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Send, Loader2, LocateFixed, MapPin, X, CircleParking } from "lucide-react"
+import { Send, Loader2, LocateFixed, MapPin, X, CircleParking, Building2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { useIsMobile } from "@/hooks/useIsMobile"
@@ -13,11 +13,11 @@ interface Props {
   onSearch:          (query: string, coords?: Coords, nameHint?: string) => void
   onPlaceSearch?:    (nameHint: string, coords?: Coords) => void
   isLoading:         boolean
-  onModeChange?:     (mode: "text" | "nearby") => void
+  onModeChange?:     (mode: "text" | "nearby" | "place") => void
   autoFocus?:        boolean
   initialLocation?:  string
   initialChipIdx?:   number
-  initialMode?:      "text" | "nearby"
+  initialMode?:      "text" | "nearby" | "place"
   onShowParking?:    (coords: Coords) => void
   onGpsResolved?:    (coords: Coords) => void
   isParkingLoading?: boolean
@@ -39,7 +39,7 @@ const CHIPS = [
   { icon: "🗺",  de: "Sehenswürdigkeiten", en: "Attractions" },
 ]
 
-type Mode        = "text" | "nearby"
+type Mode        = "text" | "nearby" | "place"
 type NearbyPhase = "idle" | "locating" | { district: string; lat: number; lon: number } | "error"
 
 type Suggestion = { display: string; name: string }
@@ -213,6 +213,13 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   function switchMode(next: Mode) {
     setMode(next)
     onModeChange?.(next)
+    if (next === "place") {
+      // Clear location so name-suggest fires unconditionally in place mode
+      setLocation("")
+      setSuggestions([])
+      setShowSuggestions(false)
+      return
+    }
     if (next !== "nearby") return
     if (nearbyPhase === "idle") {
       handleLocate()
@@ -242,6 +249,10 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
 
   function submit() {
     if (isLoading) return
+    if (mode === "place") {
+      if (name.trim()) onPlaceSearch?.(name.trim())
+      return
+    }
     if (!location.trim()) {
       if (name.trim()) onPlaceSearch?.(name.trim())
       return
@@ -330,7 +341,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
 
       {/* ── Segmented control ── */}
       <div className="flex rounded-lg border border-border bg-muted p-0.5 gap-0.5">
-        {(["text", "nearby"] as Mode[]).map((m) => (
+        {(["text", "nearby", "place"] as Mode[]).map((m) => (
           <button
             key={m}
             onClick={() => switchMode(m)}
@@ -341,32 +352,33 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            {m === "text"
-              ? <><Send className="w-3.5 h-3.5" />{t.chat.modeText}</>
-              : <><MapPin className="w-3.5 h-3.5" />{t.chat.modeNearby}</>
-            }
+            {m === "text"   && <><Send      className="w-3.5 h-3.5" />{t.chat.modeText}</>}
+            {m === "nearby" && <><MapPin    className="w-3.5 h-3.5" />{t.chat.modeNearby}</>}
+            {m === "place"  && <><Building2 className="w-3.5 h-3.5" />{t.chat.modePlace}</>}
           </button>
         ))}
       </div>
 
-      {/* ── Category chip strip (shared) ── */}
-      <div className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none] -mx-4 px-4">
-        {CHIPS.map((chip, idx) => (
-          <button
-            key={chip.de}
-            onClick={() => selectChip(idx)}
-            disabled={isLoading}
-            className={cn(
-              "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
-              idx === selectedIdx
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
-            )}
-          >
-            {chip.icon} {locale === "de" ? chip.de : chip.en}
-          </button>
-        ))}
-      </div>
+      {/* ── Category chip strip — hidden in place mode ── */}
+      {mode !== "place" && (
+        <div className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none] -mx-4 px-4">
+          {CHIPS.map((chip, idx) => (
+            <button
+              key={chip.de}
+              onClick={() => selectChip(idx)}
+              disabled={isLoading}
+              className={cn(
+                "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
+                idx === selectedIdx
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+              )}
+            >
+              {chip.icon} {locale === "de" ? chip.de : chip.en}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── Text search mode ── */}
       {mode === "text" && (
@@ -609,6 +621,99 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
         {name.trim() && !location.trim() && (
           <p className="text-xs text-muted-foreground">{t.chat.placeSearchHint}</p>
         )}
+        </>
+      )}
+
+      {/* ── Place search mode ── */}
+      {mode === "place" && (
+        <>
+          <div className="flex gap-2 items-center">
+            <div className="relative flex-1">
+              <input
+                value={name}
+                onChange={(e) => { setName(e.target.value); setNameHighlightedIdx(-1) }}
+                onKeyDown={(e) => {
+                  if (showNameSuggestions && nameSuggestions.length > 0) {
+                    if (e.key === "ArrowDown") { e.preventDefault(); setNameHighlightedIdx((i) => Math.min(i + 1, nameSuggestions.length - 1)); return }
+                    if (e.key === "ArrowUp")   { e.preventDefault(); setNameHighlightedIdx((i) => Math.max(i - 1, -1)); return }
+                    if (e.key === "Escape")    { setShowNameSuggestions(false); setNameHighlightedIdx(-1); return }
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      if (nameHighlightedIdx >= 0) { selectNameSuggestion(nameSuggestions[nameHighlightedIdx]); return }
+                    }
+                  }
+                  if (e.key === "Enter") submit()
+                }}
+                onBlur={() => setTimeout(() => setShowNameSuggestions(false), 150)}
+                onFocus={() => nameSuggestions.length > 0 && setShowNameSuggestions(true)}
+                placeholder={t.chat.placeModePlaceholder}
+                disabled={isLoading}
+                autoFocus={autoFocus}
+                className={cn(
+                  "w-full rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]",
+                  "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
+                  "focus-visible:ring-ring disabled:opacity-50",
+                  name && "pr-7",
+                )}
+              />
+              {name && (
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); setName(""); setNameSuggestions([]); setShowNameSuggestions(false) }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="Clear"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {showNameSuggestions && nameSuggestions.length > 0 && (
+                <ul
+                  role="listbox"
+                  className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg overflow-hidden"
+                >
+                  {nameSuggestions.map((s, i) => (
+                    <li
+                      key={s.display}
+                      role="option"
+                      aria-selected={i === nameHighlightedIdx}
+                      onMouseDown={(e) => { e.preventDefault(); selectNameSuggestion(s) }}
+                      className={cn(
+                        "px-3 py-2 text-sm cursor-pointer transition-colors",
+                        i === nameHighlightedIdx
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-muted",
+                      )}
+                    >
+                      <span className="font-semibold">{s.name}</span>
+                      {s.display !== s.name && <span className="text-muted-foreground">{s.display.slice(s.name.length)}</span>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <Button
+              onClick={submit}
+              disabled={isLoading || !name.trim()}
+              size="sm"
+              className="shrink-0 relative overflow-hidden"
+            >
+              {isLoading && (
+                <span
+                  className="absolute inset-y-0 left-0 pointer-events-none"
+                  style={{ width: 0, background: "rgba(255,255,255,0.45)", animation: "btn-progress 30s linear forwards" }}
+                  aria-hidden
+                />
+              )}
+              <span className="relative z-10 inline-flex items-center gap-1.5">
+                {isLoading
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <Send className="w-4 h-4" />
+                }
+                {isLoading ? t.chat.thinking : t.chat.send}
+              </span>
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">{t.chat.placeSearchHint}</p>
         </>
       )}
 

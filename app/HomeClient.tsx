@@ -92,7 +92,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [lastQuery,     setLastQuery]    = useState<string | undefined>()
   const [lastCoords,    setLastCoords]   = useState<{ lat: number; lon: number } | undefined>()
   const [lastNameHint,  setLastNameHint] = useState<string | undefined>()
-  const [chatMode,      setChatMode]     = useState<"text" | "nearby">(() => loadSettings().defaultSearchMode)
+  const [chatMode,      setChatMode]     = useState<"text" | "nearby" | "place">(() => loadSettings().defaultSearchMode)
   const [sortBy,        setSortBy]       = useState<"confidence" | "distance">(() => loadSettings().sortOrder)
   const [resetKey,            setResetKey]            = useState(0)
   const [scrollToId,          setScrollToId]          = useState<string | undefined>()
@@ -555,17 +555,19 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
       {/* ── Main: filter | results | divider | map ── */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        <FilterPanel
-          filters={filters}
-          sources={sources}
-          radiusKm={radiusKm}
-          onFilters={setFilters}
-          onSources={setSources}
-          onRadius={setRadiusKm}
-          sourceStates={sourceStates}
-          onRerun={chatMode === "nearby" && lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords, lastNameHint) : undefined}
-          isLoading={isLoading}
-        />
+        {chatMode !== "place" && (
+          <FilterPanel
+            filters={filters}
+            sources={sources}
+            radiusKm={radiusKm}
+            onFilters={setFilters}
+            onSources={setSources}
+            onRadius={setRadiusKm}
+            sourceStates={sourceStates}
+            onRerun={chatMode === "nearby" && lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords, lastNameHint) : undefined}
+            isLoading={isLoading}
+          />
+        )}
 
         <div
           className="shrink-0 border-r border-border flex flex-col min-h-0"
