@@ -34,7 +34,7 @@ interface Props {
   sourceStates?: Partial<Record<SourceId, SourceState>>
   searchCenter?: { lat: number; lon: number }
   onSearch:        (query: string, coords?: { lat: number; lon: number }, nameHint?: string) => void
-  onPlaceSearch?:  (nameHint: string) => void
+  onPlaceSearch?:  (nameHint: string, coords?: { lat: number; lon: number }) => void
   onRerun?:         () => void
   onExpandRadius?:  () => void
   onRadiusChange?:  (km: number) => void

@@ -264,11 +264,16 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setResetKey((k) => k + 1)
   }, [settings])
 
-  const handlePlaceSearch = useCallback(async (nameHint: string) => {
+  const handlePlaceSearch = useCallback(async (nameHint: string, preResolvedCoords?: { lat: number; lon: number }) => {
     if (!nameHint.trim()) return
     setIsLoading(true)
     setError(undefined)
     try {
+      // When Photon already returned coordinates (via place-suggest), skip Nominatim
+      if (preResolvedCoords) {
+        await handleSearch("", undefined, preResolvedCoords, nameHint, undefined, undefined, true)
+        return
+      }
       // Best-effort location bias: existing search center → cached GPS → fresh GPS
       const getCoords = (): Promise<{ lat: number; lon: number } | null> => {
         if (searchCenter) return Promise.resolve(searchCenter)
@@ -288,7 +293,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       if (res.status === 404) { setError(t.chat.placeNotFound); setIsLoading(false); return }
       if (!res.ok)            { setError(t.chat.errorGeneric);  setIsLoading(false); return }
       const { lat, lon } = await res.json()
-      // Pass placeSearch=true to enable name-based OSM query + 0.5 km radius cap
       await handleSearch("", undefined, { lat, lon }, nameHint, undefined, undefined, true)
     } catch {
       setError(t.chat.errorGeneric)

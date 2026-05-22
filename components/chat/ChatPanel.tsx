@@ -11,7 +11,7 @@ type Coords = { lat: number; lon: number }
 
 interface Props {
   onSearch:          (query: string, coords?: Coords, nameHint?: string) => void
-  onPlaceSearch?:    (nameHint: string) => void
+  onPlaceSearch?:    (nameHint: string, coords?: Coords) => void
   isLoading:         boolean
   onModeChange?:     (mode: "text" | "nearby") => void
   autoFocus?:        boolean
@@ -63,12 +63,17 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const [suggestions,    setSuggestions]    = useState<Suggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [highlightedIdx, setHighlightedIdx] = useState(-1)
-  const [inputPulse,     setInputPulse]     = useState(false)
-  const selectedIdxRef    = useRef(0)
-  const debounceRef       = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const suggestAbortRef   = useRef<AbortController>(undefined)
-  const skipSuggestRef    = useRef(false)
-  const locatingRef       = useRef(false)
+  const [inputPulse,         setInputPulse]         = useState(false)
+  const [nameSuggestions,    setNameSuggestions]    = useState<(Suggestion & { lat: number | null; lon: number | null })[]>([])
+  const [showNameSuggestions, setShowNameSuggestions] = useState(false)
+  const [nameHighlightedIdx,  setNameHighlightedIdx]  = useState(-1)
+  const selectedIdxRef       = useRef(0)
+  const debounceRef          = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const suggestAbortRef      = useRef<AbortController>(undefined)
+  const nameDebounceRef      = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const nameAbortRef         = useRef<AbortController>(undefined)
+  const skipSuggestRef       = useRef(false)
+  const locatingRef          = useRef(false)
   // Holds the location value that was set programmatically on restore.
   // Autocomplete is suppressed as long as location equals this value —
   // survives locale re-renders that would otherwise consume the one-shot
@@ -176,6 +181,33 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     }
   }, [location, locale])
 
+  // Fetch place-name suggestions for the name field (only when location is empty)
+  useEffect(() => {
+    if (location.trim() || name.length < 2) {
+      setNameSuggestions([])
+      setShowNameSuggestions(false)
+      return
+    }
+    clearTimeout(nameDebounceRef.current)
+    nameAbortRef.current?.abort()
+    nameDebounceRef.current = setTimeout(async () => {
+      const ac = new AbortController()
+      nameAbortRef.current = ac
+      try {
+        const res = await fetch(`/api/geocode/place-suggest?q=${encodeURIComponent(name)}&lang=${locale}`, { signal: ac.signal })
+        if (!res.ok) return
+        const data = await res.json()
+        setNameSuggestions(data)
+        setShowNameSuggestions(data.length > 0)
+        setNameHighlightedIdx(-1)
+      } catch { /* AbortError or network error */ }
+    }, 300)
+    return () => {
+      clearTimeout(nameDebounceRef.current)
+      nameAbortRef.current?.abort()
+    }
+  }, [name, location, locale])
+
   function switchMode(next: Mode) {
     setMode(next)
     onModeChange?.(next)
@@ -216,6 +248,15 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     setShowSuggestions(false)
     try { localStorage.setItem("ap_last_search", JSON.stringify({ idx: selectedIdx, loc: location.trim() })) } catch { /* ignore */ }
     onSearch(buildQuery(location), undefined, name.trim() || undefined)
+  }
+
+  function selectNameSuggestion(s: { display: string; name: string; lat: number | null; lon: number | null }) {
+    setName(s.name)
+    setNameSuggestions([])
+    setShowNameSuggestions(false)
+    setNameHighlightedIdx(-1)
+    const coords = s.lat != null && s.lon != null ? { lat: s.lat, lon: s.lon } : undefined
+    onPlaceSearch?.(s.name, coords)
   }
 
   function selectSuggestion(s: Suggestion) {
@@ -410,12 +451,23 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             <div className="relative flex-1">
               <input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => { setName(e.target.value); setNameHighlightedIdx(-1) }}
                 onKeyDown={(e) => {
+                  if (showNameSuggestions && nameSuggestions.length > 0) {
+                    if (e.key === "ArrowDown") { e.preventDefault(); setNameHighlightedIdx((i) => Math.min(i + 1, nameSuggestions.length - 1)); return }
+                    if (e.key === "ArrowUp")   { e.preventDefault(); setNameHighlightedIdx((i) => Math.max(i - 1, -1)); return }
+                    if (e.key === "Escape")    { setShowNameSuggestions(false); setNameHighlightedIdx(-1); return }
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      if (nameHighlightedIdx >= 0) { selectNameSuggestion(nameSuggestions[nameHighlightedIdx]); return }
+                    }
+                  }
                   if (e.key !== "Enter") return
                   if (!location.trim() && name.trim()) onPlaceSearch?.(name.trim())
                   else submit()
                 }}
+                onBlur={() => setTimeout(() => setShowNameSuggestions(false), 150)}
+                onFocus={() => nameSuggestions.length > 0 && setShowNameSuggestions(true)}
                 placeholder={t.chat.namePlaceholder}
                 disabled={isLoading}
                 className={cn(
@@ -428,15 +480,36 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
               {name && (
                 <button
                   type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault()
-                    setName("")
-                  }}
+                  onMouseDown={(e) => { e.preventDefault(); setName(""); setNameSuggestions([]); setShowNameSuggestions(false) }}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   aria-label="Clear"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
+              )}
+              {showNameSuggestions && nameSuggestions.length > 0 && (
+                <ul
+                  role="listbox"
+                  className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg overflow-hidden"
+                >
+                  {nameSuggestions.map((s, i) => (
+                    <li
+                      key={s.display}
+                      role="option"
+                      aria-selected={i === nameHighlightedIdx}
+                      onMouseDown={(e) => { e.preventDefault(); selectNameSuggestion(s) }}
+                      className={cn(
+                        "px-3 py-2 text-sm cursor-pointer transition-colors",
+                        i === nameHighlightedIdx
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-muted",
+                      )}
+                    >
+                      <span className="font-semibold">{s.name}</span>
+                      {s.display !== s.name && <span className="text-muted-foreground">{s.display.slice(s.name.length)}</span>}
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           )}
@@ -469,12 +542,20 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           <div className="relative">
             <input
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => { setName(e.target.value); setNameHighlightedIdx(-1) }}
               onKeyDown={(e) => {
+                if (showNameSuggestions && nameSuggestions.length > 0) {
+                  if (e.key === "ArrowDown") { e.preventDefault(); setNameHighlightedIdx((i) => Math.min(i + 1, nameSuggestions.length - 1)); return }
+                  if (e.key === "ArrowUp")   { e.preventDefault(); setNameHighlightedIdx((i) => Math.max(i - 1, -1)); return }
+                  if (e.key === "Escape")    { setShowNameSuggestions(false); setNameHighlightedIdx(-1); return }
+                  if (e.key === "Enter" && nameHighlightedIdx >= 0) { e.preventDefault(); selectNameSuggestion(nameSuggestions[nameHighlightedIdx]); return }
+                }
                 if (e.key !== "Enter") return
                 if (!location.trim() && name.trim()) onPlaceSearch?.(name.trim())
                 else submit()
               }}
+              onBlur={() => setTimeout(() => setShowNameSuggestions(false), 150)}
+              onFocus={() => nameSuggestions.length > 0 && setShowNameSuggestions(true)}
               placeholder={t.chat.namePlaceholder}
               disabled={isLoading}
               className={cn(
@@ -487,12 +568,36 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             {name && (
               <button
                 type="button"
-                onMouseDown={(e) => { e.preventDefault(); setName("") }}
+                onMouseDown={(e) => { e.preventDefault(); setName(""); setNameSuggestions([]); setShowNameSuggestions(false) }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 aria-label={t.chat.nameToggleHide}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
+            )}
+            {showNameSuggestions && nameSuggestions.length > 0 && (
+              <ul
+                role="listbox"
+                className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg overflow-hidden"
+              >
+                {nameSuggestions.map((s, i) => (
+                  <li
+                    key={s.display}
+                    role="option"
+                    aria-selected={i === nameHighlightedIdx}
+                    onMouseDown={(e) => { e.preventDefault(); selectNameSuggestion(s) }}
+                    className={cn(
+                      "px-3 py-2 text-sm cursor-pointer transition-colors",
+                      i === nameHighlightedIdx
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted",
+                    )}
+                  >
+                    <span className="font-semibold">{s.name}</span>
+                    {s.display !== s.name && <span className="text-muted-foreground">{s.display.slice(s.name.length)}</span>}
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         )}
