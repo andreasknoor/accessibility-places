@@ -37,7 +37,7 @@ const en: Translations = {
     nameToggleHide:    "Remove name filter",
     showParkingButton: (km: number) => {
       const dist = km < 1 ? `${Math.round(km * 1000)} m` : `${(Math.round(km * 10) / 10).toFixed(1)} km`
-      return `Show wheelchair parking (${dist})`
+      return `Show nearby wheelchair parking (${dist})`
     },
   },
   filters: {
