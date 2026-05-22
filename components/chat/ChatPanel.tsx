@@ -323,7 +323,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   }
 
   return (
-    <div className="flex flex-col gap-3 p-4 border-b border-border bg-card">
+    <div className="flex flex-col gap-3 p-4 border-b border-border bg-card relative z-20">
 
       {/* ── Segmented control ── */}
       <div className="flex rounded-lg border border-border bg-muted p-0.5 gap-0.5">
