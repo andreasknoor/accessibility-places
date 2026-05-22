@@ -219,6 +219,7 @@ describe("ChatPanel autocomplete — selection", () => {
     mockFetch([{ display: "Berlin", name: "Berlin" }])
     renderPanel(onSearch)
     // Expand name field and fill it
+    fireEvent.click(screen.getByText(/Name eingrenzen|Filter results by name/i))
     const nameInput = screen.getByPlaceholderText(/Zur Linde|The Crown/i) as HTMLInputElement
     fireEvent.change(nameInput, { target: { value: "Goldener Löwe" } })
     // Type and select location
@@ -451,9 +452,24 @@ describe("ChatPanel parking button", () => {
 // ─── Place-search trigger ────────────────────────────────────────────────────
 
 describe("ChatPanel place-search", () => {
+  function openNameField() {
+    fireEvent.click(screen.getByText(/Name eingrenzen|Filter results by name/i))
+  }
   function getNameInput() {
     return screen.getByPlaceholderText(/Zur Linde|The Crown/i) as HTMLInputElement
   }
+
+  it("name filter toggle button is visible in text mode", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
+    expect(screen.getByText(/Name eingrenzen|Filter results by name/i)).toBeInTheDocument()
+  })
+
+  it("name input is hidden until toggle is clicked", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
+    expect(screen.queryByPlaceholderText(/Zur Linde|The Crown/i)).not.toBeInTheDocument()
+    openNameField()
+    expect(screen.getByPlaceholderText(/Zur Linde|The Crown/i)).toBeInTheDocument()
+  })
 
   it("search button is disabled when both location and name are empty", () => {
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} onPlaceSearch={vi.fn()} />)
@@ -463,6 +479,7 @@ describe("ChatPanel place-search", () => {
 
   it("search button is enabled when name has content and location is empty", () => {
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} onPlaceSearch={vi.fn()} />)
+    openNameField()
     fireEvent.change(getNameInput(), { target: { value: "Hotel Adlon" } })
     const btn = screen.getByRole("button", { name: "Suchen" })
     expect(btn).not.toBeDisabled()
@@ -472,6 +489,7 @@ describe("ChatPanel place-search", () => {
     const onSearch = vi.fn()
     const onPlaceSearch = vi.fn()
     render(<ChatPanel onSearch={onSearch} isLoading={false} onPlaceSearch={onPlaceSearch} />)
+    openNameField()
     fireEvent.change(getNameInput(), { target: { value: "Hotel Adlon" } })
     fireEvent.click(screen.getByRole("button", { name: "Suchen" }))
     expect(onPlaceSearch).toHaveBeenCalledWith("Hotel Adlon")
@@ -481,6 +499,7 @@ describe("ChatPanel place-search", () => {
   it("pressing Enter in name field with no location calls onPlaceSearch", () => {
     const onPlaceSearch = vi.fn()
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} onPlaceSearch={onPlaceSearch} />)
+    openNameField()
     fireEvent.change(getNameInput(), { target: { value: "Goldener Löwe" } })
     fireEvent.keyDown(getNameInput(), { key: "Enter" })
     expect(onPlaceSearch).toHaveBeenCalledWith("Goldener Löwe")
@@ -491,22 +510,17 @@ describe("ChatPanel place-search", () => {
     const onPlaceSearch = vi.fn()
     render(<ChatPanel onSearch={onSearch} isLoading={false} onPlaceSearch={onPlaceSearch} />)
     fireEvent.change(getInput(), { target: { value: "Berlin" } })
+    openNameField()
     fireEvent.change(getNameInput(), { target: { value: "Goldener Löwe" } })
     fireEvent.keyDown(getNameInput(), { key: "Enter" })
     expect(onSearch).toHaveBeenCalledWith(expect.stringContaining("Berlin"), undefined, "Goldener Löwe")
     expect(onPlaceSearch).not.toHaveBeenCalled()
   })
 
-  it("shows place-search hint when name is filled and location is empty", () => {
+  it("place-search hint is not shown in text/Erkunden mode", () => {
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
+    openNameField()
     fireEvent.change(getNameInput(), { target: { value: "Hotel Adlon" } })
-    expect(screen.getByText(/Direkte Ortssuche|Direct place search/i)).toBeInTheDocument()
-  })
-
-  it("hides place-search hint when location is also filled", () => {
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
-    fireEvent.change(getNameInput(), { target: { value: "Hotel Adlon" } })
-    fireEvent.change(getInput(), { target: { value: "Berlin" } })
     expect(screen.queryByText(/Direkte Ortssuche|Direct place search/i)).not.toBeInTheDocument()
   })
 })

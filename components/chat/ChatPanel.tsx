@@ -59,6 +59,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const [nearbyPhase,    setNearbyPhase]    = useState<NearbyPhase>("idle")
   const [location,       setLocation]       = useState("")
   const [name,           setName]           = useState("")
+  const [showNameField,  setShowNameField]  = useState(false)
   const [selectedIdx,    setSelectedIdx]    = useState(0)
   const [suggestions,    setSuggestions]    = useState<Suggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -182,10 +183,11 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     }
   }, [location, locale])
 
-  // Fetch place-name suggestions for the name field (only when location is empty)
+  // Fetch place-name suggestions — only active in "place" mode; in text mode the
+  // name field is a filter and Photon autocomplete would be confusing/redundant.
   useEffect(() => {
     if (skipNameSuggestRef.current) { skipNameSuggestRef.current = false; return }
-    if (location.trim() || name.length < 2) {
+    if (mode !== "place" || location.trim() || name.length < 2) {
       setNameSuggestions([])
       setShowNameSuggestions(false)
       return
@@ -208,11 +210,12 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       clearTimeout(nameDebounceRef.current)
       nameAbortRef.current?.abort()
     }
-  }, [name, location, locale])
+  }, [name, location, locale, mode])
 
   function switchMode(next: Mode) {
     setMode(next)
     onModeChange?.(next)
+    setShowNameField(false)
     if (next === "place") {
       // Clear location so name-suggest fires unconditionally in place mode
       setLocation("")
@@ -461,30 +464,20 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             )}
           </div>
 
-          {/* Name input — desktop: inline flex-1 alongside location */}
-          {!isMobile && (
+          {/* Name input — desktop: inline flex-1 alongside location, behind toggle */}
+          {!isMobile && showNameField && (
             <div className="relative flex-1">
               <input
                 value={name}
-                onChange={(e) => { setName(e.target.value); setNameHighlightedIdx(-1) }}
+                onChange={(e) => { setName(e.target.value) }}
                 onKeyDown={(e) => {
-                  if (showNameSuggestions && nameSuggestions.length > 0) {
-                    if (e.key === "ArrowDown") { e.preventDefault(); setNameHighlightedIdx((i) => Math.min(i + 1, nameSuggestions.length - 1)); return }
-                    if (e.key === "ArrowUp")   { e.preventDefault(); setNameHighlightedIdx((i) => Math.max(i - 1, -1)); return }
-                    if (e.key === "Escape")    { setShowNameSuggestions(false); setNameHighlightedIdx(-1); return }
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      if (nameHighlightedIdx >= 0) { selectNameSuggestion(nameSuggestions[nameHighlightedIdx]); return }
-                    }
-                  }
                   if (e.key !== "Enter") return
                   if (!location.trim() && name.trim()) onPlaceSearch?.(name.trim())
                   else submit()
                 }}
-                onBlur={() => setTimeout(() => setShowNameSuggestions(false), 150)}
-                onFocus={() => nameSuggestions.length > 0 && setShowNameSuggestions(true)}
                 placeholder={t.chat.namePlaceholder}
                 disabled={isLoading}
+                autoFocus
                 className={cn(
                   "w-full rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]",
                   "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
@@ -495,36 +488,12 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
               {name && (
                 <button
                   type="button"
-                  onMouseDown={(e) => { e.preventDefault(); setName(""); setNameSuggestions([]); setShowNameSuggestions(false) }}
+                  onMouseDown={(e) => { e.preventDefault(); setName(""); setShowNameField(false) }}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label="Clear"
+                  aria-label={t.chat.nameToggleHide}
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
-              )}
-              {showNameSuggestions && nameSuggestions.length > 0 && (
-                <ul
-                  role="listbox"
-                  className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg overflow-hidden"
-                >
-                  {nameSuggestions.map((s, i) => (
-                    <li
-                      key={s.display}
-                      role="option"
-                      aria-selected={i === nameHighlightedIdx}
-                      onMouseDown={(e) => { e.preventDefault(); selectNameSuggestion(s) }}
-                      className={cn(
-                        "px-3 py-2 text-sm cursor-pointer transition-colors",
-                        i === nameHighlightedIdx
-                          ? "bg-primary text-primary-foreground"
-                          : "hover:bg-muted",
-                      )}
-                    >
-                      <span className="font-semibold">{s.name}</span>
-                      {s.display !== s.name && <span className="text-muted-foreground">{s.display.slice(s.name.length)}</span>}
-                    </li>
-                  ))}
-                </ul>
               )}
             </div>
           )}
@@ -552,27 +521,20 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           </Button>
         </div>
 
-        {/* Mobile: name field always visible as second row */}
-        {isMobile && (
+        {/* Mobile: name field behind toggle, shown as second row */}
+        {isMobile && showNameField && (
           <div className="relative">
             <input
               value={name}
-              onChange={(e) => { setName(e.target.value); setNameHighlightedIdx(-1) }}
+              onChange={(e) => { setName(e.target.value) }}
               onKeyDown={(e) => {
-                if (showNameSuggestions && nameSuggestions.length > 0) {
-                  if (e.key === "ArrowDown") { e.preventDefault(); setNameHighlightedIdx((i) => Math.min(i + 1, nameSuggestions.length - 1)); return }
-                  if (e.key === "ArrowUp")   { e.preventDefault(); setNameHighlightedIdx((i) => Math.max(i - 1, -1)); return }
-                  if (e.key === "Escape")    { setShowNameSuggestions(false); setNameHighlightedIdx(-1); return }
-                  if (e.key === "Enter" && nameHighlightedIdx >= 0) { e.preventDefault(); selectNameSuggestion(nameSuggestions[nameHighlightedIdx]); return }
-                }
                 if (e.key !== "Enter") return
                 if (!location.trim() && name.trim()) onPlaceSearch?.(name.trim())
                 else submit()
               }}
-              onBlur={() => setTimeout(() => setShowNameSuggestions(false), 150)}
-              onFocus={() => nameSuggestions.length > 0 && setShowNameSuggestions(true)}
               placeholder={t.chat.namePlaceholder}
               disabled={isLoading}
+              autoFocus
               className={cn(
                 "w-full rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]",
                 "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
@@ -583,43 +545,25 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             {name && (
               <button
                 type="button"
-                onMouseDown={(e) => { e.preventDefault(); setName(""); setNameSuggestions([]); setShowNameSuggestions(false) }}
+                onMouseDown={(e) => { e.preventDefault(); setName(""); setShowNameField(false) }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 aria-label={t.chat.nameToggleHide}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
-            {showNameSuggestions && nameSuggestions.length > 0 && (
-              <ul
-                role="listbox"
-                className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg overflow-hidden"
-              >
-                {nameSuggestions.map((s, i) => (
-                  <li
-                    key={s.display}
-                    role="option"
-                    aria-selected={i === nameHighlightedIdx}
-                    onMouseDown={(e) => { e.preventDefault(); selectNameSuggestion(s) }}
-                    className={cn(
-                      "px-3 py-2 text-sm cursor-pointer transition-colors",
-                      i === nameHighlightedIdx
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted",
-                    )}
-                  >
-                    <span className="font-semibold">{s.name}</span>
-                    {s.display !== s.name && <span className="text-muted-foreground">{s.display.slice(s.name.length)}</span>}
-                  </li>
-                ))}
-              </ul>
-            )}
           </div>
         )}
 
-        {/* Place-search mode hint */}
-        {name.trim() && !location.trim() && (
-          <p className="text-xs text-muted-foreground">{t.chat.placeSearchHint}</p>
+        {/* Toggle to reveal the name filter */}
+        {!showNameField && (
+          <button
+            type="button"
+            onClick={() => setShowNameField(true)}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors text-left"
+          >
+            {t.chat.nameToggleShow}
+          </button>
         )}
         </>
       )}
