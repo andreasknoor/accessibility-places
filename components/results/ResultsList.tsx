@@ -30,9 +30,10 @@ interface Props {
   parkingSpotCount?:    number
   sortBy?:              "confidence" | "distance"
   onSortChange?:        (s: "confidence" | "distance") => void
+  chatMode?:            "text" | "nearby" | "place"
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode }: Props) {
   const t = useTranslations()
   const [mapHintSeen, setMapHintSeen] = useState(() =>
     typeof window !== "undefined" && !!localStorage.getItem("ap_map_hint_seen")
@@ -209,14 +210,24 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
             </div>
           )}
 
-          {!isLoading && places.length === 0 && !hasSearched && (
+          {!isLoading && places.length === 0 && !hasSearched && chatMode !== "nearby" && (
             <div className="flex flex-col items-center gap-4 py-14 px-6 text-center">
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
                 <MapPin className="w-8 h-8 text-muted-foreground" />
               </div>
               <div className="flex flex-col gap-1.5">
-                <p className="font-semibold text-foreground">{t.chat.noSearchYetTitle}</p>
-                <p className="text-sm text-muted-foreground">{t.chat.noSearchYet}</p>
+                {chatMode === "place" ? (
+                  <>
+                    <p className="font-semibold text-foreground">{t.chat.noSearchYetTitlePlace}</p>
+                    <p className="text-sm text-muted-foreground">{t.chat.noSearchYetPlace}</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-semibold text-foreground">{t.chat.noSearchYetTitle}</p>
+                    <p className="text-sm text-muted-foreground">{t.chat.noSearchYet}</p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">{t.chat.noSearchYetNameHint}</p>
+                  </>
+                )}
               </div>
             </div>
           )}

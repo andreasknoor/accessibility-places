@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useRef, useEffect } from "react"
+import { SlidersHorizontal, ChevronRight, ChevronLeft } from "lucide-react"
 import dynamic from "next/dynamic"
 import Script from "next/script"
 import Link from "next/link"
@@ -93,6 +94,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [lastCoords,    setLastCoords]   = useState<{ lat: number; lon: number } | undefined>()
   const [lastNameHint,  setLastNameHint] = useState<string | undefined>()
   const [chatMode,      setChatMode]     = useState<"text" | "nearby" | "place">(() => loadSettings().defaultSearchMode)
+  const [filterCollapsed, setFilterCollapsed] = useState(true)
   const [sortBy,        setSortBy]       = useState<"confidence" | "distance">(() => loadSettings().sortOrder)
   const [resetKey,            setResetKey]            = useState(0)
   const [scrollToId,          setScrollToId]          = useState<string | undefined>()
@@ -368,6 +370,19 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
   }, [settings.parkingRadiusKm, runParkingPreFetch])
 
+  // Silently pre-fetch GPS when entering place-search mode so coords are
+  // available immediately when the user submits (avoids mid-submit delay).
+  useEffect(() => {
+    if (chatMode !== "place") return
+    if (gpsCoordRef.current) return
+    if (!("geolocation" in navigator)) return
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { gpsCoordRef.current = { lat: pos.coords.latitude, lon: pos.coords.longitude } },
+      () => { /* silently ignored — place search has other fallbacks */ },
+      { timeout: 8000, maximumAge: 60_000 },
+    )
+  }, [chatMode])
+
   const handleShowParking = useCallback(async (coords: { lat: number; lon: number }) => {
     setIsParkingLoading(true)
     setSearchCenter(coords)
@@ -556,17 +571,38 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       {/* ── Main: filter | results | divider | map ── */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {chatMode !== "place" && (
-          <FilterPanel
-            filters={filters}
-            sources={sources}
-            radiusKm={radiusKm}
-            onFilters={setFilters}
-            onSources={setSources}
-            onRadius={setRadiusKm}
-            sourceStates={sourceStates}
-            onRerun={chatMode === "nearby" && lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords, lastNameHint) : undefined}
-            isLoading={isLoading}
-          />
+          filterCollapsed ? (
+            <button
+              onClick={() => setFilterCollapsed(false)}
+              className="shrink-0 w-12 border-r border-border flex flex-col items-center justify-center gap-3 py-6 hover:bg-muted/50 transition-colors cursor-pointer"
+              aria-label={t.filters.title}
+            >
+              <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground font-medium [writing-mode:vertical-rl] rotate-180 tracking-wide">{t.filters.title}</span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </button>
+          ) : (
+            <div className="relative flex flex-col shrink-0">
+              <FilterPanel
+                filters={filters}
+                sources={sources}
+                radiusKm={radiusKm}
+                onFilters={setFilters}
+                onSources={setSources}
+                onRadius={setRadiusKm}
+                sourceStates={sourceStates}
+                onRerun={chatMode === "nearby" && lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords, lastNameHint) : undefined}
+                isLoading={isLoading}
+              />
+              <button
+                onClick={() => setFilterCollapsed(true)}
+                className="absolute top-2 right-2 p-1 rounded hover:bg-muted/70 transition-colors"
+                aria-label={t.filters.title}
+              >
+                <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
+          )
         )}
 
         <div
@@ -590,6 +626,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             parkingSpotCount={parkingSpots.length > 0 ? parkingSpots.length : undefined}
             sortBy={sortBy}
             onSortChange={(s) => { setSortBy(s); updateSettings({ sortOrder: s }) }}
+            chatMode={chatMode}
           />
           <div className="shrink-0 border-t border-border px-4 py-2 flex justify-end gap-4">
             <Link href={locale === "en" ? "/en/faq" : "/faq"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">

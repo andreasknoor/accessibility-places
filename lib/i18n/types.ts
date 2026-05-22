@@ -20,8 +20,11 @@ export interface Translations {
     send:          string
     thinking:      string
     noResults:        string
-    noSearchYetTitle: string
-    noSearchYet:      string
+    noSearchYetTitle:      string
+    noSearchYet:           string
+    noSearchYetNameHint:   string
+    noSearchYetTitlePlace: string
+    noSearchYetPlace:      string
     errorGeneric:  string
     modeText:      string
     modeNearby:    string
