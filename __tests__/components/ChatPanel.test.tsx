@@ -332,14 +332,14 @@ describe("ChatPanel initialMode", () => {
   it("defaults to text mode when initialMode is not passed", () => {
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
     const textTab = screen.getByText(/^Erkunden$/)
-    expect(textTab.closest("button")).toHaveClass("bg-background")
+    expect(textTab.closest("button")).toHaveClass("bg-primary")
   })
 
   it("shows nearby mode tab as active when initialMode='nearby'", () => {
     vi.stubGlobal("navigator", { geolocation: { getCurrentPosition: vi.fn() }, clipboard: navigator.clipboard })
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="nearby" />)
     const nearbyTab = screen.getByText(/In der Nähe/)
-    expect(nearbyTab.closest("button")).toHaveClass("bg-background")
+    expect(nearbyTab.closest("button")).toHaveClass("bg-primary")
   })
 
   it("calls geolocation.getCurrentPosition on mount when initialMode='nearby'", () => {
@@ -537,7 +537,7 @@ describe("ChatPanel place mode", () => {
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
     fireEvent.click(screen.getByRole("button", { name: /Ort suchen/ }))
     const placeBtn = screen.getByRole("button", { name: /Ort suchen/ })
-    expect(placeBtn).toHaveClass("bg-background")
+    expect(placeBtn).toHaveClass("bg-primary")
   })
 
   it("shows place-mode placeholder after clicking 'Ort suchen'", () => {

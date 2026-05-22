@@ -33,6 +33,9 @@ export interface Translations {
     modeText:      string
     modeNearby:    string
     modePlace:     string
+    modeTextSub:   string
+    modeNearbySub: string
+    modePlaceSub:  string
     locateButton:  string
     locationError: string
     nearbyIn:        (district: string) => string

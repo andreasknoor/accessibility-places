@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Send, Loader2, LocateFixed, MapPin, X, CircleParking, Building2 } from "lucide-react"
+import { Send, Loader2, LocateFixed, Compass, X, CircleParking, Building2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { useIsMobile } from "@/hooks/useIsMobile"
@@ -348,25 +348,62 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   return (
     <div className="flex flex-col gap-3 p-4 border-b border-border bg-card relative z-20">
 
-      {/* ── Segmented control ── */}
-      <div className="flex rounded-lg border border-border bg-muted p-0.5 gap-0.5">
-        {(["nearby", "text", "place"] as Mode[]).map((m) => (
-          <button
-            key={m}
-            onClick={() => switchMode(m)}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-1.5 rounded-md py-1.5 text-sm font-medium transition-colors",
-              mode === m
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {m === "text"   && <><Send      className="w-3.5 h-3.5" />{t.chat.modeText}</>}
-            {m === "nearby" && <><MapPin    className="w-3.5 h-3.5" />{t.chat.modeNearby}</>}
-            {m === "place"  && <><Building2 className="w-3.5 h-3.5" />{t.chat.modePlace}</>}
-          </button>
-        ))}
-      </div>
+      {/* ── Mode selector ── */}
+      {isMobile ? (
+        <div className="flex rounded-md overflow-hidden border border-border">
+          {(["nearby", "text", "place"] as Mode[]).map((m) => (
+            <button
+              key={m}
+              onClick={() => switchMode(m)}
+              className={cn(
+                "flex-1 flex flex-col items-center gap-1 py-2.5 relative transition-colors border-r border-border last:border-r-0 cursor-pointer",
+                mode === m
+                  ? "bg-primary/10 text-primary"
+                  : "bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              {m === "nearby" && <LocateFixed className="w-[1.125rem] h-[1.125rem]" />}
+              {m === "text"   && <Compass     className="w-[1.125rem] h-[1.125rem]" />}
+              {m === "place"  && <Building2   className="w-[1.125rem] h-[1.125rem]" />}
+              <span className="text-xs font-medium leading-none">
+                {m === "text"   && t.chat.modeText}
+                {m === "nearby" && t.chat.modeNearby}
+                {m === "place"  && t.chat.modePlace}
+              </span>
+              {mode === m && <span className="absolute bottom-0 inset-x-0 h-0.5 bg-primary" />}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-1.5">
+          {(["nearby", "text", "place"] as Mode[]).map((m) => (
+            <button
+              key={m}
+              onClick={() => switchMode(m)}
+              className={cn(
+                "flex flex-col items-center gap-1 rounded-lg border py-3 px-2 transition-colors cursor-pointer",
+                mode === m
+                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                  : "bg-card border-border text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              {m === "nearby" && <LocateFixed className="w-5 h-5" />}
+              {m === "text"   && <Compass     className="w-5 h-5" />}
+              {m === "place"  && <Building2   className="w-5 h-5" />}
+              <span className="text-sm font-semibold leading-tight">
+                {m === "text"   && t.chat.modeText}
+                {m === "nearby" && t.chat.modeNearby}
+                {m === "place"  && t.chat.modePlace}
+              </span>
+              <span className={cn("text-xs leading-tight text-center", mode === m ? "text-primary-foreground/75" : "text-muted-foreground/80")}>
+                {m === "text"   && t.chat.modeTextSub}
+                {m === "nearby" && t.chat.modeNearbySub}
+                {m === "place"  && t.chat.modePlaceSub}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── Category chip strip — hidden in place mode ── */}
       {mode !== "place" && (
