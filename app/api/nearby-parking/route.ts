@@ -2,7 +2,7 @@ import { NextRequest } from "next/server"
 import { fetchOsmDisabledParking } from "@/lib/adapters/osm"
 
 const RADIUS_MIN_KM = 0.05
-const RADIUS_MAX_KM = 1.0
+const RADIUS_MAX_KM = 3.0
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl

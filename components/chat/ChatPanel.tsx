@@ -18,7 +18,10 @@ interface Props {
   initialChipIdx?:   number
   initialMode?:      "text" | "nearby"
   onShowParking?:    (coords: Coords) => void
+  onGpsResolved?:    (coords: Coords) => void
   isParkingLoading?: boolean
+  hasParkingNearby?: boolean
+  parkingRadiusKm?:  number
 }
 
 const CHIPS = [
@@ -47,7 +50,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
   return data.district ?? ""
 }
 
-export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onShowParking, isParkingLoading }: Props) {
+export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
   const isMobile = useIsMobile()
@@ -261,6 +264,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
         try {
           const d = await reverseGeocode(lat, lon)
           setNearbyPhase({ district: d, lat, lon })
+          onGpsResolved?.({ lat, lon })
           const chip = CHIPS[selectedIdxRef.current]
           const label = locale === "de" ? chip.de : chip.en
           onSearch(d ? `${label} in ${d}` : label, { lat, lon }, name.trim() || undefined)
@@ -529,7 +533,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
             </p>
           )}
 
-          {typeof nearbyPhase === "object" && onShowParking && (
+          {hasParkingNearby && typeof nearbyPhase === "object" && onShowParking && (
             <Button
               variant="outline"
               size="sm"
@@ -541,7 +545,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
                 ? <Loader2 className="w-4 h-4 animate-spin" />
                 : <CircleParking className="w-4 h-4" />
               }
-              {t.chat.showParkingButton}
+              {t.chat.showParkingButton(parkingRadiusKm ?? 1)}
             </Button>
           )}
         </>

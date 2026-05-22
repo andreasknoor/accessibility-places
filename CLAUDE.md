@@ -145,6 +145,16 @@ nominatim:           0     // stats-only
 
 **Filter/source/radius persistence** — `HomeClient.tsx` persists the active filter criteria, source toggles, and radius to `localStorage` via lazy `useState` initialisers, so user preferences survive page reloads. `alwaysShowParking` is intentionally excluded (it is a per-session display toggle). `handleReset` restores defaults and writes them back, so the stored value self-heals on reset.
 
+### User settings (`lib/settings.ts`)
+
+`AppSettings` is a user-configurable set of defaults persisted to `localStorage` under key `ap_settings`. `useSettings()` returns `[settings, updateSettings]`; `loadSettings()` is called in lazy `useState` initialisers in `HomeClient` for settings that must be available before React mounts.
+
+Fields: `defaultSearchMode` (`"text"` | `"nearby"`), `defaultMobileView` (`"results"` | `"map"`), `defaultChipIdx` (which chip is pre-selected, `null` = Restaurants), `sortOrder` (`"confidence"` | `"distance"`), `autoZoom` (MapView auto-fits after search), `alwaysShowParking` (default `false`).
+
+**Critical invariant:** `SETTING_CHIPS` in `lib/settings.ts` and `CHIPS` in `ChatPanel.tsx` must stay in the **same order** — `defaultChipIdx` is an index into both simultaneously. Reordering chips in either file requires updating the other.
+
+`SettingsSheet` (`components/settings/SettingsSheet.tsx`) renders via `createPortal` and is triggered from a gear icon in `HomeClient`. It receives `settings` and `onUpdate`; `HomeClient.handleUpdateSettings` applies the patch and syncs derived state (e.g. propagates `sortOrder` → `sortBy`).
+
 ### Name filter (ChatPanel → API)
 
 The name field is a separate input, **not** embedded in the query string. `ChatPanel.onSearch` signature: `(query: string, coords?: Coords, nameHint?: string)`. The `nameHint` is passed in the API request body and applied as a JS post-filter (`filterByNameHint` — substring + trigram ≥ 0.6) after the merge step. This means accessibility filters apply independently of name searches.

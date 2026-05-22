@@ -97,6 +97,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [resetKey,            setResetKey]            = useState(0)
   const [scrollToId,          setScrollToId]          = useState<string | undefined>()
   const [isParkingLoading,    setIsParkingLoading]    = useState(false)
+  const [hasParkingNearby,    setHasParkingNearby]    = useState(false)
+  const gpsCoordRef  = useRef<{ lat: number; lon: number } | null>(null)
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
   const selectTarget = useRef(
@@ -295,10 +297,33 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const runParkingPreFetch = useCallback(async (coords: { lat: number; lon: number }, radiusKm: number) => {
+    try {
+      const res = await fetch(`/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=${radiusKm}`)
+      if (res.ok) {
+        const spots = await res.json()
+        setHasParkingNearby(Array.isArray(spots) && spots.length > 0)
+      }
+    } catch { /* ignore — parking pre-fetch is non-fatal */ }
+  }, [])
+
+  const handleGpsResolved = useCallback((coords: { lat: number; lon: number }) => {
+    gpsCoordRef.current = coords
+    runParkingPreFetch(coords, settings.parkingRadiusKm)
+  }, [runParkingPreFetch, settings.parkingRadiusKm])
+
+  // Re-check parking availability when the radius setting changes
+  useEffect(() => {
+    if (gpsCoordRef.current) {
+      runParkingPreFetch(gpsCoordRef.current, settings.parkingRadiusKm)
+    }
+  }, [settings.parkingRadiusKm, runParkingPreFetch])
+
   const handleShowParking = useCallback(async (coords: { lat: number; lon: number }) => {
     setIsParkingLoading(true)
+    setSearchCenter(coords)
     try {
-      const res = await fetch(`/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=1`)
+      const res = await fetch(`/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=${settings.parkingRadiusKm}`)
       if (res.ok) {
         const spots = await res.json()
         setParkingSpots(spots)
@@ -307,7 +332,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     } catch { /* ignore — parking is non-fatal */ } finally {
       setIsParkingLoading(false)
     }
-  }, [])
+  }, [settings.parkingRadiusKm])
 
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     isDragging.current = true
@@ -399,7 +424,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onSortChange={(s) => { setSortBy(s); updateSettings({ sortOrder: s }) }}
         defaultMobileView={settings.defaultMobileView}
         onShowParking={handleShowParking}
+        onGpsResolved={handleGpsResolved}
         isParkingLoading={isParkingLoading}
+        hasParkingNearby={hasParkingNearby}
+        parkingRadiusKm={settings.parkingRadiusKm}
       />
     )
   }
@@ -461,7 +489,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         initialChipIdx={initialCategory && resetKey === 0 ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : settings.defaultChipIdx ?? undefined}
         initialMode={settings.defaultSearchMode}
         onShowParking={handleShowParking}
+        onGpsResolved={handleGpsResolved}
         isParkingLoading={isParkingLoading}
+        hasParkingNearby={hasParkingNearby}
+        parkingRadiusKm={settings.parkingRadiusKm}
       />
 
       {/* ── Error banner ── */}

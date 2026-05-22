@@ -9,6 +9,7 @@ export interface AppSettings {
   sortOrder:          "confidence" | "distance"
   autoZoom:           boolean
   alwaysShowParking:  boolean
+  parkingRadiusKm:    number          // radius for the "show parking" pre-check and fetch (0.05–3.0)
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -18,6 +19,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   sortOrder:          "confidence",
   autoZoom:           true,
   alwaysShowParking:  false,
+  parkingRadiusKm:    1.0,
 }
 
 // Mirrors CHIPS in ChatPanel.tsx — same order and indices must stay in sync

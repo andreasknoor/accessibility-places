@@ -54,7 +54,10 @@ interface Props {
   onSortChange:         (s: "confidence" | "distance") => void
   defaultMobileView:    "results" | "map"
   onShowParking?:       (coords: { lat: number; lon: number }) => void
+  onGpsResolved?:       (coords: { lat: number; lon: number }) => void
   isParkingLoading?:    boolean
+  hasParkingNearby?:    boolean
+  parkingRadiusKm?:     number
 }
 
 export default function MobileLayout({
@@ -64,7 +67,7 @@ export default function MobileLayout({
   onReset, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
   showParking, onToggleParking, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
-  onShowParking, isParkingLoading,
+  onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -128,7 +131,7 @@ export default function MobileLayout({
       <h1 className="sr-only">{t.app.srHeading}</h1>
 
       {/* ── Search bar (always visible) ── */}
-      <ChatPanel key={resetKey} onSearch={handleSearch} isLoading={isLoading} onModeChange={setChatMode} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={settings.defaultSearchMode} onShowParking={handleShowParking} isParkingLoading={isParkingLoading} />
+      <ChatPanel key={resetKey} onSearch={handleSearch} isLoading={isLoading} onModeChange={setChatMode} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={settings.defaultSearchMode} onShowParking={handleShowParking} onGpsResolved={onGpsResolved} isParkingLoading={isParkingLoading} hasParkingNearby={hasParkingNearby} parkingRadiusKm={parkingRadiusKm} />
 
       {/* ── Error banner ── */}
       {error && (

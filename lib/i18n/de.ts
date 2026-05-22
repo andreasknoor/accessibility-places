@@ -35,7 +35,10 @@ const de: Translations = {
     namePlaceholder:   'z. B. „Zur Linde" oder „Hilton"',
     nameToggleShow:    "+ Ergebnisse nach Name eingrenzen",
     nameToggleHide:    "Namensfilter entfernen",
-    showParkingButton: "Rollstuhl-Parkplätze zeigen",
+    showParkingButton: (km: number) => {
+      const dist = km < 1 ? `${Math.round(km * 1000)} m` : `${(Math.round(km * 10) / 10).toFixed(1).replace(".", ",")} km`
+      return `Rollstuhl-Parkplätze zeigen (${dist})`
+    },
   },
   filters: {
     title: "Filter",
@@ -281,6 +284,7 @@ const de: Translations = {
     mobileViewList:    "Liste",
     mobileViewMap:     "Karte",
     resetToDefaults:   "Auf Standard zurücksetzen",
+    parkingRadius:     "Parkplatz-Suchradius",
   },
 }
 

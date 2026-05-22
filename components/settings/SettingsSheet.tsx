@@ -65,6 +65,30 @@ function SelectInput({ value, onChange, children }: {
   )
 }
 
+function SliderInput({ value, min, max, step, onChange, displayLabel }: {
+  value: number
+  min: number
+  max: number
+  step: number
+  onChange: (v: number) => void
+  displayLabel: string
+}) {
+  return (
+    <div className="flex items-center gap-2 min-w-[160px]">
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        className="flex-1 h-1.5 accent-primary cursor-pointer"
+      />
+      <span className="text-xs text-muted-foreground tabular-nums w-12 text-right shrink-0">{displayLabel}</span>
+    </div>
+  )
+}
+
 function SettingsPanel({ settings, onUpdate, onClose }: Props & { onClose: () => void }) {
   const t  = useTranslations()
   const ts = t.settings
@@ -133,6 +157,20 @@ function SettingsPanel({ settings, onUpdate, onClose }: Props & { onClose: () =>
               <Toggle
                 value={settings.alwaysShowParking}
                 onChange={(v) => onUpdate({ alwaysShowParking: v })}
+              />
+            </Row>
+            <Row label={ts.parkingRadius}>
+              <SliderInput
+                min={0.05}
+                max={3.0}
+                step={0.05}
+                value={settings.parkingRadiusKm}
+                onChange={(v) => onUpdate({ parkingRadiusKm: v })}
+                displayLabel={
+                  settings.parkingRadiusKm < 1
+                    ? `${Math.round(settings.parkingRadiusKm * 1000)} m`
+                    : `${settings.parkingRadiusKm.toFixed(1)} km`
+                }
               />
             </Row>
           </div>

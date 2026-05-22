@@ -60,6 +60,7 @@ describe("loadSettings", () => {
       sortOrder:         "distance",
       autoZoom:          false,
       alwaysShowParking: true,
+      parkingRadiusKm:   1,
     }
     localStorageMock.setItem(KEY, JSON.stringify(custom))
     expect(loadSettings()).toEqual(custom)

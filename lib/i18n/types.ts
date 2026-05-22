@@ -31,7 +31,7 @@ export interface Translations {
     namePlaceholder:   string
     nameToggleShow:    string
     nameToggleHide:    string
-    showParkingButton: string
+    showParkingButton: (km: number) => string
   }
   filters: {
     title:               string
@@ -256,5 +256,6 @@ export interface Translations {
     mobileViewList:    string
     mobileViewMap:     string
     resetToDefaults:   string
+    parkingRadius:     string
   }
 }

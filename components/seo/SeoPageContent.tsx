@@ -87,6 +87,162 @@ function parkingValueLabel(attr: { value: A11yValue; details?: unknown }, locale
   return VALUE_LABEL[attr.value][locale]
 }
 
+// ─── Schema.org category types ──────────────────────────────────────────────
+
+const CATEGORY_SCHEMA_TYPE: Record<string, string> = {
+  cafe:        "CafeOrCoffeeShop",
+  restaurant:  "Restaurant",
+  bar:         "BarOrPub",
+  pub:         "BarOrPub",
+  biergarten:  "FoodEstablishment",
+  fast_food:   "FastFoodRestaurant",
+  hotel:       "Hotel",
+  hostel:      "Hostel",
+  apartment:   "LodgingBusiness",
+  museum:      "Museum",
+  theater:     "PerformingArtsTheater",
+  cinema:      "MovieTheater",
+  library:     "Library",
+  gallery:     "ArtGallery",
+  attraction:  "TouristAttraction",
+  ice_cream:   "FoodEstablishment",
+}
+
+// ─── amenityFeature builder ──────────────────────────────────────────────────
+
+type LdFeature = { "@type": "LocationFeatureSpecification"; name: string; value: boolean | string | number }
+
+function buildAmenityFeatures(place: Place): LdFeature[] {
+  const f = (name: string, value: boolean | string | number): LdFeature =>
+    ({ "@type": "LocationFeatureSpecification", name, value })
+
+  const features: LdFeature[] = []
+
+  const entrance = place.accessibility.entrance
+  if (entrance && entrance.value !== "unknown") {
+    features.push(f("Wheelchair-accessible entrance", entrance.value !== "no"))
+    const d = entrance.details as EntranceDetails | undefined
+    if (d) {
+      if (d.isLevel === true)             features.push(f("Level access (no steps)", true))
+      if (d.hasRamp)                      features.push(f("Ramp available", true))
+      if (d.doorWidthCm !== undefined)    features.push(f("Entrance door width", `${d.doorWidthCm} cm`))
+      if (d.hasAutomaticDoor)            features.push(f("Automatic door", true))
+    }
+  }
+
+  const toilet = place.accessibility.toilet
+  if (toilet && toilet.value !== "unknown") {
+    features.push(f("Accessible toilet", toilet.value !== "no"))
+    const d = toilet.details as ToiletDetails | undefined
+    if (d) {
+      if (d.isDesignated)                  features.push(f("Designated wheelchair toilet", true))
+      if (d.hasGrabBars)                   features.push(f("Grab bars", true))
+      if (d.turningRadiusCm !== undefined) features.push(f("Toilet turning radius", `${d.turningRadiusCm} cm`))
+      if (d.doorWidthCm !== undefined)     features.push(f("Toilet door width", `${d.doorWidthCm} cm`))
+    }
+  }
+
+  const parking = place.accessibility.parking
+  if (parking.value !== "unknown") {
+    const d = parking.details as ParkingDetails | undefined
+    if (d?.nearbyOnly) {
+      features.push(f("Nearby disabled parking", true))
+      if (d.nearbyParkingDistanceM !== undefined)
+        features.push(f("Distance to nearest disabled parking", `${d.nearbyParkingDistanceM} m`))
+    } else {
+      features.push(f("Accessible parking on site", parking.value !== "no"))
+      if (d?.spaceCount !== undefined) features.push(f("Disabled parking spaces", d.spaceCount))
+    }
+  }
+
+  return features
+}
+
+// ─── Page stats + mini-FAQ ───────────────────────────────────────────────────
+
+interface PageStats {
+  total:             number
+  nHighConf:         number  // overallConfidence >= 0.70
+  nParking:          number  // parking yes/limited
+  nDesignatedToilet: number  // toilet.details.isDesignated === true
+}
+
+function computePageStats(places: Place[]): PageStats {
+  return {
+    total:             places.length,
+    nHighConf:         places.filter(p => p.overallConfidence >= 0.70).length,
+    nParking:          places.filter(p => p.accessibility.parking.value === "yes" || p.accessibility.parking.value === "limited").length,
+    nDesignatedToilet: places.filter(p => (p.accessibility.toilet?.details as ToiletDetails | undefined)?.isDesignated === true).length,
+  }
+}
+
+interface FaqItem { question: string; answer: string }
+
+function buildFaqItems(
+  stats:    PageStats,
+  places:   Place[],
+  locale:   Locale,
+  cityName: string,
+  catLabel: string,
+): FaqItem[] {
+  const de = locale === "de"
+  const items: FaqItem[] = []
+
+  // Q1 — count (always)
+  items.push({
+    question: de
+      ? `Wie viele ${catLabel} in ${cityName} sind rollstuhlgerecht?`
+      : `How many ${catLabel} in ${cityName} are wheelchair-accessible?`,
+    answer: de
+      ? `Accessible Places listet aktuell ${stats.total} ${catLabel} in ${cityName} – alle mit rollstuhlgerechtem Eingang und barrierefreiem WC. ${stats.nHighConf} Einträge haben eine Verlässlichkeit von mindestens 70 %.`
+      : `Accessible Places currently lists ${stats.total} ${catLabel} in ${cityName} – all with a wheelchair-accessible entrance and toilet. ${stats.nHighConf} entries have a reliability score of at least 70%.`,
+  })
+
+  // Q2 — designated wheelchair toilet (only when data exists)
+  if (stats.nDesignatedToilet > 0) {
+    const top3Names = places
+      .filter(p => (p.accessibility.toilet?.details as ToiletDetails | undefined)?.isDesignated === true)
+      .sort((a, b) => b.overallConfidence - a.overallConfidence)
+      .slice(0, 3)
+      .map(p => p.name)
+    const nameStr = top3Names.length > 0
+      ? (de ? `, darunter ${top3Names.join(", ")}` : `, including ${top3Names.join(", ")}`)
+      : ""
+    items.push({
+      question: de
+        ? `Welche ${catLabel} in ${cityName} haben ein ausgewiesenes Rollstuhl-WC?`
+        : `Which ${catLabel} in ${cityName} have a designated wheelchair toilet?`,
+      answer: de
+        ? `${stats.nDesignatedToilet} von ${stats.total} ${catLabel} haben ein ausgewiesenes Rollstuhl-WC${nameStr}.`
+        : `${stats.nDesignatedToilet} of ${stats.total} ${catLabel} have a designated wheelchair toilet${nameStr}.`,
+    })
+  }
+
+  // Q3 — parking (only when data exists)
+  if (stats.nParking > 0) {
+    items.push({
+      question: de
+        ? `Gibt es ${catLabel} mit Behindertenparkplatz in ${cityName}?`
+        : `Are there ${catLabel} with accessible parking in ${cityName}?`,
+      answer: de
+        ? `Ja, ${stats.nParking} von ${stats.total} ${catLabel} haben einen Behindertenparkplatz oder rollstuhlgerechten Parkplatz in unmittelbarer Nähe (≤ 300 m).`
+        : `Yes, ${stats.nParking} of ${stats.total} ${catLabel} have a disabled parking space or an accessible parking spot nearby (≤ 300 m).`,
+    })
+  }
+
+  // Q4 — data currency (always)
+  items.push({
+    question: de
+      ? "Wie aktuell sind die Barrierefreiheitsdaten?"
+      : "How up-to-date is the accessibility data?",
+    answer: de
+      ? "Die Daten stammen aus OpenStreetMap (kontinuierlich durch die Community aktualisiert), accessibility.cloud/Wheelmap und Ginto. Einträge mit einem OSM-Verifikationsdatum der letzten 2 Jahre werden als manuell verifiziert markiert."
+      : "The data comes from OpenStreetMap (continuously updated by the community), accessibility.cloud/Wheelmap, and Ginto. Entries with an OSM verification date within the last 2 years are marked as manually verified.",
+  })
+
+  return items
+}
+
 // ─── Confidence badge ────────────────────────────────────────────────────────
 
 const CONFIDENCE_COLORS: Record<"high" | "medium" | "low", string> = {
@@ -271,6 +427,10 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
 
   const canonicalUrl = `${BASE}${prefix}/${city.slug}/${categorySlug}`
 
+  const showSummary = places.length > 3
+  const stats       = showSummary ? computePageStats(places) : null
+  const faqItems    = stats ? buildFaqItems(stats, places, locale, cityName, catLabel) : []
+
   const structuredData = [
     {
       "@context":        "https://schema.org",
@@ -278,27 +438,32 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
       "name":            heading,
       "url":             canonicalUrl,
       "numberOfItems":   places.length,
-      "itemListElement": places.map((p, i) => ({
-        "@type":    "ListItem",
-        "position": i + 1,
-        "name":     p.name,
-        "item": {
-          "@type":       "LocalBusiness",
-          "name":        p.name,
-          "address": {
-            "@type":           "PostalAddress",
-            "streetAddress":   [p.address.street, p.address.houseNumber].filter(Boolean).join(" "),
-            "addressLocality": p.address.city,
-            "postalCode":      p.address.postalCode,
-            "addressCountry":  p.address.country,
+      "itemListElement": places.map((p, i) => {
+        const amenityFeature = buildAmenityFeatures(p)
+        return {
+          "@type":    "ListItem",
+          "position": i + 1,
+          "name":     p.name,
+          "item": {
+            "@type": CATEGORY_SCHEMA_TYPE[categorySlug] ?? "LocalBusiness",
+            "name":  p.name,
+            "url":   `${BASE}${searchUrl}&selectLat=${p.coordinates.lat}&selectLon=${p.coordinates.lon}&selectName=${encodeURIComponent(p.name)}`,
+            "address": {
+              "@type":           "PostalAddress",
+              "streetAddress":   [p.address.street, p.address.houseNumber].filter(Boolean).join(" "),
+              "addressLocality": p.address.city,
+              "postalCode":      p.address.postalCode,
+              "addressCountry":  p.address.country,
+            },
+            "geo": {
+              "@type":     "GeoCoordinates",
+              "latitude":  p.coordinates.lat,
+              "longitude": p.coordinates.lon,
+            },
+            ...(amenityFeature.length > 0 && { "amenityFeature": amenityFeature }),
           },
-          "geo": {
-            "@type":     "GeoCoordinates",
-            "latitude":  p.coordinates.lat,
-            "longitude": p.coordinates.lon,
-          },
-        },
-      })),
+        }
+      }),
     },
     {
       "@context": "https://schema.org",
@@ -309,6 +474,15 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
         { "@type": "ListItem", "position": 3, "name": catLabel,            "item": canonicalUrl },
       ],
     },
+    ...(faqItems.length > 0 ? [{
+      "@context": "https://schema.org",
+      "@type":    "FAQPage",
+      "mainEntity": faqItems.map(item => ({
+        "@type": "Question",
+        "name":  item.question,
+        "acceptedAnswer": { "@type": "Answer", "text": item.answer },
+      })),
+    }] : []),
   ]
 
   return (
@@ -380,6 +554,48 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
           <p className="text-xs text-gray-400 mt-6">
             {sourceLabel} OpenStreetMap, accessibility.cloud, Ginto (CH)
           </p>
+
+          {/* Stats summary + mini-FAQ */}
+          {showSummary && stats && (
+            <>
+              <div className="mt-8 rounded-lg border border-gray-200 bg-white p-4">
+                <h2 className="text-sm font-semibold text-gray-700 mb-3">
+                  {locale === "de"
+                    ? `Kurzübersicht · ${catLabel} in ${cityName}`
+                    : `Summary · ${catLabel} in ${cityName}`}
+                </h2>
+                <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                  {([
+                    { value: stats.total,             label: locale === "de" ? "Einträge"            : "Entries"            },
+                    { value: stats.nHighConf,          label: locale === "de" ? "Verlässlichkeit ≥ 70 %" : "Reliability ≥ 70%" },
+                    { value: stats.nParking,           label: locale === "de" ? "Mit Parkplatz"       : "With parking"       },
+                    { value: stats.nDesignatedToilet,  label: locale === "de" ? "Rollstuhl-WC"        : "Wheelchair toilet"  },
+                  ] as { value: number; label: string }[]).map(({ value, label }) => (
+                    <div key={label} className="flex flex-col">
+                      <dt className="text-xs text-gray-500">{label}</dt>
+                      <dd className="text-2xl font-bold text-blue-600 mt-0.5">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+
+              <section aria-labelledby="faq-heading" className="mt-8">
+                <h2 id="faq-heading" className="text-base font-semibold text-gray-700 mb-3">
+                  {locale === "de"
+                    ? `Häufige Fragen zu barrierefreien ${catLabel} in ${cityName}`
+                    : `Frequently asked questions about wheelchair-accessible ${catLabel} in ${cityName}`}
+                </h2>
+                <dl className="flex flex-col divide-y divide-gray-100">
+                  {faqItems.map((item, i) => (
+                    <div key={i} className="py-3 first:pt-0">
+                      <dt className="text-sm font-semibold text-gray-800">{item.question}</dt>
+                      <dd className="mt-1 text-sm text-gray-600 leading-relaxed">{item.answer}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            </>
+          )}
 
           {/* Related categories */}
           {relatedCategories.length > 0 && (
