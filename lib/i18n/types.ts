@@ -22,9 +22,12 @@ export interface Translations {
     noResults:        string
     noSearchYetTitle:      string
     noSearchYet:           string
-    noSearchYetNameHint:   string
-    noSearchYetTitlePlace: string
-    noSearchYetPlace:      string
+    noSearchYetNameHint:    string
+    noSearchYetPlaceHint:   string
+    noSearchYetTitlePlace:  string
+    noSearchYetPlace:       string
+    noSearchYetExploreHint: string
+    noSearchYetExploreLink: string
     errorGeneric:  string
     modeText:      string
     modeNearby:    string

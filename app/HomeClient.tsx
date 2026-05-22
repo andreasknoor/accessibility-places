@@ -248,6 +248,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
   }, [filters, sources, radiusKm, t])
 
+  const handleSwitchMode = useCallback((mode: "text" | "nearby" | "place") => {
+    setChatMode(mode)
+    setResetKey((k) => k + 1)
+  }, [])
+
   const handleReset = useCallback(() => {
     setFilters({ ...DEFAULT_FILTERS, alwaysShowParking: settings.alwaysShowParking })
     setSources(DEFAULT_SOURCES)
@@ -559,7 +564,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         autoFocus
         initialLocation={resetKey === 0 ? initialCity : undefined}
         initialChipIdx={initialCategory && resetKey === 0 ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : settings.defaultChipIdx ?? undefined}
-        initialMode={settings.defaultSearchMode}
+        initialMode={chatMode}
         onShowParking={handleShowParking}
         onGpsResolved={handleGpsResolved}
         isParkingLoading={isParkingLoading}
@@ -633,6 +638,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             sortBy={sortBy}
             onSortChange={(s) => { setSortBy(s); updateSettings({ sortOrder: s }) }}
             chatMode={chatMode}
+            onSwitchToPlace={chatMode === "text" ? () => handleSwitchMode("place") : undefined}
+            onSwitchToText={chatMode === "place" ? () => handleSwitchMode("text") : undefined}
           />
           <div className="shrink-0 border-t border-border px-4 py-2 flex justify-end gap-4">
             <Link href={locale === "en" ? "/en/faq" : "/faq"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
