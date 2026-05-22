@@ -330,7 +330,7 @@ describe("ChatPanel initialChipIdx restore", () => {
 describe("ChatPanel initialMode", () => {
   it("defaults to text mode when initialMode is not passed", () => {
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
-    const textTab = screen.getByText(/^Suche$/)
+    const textTab = screen.getByText(/^Erkunden$/)
     expect(textTab.closest("button")).toHaveClass("bg-background")
   })
 
