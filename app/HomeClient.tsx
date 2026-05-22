@@ -96,6 +96,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [sortBy,        setSortBy]       = useState<"confidence" | "distance">(() => loadSettings().sortOrder)
   const [resetKey,            setResetKey]            = useState(0)
   const [scrollToId,          setScrollToId]          = useState<string | undefined>()
+  const [isParkingLoading,    setIsParkingLoading]    = useState(false)
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
   const selectTarget = useRef(
@@ -294,6 +295,20 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const handleShowParking = useCallback(async (coords: { lat: number; lon: number }) => {
+    setIsParkingLoading(true)
+    try {
+      const res = await fetch(`/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=1`)
+      if (res.ok) {
+        const spots = await res.json()
+        setParkingSpots(spots)
+        setFilters((f) => ({ ...f, alwaysShowParking: true }))
+      }
+    } catch { /* ignore — parking is non-fatal */ } finally {
+      setIsParkingLoading(false)
+    }
+  }, [])
+
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     isDragging.current = true
     dragStart.current  = { x: e.clientX, width: resultsWidth }
@@ -383,6 +398,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         sortBy={sortBy}
         onSortChange={(s) => { setSortBy(s); updateSettings({ sortOrder: s }) }}
         defaultMobileView={settings.defaultMobileView}
+        onShowParking={handleShowParking}
+        isParkingLoading={isParkingLoading}
       />
     )
   }
@@ -442,7 +459,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         autoFocus
         initialLocation={resetKey === 0 ? initialCity : undefined}
         initialChipIdx={initialCategory && resetKey === 0 ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : settings.defaultChipIdx ?? undefined}
-        initialMode={resetKey === 0 ? settings.defaultSearchMode : undefined}
+        initialMode={settings.defaultSearchMode}
+        onShowParking={handleShowParking}
+        isParkingLoading={isParkingLoading}
       />
 
       {/* ── Error banner ── */}

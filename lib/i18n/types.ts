@@ -28,9 +28,10 @@ export interface Translations {
     locateButton:  string
     locationError: string
     nearbyIn:        (district: string) => string
-    namePlaceholder: string
-    nameToggleShow:  string
-    nameToggleHide:  string
+    namePlaceholder:   string
+    nameToggleShow:    string
+    nameToggleHide:    string
+    showParkingButton: string
   }
   filters: {
     title:               string

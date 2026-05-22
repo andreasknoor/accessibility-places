@@ -53,6 +53,8 @@ interface Props {
   sortBy:               "confidence" | "distance"
   onSortChange:         (s: "confidence" | "distance") => void
   defaultMobileView:    "results" | "map"
+  onShowParking?:       (coords: { lat: number; lon: number }) => void
+  isParkingLoading?:    boolean
 }
 
 export default function MobileLayout({
@@ -62,6 +64,7 @@ export default function MobileLayout({
   onReset, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
   showParking, onToggleParking, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
+  onShowParking, isParkingLoading,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -79,6 +82,10 @@ export default function MobileLayout({
   const handleSearch = (query: string, coords?: { lat: number; lon: number }, nameHint?: string) => { setActiveTab(defaultMobileView ?? "results"); onSearch(query, coords, nameHint) }
   const handleRerun = onRerun ? () => { setActiveTab(defaultMobileView ?? "results"); onRerun() } : undefined
   const handleExpandRadius = onExpandRadius ? () => { setActiveTab(defaultMobileView ?? "results"); onExpandRadius() } : undefined
+  // Parking always opens the map tab directly
+  const handleShowParking = onShowParking
+    ? (coords: { lat: number; lon: number }) => { setActiveTab("map"); onShowParking(coords) }
+    : undefined
   const t = useTranslations()
   const { locale } = useLocale()
 
@@ -121,7 +128,7 @@ export default function MobileLayout({
       <h1 className="sr-only">{t.app.srHeading}</h1>
 
       {/* ── Search bar (always visible) ── */}
-      <ChatPanel key={resetKey} onSearch={handleSearch} isLoading={isLoading} onModeChange={setChatMode} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={settings.defaultSearchMode} />
+      <ChatPanel key={resetKey} onSearch={handleSearch} isLoading={isLoading} onModeChange={setChatMode} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={settings.defaultSearchMode} onShowParking={handleShowParking} isParkingLoading={isParkingLoading} />
 
       {/* ── Error banner ── */}
       {error && (

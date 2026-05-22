@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Send, Loader2, LocateFixed, MapPin, X } from "lucide-react"
+import { Send, Loader2, LocateFixed, MapPin, X, CircleParking } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { useIsMobile } from "@/hooks/useIsMobile"
@@ -10,13 +10,15 @@ import { cn } from "@/lib/utils"
 type Coords = { lat: number; lon: number }
 
 interface Props {
-  onSearch:         (query: string, coords?: Coords, nameHint?: string) => void
-  isLoading:        boolean
-  onModeChange?:    (mode: "text" | "nearby") => void
-  autoFocus?:       boolean
-  initialLocation?: string
-  initialChipIdx?:  number
-  initialMode?:     "text" | "nearby"
+  onSearch:          (query: string, coords?: Coords, nameHint?: string) => void
+  isLoading:         boolean
+  onModeChange?:     (mode: "text" | "nearby") => void
+  autoFocus?:        boolean
+  initialLocation?:  string
+  initialChipIdx?:   number
+  initialMode?:      "text" | "nearby"
+  onShowParking?:    (coords: Coords) => void
+  isParkingLoading?: boolean
 }
 
 const CHIPS = [
@@ -45,7 +47,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
   return data.district ?? ""
 }
 
-export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode }: Props) {
+export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onShowParking, isParkingLoading }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
   const isMobile = useIsMobile()
@@ -525,6 +527,22 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
               <LocateFixed className="w-3 h-3 shrink-0 text-primary" />
               <span className="text-primary font-medium">{t.chat.nearbyIn(district)}</span>
             </p>
+          )}
+
+          {typeof nearbyPhase === "object" && onShowParking && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onShowParking({ lat: nearbyPhase.lat, lon: nearbyPhase.lon })}
+              disabled={isLoading || isParkingLoading}
+              className="w-full gap-2"
+            >
+              {isParkingLoading
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <CircleParking className="w-4 h-4" />
+              }
+              {t.chat.showParkingButton}
+            </Button>
           )}
         </>
       )}

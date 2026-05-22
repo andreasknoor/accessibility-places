@@ -32,9 +32,10 @@ const de: Translations = {
     locateButton:  "Standort ermitteln",
     locationError: "Standort konnte nicht ermittelt werden.",
     nearbyIn:        (d: string) => `In der Nähe von ${d}`,
-    namePlaceholder: 'z. B. „Zur Linde" oder „Hilton"',
-    nameToggleShow:  "+ Ergebnisse nach Name eingrenzen",
-    nameToggleHide:  "Namensfilter entfernen",
+    namePlaceholder:   'z. B. „Zur Linde" oder „Hilton"',
+    nameToggleShow:    "+ Ergebnisse nach Name eingrenzen",
+    nameToggleHide:    "Namensfilter entfernen",
+    showParkingButton: "Rollstuhl-Parkplätze zeigen",
   },
   filters: {
     title: "Filter",

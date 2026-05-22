@@ -32,9 +32,10 @@ const en: Translations = {
     locateButton:  "Detect location",
     locationError: "Location could not be determined.",
     nearbyIn:        (d: string) => `Near ${d}`,
-    namePlaceholder: "e.g. \"The Crown\" or \"Hilton\"",
-    nameToggleShow:  "+ Filter results by name",
-    nameToggleHide:  "Remove name filter",
+    namePlaceholder:   "e.g. \"The Crown\" or \"Hilton\"",
+    nameToggleShow:    "+ Filter results by name",
+    nameToggleHide:    "Remove name filter",
+    showParkingButton: "Show wheelchair parking",
   },
   filters: {
     title: "Filters",
