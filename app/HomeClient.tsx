@@ -256,15 +256,21 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setParkingSpots([])
     setSelectedId(undefined)
     setLastQuery(undefined)
+    setLastCoords(undefined)
+    setLastNameHint(undefined)
     setSearchCenter(undefined)
     setFilterDebug(undefined)
     setError(undefined)
     setSourceStates({})
+    setIsLoading(false)
     setChatMode(settings.defaultSearchMode)
     setSortBy(settings.sortOrder)
+    setFilterCollapsed(true)
     try { localStorage.removeItem("ap_last_search") } catch { /* ignore */ }
+    // Clean up any deep-link or SEO params from the URL without a page reload
+    window.history.replaceState({}, "", locale === "en" ? "/en/" : "/")
     setResetKey((k) => k + 1)
-  }, [settings])
+  }, [settings, locale])
 
   const handlePlaceSearch = useCallback(async (nameHint: string, preResolvedCoords?: { lat: number; lon: number }) => {
     if (!nameHint.trim()) return
