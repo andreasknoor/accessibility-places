@@ -122,8 +122,8 @@ function SettingsPanel({ settings, onUpdate, onClose }: Props & { onClose: () =>
                 value={settings.defaultSearchMode}
                 onChange={(v) => onUpdate({ defaultSearchMode: v as "text" | "nearby" | "place" })}
               >
-                <option value="text">{ts.searchModeText}</option>
                 <option value="nearby">{ts.searchModeNearby}</option>
+                <option value="text">{ts.searchModeText}</option>
                 <option value="place">{ts.searchModePlace}</option>
               </SelectInput>
             </Row>

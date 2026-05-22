@@ -252,7 +252,13 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
 
   function submit() {
     if (isLoading) return
+    clearTimeout(debounceRef.current)
+    suggestAbortRef.current?.abort()
+    clearTimeout(nameDebounceRef.current)
+    nameAbortRef.current?.abort()
     if (mode === "place") {
+      setNameSuggestions([])
+      setShowNameSuggestions(false)
       if (name.trim()) onPlaceSearch?.(name.trim())
       return
     }
@@ -344,7 +350,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
 
       {/* ── Segmented control ── */}
       <div className="flex rounded-lg border border-border bg-muted p-0.5 gap-0.5">
-        {(["text", "nearby", "place"] as Mode[]).map((m) => (
+        {(["nearby", "text", "place"] as Mode[]).map((m) => (
           <button
             key={m}
             onClick={() => switchMode(m)}
