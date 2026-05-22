@@ -596,7 +596,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
               />
               <button
                 onClick={() => setFilterCollapsed(true)}
-                className="absolute top-2 right-2 p-1 rounded hover:bg-muted/70 transition-colors"
+                className="absolute top-2 right-2 z-10 p-1 rounded bg-card border border-border hover:bg-muted transition-colors"
                 aria-label={t.filters.title}
               >
                 <ChevronLeft className="w-4 h-4 text-muted-foreground" />
