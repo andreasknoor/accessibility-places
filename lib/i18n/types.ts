@@ -24,6 +24,7 @@ export interface Translations {
     noSearchYet:           string
     noSearchYetNameHint:    string
     noSearchYetPlaceHint:   string
+    noSearchYetPlaceLink:   string
     noSearchYetTitlePlace:  string
     noSearchYetPlace:       string
     noSearchYetExploreHint: string

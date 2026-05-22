@@ -242,7 +242,17 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
                     <p className="font-semibold text-foreground">{t.chat.noSearchYetTitle}</p>
                     <p className="text-sm text-muted-foreground">{t.chat.noSearchYet}</p>
                     <p className="text-xs text-muted-foreground/70 mt-1">{t.chat.noSearchYetNameHint}</p>
-                    <p className="text-xs text-muted-foreground/70">{t.chat.noSearchYetPlaceHint}</p>
+                    {onSwitchToPlace && (
+                      <p className="text-xs text-muted-foreground/70">
+                        {t.chat.noSearchYetPlaceHint}{" "}
+                        <button
+                          onClick={onSwitchToPlace}
+                          className="text-primary hover:underline font-medium"
+                        >
+                          {t.chat.noSearchYetPlaceLink}
+                        </button>
+                      </p>
+                    )}
                   </>
                 )}
               </div>
