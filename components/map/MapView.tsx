@@ -375,12 +375,22 @@ export default function MapView({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, panTrigger, mapReady])
 
-  // Pan to center — only when no results (e.g. failed search or initial state)
+  // Pan to center — only when no results (e.g. failed search, initial state, or parking-only view)
+  // When parking spots are visible without venue results, fit the view to all spots + GPS location.
   useEffect(() => {
-    if (!mapInst.current || !center || places.length > 0) return
+    if (!mapInst.current || places.length > 0) return
+    const spots = parkingSpots ?? []
+    if (spots.length > 0) {
+      const latlngs: [number, number][] = spots.map((s) => [s.lat, s.lon])
+      const ul = userLocationRef.current
+      if (ul) latlngs.push([ul.lat, ul.lon])
+      mapInst.current.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 16 })
+      return
+    }
+    if (!center) return
     mapInst.current.setView([center.lat, center.lon], 13)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [center, mapReady])
+  }, [center, parkingSpots, mapReady])
 
   // Re-measure and re-center whenever the map container becomes visible.
   // Called for both tab reveals and fullscreen toggles — both change the
@@ -398,8 +408,16 @@ export default function MapView({
         const ul = userLocationRef.current
         if (ul) latlngs.push([ul.lat, ul.lon])
         mapInst.current?.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 15 })
-      } else if (center) {
-        mapInst.current?.setView([center.lat, center.lon], 13)
+      } else {
+        const spots = parkingSpots ?? []
+        if (spots.length > 0) {
+          const latlngs: [number, number][] = spots.map((s) => [s.lat, s.lon])
+          const ul = userLocationRef.current
+          if (ul) latlngs.push([ul.lat, ul.lon])
+          mapInst.current?.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 16 })
+        } else if (center) {
+          mapInst.current?.setView([center.lat, center.lon], 13)
+        }
       }
     }, 50)
     return () => clearTimeout(id)
