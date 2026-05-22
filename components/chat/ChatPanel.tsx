@@ -72,6 +72,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const suggestAbortRef      = useRef<AbortController>(undefined)
   const nameDebounceRef      = useRef<ReturnType<typeof setTimeout>>(undefined)
   const nameAbortRef         = useRef<AbortController>(undefined)
+  const skipNameSuggestRef   = useRef(false)
   const skipSuggestRef       = useRef(false)
   const locatingRef          = useRef(false)
   // Holds the location value that was set programmatically on restore.
@@ -183,6 +184,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
 
   // Fetch place-name suggestions for the name field (only when location is empty)
   useEffect(() => {
+    if (skipNameSuggestRef.current) { skipNameSuggestRef.current = false; return }
     if (location.trim() || name.length < 2) {
       setNameSuggestions([])
       setShowNameSuggestions(false)
@@ -251,6 +253,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   }
 
   function selectNameSuggestion(s: { display: string; name: string; lat: number | null; lon: number | null }) {
+    skipNameSuggestRef.current = true
     setName(s.name)
     setNameSuggestions([])
     setShowNameSuggestions(false)
