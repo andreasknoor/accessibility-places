@@ -2,10 +2,18 @@ import { NextRequest, NextResponse } from "next/server"
 import { NOMINATIM_ENDPOINT } from "@/lib/config"
 
 export async function GET(req: NextRequest) {
-  const q = req.nextUrl.searchParams.get("q")
+  const q   = req.nextUrl.searchParams.get("q")
+  const lat = req.nextUrl.searchParams.get("lat")
+  const lon = req.nextUrl.searchParams.get("lon")
   if (!q) return NextResponse.json({ error: "Missing q" }, { status: 400 })
 
-  const url = `${NOMINATIM_ENDPOINT}/search?q=${encodeURIComponent(q)}&format=json&limit=1&countrycodes=de,at,ch`
+  const latN = lat ? parseFloat(lat) : NaN
+  const lonN = lon ? parseFloat(lon) : NaN
+  const viewbox = !isNaN(latN) && !isNaN(lonN)
+    ? `&viewbox=${lonN - 0.2},${latN + 0.2},${lonN + 0.2},${latN - 0.2}&bounded=0`
+    : ""
+
+  const url = `${NOMINATIM_ENDPOINT}/search?q=${encodeURIComponent(q)}&format=json&limit=1&countrycodes=de,at,ch${viewbox}`
 
   const res = await fetch(url, {
     headers: { "User-Agent": "AccessiblePlaces/1.0 (contact@accessible-places.org)" },

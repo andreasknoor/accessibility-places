@@ -11,6 +11,7 @@ type Coords = { lat: number; lon: number }
 
 interface Props {
   onSearch:          (query: string, coords?: Coords, nameHint?: string) => void
+  onPlaceSearch?:    (nameHint: string) => void
   isLoading:         boolean
   onModeChange?:     (mode: "text" | "nearby") => void
   autoFocus?:        boolean
@@ -50,7 +51,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
   return data.district ?? ""
 }
 
-export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm }: Props) {
+export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
   const isMobile = useIsMobile()
@@ -58,7 +59,6 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
   const [nearbyPhase,    setNearbyPhase]    = useState<NearbyPhase>("idle")
   const [location,       setLocation]       = useState("")
   const [name,           setName]           = useState("")
-  const [showNameField,  setShowNameField]  = useState(false)
   const [selectedIdx,    setSelectedIdx]    = useState(0)
   const [suggestions,    setSuggestions]    = useState<Suggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -207,7 +207,11 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
   }
 
   function submit() {
-    if (isLoading || !location.trim()) return
+    if (isLoading) return
+    if (!location.trim()) {
+      if (name.trim()) onPlaceSearch?.(name.trim())
+      return
+    }
     setSuggestions([])
     setShowSuggestions(false)
     try { localStorage.setItem("ap_last_search", JSON.stringify({ idx: selectedIdx, loc: location.trim() })) } catch { /* ignore */ }
@@ -407,7 +411,11 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") submit() }}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return
+                  if (!location.trim() && name.trim()) onPlaceSearch?.(name.trim())
+                  else submit()
+                }}
                 placeholder={t.chat.namePlaceholder}
                 disabled={isLoading}
                 className={cn(
@@ -435,7 +443,7 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
 
           <Button
             onClick={submit}
-            disabled={isLoading || !location.trim()}
+            disabled={isLoading || (!location.trim() && !name.trim())}
             size="sm"
             className="shrink-0 relative overflow-hidden"
           >
@@ -456,45 +464,42 @@ export default function ChatPanel({ onSearch, isLoading, onModeChange, autoFocus
           </Button>
         </div>
 
-        {/* Mobile: expand link — visible when name field is hidden */}
-        {isMobile && !showNameField && (
-          <button
-            type="button"
-            onClick={() => setShowNameField(true)}
-            className="self-start text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {t.chat.nameToggleShow}
-          </button>
-        )}
-
-        {/* Mobile: name field as second row when expanded */}
-        {isMobile && showNameField && (
+        {/* Mobile: name field always visible as second row */}
+        {isMobile && (
           <div className="relative">
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") submit() }}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return
+                if (!location.trim() && name.trim()) onPlaceSearch?.(name.trim())
+                else submit()
+              }}
               placeholder={t.chat.namePlaceholder}
               disabled={isLoading}
               className={cn(
                 "w-full rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]",
                 "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
-                "focus-visible:ring-ring disabled:opacity-50 pr-7",
+                "focus-visible:ring-ring disabled:opacity-50",
+                name && "pr-7",
               )}
             />
-            <button
-              type="button"
-              onMouseDown={(e) => {
-                e.preventDefault()
-                setName("")
-                setShowNameField(false)
-              }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label={t.chat.nameToggleHide}
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
+            {name && (
+              <button
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); setName("") }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label={t.chat.nameToggleHide}
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
+        )}
+
+        {/* Place-search mode hint */}
+        {name.trim() && !location.trim() && (
+          <p className="text-xs text-muted-foreground">{t.chat.placeSearchHint}</p>
         )}
         </>
       )}

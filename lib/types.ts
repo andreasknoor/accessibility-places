@@ -191,6 +191,8 @@ export interface SearchParams {
   filters: SearchFilters
   sources: ActiveSources
   signal?: AbortSignal
+  nameHint?: string
+  placeSearch?: boolean
 }
 
 // ─── LLM query parse result ────────────────────────────────────────────────

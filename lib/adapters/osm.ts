@@ -32,6 +32,16 @@ export function buildOverpassQuery(params: SearchParams): string {
   const lat = location.lat
   const lon = location.lon
 
+  // ── Place-search: name-based query ───────────────────────────────────────
+  // Used when the user searches for a specific known place by name.
+  // No accessibility pre-filter — we want to find the place regardless of tags.
+  if (params.placeSearch && params.nameHint) {
+    const regex  = buildOverpassNameRegex(params.nameHint)
+    const around = `(around:${r},${lat},${lon})`
+    const nf     = `["name"~"${regex}"]`
+    return `[out:json][timeout:12];(node${nf}${around};way${nf}${around};relation${nf}${around};);out 200 center tags;`
+  }
+
   // ── Category-driven query ─────────────────────────────────────────────────
   // Collect all amenity and tourism values across requested categories
   const amenityVals = new Set<string>()

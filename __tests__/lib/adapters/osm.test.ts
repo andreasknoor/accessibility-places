@@ -118,6 +118,57 @@ describe("buildOverpassQuery", () => {
   })
 })
 
+// ─── buildOverpassQuery: name-based place search ──────────────────────────────
+
+describe("buildOverpassQuery — placeSearch branch", () => {
+  const PLACE_PARAMS: SearchParams = {
+    ...BASE_PARAMS,
+    categories: [],
+    nameHint:   "Hotel Adlon",
+    placeSearch: true,
+  }
+
+  it("returns name-based query when placeSearch=true and nameHint is set", () => {
+    const q = buildOverpassQuery(PLACE_PARAMS)
+    expect(q).toContain(`["name"~"`)
+    expect(q).toContain("around:")
+  })
+
+  it("includes node, way, and relation in name-based query", () => {
+    const q = buildOverpassQuery(PLACE_PARAMS)
+    expect(q).toContain("node[")
+    expect(q).toContain("way[")
+    expect(q).toContain("relation[")
+  })
+
+  it("encodes name using case-insensitive character classes", () => {
+    const q = buildOverpassQuery(PLACE_PARAMS)
+    // 'H' → '[hH]', space passes through
+    expect(q).toContain("[hH][oO][tT][eE][lL]")
+  })
+
+  it("uses the correct radius from radiusKm", () => {
+    const q = buildOverpassQuery({ ...PLACE_PARAMS, radiusKm: 0.5 })
+    expect(q).toContain("around:500,")
+  })
+
+  it("falls back to category query when placeSearch=false", () => {
+    const q = buildOverpassQuery({ ...BASE_PARAMS, placeSearch: false })
+    expect(q).not.toContain(`["name"~"`)
+    expect(q).toContain("amenity~")
+  })
+
+  it("falls back to category query when nameHint is absent", () => {
+    const q = buildOverpassQuery({ ...PLACE_PARAMS, nameHint: undefined })
+    expect(q).toBe("") // empty categories → empty string
+  })
+
+  it("does not apply wheelchair pre-filter in name-based query", () => {
+    const q = buildOverpassQuery(PLACE_PARAMS)
+    expect(q).not.toContain("wheelchair~")
+  })
+})
+
 // ─── osmWheelchair ────────────────────────────────────────────────────────────
 
 describe("osmWheelchair", () => {

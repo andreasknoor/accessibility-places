@@ -117,7 +117,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     } catch { /* ignore — localStorage unavailable (private mode, quota) */ }
   }, [filters, sources, radiusKm])
 
-  const handleSearch = useCallback(async (query: string, radiusKmOverride?: number, coords?: { lat: number; lon: number }, nameHint?: string, filtersOverride?: Partial<SearchFilters>, sourcesOverride?: Partial<ActiveSources>) => {
+  const handleSearch = useCallback(async (query: string, radiusKmOverride?: number, coords?: { lat: number; lon: number }, nameHint?: string, filtersOverride?: Partial<SearchFilters>, sourcesOverride?: Partial<ActiveSources>, placeSearch?: boolean) => {
     setLastQuery(query)
     setLastCoords(coords)
     setLastNameHint(nameHint)
@@ -139,7 +139,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       const res = await fetch("/api/search", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ userQuery: query, radiusKm: radiusKmOverride ?? radiusKm, filters: { ...filters, ...filtersOverride }, sources: { ...sources, ...sourcesOverride }, locale, coordinates: coords, nameHint }),
+        body:    JSON.stringify({ userQuery: query, radiusKm: radiusKmOverride ?? radiusKm, filters: { ...filters, ...filtersOverride }, sources: { ...sources, ...sourcesOverride }, locale, coordinates: coords, nameHint, placeSearch }),
       })
 
       if (!res.ok || !res.body) {
@@ -151,6 +151,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       const reader  = res.body.getReader()
       const decoder = new TextDecoder()
       let buffer    = ""
+      let placesReceived = false
 
       // eslint-disable-next-line no-constant-condition
       while (true) {
@@ -172,10 +173,17 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             setSourceStates((prev) => ({ ...prev, [sid]: update }))
           } else if (event.type === "result") {
             const data = event.payload as SearchResult
+            placesReceived = data.places.length > 0
             setPlaces(data.places)
             setParkingSpots(data.parkingSpots ?? [])
             setSearchCenter(data.location)
             setFilterDebug(data.filterDebug)
+
+            // Auto-select single result for place search
+            if (placeSearch && data.places.length === 1) {
+              setSelectedId(data.places[0].id)
+              setScrollToId(data.places[0].id)
+            }
 
             // Auto-select place from SEO deep-link (closest within 100 m)
             if (selectTarget.current && !hasAutoSelected.current) {
@@ -219,6 +227,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           }
         }
       }
+
+      // Place found by geocoding but no adapter returned data
+      if (placeSearch && !placesReceived) {
+        setError(t.chat.placeNoData(nameHint ?? ""))
+      }
     } catch (err) {
       setError(t.chat.errorGeneric)
       console.error(err)
@@ -250,6 +263,38 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     try { localStorage.removeItem("ap_last_search") } catch { /* ignore */ }
     setResetKey((k) => k + 1)
   }, [settings])
+
+  const handlePlaceSearch = useCallback(async (nameHint: string) => {
+    if (!nameHint.trim()) return
+    setIsLoading(true)
+    setError(undefined)
+    try {
+      // Best-effort location bias: existing search center → cached GPS → fresh GPS
+      const getCoords = (): Promise<{ lat: number; lon: number } | null> => {
+        if (searchCenter) return Promise.resolve(searchCenter)
+        if (gpsCoordRef.current) return Promise.resolve(gpsCoordRef.current)
+        return new Promise((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+            () => resolve(null),
+            { timeout: 5_000, maximumAge: 60_000 },
+          )
+        })
+      }
+      const coords = await getCoords()
+      const qs = new URLSearchParams({ q: nameHint })
+      if (coords) { qs.set("lat", String(coords.lat)); qs.set("lon", String(coords.lon)) }
+      const res = await fetch(`/api/geocode?${qs}`)
+      if (res.status === 404) { setError(t.chat.placeNotFound); setIsLoading(false); return }
+      if (!res.ok)            { setError(t.chat.errorGeneric);  setIsLoading(false); return }
+      const { lat, lon } = await res.json()
+      // Pass placeSearch=true to enable name-based OSM query + 0.5 km radius cap
+      await handleSearch("", undefined, { lat, lon }, nameHint, undefined, undefined, true)
+    } catch {
+      setError(t.chat.errorGeneric)
+      setIsLoading(false)
+    }
+  }, [searchCenter, t, handleSearch])
 
   const handleExpandRadius = useCallback(() => {
     if (!lastQuery) return
@@ -404,10 +449,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         sourceStates={sourceStates}
         searchCenter={searchCenter}
         onSearch={(query, coords, nameHint) => handleSearch(query, undefined, coords, nameHint)}
+        onPlaceSearch={handlePlaceSearch}
         onRerun={lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords, lastNameHint) : undefined}
         onExpandRadius={lastQuery && radiusKm < RADIUS_MAX_KM ? handleExpandRadius : undefined}
         onRadiusChange={handleRadiusChange}
-        hasSearched={!!lastQuery}
+        hasSearched={!!(lastQuery || lastNameHint)}
         error={error}
         onReset={handleReset}
         resetKey={resetKey}
@@ -482,6 +528,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       <ChatPanel
         key={resetKey}
         onSearch={(query, coords, nameHint) => handleSearch(query, undefined, coords, nameHint)}
+        onPlaceSearch={handlePlaceSearch}
         isLoading={isLoading}
         onModeChange={setChatMode}
         autoFocus
@@ -530,7 +577,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             onExpandRadius={lastQuery && radiusKm < RADIUS_MAX_KM ? handleExpandRadius : undefined}
             radiusKm={radiusKm}
             onRadiusChange={handleRadiusChange}
-            hasSearched={!!lastQuery}
+            hasSearched={!!(lastQuery || lastNameHint)}
             scrollToId={scrollToId}
             filterDebug={filterDebug}
             searchCenter={chatMode === "nearby" ? searchCenter : undefined}

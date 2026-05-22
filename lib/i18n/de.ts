@@ -35,6 +35,9 @@ const de: Translations = {
     namePlaceholder:   'z. B. „Zur Linde" oder „Hilton"',
     nameToggleShow:    "+ Ergebnisse nach Name eingrenzen",
     nameToggleHide:    "Namensfilter entfernen",
+    placeSearchHint:   "Direkte Ortssuche — aktuell nur DE, AT, CH",
+    placeNotFound:     "Diesen Ort konnten wir nicht finden. Versuche einen präziseren Namen oder füge die Stadt hinzu.",
+    placeNoData:       (name: string) => `Wir haben „${name}" gefunden, haben aber keine Barrierefreiheits-Daten für diesen Ort.`,
     showParkingButton: (km: number) => {
       const dist = km < 1 ? `${Math.round(km * 1000)} m` : `${(Math.round(km * 10) / 10).toFixed(1).replace(".", ",")} km`
       return `Rollstuhl-Parkplätze in der Nähe zeigen (${dist})`

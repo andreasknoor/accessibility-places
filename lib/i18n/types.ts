@@ -31,6 +31,9 @@ export interface Translations {
     namePlaceholder:   string
     nameToggleShow:    string
     nameToggleHide:    string
+    placeSearchHint:   string
+    placeNotFound:     string
+    placeNoData:       (name: string) => string
     showParkingButton: (km: number) => string
   }
   filters: {

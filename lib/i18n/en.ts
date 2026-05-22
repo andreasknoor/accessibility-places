@@ -35,6 +35,9 @@ const en: Translations = {
     namePlaceholder:   "e.g. \"The Crown\" or \"Hilton\"",
     nameToggleShow:    "+ Filter results by name",
     nameToggleHide:    "Remove name filter",
+    placeSearchHint:   "Direct place search — currently DE, AT, CH only",
+    placeNotFound:     "We couldn't find this place. Try a more specific name or add the city.",
+    placeNoData:       (name: string) => `We found "${name}" but have no accessibility data for this place.`,
     showParkingButton: (km: number) => {
       const dist = km < 1 ? `${Math.round(km * 1000)} m` : `${(Math.round(km * 10) / 10).toFixed(1)} km`
       return `Show nearby wheelchair parking (${dist})`

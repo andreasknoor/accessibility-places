@@ -448,6 +448,69 @@ describe("ChatPanel parking button", () => {
   })
 })
 
+// ─── Place-search trigger ────────────────────────────────────────────────────
+
+describe("ChatPanel place-search", () => {
+  function getNameInput() {
+    return screen.getByPlaceholderText(/Zur Linde|The Crown/i) as HTMLInputElement
+  }
+
+  it("search button is disabled when both location and name are empty", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onPlaceSearch={vi.fn()} />)
+    const btn = screen.getByRole("button", { name: /Suchen/i })
+    expect(btn).toBeDisabled()
+  })
+
+  it("search button is enabled when name has content and location is empty", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onPlaceSearch={vi.fn()} />)
+    fireEvent.change(getNameInput(), { target: { value: "Hotel Adlon" } })
+    const btn = screen.getByRole("button", { name: /Suchen/i })
+    expect(btn).not.toBeDisabled()
+  })
+
+  it("clicking Suchen with name+no-location calls onPlaceSearch, not onSearch", () => {
+    const onSearch = vi.fn()
+    const onPlaceSearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} isLoading={false} onPlaceSearch={onPlaceSearch} />)
+    fireEvent.change(getNameInput(), { target: { value: "Hotel Adlon" } })
+    fireEvent.click(screen.getByRole("button", { name: /Suchen/i }))
+    expect(onPlaceSearch).toHaveBeenCalledWith("Hotel Adlon")
+    expect(onSearch).not.toHaveBeenCalled()
+  })
+
+  it("pressing Enter in name field with no location calls onPlaceSearch", () => {
+    const onPlaceSearch = vi.fn()
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onPlaceSearch={onPlaceSearch} />)
+    fireEvent.change(getNameInput(), { target: { value: "Goldener Löwe" } })
+    fireEvent.keyDown(getNameInput(), { key: "Enter" })
+    expect(onPlaceSearch).toHaveBeenCalledWith("Goldener Löwe")
+  })
+
+  it("pressing Enter in name field WITH location calls onSearch, not onPlaceSearch", () => {
+    const onSearch = vi.fn()
+    const onPlaceSearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} isLoading={false} onPlaceSearch={onPlaceSearch} />)
+    fireEvent.change(getInput(), { target: { value: "Berlin" } })
+    fireEvent.change(getNameInput(), { target: { value: "Goldener Löwe" } })
+    fireEvent.keyDown(getNameInput(), { key: "Enter" })
+    expect(onSearch).toHaveBeenCalledWith(expect.stringContaining("Berlin"), undefined, "Goldener Löwe")
+    expect(onPlaceSearch).not.toHaveBeenCalled()
+  })
+
+  it("shows place-search hint when name is filled and location is empty", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
+    fireEvent.change(getNameInput(), { target: { value: "Hotel Adlon" } })
+    expect(screen.getByText(/Direkte Ortssuche|Direct place search/i)).toBeInTheDocument()
+  })
+
+  it("hides place-search hint when location is also filled", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
+    fireEvent.change(getNameInput(), { target: { value: "Hotel Adlon" } })
+    fireEvent.change(getInput(), { target: { value: "Berlin" } })
+    expect(screen.queryByText(/Direkte Ortssuche|Direct place search/i)).not.toBeInTheDocument()
+  })
+})
+
 // ─── Quoted-name stripping ───────────────────────────────────────────────────
 
 describe("ChatPanel autocomplete — quote stripping", () => {

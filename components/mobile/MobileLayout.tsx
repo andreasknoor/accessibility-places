@@ -33,7 +33,8 @@ interface Props {
   onRadius:      (r: number) => void
   sourceStates?: Partial<Record<SourceId, SourceState>>
   searchCenter?: { lat: number; lon: number }
-  onSearch:      (query: string, coords?: { lat: number; lon: number }, nameHint?: string) => void
+  onSearch:        (query: string, coords?: { lat: number; lon: number }, nameHint?: string) => void
+  onPlaceSearch?:  (nameHint: string) => void
   onRerun?:         () => void
   onExpandRadius?:  () => void
   onRadiusChange?:  (km: number) => void
@@ -63,7 +64,7 @@ interface Props {
 export default function MobileLayout({
   places, parkingSpots, selectedId, onSelect, isLoading,
   filters, sources, radiusKm, onFilters, onSources, onRadius,
-  sourceStates, searchCenter, onSearch, onRerun, onExpandRadius, onRadiusChange, hasSearched, error,
+  sourceStates, searchCenter, onSearch, onPlaceSearch, onRerun, onExpandRadius, onRadiusChange, hasSearched, error,
   onReset, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
   showParking, onToggleParking, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
@@ -131,7 +132,7 @@ export default function MobileLayout({
       <h1 className="sr-only">{t.app.srHeading}</h1>
 
       {/* ── Search bar (always visible) ── */}
-      <ChatPanel key={resetKey} onSearch={handleSearch} isLoading={isLoading} onModeChange={setChatMode} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={settings.defaultSearchMode} onShowParking={handleShowParking} onGpsResolved={onGpsResolved} isParkingLoading={isParkingLoading} hasParkingNearby={hasParkingNearby} parkingRadiusKm={parkingRadiusKm} />
+      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={setChatMode} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={settings.defaultSearchMode} onShowParking={handleShowParking} onGpsResolved={onGpsResolved} isParkingLoading={isParkingLoading} hasParkingNearby={hasParkingNearby} parkingRadiusKm={parkingRadiusKm} />
 
       {/* ── Error banner ── */}
       {error && (
