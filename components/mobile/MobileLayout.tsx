@@ -104,10 +104,17 @@ export default function MobileLayout({
     if (chatMode === "place" && activeTab === "filter") setActiveTab("results")
   }, [chatMode, activeTab])
 
+  const hasActiveFilters = filters.entrance || filters.toilet || filters.parking || filters.seating || filters.onlyVerified
+
   const allTabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "results", label: t.results.title ?? "Ergebnisse", icon: <List className="w-5 h-5" /> },
     { id: "map",     label: t.results.showMap ?? "Karte",     icon: <Map  className="w-5 h-5" /> },
-    { id: "filter",  label: t.filters?.title  ?? "Filter",    icon: <SlidersHorizontal className="w-5 h-5" /> },
+    { id: "filter",  label: t.filters?.title  ?? "Filter",    icon: (
+      <span className="relative">
+        <SlidersHorizontal className="w-5 h-5" />
+        {hasActiveFilters && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" />}
+      </span>
+    )},
   ]
   // Filter tab is irrelevant in place mode — hide it and redirect if currently active
   const tabs = chatMode === "place" ? allTabs.filter((tab) => tab.id !== "filter") : allTabs
