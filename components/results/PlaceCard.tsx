@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import ConfidenceBadge  from "./ConfidenceBadge"
 import A11yAttribute    from "./A11yAttribute"
 import PlaceDebugSheet  from "./PlaceDebugSheet"
+import { track } from "@vercel/analytics"
 import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS }   from "@/lib/config"
 import { cn } from "@/lib/utils"
@@ -86,7 +87,7 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
         "cursor-pointer transition-all hover:shadow-md border overflow-hidden",
         isSelected ? "border-primary ring-1 ring-primary" : "border-border",
       )}
-      onClick={() => setShowDebug(true)}
+      onClick={() => { setShowDebug(true); track("detail_sheet_open", { category: place.category }) }}
     >
       <CardContent className="p-3 flex flex-col gap-2">
         {/* ── Header ── */}

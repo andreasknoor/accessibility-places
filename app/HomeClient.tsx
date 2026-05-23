@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useRef, useEffect } from "react"
+import { track } from "@vercel/analytics"
 import { SlidersHorizontal, ChevronRight, ChevronLeft } from "lucide-react"
 import dynamic from "next/dynamic"
 import Script from "next/script"
@@ -180,6 +181,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             setParkingSpots(data.parkingSpots ?? [])
             setSearchCenter(data.location)
             setFilterDebug(data.filterDebug)
+            track("search", { mode: chatMode, result_count: data.places.length })
+            if (data.places.length === 0) {
+              track("search_no_results", { mode: chatMode, radius_km: radiusKmOverride ?? radiusKm })
+            }
 
             // Auto-select single result for place search
             if (placeSearch && data.places.length === 1) {
@@ -232,6 +237,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
       // Place found by geocoding but no adapter returned data
       if (placeSearch && !placesReceived) {
+        track("place_not_found", { reason: "no_data" })
         setError(t.chat.placeNoData(nameHint ?? ""))
       }
     } catch (err) {
@@ -321,7 +327,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       const qs = new URLSearchParams({ q: nameHint })
       if (coords) { qs.set("lat", String(coords.lat)); qs.set("lon", String(coords.lon)) }
       const res = await fetch(`/api/geocode?${qs}`)
-      if (res.status === 404) { setError(t.chat.placeNotFound); setIsLoading(false); return }
+      if (res.status === 404) { track("place_not_found", { reason: "not_found" }); setError(t.chat.placeNotFound); setIsLoading(false); return }
       if (!res.ok)            { setError(t.chat.errorGeneric);  setIsLoading(false); return }
       const { lat, lon } = await res.json()
       await handleSearch("", undefined, { lat, lon }, nameHint, undefined, undefined, true)
@@ -451,9 +457,17 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
   const visibleParkingSpots = filters.alwaysShowParking ? parkingSpots : []
 
+  const handleFilters = useCallback((next: SearchFilters) => {
+    const activated = (["entrance", "toilet", "parking", "seating", "onlyVerified"] as const)
+      .filter((k) => next[k] && !filters[k])
+    if (activated.length > 0) track("filter_apply", { criteria: activated.join(",") })
+    setFilters(next)
+  }, [filters])
+
   const handleToggleParking = useCallback(() => {
     setFilters((f) => {
       const next = !f.alwaysShowParking
+      if (next) track("parking_shown")
       updateSettings({ alwaysShowParking: next })
       return { ...f, alwaysShowParking: next }
     })
@@ -491,7 +505,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         filters={filters}
         sources={sources}
         radiusKm={radiusKm}
-        onFilters={setFilters}
+        onFilters={handleFilters}
         onSources={setSources}
         onRadius={setRadiusKm}
         sourceStates={sourceStates}
@@ -623,7 +637,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
                 filters={filters}
                 sources={sources}
                 radiusKm={radiusKm}
-                onFilters={setFilters}
+                onFilters={handleFilters}
                 onSources={setSources}
                 onRadius={setRadiusKm}
                 sourceStates={sourceStates}
