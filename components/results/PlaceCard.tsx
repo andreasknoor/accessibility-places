@@ -52,7 +52,7 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
     place.accessibility.parking,
     ...(place.accessibility.seating ? [place.accessibility.seating] : []),
   ]
-  const HIDDEN_DETAIL_KEYS = new Set(["isInside"])
+  const HIDDEN_DETAIL_KEYS = new Set(["isInside", "nearbyOnly", "nearbyParkingDistanceM"])
   const hasAnyDetails = allAttrs.some((attr) =>
     Object.entries(attr.details).some(([k, v]) => v != null && !HIDDEN_DETAIL_KEYS.has(k)),
   )
