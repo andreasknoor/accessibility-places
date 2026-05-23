@@ -93,7 +93,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [lastQuery,     setLastQuery]    = useState<string | undefined>()
   const [lastCoords,    setLastCoords]   = useState<{ lat: number; lon: number } | undefined>()
   const [lastNameHint,  setLastNameHint] = useState<string | undefined>()
-  const [chatMode,      setChatMode]     = useState<"text" | "nearby" | "place">(() => loadSettings().defaultSearchMode)
+  const [chatMode,      setChatMode]     = useState<"text" | "nearby" | "place">(() => loadSettings().defaultSearchMode ?? "text")
   const [filterCollapsed, setFilterCollapsed] = useState(true)
   const [sortBy,        setSortBy]       = useState<"confidence" | "distance">(() => loadSettings().sortOrder)
   const [resetKey,            setResetKey]            = useState(0)
@@ -286,7 +286,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setError(undefined)
     setSourceStates({})
     setIsLoading(false)
-    setChatMode(settings.defaultSearchMode)
+    setChatMode(settings.defaultSearchMode ?? "text")
     setSortBy(settings.sortOrder)
     setFilterCollapsed(true)
     try { localStorage.removeItem("ap_last_search") } catch { /* ignore */ }
@@ -468,7 +468,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       setSortBy(patch.sortOrder)
     }
     if (patch.defaultSearchMode !== undefined) {
-      setChatMode(patch.defaultSearchMode)
+      setChatMode(patch.defaultSearchMode ?? "text")
     }
   }, [updateSettings])
 

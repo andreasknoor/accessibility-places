@@ -257,6 +257,7 @@ export interface Translations {
     sectionResults:    string
     sectionMobile:     string
     searchMode:        string
+    searchModeDefault: string
     searchModeText:    string
     searchModeNearby:  string
     searchModePlace:   string

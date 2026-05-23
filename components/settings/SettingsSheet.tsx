@@ -119,9 +119,10 @@ function SettingsPanel({ settings, onUpdate, onClose }: Props & { onClose: () =>
           <div className="divide-y divide-border/60">
             <Row label={ts.searchMode}>
               <SelectInput
-                value={settings.defaultSearchMode}
-                onChange={(v) => onUpdate({ defaultSearchMode: v as "text" | "nearby" | "place" })}
+                value={settings.defaultSearchMode ?? ""}
+                onChange={(v) => onUpdate({ defaultSearchMode: v === "" ? null : v as "text" | "nearby" | "place" })}
               >
+                <option value="">{ts.searchModeDefault}</option>
                 <option value="nearby">{ts.searchModeNearby}</option>
                 <option value="text">{ts.searchModeText}</option>
                 <option value="place">{ts.searchModePlace}</option>

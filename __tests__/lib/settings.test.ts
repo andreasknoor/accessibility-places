@@ -70,4 +70,9 @@ describe("loadSettings", () => {
     localStorageMock.setItem(KEY, JSON.stringify({ defaultChipIdx: null }))
     expect(loadSettings().defaultChipIdx).toBeNull()
   })
+
+  it("defaultSearchMode null roundtrips correctly", () => {
+    localStorageMock.setItem(KEY, JSON.stringify({ defaultSearchMode: null }))
+    expect(loadSettings().defaultSearchMode).toBeNull()
+  })
 })

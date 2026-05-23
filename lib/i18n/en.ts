@@ -285,6 +285,7 @@ const en: Translations = {
     sectionResults:    "Results",
     sectionMobile:     "Mobile",
     searchMode:        "Default search mode",
+    searchModeDefault: "No default",
     searchModeText:    "Explore",
     searchModeNearby:  "Nearby",
     searchModePlace:   "Find Place",
