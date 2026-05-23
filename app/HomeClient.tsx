@@ -606,7 +606,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
               className="shrink-0 w-12 border-r border-border flex flex-col items-center justify-center gap-3 py-6 hover:bg-muted/50 transition-colors cursor-pointer"
               aria-label={t.filters.title}
             >
-              <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
+              <span className="relative">
+                <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
+                {(filters.entrance || filters.toilet || filters.parking || filters.seating || filters.onlyVerified) && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" />
+                )}
+              </span>
               <span className="text-xs text-muted-foreground font-medium [writing-mode:vertical-rl] rotate-180 tracking-wide">{t.filters.title}</span>
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
