@@ -112,7 +112,8 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Input validation ──────────────────────────────────────────────────────
-  const { userQuery, radiusKm: rawRadius, filters: rawFilters, sources: rawSources, locale, coordinates: rawCoords, nameHint: rawNameHint } = rawBody
+  const { userQuery, radiusKm: rawRadius, filters: rawFilters, sources: rawSources, locale, coordinates: rawCoords, nameHint: rawNameHint, placeSearch: rawPlaceSearch } = rawBody
+  const placeSearch = rawPlaceSearch === true
 
   const coordinates = (() => {
     if (!rawCoords || typeof rawCoords !== "object") return undefined
@@ -123,7 +124,8 @@ export async function POST(req: NextRequest) {
     return { lat, lon }
   })()
 
-  if (typeof userQuery !== "string" || userQuery.trim().length === 0) {
+  // placeSearch mode supplies coordinates directly and uses nameHint as the query — allow empty userQuery
+  if (typeof userQuery !== "string" || (userQuery.trim().length === 0 && !(placeSearch && coordinates))) {
     return new Response(JSON.stringify({ error: "userQuery must be a non-empty string" }), {
       status:  400,
       headers: { "Content-Type": "application/json" },
@@ -138,9 +140,12 @@ export async function POST(req: NextRequest) {
 
   const nameHint = typeof rawNameHint === "string" ? rawNameHint.trim().slice(0, 100) : ""
 
-  const radiusKm = typeof rawRadius === "number"
-    ? Math.max(RADIUS_MIN_KM, Math.min(RADIUS_MAX_KM, rawRadius))
-    : 5
+  const PLACE_SEARCH_RADIUS_KM = 0.5
+  const radiusKm = placeSearch
+    ? PLACE_SEARCH_RADIUS_KM
+    : typeof rawRadius === "number"
+      ? Math.max(RADIUS_MIN_KM, Math.min(RADIUS_MAX_KM, rawRadius))
+      : 5
 
   const rawF = rawFilters && typeof rawFilters === "object" ? rawFilters as Record<string, unknown> : {}
   const filters: SearchParams["filters"] = {
@@ -209,6 +214,8 @@ export async function POST(req: NextRequest) {
           filters,
           sources,
           signal,
+          nameHint:    nameHint || undefined,
+          placeSearch: placeSearch || undefined,
         }
 
         // ── 4. Fire all adapters ──────────────────────────────────────────────

@@ -57,6 +57,39 @@ describe("GET /api/geocode", () => {
     await geocodeGET(makeGeoReq("Berlin"))
     expect(capturedUrl).toContain("countrycodes=de,at,ch")
   })
+
+  it("appends viewbox when lat+lon are provided", async () => {
+    let capturedUrl = ""
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
+      capturedUrl = url
+      return Promise.resolve({ ok: true, json: async () => [{ lat: "52.52", lon: "13.4", display_name: "Hotel Adlon" }] })
+    }))
+    const req = new NextRequest("http://localhost/api/geocode?q=Hotel+Adlon&lat=52.52&lon=13.405")
+    await geocodeGET(req)
+    expect(capturedUrl).toContain("viewbox=")
+    expect(capturedUrl).toContain("bounded=0")
+  })
+
+  it("does not append viewbox when lat/lon are absent", async () => {
+    let capturedUrl = ""
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
+      capturedUrl = url
+      return Promise.resolve({ ok: true, json: async () => [{ lat: "52.52", lon: "13.4", display_name: "Berlin" }] })
+    }))
+    await geocodeGET(makeGeoReq("Berlin"))
+    expect(capturedUrl).not.toContain("viewbox=")
+  })
+
+  it("does not append viewbox when lat/lon are non-numeric", async () => {
+    let capturedUrl = ""
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
+      capturedUrl = url
+      return Promise.resolve({ ok: true, json: async () => [{ lat: "52.52", lon: "13.4", display_name: "Berlin" }] })
+    }))
+    const req = new NextRequest("http://localhost/api/geocode?q=Berlin&lat=foo&lon=bar")
+    await geocodeGET(req)
+    expect(capturedUrl).not.toContain("viewbox=")
+  })
 })
 
 // ─── GET /api/geocode/reverse ─────────────────────────────────────────────────

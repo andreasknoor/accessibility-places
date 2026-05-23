@@ -33,7 +33,8 @@ interface Props {
   onRadius:      (r: number) => void
   sourceStates?: Partial<Record<SourceId, SourceState>>
   searchCenter?: { lat: number; lon: number }
-  onSearch:      (query: string, coords?: { lat: number; lon: number }, nameHint?: string) => void
+  onSearch:        (query: string, coords?: { lat: number; lon: number }, nameHint?: string) => void
+  onPlaceSearch?:  (nameHint: string, coords?: { lat: number; lon: number }) => void
   onRerun?:         () => void
   onExpandRadius?:  () => void
   onRadiusChange?:  (km: number) => void
@@ -63,7 +64,7 @@ interface Props {
 export default function MobileLayout({
   places, parkingSpots, selectedId, onSelect, isLoading,
   filters, sources, radiusKm, onFilters, onSources, onRadius,
-  sourceStates, searchCenter, onSearch, onRerun, onExpandRadius, onRadiusChange, hasSearched, error,
+  sourceStates, searchCenter, onSearch, onPlaceSearch, onRerun, onExpandRadius, onRadiusChange, hasSearched, error,
   onReset, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
   showParking, onToggleParking, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
@@ -72,7 +73,7 @@ export default function MobileLayout({
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
   const [panTrigger,  setPanTrigger]  = useState(0)
-  const [chatMode,    setChatMode]    = useState<"text" | "nearby">(settings.defaultSearchMode)
+  const [chatMode,    setChatMode]    = useState<"text" | "nearby" | "place">(settings.defaultSearchMode ?? "text")
   const [scrollToId,  setScrollToId]  = useState<string | undefined>()
 
   function handleShowInResults(place: Place) {
@@ -98,11 +99,29 @@ export default function MobileLayout({
     if (activeTab === "map") setMapMounted(true)
   }, [activeTab])
 
-  const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
+  // When switching to place mode, redirect away from the (now-hidden) filter tab
+  useEffect(() => {
+    if (chatMode === "place" && activeTab === "filter") setActiveTab("results")
+  }, [chatMode, activeTab])
+
+  const activeFilterCount = [filters.entrance, filters.toilet, filters.parking, filters.seating, filters.onlyVerified].filter(Boolean).length
+
+  const allTabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "results", label: t.results.title ?? "Ergebnisse", icon: <List className="w-5 h-5" /> },
     { id: "map",     label: t.results.showMap ?? "Karte",     icon: <Map  className="w-5 h-5" /> },
-    { id: "filter",  label: t.filters?.title  ?? "Filter",    icon: <SlidersHorizontal className="w-5 h-5" /> },
+    { id: "filter",  label: t.filters?.title  ?? "Filter",    icon: (
+      <span className="relative">
+        <SlidersHorizontal className="w-5 h-5" />
+        {activeFilterCount > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 min-w-[1.125rem] h-[1.125rem] rounded-full bg-red-500 text-white text-[10px] font-bold leading-none flex items-center justify-center px-1">
+            {activeFilterCount}
+          </span>
+        )}
+      </span>
+    )},
   ]
+  // Filter tab is irrelevant in place mode — hide it and redirect if currently active
+  const tabs = chatMode === "place" ? allTabs.filter((tab) => tab.id !== "filter") : allTabs
 
   return (
     <>
@@ -131,7 +150,7 @@ export default function MobileLayout({
       <h1 className="sr-only">{t.app.srHeading}</h1>
 
       {/* ── Search bar (always visible) ── */}
-      <ChatPanel key={resetKey} onSearch={handleSearch} isLoading={isLoading} onModeChange={setChatMode} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={settings.defaultSearchMode} onShowParking={handleShowParking} onGpsResolved={onGpsResolved} isParkingLoading={isParkingLoading} hasParkingNearby={hasParkingNearby} parkingRadiusKm={parkingRadiusKm} />
+      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={setChatMode} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={settings.defaultSearchMode ?? undefined} onShowParking={handleShowParking} onGpsResolved={onGpsResolved} isParkingLoading={isParkingLoading} hasParkingNearby={hasParkingNearby} parkingRadiusKm={parkingRadiusKm} />
 
       {/* ── Error banner ── */}
       {error && (

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useRef, useEffect } from "react"
+import { SlidersHorizontal, ChevronRight, ChevronLeft } from "lucide-react"
 import dynamic from "next/dynamic"
 import Script from "next/script"
 import Link from "next/link"
@@ -92,7 +93,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [lastQuery,     setLastQuery]    = useState<string | undefined>()
   const [lastCoords,    setLastCoords]   = useState<{ lat: number; lon: number } | undefined>()
   const [lastNameHint,  setLastNameHint] = useState<string | undefined>()
-  const [chatMode,      setChatMode]     = useState<"text" | "nearby">(() => loadSettings().defaultSearchMode)
+  const [chatMode,      setChatMode]     = useState<"text" | "nearby" | "place">(() => loadSettings().defaultSearchMode ?? "text")
+  const [filterCollapsed, setFilterCollapsed] = useState(true)
   const [sortBy,        setSortBy]       = useState<"confidence" | "distance">(() => loadSettings().sortOrder)
   const [resetKey,            setResetKey]            = useState(0)
   const [scrollToId,          setScrollToId]          = useState<string | undefined>()
@@ -117,7 +119,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     } catch { /* ignore — localStorage unavailable (private mode, quota) */ }
   }, [filters, sources, radiusKm])
 
-  const handleSearch = useCallback(async (query: string, radiusKmOverride?: number, coords?: { lat: number; lon: number }, nameHint?: string, filtersOverride?: Partial<SearchFilters>, sourcesOverride?: Partial<ActiveSources>) => {
+  const handleSearch = useCallback(async (query: string, radiusKmOverride?: number, coords?: { lat: number; lon: number }, nameHint?: string, filtersOverride?: Partial<SearchFilters>, sourcesOverride?: Partial<ActiveSources>, placeSearch?: boolean) => {
     setLastQuery(query)
     setLastCoords(coords)
     setLastNameHint(nameHint)
@@ -139,7 +141,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       const res = await fetch("/api/search", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ userQuery: query, radiusKm: radiusKmOverride ?? radiusKm, filters: { ...filters, ...filtersOverride }, sources: { ...sources, ...sourcesOverride }, locale, coordinates: coords, nameHint }),
+        body:    JSON.stringify({ userQuery: query, radiusKm: radiusKmOverride ?? radiusKm, filters: { ...filters, ...filtersOverride }, sources: { ...sources, ...sourcesOverride }, locale, coordinates: coords, nameHint, placeSearch }),
       })
 
       if (!res.ok || !res.body) {
@@ -151,6 +153,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       const reader  = res.body.getReader()
       const decoder = new TextDecoder()
       let buffer    = ""
+      let placesReceived = false
 
       // eslint-disable-next-line no-constant-condition
       while (true) {
@@ -172,10 +175,17 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             setSourceStates((prev) => ({ ...prev, [sid]: update }))
           } else if (event.type === "result") {
             const data = event.payload as SearchResult
+            placesReceived = data.places.length > 0
             setPlaces(data.places)
             setParkingSpots(data.parkingSpots ?? [])
             setSearchCenter(data.location)
             setFilterDebug(data.filterDebug)
+
+            // Auto-select single result for place search
+            if (placeSearch && data.places.length === 1) {
+              setSelectedId(data.places[0].id)
+              setScrollToId(data.places[0].id)
+            }
 
             // Auto-select place from SEO deep-link (closest within 100 m)
             if (selectTarget.current && !hasAutoSelected.current) {
@@ -219,6 +229,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           }
         }
       }
+
+      // Place found by geocoding but no adapter returned data
+      if (placeSearch && !placesReceived) {
+        setError(t.chat.placeNoData(nameHint ?? ""))
+      }
     } catch (err) {
       setError(t.chat.errorGeneric)
       console.error(err)
@@ -233,6 +248,29 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
   }, [filters, sources, radiusKm, t])
 
+  const clearSearchState = useCallback(() => {
+    setPlaces([])
+    setParkingSpots([])
+    setSelectedId(undefined)
+    setScrollToId(undefined)
+    setLastQuery(undefined)
+    setLastNameHint(undefined)
+    setFilterDebug(undefined)
+    setError(undefined)
+    setSourceStates({})
+  }, [])
+
+  const handleSwitchMode = useCallback((mode: "text" | "nearby" | "place") => {
+    clearSearchState()
+    setChatMode(mode)
+    setResetKey((k) => k + 1)
+  }, [clearSearchState])
+
+  const handleModeChange = useCallback((mode: "text" | "nearby" | "place") => {
+    clearSearchState()
+    setChatMode(mode)
+  }, [clearSearchState])
+
   const handleReset = useCallback(() => {
     setFilters({ ...DEFAULT_FILTERS, alwaysShowParking: settings.alwaysShowParking })
     setSources(DEFAULT_SOURCES)
@@ -241,15 +279,57 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setParkingSpots([])
     setSelectedId(undefined)
     setLastQuery(undefined)
+    setLastCoords(undefined)
+    setLastNameHint(undefined)
     setSearchCenter(undefined)
     setFilterDebug(undefined)
     setError(undefined)
     setSourceStates({})
-    setChatMode(settings.defaultSearchMode)
+    setIsLoading(false)
+    setChatMode(settings.defaultSearchMode ?? "text")
     setSortBy(settings.sortOrder)
+    setFilterCollapsed(true)
     try { localStorage.removeItem("ap_last_search") } catch { /* ignore */ }
+    // Clean up any deep-link or SEO params from the URL without a page reload
+    window.history.replaceState({}, "", locale === "en" ? "/en/" : "/")
     setResetKey((k) => k + 1)
-  }, [settings])
+  }, [settings, locale])
+
+  const handlePlaceSearch = useCallback(async (nameHint: string, preResolvedCoords?: { lat: number; lon: number }) => {
+    if (!nameHint.trim()) return
+    setIsLoading(true)
+    setError(undefined)
+    try {
+      // When Photon already returned coordinates (via place-suggest), skip Nominatim
+      if (preResolvedCoords) {
+        await handleSearch("", undefined, preResolvedCoords, nameHint, undefined, undefined, true)
+        return
+      }
+      // Best-effort location bias: existing search center → cached GPS → fresh GPS
+      const getCoords = (): Promise<{ lat: number; lon: number } | null> => {
+        if (searchCenter) return Promise.resolve(searchCenter)
+        if (gpsCoordRef.current) return Promise.resolve(gpsCoordRef.current)
+        return new Promise((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+            () => resolve(null),
+            { timeout: 5_000, maximumAge: 60_000 },
+          )
+        })
+      }
+      const coords = await getCoords()
+      const qs = new URLSearchParams({ q: nameHint })
+      if (coords) { qs.set("lat", String(coords.lat)); qs.set("lon", String(coords.lon)) }
+      const res = await fetch(`/api/geocode?${qs}`)
+      if (res.status === 404) { setError(t.chat.placeNotFound); setIsLoading(false); return }
+      if (!res.ok)            { setError(t.chat.errorGeneric);  setIsLoading(false); return }
+      const { lat, lon } = await res.json()
+      await handleSearch("", undefined, { lat, lon }, nameHint, undefined, undefined, true)
+    } catch {
+      setError(t.chat.errorGeneric)
+      setIsLoading(false)
+    }
+  }, [searchCenter, t, handleSearch])
 
   const handleExpandRadius = useCallback(() => {
     if (!lastQuery) return
@@ -319,6 +399,19 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
   }, [settings.parkingRadiusKm, runParkingPreFetch])
 
+  // Silently pre-fetch GPS when entering place-search mode so coords are
+  // available immediately when the user submits (avoids mid-submit delay).
+  useEffect(() => {
+    if (chatMode !== "place") return
+    if (gpsCoordRef.current) return
+    if (!("geolocation" in navigator)) return
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { gpsCoordRef.current = { lat: pos.coords.latitude, lon: pos.coords.longitude } },
+      () => { /* silently ignored — place search has other fallbacks */ },
+      { timeout: 8000, maximumAge: 60_000 },
+    )
+  }, [chatMode])
+
   const handleShowParking = useCallback(async (coords: { lat: number; lon: number }) => {
     setIsParkingLoading(true)
     setSearchCenter(coords)
@@ -375,7 +468,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       setSortBy(patch.sortOrder)
     }
     if (patch.defaultSearchMode !== undefined) {
-      setChatMode(patch.defaultSearchMode)
+      setChatMode(patch.defaultSearchMode ?? "text")
     }
   }, [updateSettings])
 
@@ -404,10 +497,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         sourceStates={sourceStates}
         searchCenter={searchCenter}
         onSearch={(query, coords, nameHint) => handleSearch(query, undefined, coords, nameHint)}
+        onPlaceSearch={handlePlaceSearch}
         onRerun={lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords, lastNameHint) : undefined}
         onExpandRadius={lastQuery && radiusKm < RADIUS_MAX_KM ? handleExpandRadius : undefined}
         onRadiusChange={handleRadiusChange}
-        hasSearched={!!lastQuery}
+        hasSearched={!!(lastQuery || lastNameHint)}
         error={error}
         onReset={handleReset}
         resetKey={resetKey}
@@ -482,12 +576,13 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       <ChatPanel
         key={resetKey}
         onSearch={(query, coords, nameHint) => handleSearch(query, undefined, coords, nameHint)}
+        onPlaceSearch={handlePlaceSearch}
         isLoading={isLoading}
-        onModeChange={setChatMode}
+        onModeChange={handleModeChange}
         autoFocus
         initialLocation={resetKey === 0 ? initialCity : undefined}
         initialChipIdx={initialCategory && resetKey === 0 ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : settings.defaultChipIdx ?? undefined}
-        initialMode={settings.defaultSearchMode}
+        initialMode={chatMode}
         onShowParking={handleShowParking}
         onGpsResolved={handleGpsResolved}
         isParkingLoading={isParkingLoading}
@@ -504,17 +599,47 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
       {/* ── Main: filter | results | divider | map ── */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        <FilterPanel
-          filters={filters}
-          sources={sources}
-          radiusKm={radiusKm}
-          onFilters={setFilters}
-          onSources={setSources}
-          onRadius={setRadiusKm}
-          sourceStates={sourceStates}
-          onRerun={chatMode === "nearby" && lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords, lastNameHint) : undefined}
-          isLoading={isLoading}
-        />
+        {chatMode !== "place" && (
+          filterCollapsed ? (
+            <button
+              onClick={() => setFilterCollapsed(false)}
+              className="shrink-0 w-12 border-r border-border flex flex-col items-center justify-center gap-3 py-6 hover:bg-muted/50 transition-colors cursor-pointer"
+              aria-label={t.filters.title}
+            >
+              <span className="relative">
+                <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
+                {[filters.entrance, filters.toilet, filters.parking, filters.seating, filters.onlyVerified].filter(Boolean).length > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[1.125rem] h-[1.125rem] rounded-full bg-red-500 text-white text-[10px] font-bold leading-none flex items-center justify-center px-1">
+                    {[filters.entrance, filters.toilet, filters.parking, filters.seating, filters.onlyVerified].filter(Boolean).length}
+                  </span>
+                )}
+              </span>
+              <span className="text-xs text-muted-foreground font-medium [writing-mode:vertical-rl] rotate-180 tracking-wide">{t.filters.title}</span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </button>
+          ) : (
+            <div className="relative flex flex-col shrink-0">
+              <FilterPanel
+                filters={filters}
+                sources={sources}
+                radiusKm={radiusKm}
+                onFilters={setFilters}
+                onSources={setSources}
+                onRadius={setRadiusKm}
+                sourceStates={sourceStates}
+                onRerun={chatMode === "nearby" && lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords, lastNameHint) : undefined}
+                isLoading={isLoading}
+              />
+              <button
+                onClick={() => setFilterCollapsed(true)}
+                className="absolute top-2 right-2 z-10 p-1 rounded bg-card border border-border hover:bg-muted transition-colors"
+                aria-label={t.filters.title}
+              >
+                <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
+          )
+        )}
 
         <div
           className="shrink-0 border-r border-border flex flex-col min-h-0"
@@ -530,13 +655,16 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             onExpandRadius={lastQuery && radiusKm < RADIUS_MAX_KM ? handleExpandRadius : undefined}
             radiusKm={radiusKm}
             onRadiusChange={handleRadiusChange}
-            hasSearched={!!lastQuery}
+            hasSearched={!!(lastQuery || lastNameHint)}
             scrollToId={scrollToId}
             filterDebug={filterDebug}
             searchCenter={chatMode === "nearby" ? searchCenter : undefined}
             parkingSpotCount={parkingSpots.length > 0 ? parkingSpots.length : undefined}
             sortBy={sortBy}
             onSortChange={(s) => { setSortBy(s); updateSettings({ sortOrder: s }) }}
+            chatMode={chatMode}
+            onSwitchToPlace={chatMode === "text" ? () => handleSwitchMode("place") : undefined}
+            onSwitchToText={chatMode === "place" ? () => handleSwitchMode("text") : undefined}
           />
           <div className="shrink-0 border-t border-border px-4 py-2 flex justify-end gap-4">
             <Link href={locale === "en" ? "/en/faq" : "/faq"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
@@ -561,7 +689,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           className="w-1.5 shrink-0 bg-border hover:bg-primary/40 cursor-col-resize transition-colors"
           onMouseDown={handleDividerMouseDown}
         />
-        <div className="flex-1 min-h-0 relative">
+        <div className="flex-1 min-h-0 relative isolate">
           <MapView
             places={places}
             parkingSpots={visibleParkingSpots}

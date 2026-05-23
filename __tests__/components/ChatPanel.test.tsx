@@ -219,6 +219,7 @@ describe("ChatPanel autocomplete — selection", () => {
     mockFetch([{ display: "Berlin", name: "Berlin" }])
     renderPanel(onSearch)
     // Expand name field and fill it
+    fireEvent.click(screen.getByText(/Name eingrenzen|Filter results by name/i))
     const nameInput = screen.getByPlaceholderText(/Zur Linde|The Crown/i) as HTMLInputElement
     fireEvent.change(nameInput, { target: { value: "Goldener Löwe" } })
     // Type and select location
@@ -330,15 +331,15 @@ describe("ChatPanel initialChipIdx restore", () => {
 describe("ChatPanel initialMode", () => {
   it("defaults to text mode when initialMode is not passed", () => {
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
-    const textTab = screen.getByText(/^Suche$/)
-    expect(textTab.closest("button")).toHaveClass("bg-background")
+    const textTab = screen.getByText(/^Erkunden$/)
+    expect(textTab.closest("button")).toHaveClass("bg-primary")
   })
 
   it("shows nearby mode tab as active when initialMode='nearby'", () => {
     vi.stubGlobal("navigator", { geolocation: { getCurrentPosition: vi.fn() }, clipboard: navigator.clipboard })
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="nearby" />)
     const nearbyTab = screen.getByText(/In der Nähe/)
-    expect(nearbyTab.closest("button")).toHaveClass("bg-background")
+    expect(nearbyTab.closest("button")).toHaveClass("bg-primary")
   })
 
   it("calls geolocation.getCurrentPosition on mount when initialMode='nearby'", () => {
@@ -445,6 +446,149 @@ describe("ChatPanel parking button", () => {
     fireEvent.click(screen.getByText(/In der Nähe/))
     await act(() => vi.runAllTimersAsync())
     expect(screen.queryByText(/Rollstuhl-Parkplätze/)).toBeNull()
+  })
+})
+
+// ─── Place-search trigger ────────────────────────────────────────────────────
+
+describe("ChatPanel place-search", () => {
+  function openNameField() {
+    fireEvent.click(screen.getByText(/Name eingrenzen|Filter results by name/i))
+  }
+  function getNameInput() {
+    return screen.getByPlaceholderText(/Zur Linde|The Crown/i) as HTMLInputElement
+  }
+
+  it("name filter toggle button is visible in text mode", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
+    expect(screen.getByText(/Name eingrenzen|Filter results by name/i)).toBeInTheDocument()
+  })
+
+  it("name input is hidden until toggle is clicked", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
+    expect(screen.queryByPlaceholderText(/Zur Linde|The Crown/i)).not.toBeInTheDocument()
+    openNameField()
+    expect(screen.getByPlaceholderText(/Zur Linde|The Crown/i)).toBeInTheDocument()
+  })
+
+  it("search button is disabled when both location and name are empty", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onPlaceSearch={vi.fn()} />)
+    const btn = screen.getByRole("button", { name: "Suchen" })
+    expect(btn).toBeDisabled()
+  })
+
+  it("search button is enabled when name has content and location is empty", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onPlaceSearch={vi.fn()} />)
+    openNameField()
+    fireEvent.change(getNameInput(), { target: { value: "Hotel Adlon" } })
+    const btn = screen.getByRole("button", { name: "Suchen" })
+    expect(btn).not.toBeDisabled()
+  })
+
+  it("clicking Suchen with name+no-location calls onPlaceSearch, not onSearch", () => {
+    const onSearch = vi.fn()
+    const onPlaceSearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} isLoading={false} onPlaceSearch={onPlaceSearch} />)
+    openNameField()
+    fireEvent.change(getNameInput(), { target: { value: "Hotel Adlon" } })
+    fireEvent.click(screen.getByRole("button", { name: "Suchen" }))
+    expect(onPlaceSearch).toHaveBeenCalledWith("Hotel Adlon")
+    expect(onSearch).not.toHaveBeenCalled()
+  })
+
+  it("pressing Enter in name field with no location calls onPlaceSearch", () => {
+    const onPlaceSearch = vi.fn()
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onPlaceSearch={onPlaceSearch} />)
+    openNameField()
+    fireEvent.change(getNameInput(), { target: { value: "Goldener Löwe" } })
+    fireEvent.keyDown(getNameInput(), { key: "Enter" })
+    expect(onPlaceSearch).toHaveBeenCalledWith("Goldener Löwe")
+  })
+
+  it("pressing Enter in name field WITH location calls onSearch, not onPlaceSearch", () => {
+    const onSearch = vi.fn()
+    const onPlaceSearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} isLoading={false} onPlaceSearch={onPlaceSearch} />)
+    fireEvent.change(getInput(), { target: { value: "Berlin" } })
+    openNameField()
+    fireEvent.change(getNameInput(), { target: { value: "Goldener Löwe" } })
+    fireEvent.keyDown(getNameInput(), { key: "Enter" })
+    expect(onSearch).toHaveBeenCalledWith(expect.stringContaining("Berlin"), undefined, "Goldener Löwe")
+    expect(onPlaceSearch).not.toHaveBeenCalled()
+  })
+
+  it("place-search hint is not shown in text/Erkunden mode", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
+    openNameField()
+    fireEvent.change(getNameInput(), { target: { value: "Hotel Adlon" } })
+    expect(screen.queryByText(/Direkte Ortssuche|Direct place search/i)).not.toBeInTheDocument()
+  })
+})
+
+// ─── Place mode (explicit third mode) ───────────────────────────────────────
+
+describe("ChatPanel place mode", () => {
+  it("renders an 'Ort suchen' button in the mode bar", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
+    expect(screen.getByRole("button", { name: /Ort suchen/ })).toBeInTheDocument()
+  })
+
+  it("activates place mode when 'Ort suchen' is clicked", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
+    fireEvent.click(screen.getByRole("button", { name: /Ort suchen/ }))
+    const placeBtn = screen.getByRole("button", { name: /Ort suchen/ })
+    expect(placeBtn).toHaveClass("bg-primary")
+  })
+
+  it("shows place-mode placeholder after clicking 'Ort suchen'", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
+    fireEvent.click(screen.getByRole("button", { name: /Ort suchen/ }))
+    expect(screen.getByPlaceholderText(/Hotel Adlon Berlin/i)).toBeInTheDocument()
+  })
+
+  it("hides the location input in place mode", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
+    fireEvent.click(screen.getByRole("button", { name: /Ort suchen/ }))
+    expect(screen.queryByPlaceholderText(/Ort eingeben|Enter a city/i)).not.toBeInTheDocument()
+  })
+
+  it("hides the chip strip in place mode", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
+    // Verify chips exist in text mode first
+    expect(screen.getByText(/Restaurants/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: /Ort suchen/ }))
+    // Chip buttons should be gone
+    expect(screen.queryByText(/^🍽 Restaurants$/)).not.toBeInTheDocument()
+  })
+
+  it("calls onPlaceSearch when submit clicked in place mode with a name", () => {
+    const onPlaceSearch = vi.fn()
+    const onSearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} isLoading={false} onPlaceSearch={onPlaceSearch} />)
+    fireEvent.click(screen.getByRole("button", { name: /Ort suchen/ }))
+    fireEvent.change(screen.getByPlaceholderText(/Hotel Adlon Berlin/i), { target: { value: "Café Einstein" } })
+    fireEvent.click(screen.getByRole("button", { name: "Suchen" }))
+    expect(onPlaceSearch).toHaveBeenCalledWith("Café Einstein")
+    expect(onSearch).not.toHaveBeenCalled()
+  })
+
+  it("submit button is disabled when name is empty in place mode", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
+    fireEvent.click(screen.getByRole("button", { name: /Ort suchen/ }))
+    expect(screen.getByRole("button", { name: "Suchen" })).toBeDisabled()
+  })
+
+  it("calls onModeChange with 'place' when switching to place mode", () => {
+    const onModeChange = vi.fn()
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onModeChange={onModeChange} />)
+    fireEvent.click(screen.getByRole("button", { name: /Ort suchen/ }))
+    expect(onModeChange).toHaveBeenCalledWith("place")
+  })
+
+  it("initialMode='place' starts in place mode", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="place" />)
+    expect(screen.getByPlaceholderText(/Hotel Adlon Berlin/i)).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText(/Ort eingeben|Enter a city/i)).not.toBeInTheDocument()
   })
 })
 

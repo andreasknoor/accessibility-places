@@ -20,17 +20,32 @@ export interface Translations {
     send:          string
     thinking:      string
     noResults:        string
-    noSearchYetTitle: string
-    noSearchYet:      string
+    noSearchYetTitle:      string
+    noSearchYet:           string
+    noSearchYetNameHint:    string
+    noSearchYetPlaceHint:   string
+    noSearchYetPlaceLink:   string
+    noSearchYetTitlePlace:  string
+    noSearchYetPlace:       string
+    noSearchYetExploreHint: string
+    noSearchYetExploreLink: string
     errorGeneric:  string
     modeText:      string
     modeNearby:    string
+    modePlace:     string
+    modeTextSub:   string
+    modeNearbySub: string
+    modePlaceSub:  string
     locateButton:  string
     locationError: string
     nearbyIn:        (district: string) => string
-    namePlaceholder:   string
-    nameToggleShow:    string
-    nameToggleHide:    string
+    namePlaceholder:      string
+    nameToggleShow:       string
+    nameToggleHide:       string
+    placeModePlaceholder: string
+    placeSearchHint:   string
+    placeNotFound:     string
+    placeNoData:       (name: string) => string
     showParkingButton: (km: number) => string
   }
   filters: {
@@ -242,8 +257,10 @@ export interface Translations {
     sectionResults:    string
     sectionMobile:     string
     searchMode:        string
+    searchModeDefault: string
     searchModeText:    string
     searchModeNearby:  string
+    searchModePlace:   string
     defaultCategory:   string
     categoryNone:      string
     sortOrder:         string
