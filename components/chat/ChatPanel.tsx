@@ -216,6 +216,9 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     setMode(next)
     onModeChange?.(next)
     setShowNameField(false)
+    setName("")
+    setNameSuggestions([])
+    setShowNameSuggestions(false)
     if (next === "place") {
       // Clear location so name-suggest fires unconditionally in place mode
       setLocation("")

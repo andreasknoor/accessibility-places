@@ -248,10 +248,28 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
   }, [filters, sources, radiusKm, t])
 
+  const clearSearchState = useCallback(() => {
+    setPlaces([])
+    setParkingSpots([])
+    setSelectedId(undefined)
+    setScrollToId(undefined)
+    setLastQuery(undefined)
+    setLastNameHint(undefined)
+    setFilterDebug(undefined)
+    setError(undefined)
+    setSourceStates({})
+  }, [])
+
   const handleSwitchMode = useCallback((mode: "text" | "nearby" | "place") => {
+    clearSearchState()
     setChatMode(mode)
     setResetKey((k) => k + 1)
-  }, [])
+  }, [clearSearchState])
+
+  const handleModeChange = useCallback((mode: "text" | "nearby" | "place") => {
+    clearSearchState()
+    setChatMode(mode)
+  }, [clearSearchState])
 
   const handleReset = useCallback(() => {
     setFilters({ ...DEFAULT_FILTERS, alwaysShowParking: settings.alwaysShowParking })
@@ -560,7 +578,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onSearch={(query, coords, nameHint) => handleSearch(query, undefined, coords, nameHint)}
         onPlaceSearch={handlePlaceSearch}
         isLoading={isLoading}
-        onModeChange={setChatMode}
+        onModeChange={handleModeChange}
         autoFocus
         initialLocation={resetKey === 0 ? initialCity : undefined}
         initialChipIdx={initialCategory && resetKey === 0 ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : settings.defaultChipIdx ?? undefined}
