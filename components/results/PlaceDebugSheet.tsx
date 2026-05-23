@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import {
   X, MapPin, Phone, Globe, Tag, Clock, Mail,
   Utensils, Leaf, Dog, Wifi, Star, DollarSign,
@@ -76,6 +76,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default function PlaceDebugSheet({ place, onClose }: Props) {
   const [linkCopied, setLinkCopied] = useState(false)
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [resolvedAddr, setResolvedAddr] = useState<string | null>(null)
 
   function handleCopyLink() {
     const homePath = window.location.pathname.startsWith("/en") ? "/en/" : "/"
@@ -141,7 +142,23 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
   const addr = place.address
   const addrLine1 = [addr.street, addr.houseNumber].filter(Boolean).join(" ")
   const addrLine2 = [addr.postalCode, addr.city].filter(Boolean).join(" ")
-  const addrStr   = [addrLine1, addrLine2].filter(Boolean).join(", ")
+  const addrStr   = [addrLine1, addrLine2].filter(Boolean).join(", ") || resolvedAddr || ""
+
+  useEffect(() => {
+    if (addrLine1 || addrLine2) return
+    const { lat, lon } = place.coordinates
+    fetch(`/api/geocode/reverse?lat=${lat}&lon=${lon}&detail=1`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => {
+        if (!d) return
+        const line1 = [d.street, d.houseNumber].filter(Boolean).join(" ")
+        const line2 = [d.postalCode, d.city].filter(Boolean).join(" ")
+        const full  = [line1, line2].filter(Boolean).join(", ")
+        if (full) setResolvedAddr(full)
+      })
+      .catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [place.coordinates.lat, place.coordinates.lon])
 
   const criteria = [
     { key: "entrance" as const, label: t.criteria.entrance, attr: place.accessibility.entrance },

@@ -118,6 +118,12 @@ export function mergePlaces(existing: Place, incoming: Place): Place {
     }
   }
 
+  // Fill in missing address fields from incoming
+  if (!merged.address.street     && incoming.address.street)     merged.address = { ...merged.address, street:      incoming.address.street }
+  if (!merged.address.houseNumber && incoming.address.houseNumber) merged.address = { ...merged.address, houseNumber: incoming.address.houseNumber }
+  if (!merged.address.postalCode  && incoming.address.postalCode)  merged.address = { ...merged.address, postalCode:  incoming.address.postalCode }
+  if (!merged.address.city        && incoming.address.city)        merged.address = { ...merged.address, city:        incoming.address.city }
+
   // Fill in missing metadata from incoming if existing lacks it
   if (!merged.website     && incoming.website)     merged.website     = incoming.website
   if (!merged.phone       && incoming.phone)       merged.phone       = incoming.phone
