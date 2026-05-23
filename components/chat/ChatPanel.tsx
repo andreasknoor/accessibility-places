@@ -454,9 +454,10 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
               disabled={isLoading}
               autoFocus={autoFocus}
               className={cn(
-                "w-full rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]",
+                "w-full rounded-md border bg-background px-3 py-2 text-sm h-[38px]",
                 "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
                 "focus-visible:ring-ring disabled:opacity-50",
+                isMobile ? "border-primary" : "border-input",
                 location ? "pr-7" : "",
               )}
             />
@@ -640,9 +641,10 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                 disabled={isLoading}
                 autoFocus={autoFocus}
                 className={cn(
-                  "w-full rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]",
+                  "w-full rounded-md border bg-background px-3 py-2 text-sm h-[38px]",
                   "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
                   "focus-visible:ring-ring disabled:opacity-50",
+                  isMobile ? "border-primary" : "border-input",
                   name && "pr-7",
                 )}
               />
