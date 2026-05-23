@@ -154,9 +154,10 @@ export interface Translations {
       isInside:               string
     }
     parking: {
-      hasWheelchairSpaces:  string
-      spaceCount:           string
-      distanceToEntranceM:  string
+      hasWheelchairSpaces:      string
+      spaceCount:               string
+      distanceToEntranceM:      string
+      nearbyParkingDistanceM:   string
     }
     seating: {
       isAccessible: string

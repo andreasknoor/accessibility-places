@@ -182,9 +182,10 @@ const en: Translations = {
       isInside:              "On-site accessible toilet",
     },
     parking: {
-      hasWheelchairSpaces:   "Disabled parking available",
-      spaceCount:            "Number of spaces",
-      distanceToEntranceM:   "Distance to entrance",
+      hasWheelchairSpaces:     "Disabled parking available",
+      spaceCount:              "Number of spaces",
+      distanceToEntranceM:     "Distance to entrance",
+      nearbyParkingDistanceM:  "Distance to nearest parking",
     },
     seating: {
       isAccessible: "Wheelchair-accessible seating",

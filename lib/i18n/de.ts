@@ -182,9 +182,10 @@ const de: Translations = {
       isInside:              "WC im Betrieb vorhanden",
     },
     parking: {
-      hasWheelchairSpaces:   "Behindertenparkplätze vorhanden",
-      spaceCount:            "Anzahl Plätze",
-      distanceToEntranceM:   "Abstand zum Eingang",
+      hasWheelchairSpaces:     "Behindertenparkplätze vorhanden",
+      spaceCount:              "Anzahl Plätze",
+      distanceToEntranceM:     "Abstand zum Eingang",
+      nearbyParkingDistanceM:  "Entfernung nächster Parkplatz",
     },
     seating: {
       isAccessible: "Rollstuhlgerechte Sitzplätze",

@@ -6,12 +6,12 @@ import {
   Utensils, Leaf, Dog, Wifi, Star, DollarSign,
   MessageSquare, ExternalLink, Accessibility,
   ShieldCheck, Award, ChevronDown, ChevronUp,
-  Truck, ShoppingBag, Link2,
+  Truck, ShoppingBag, Link2, Car, Hash, Navigation,
 } from "lucide-react"
 import { SOURCE_LABELS } from "@/lib/config"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
-import type { Place, SourceId } from "@/lib/types"
+import type { Place, SourceId, ParkingDetails } from "@/lib/types"
 
 interface Props {
   place:   Place
@@ -163,11 +163,18 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
   const criteria = [
     { key: "entrance" as const, label: t.criteria.entrance, attr: place.accessibility.entrance },
     { key: "toilet"   as const, label: t.criteria.toilet,   attr: place.accessibility.toilet   },
-    { key: "parking"  as const, label: t.criteria.parking,  attr: place.accessibility.parking  },
     ...(place.accessibility.seating
       ? [{ key: "seating" as const, label: t.criteria.seating, attr: place.accessibility.seating }]
       : []),
   ]
+
+  const parkingAttr = place.accessibility.parking
+  const parkingD    = parkingAttr.details as ParkingDetails
+  const parkingNearby = parkingD.nearbyOnly === true
+  const parkingNearbyDistM = parkingD.nearbyParkingDistanceM
+  const parkingValueLabel  = parkingNearby
+    ? `${t.a11y.yesNearby}${parkingNearbyDistM != null ? ` (${parkingNearbyDistM} m)` : ""}`
+    : t.a11y[parkingAttr.value]
 
   const osmRecord  = place.sourceRecords.find((r) => r.sourceId === "osm")
   const osmLink    = osmRecord?.externalId
@@ -320,6 +327,40 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
                 )}
               </InfoRow>
             ))}
+          </Section>
+
+          {/* ── Parkplatz ── */}
+          <Section title={t.criteria.parking}>
+            <InfoRow icon={Car} label={ti.accessibility}>
+              <span className={cn("font-medium", VALUE_COLORS[parkingAttr.value])}>
+                {parkingValueLabel}
+              </span>
+              {parkingAttr.sources.length > 0 && (
+                <span className="text-muted-foreground ml-1.5">
+                  · {parkingAttr.sources.map((s) => SOURCE_LABELS[s.sourceId]).join(", ")}
+                </span>
+              )}
+            </InfoRow>
+            {parkingD.hasWheelchairSpaces != null && (
+              <InfoRow icon={Car} label={t.details.parking.hasWheelchairSpaces}>
+                {parkingD.hasWheelchairSpaces ? "✓" : "✗"}
+              </InfoRow>
+            )}
+            {parkingD.spaceCount != null && (
+              <InfoRow icon={Hash} label={t.details.parking.spaceCount}>
+                {parkingD.spaceCount}
+              </InfoRow>
+            )}
+            {parkingD.distanceToEntranceM != null && (
+              <InfoRow icon={MapPin} label={t.details.parking.distanceToEntranceM}>
+                {parkingD.distanceToEntranceM} {t.details.units.m}
+              </InfoRow>
+            )}
+            {parkingNearby && parkingNearbyDistM != null && (
+              <InfoRow icon={Navigation} label={t.details.parking.nearbyParkingDistanceM}>
+                {parkingNearbyDistM} {t.details.units.m}
+              </InfoRow>
+            )}
           </Section>
 
           {/* ── Externe Links ── */}
