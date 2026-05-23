@@ -608,8 +608,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             >
               <span className="relative">
                 <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
-                {(filters.entrance || filters.toilet || filters.parking || filters.seating || filters.onlyVerified) && (
-                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" />
+                {[filters.entrance, filters.toilet, filters.parking, filters.seating, filters.onlyVerified].filter(Boolean).length > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[1.125rem] h-[1.125rem] rounded-full bg-red-500 text-white text-[10px] font-bold leading-none flex items-center justify-center px-1">
+                    {[filters.entrance, filters.toilet, filters.parking, filters.seating, filters.onlyVerified].filter(Boolean).length}
+                  </span>
                 )}
               </span>
               <span className="text-xs text-muted-foreground font-medium [writing-mode:vertical-rl] rotate-180 tracking-wide">{t.filters.title}</span>

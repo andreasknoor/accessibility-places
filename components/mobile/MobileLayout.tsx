@@ -104,7 +104,7 @@ export default function MobileLayout({
     if (chatMode === "place" && activeTab === "filter") setActiveTab("results")
   }, [chatMode, activeTab])
 
-  const hasActiveFilters = filters.entrance || filters.toilet || filters.parking || filters.seating || filters.onlyVerified
+  const activeFilterCount = [filters.entrance, filters.toilet, filters.parking, filters.seating, filters.onlyVerified].filter(Boolean).length
 
   const allTabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "results", label: t.results.title ?? "Ergebnisse", icon: <List className="w-5 h-5" /> },
@@ -112,7 +112,11 @@ export default function MobileLayout({
     { id: "filter",  label: t.filters?.title  ?? "Filter",    icon: (
       <span className="relative">
         <SlidersHorizontal className="w-5 h-5" />
-        {hasActiveFilters && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" />}
+        {activeFilterCount > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 min-w-[1.125rem] h-[1.125rem] rounded-full bg-red-500 text-white text-[10px] font-bold leading-none flex items-center justify-center px-1">
+            {activeFilterCount}
+          </span>
+        )}
       </span>
     )},
   ]
