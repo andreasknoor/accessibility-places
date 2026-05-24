@@ -19,7 +19,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   sortOrder:          "confidence",
   autoZoom:           true,
   alwaysShowParking:  false,
-  parkingRadiusKm:    1.0,
+  parkingRadiusKm:    2.0,
 }
 
 // Mirrors CHIPS in ChatPanel.tsx — same order and indices must stay in sync
