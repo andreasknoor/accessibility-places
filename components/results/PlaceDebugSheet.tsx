@@ -77,6 +77,8 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
   const [linkCopied, setLinkCopied] = useState(false)
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [resolvedAddr, setResolvedAddr] = useState<string | null>(null)
+  const [placeImage,   setPlaceImage]   = useState<string | null>(null)
+  const [imageLoaded,  setImageLoaded]  = useState(false)
 
   function handleCopyLink() {
     const homePath = window.location.pathname.startsWith("/en") ? "/en/" : "/"
@@ -177,6 +179,54 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
     : t.a11y[parkingAttr.value]
 
   const osmRecord  = place.sourceRecords.find((r) => r.sourceId === "osm")
+
+  // Image: Option 3 (OSM image/wikimedia_commons tag) → Option 1 (Wikidata P18)
+  useEffect(() => {
+    setPlaceImage(null)
+    setImageLoaded(false)
+
+    const meta = osmRecord ? (osmRecord.metadata ?? osmRecord.raw) as Record<string, unknown> | null : null
+    if (!meta) return
+
+    // Option 3a: direct image URL or File: reference
+    const imageTag = str(meta.image)
+    if (imageTag) {
+      if (imageTag.startsWith("File:")) {
+        setPlaceImage(`https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(imageTag.slice(5))}?width=500`)
+      } else if (imageTag.startsWith("http")) {
+        setPlaceImage(imageTag)
+      }
+      return
+    }
+
+    // Option 3b: wikimedia_commons tag (File: only, skip Category:)
+    const commonsTag = str(meta.wikimedia_commons)
+    if (commonsTag?.startsWith("File:")) {
+      setPlaceImage(`https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(commonsTag.slice(5))}?width=500`)
+      return
+    }
+
+    // Option 1: wikidata tag → Wikidata API (P18 = image)
+    const wikidataId = str(meta.wikidata)
+    if (!wikidataId) return
+
+    const controller = new AbortController()
+    fetch(
+      `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${wikidataId}&props=claims&format=json&origin=*`,
+      { signal: controller.signal },
+    )
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        const filename = data?.entities?.[wikidataId]?.claims?.P18?.[0]?.mainsnak?.datavalue?.value
+        if (typeof filename === "string") {
+          setPlaceImage(`https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(filename.replace(/ /g, "_"))}?width=500`)
+        }
+      })
+      .catch(() => {})
+    return () => controller.abort()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [osmRecord?.externalId])
+
   const osmLink    = osmRecord?.externalId
     ? `https://www.openstreetmap.org/${osmRecord.externalId}`
     : null
@@ -431,6 +481,23 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
               </div>
             )}
           </div>
+
+          {/* ── Foto ── */}
+          {placeImage && (
+            <div className="py-4">
+              <img
+                src={placeImage}
+                alt={place.name}
+                loading="lazy"
+                onLoad={() => setImageLoaded(true)}
+                onError={() => setPlaceImage(null)}
+                className={cn(
+                  "w-full rounded-md object-cover max-h-64 transition-opacity duration-300",
+                  imageLoaded ? "opacity-100" : "opacity-0 h-0",
+                )}
+              />
+            </div>
+          )}
 
         </div>
 
