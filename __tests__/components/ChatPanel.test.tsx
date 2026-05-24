@@ -330,9 +330,17 @@ describe("ChatPanel initialChipIdx restore", () => {
 
 describe("ChatPanel initialMode", () => {
   it("defaults to nearby mode when initialMode is not passed", () => {
+    vi.stubGlobal("navigator", { geolocation: { getCurrentPosition: vi.fn() }, clipboard: navigator.clipboard })
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
     const nearbyTab = screen.getByText(/In der Nähe/)
     expect(nearbyTab.closest("button")).toHaveClass("bg-primary")
+  })
+
+  it("calls geolocation.getCurrentPosition on mount when initialMode is not passed", () => {
+    const getCurrentPosition = vi.fn()
+    vi.stubGlobal("navigator", { geolocation: { getCurrentPosition }, clipboard: navigator.clipboard })
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
+    expect(getCurrentPosition).toHaveBeenCalledOnce()
   })
 
   it("shows nearby mode tab as active when initialMode='nearby'", () => {
