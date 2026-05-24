@@ -668,6 +668,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             <Link href={locale === "en" ? "/en/impressum" : "/impressum"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
               {t.impressum.linkLabel}
             </Link>
+            <Link href={locale === "en" ? "/en/ueber-uns" : "/ueber-uns"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              {t.about.linkLabel}
+            </Link>
             <button
               data-tally-open={locale === "en" ? "vGEMjQ" : "Zjv94z"}
               data-tally-emoji-text="👋"

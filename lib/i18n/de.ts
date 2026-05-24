@@ -271,6 +271,9 @@ const de: Translations = {
     linkLabel:     "FAQ",
     feedbackLabel: "Feedback",
   },
+  about: {
+    linkLabel: "Über die App",
+  },
   impressum: {
     title:      "Impressum",
     back:       "Zurück",

@@ -11,10 +11,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const staticPages: MetadataRoute.Sitemap = [
     { url: `${BASE}/`,             lastModified: BUILD_DATE, changeFrequency: "weekly",  priority: 1   },
     { url: `${BASE}/en`,           lastModified: BUILD_DATE, changeFrequency: "weekly",  priority: 1   },
-    { url: `${BASE}/faq`,          lastModified: BUILD_DATE, changeFrequency: "monthly", priority: 0.8 },
-    { url: `${BASE}/en/faq`,       lastModified: BUILD_DATE, changeFrequency: "monthly", priority: 0.8 },
-    { url: `${BASE}/impressum`,    lastModified: BUILD_DATE, changeFrequency: "yearly",  priority: 0.3 },
-    { url: `${BASE}/en/impressum`, lastModified: BUILD_DATE, changeFrequency: "yearly",  priority: 0.3 },
+    { url: `${BASE}/faq`,           lastModified: BUILD_DATE, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${BASE}/en/faq`,        lastModified: BUILD_DATE, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${BASE}/ueber-uns`,     lastModified: BUILD_DATE, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${BASE}/en/ueber-uns`,  lastModified: BUILD_DATE, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${BASE}/impressum`,     lastModified: BUILD_DATE, changeFrequency: "yearly",  priority: 0.3 },
+    { url: `${BASE}/en/impressum`,  lastModified: BUILD_DATE, changeFrequency: "yearly",  priority: 0.3 },
   ]
 
   const seoPages: MetadataRoute.Sitemap = CITIES.flatMap((city) =>

@@ -271,6 +271,9 @@ const en: Translations = {
     linkLabel:     "FAQ",
     feedbackLabel: "Feedback",
   },
+  about: {
+    linkLabel: "About",
+  },
   impressum: {
     title:      "Legal Notice",
     back:       "Back",

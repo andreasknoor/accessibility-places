@@ -252,6 +252,9 @@ export interface Translations {
     linkLabel:     string
     feedbackLabel: string
   }
+  about: {
+    linkLabel: string
+  }
   settings: {
     title:             string
     sectionGeneral:    string
