@@ -21,7 +21,6 @@ interface Props {
   onShowParking?:    (coords: Coords) => void
   onGpsResolved?:    (coords: Coords) => void
   isParkingLoading?: boolean
-  hasParkingNearby?: boolean
   parkingRadiusKm?:  number
 }
 
@@ -51,11 +50,11 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
   return data.district ?? ""
 }
 
-export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm }: Props) {
+export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onShowParking, onGpsResolved, isParkingLoading, parkingRadiusKm }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
   const isMobile = useIsMobile()
-  const [mode,           setMode]           = useState<Mode>(initialMode ?? "text")
+  const [mode,           setMode]           = useState<Mode>(initialMode ?? "nearby")
   const [nearbyPhase,    setNearbyPhase]    = useState<NearbyPhase>("idle")
   const [location,       setLocation]       = useState("")
   const [name,           setName]           = useState("")
@@ -743,7 +742,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             </p>
           )}
 
-          {hasParkingNearby && typeof nearbyPhase === "object" && onShowParking && (
+          {typeof nearbyPhase === "object" && onShowParking && (
             <Button
               variant="outline"
               size="sm"

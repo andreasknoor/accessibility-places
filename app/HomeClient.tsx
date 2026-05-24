@@ -94,13 +94,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [lastQuery,     setLastQuery]    = useState<string | undefined>()
   const [lastCoords,    setLastCoords]   = useState<{ lat: number; lon: number } | undefined>()
   const [lastNameHint,  setLastNameHint] = useState<string | undefined>()
-  const [chatMode,      setChatMode]     = useState<"text" | "nearby" | "place">(() => loadSettings().defaultSearchMode ?? "text")
+  const [chatMode,      setChatMode]     = useState<"text" | "nearby" | "place">(() => loadSettings().defaultSearchMode ?? "nearby")
   const [filterCollapsed, setFilterCollapsed] = useState(true)
   const [sortBy,        setSortBy]       = useState<"confidence" | "distance">(() => loadSettings().sortOrder)
   const [resetKey,            setResetKey]            = useState(0)
   const [scrollToId,          setScrollToId]          = useState<string | undefined>()
   const [isParkingLoading,    setIsParkingLoading]    = useState(false)
-  const [hasParkingNearby,    setHasParkingNearby]    = useState(false)
   const gpsCoordRef  = useRef<{ lat: number; lon: number } | null>(null)
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
@@ -292,7 +291,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setError(undefined)
     setSourceStates({})
     setIsLoading(false)
-    setChatMode(settings.defaultSearchMode ?? "text")
+    setChatMode(settings.defaultSearchMode ?? "nearby")
     setSortBy(settings.sortOrder)
     setFilterCollapsed(true)
     try { localStorage.removeItem("ap_last_search") } catch { /* ignore */ }
@@ -383,27 +382,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const runParkingPreFetch = useCallback(async (coords: { lat: number; lon: number }, radiusKm: number) => {
-    try {
-      const res = await fetch(`/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=${radiusKm}`)
-      if (res.ok) {
-        const spots = await res.json()
-        setHasParkingNearby(Array.isArray(spots) && spots.length > 0)
-      }
-    } catch { /* ignore — parking pre-fetch is non-fatal */ }
-  }, [])
-
   const handleGpsResolved = useCallback((coords: { lat: number; lon: number }) => {
     gpsCoordRef.current = coords
-    runParkingPreFetch(coords, settings.parkingRadiusKm)
-  }, [runParkingPreFetch, settings.parkingRadiusKm])
-
-  // Re-check parking availability when the radius setting changes
-  useEffect(() => {
-    if (gpsCoordRef.current) {
-      runParkingPreFetch(gpsCoordRef.current, settings.parkingRadiusKm)
-    }
-  }, [settings.parkingRadiusKm, runParkingPreFetch])
+  }, [])
 
   // Silently pre-fetch GPS when entering place-search mode so coords are
   // available immediately when the user submits (avoids mid-submit delay).
@@ -534,7 +515,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onShowParking={handleShowParking}
         onGpsResolved={handleGpsResolved}
         isParkingLoading={isParkingLoading}
-        hasParkingNearby={hasParkingNearby}
+
         parkingRadiusKm={settings.parkingRadiusKm}
       />
     )
@@ -600,7 +581,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onShowParking={handleShowParking}
         onGpsResolved={handleGpsResolved}
         isParkingLoading={isParkingLoading}
-        hasParkingNearby={hasParkingNearby}
+
         parkingRadiusKm={settings.parkingRadiusKm}
       />
 

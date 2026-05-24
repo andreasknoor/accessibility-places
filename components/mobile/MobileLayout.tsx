@@ -57,7 +57,7 @@ interface Props {
   onShowParking?:       (coords: { lat: number; lon: number }) => void
   onGpsResolved?:       (coords: { lat: number; lon: number }) => void
   isParkingLoading?:    boolean
-  hasParkingNearby?:    boolean
+
   parkingRadiusKm?:     number
 }
 
@@ -68,12 +68,12 @@ export default function MobileLayout({
   onReset, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
   showParking, onToggleParking, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
-  onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm,
+  onShowParking, onGpsResolved, isParkingLoading, parkingRadiusKm,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
   const [panTrigger,  setPanTrigger]  = useState(0)
-  const [chatMode,    setChatMode]    = useState<"text" | "nearby" | "place">(settings.defaultSearchMode ?? "text")
+  const [chatMode,    setChatMode]    = useState<"text" | "nearby" | "place">(settings.defaultSearchMode ?? "nearby")
   const [scrollToId,  setScrollToId]  = useState<string | undefined>()
 
   function handleShowInResults(place: Place) {
@@ -150,7 +150,7 @@ export default function MobileLayout({
       <h1 className="sr-only">{t.app.srHeading}</h1>
 
       {/* ── Search bar (always visible) ── */}
-      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={setChatMode} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={settings.defaultSearchMode ?? undefined} onShowParking={handleShowParking} onGpsResolved={onGpsResolved} isParkingLoading={isParkingLoading} hasParkingNearby={hasParkingNearby} parkingRadiusKm={parkingRadiusKm} />
+      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={setChatMode} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={settings.defaultSearchMode ?? undefined} onShowParking={handleShowParking} onGpsResolved={onGpsResolved} isParkingLoading={isParkingLoading} parkingRadiusKm={parkingRadiusKm} />
 
       {/* ── Error banner ── */}
       {error && (

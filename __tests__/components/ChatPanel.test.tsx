@@ -13,7 +13,7 @@ vi.mock("@/lib/i18n", async (importOriginal) => {
 })
 
 function renderPanel(onSearch = vi.fn(), isLoading = false) {
-  return render(<ChatPanel onSearch={onSearch} isLoading={isLoading} />)
+  return render(<ChatPanel onSearch={onSearch} isLoading={isLoading} initialMode="text" />)
 }
 
 function mockFetch(suggestions: { display: string; name: string }[]) {
@@ -329,10 +329,10 @@ describe("ChatPanel initialChipIdx restore", () => {
 // ─── initialMode ─────────────────────────────────────────────────────────────
 
 describe("ChatPanel initialMode", () => {
-  it("defaults to text mode when initialMode is not passed", () => {
+  it("defaults to nearby mode when initialMode is not passed", () => {
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
-    const textTab = screen.getByText(/^Erkunden$/)
-    expect(textTab.closest("button")).toHaveClass("bg-primary")
+    const nearbyTab = screen.getByText(/In der Nähe/)
+    expect(nearbyTab.closest("button")).toHaveClass("bg-primary")
   })
 
   it("shows nearby mode tab as active when initialMode='nearby'", () => {
@@ -388,25 +388,17 @@ describe("ChatPanel parking button", () => {
     expect(screen.queryByText(/Rollstuhl-Parkplätze/)).toBeNull()
   })
 
-  it("is not shown after GPS resolves without hasParkingNearby", async () => {
+  it("appears after GPS resolves when onShowParking is defined", async () => {
     simulateGpsSuccess()
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={vi.fn()} hasParkingNearby={false} />)
-    fireEvent.click(screen.getByText(/In der Nähe/))
-    await act(() => vi.runAllTimersAsync())
-    expect(screen.queryByText(/Rollstuhl-Parkplätze/)).toBeNull()
-  })
-
-  it("appears after GPS resolves when hasParkingNearby=true", async () => {
-    simulateGpsSuccess()
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={vi.fn()} hasParkingNearby={true} />)
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={vi.fn()} />)
     fireEvent.click(screen.getByText(/In der Nähe/))
     await act(() => vi.runAllTimersAsync())
     expect(screen.getByText(/Rollstuhl-Parkplätze/)).toBeInTheDocument()
   })
 
-  it("button label includes radius when hasParkingNearby=true", async () => {
+  it("button label includes radius", async () => {
     simulateGpsSuccess()
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={vi.fn()} hasParkingNearby={true} parkingRadiusKm={0.5} />)
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={vi.fn()} parkingRadiusKm={0.5} />)
     fireEvent.click(screen.getByText(/In der Nähe/))
     await act(() => vi.runAllTimersAsync())
     expect(screen.getByText(/500 m/)).toBeInTheDocument()
@@ -424,7 +416,7 @@ describe("ChatPanel parking button", () => {
   it("calls onShowParking with GPS coords on click", async () => {
     simulateGpsSuccess(48.137, 11.576, "Maxvorstadt")
     const onShowParking = vi.fn()
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={onShowParking} hasParkingNearby={true} />)
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={onShowParking} />)
     fireEvent.click(screen.getByText(/In der Nähe/))
     await act(() => vi.runAllTimersAsync())
     fireEvent.click(screen.getByText(/Rollstuhl-Parkplätze/))
@@ -433,7 +425,7 @@ describe("ChatPanel parking button", () => {
 
   it("shows spinner and is disabled when isParkingLoading=true", async () => {
     simulateGpsSuccess()
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={vi.fn()} isParkingLoading={true} hasParkingNearby={true} />)
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={vi.fn()} isParkingLoading={true} />)
     fireEvent.click(screen.getByText(/In der Nähe/))
     await act(() => vi.runAllTimersAsync())
     const btn = screen.getByText(/Rollstuhl-Parkplätze/).closest("button")
@@ -442,7 +434,7 @@ describe("ChatPanel parking button", () => {
 
   it("is not shown when onShowParking prop is absent", async () => {
     simulateGpsSuccess()
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} hasParkingNearby={true} />)
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
     fireEvent.click(screen.getByText(/In der Nähe/))
     await act(() => vi.runAllTimersAsync())
     expect(screen.queryByText(/Rollstuhl-Parkplätze/)).toBeNull()
@@ -460,25 +452,25 @@ describe("ChatPanel place-search", () => {
   }
 
   it("name filter toggle button is visible in text mode", () => {
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
     expect(screen.getByText(/Name eingrenzen|Filter results by name/i)).toBeInTheDocument()
   })
 
   it("name input is hidden until toggle is clicked", () => {
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
     expect(screen.queryByPlaceholderText(/Zur Linde|The Crown/i)).not.toBeInTheDocument()
     openNameField()
     expect(screen.getByPlaceholderText(/Zur Linde|The Crown/i)).toBeInTheDocument()
   })
 
   it("search button is disabled when both location and name are empty", () => {
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onPlaceSearch={vi.fn()} />)
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onPlaceSearch={vi.fn()} initialMode="text" />)
     const btn = screen.getByRole("button", { name: "Suchen" })
     expect(btn).toBeDisabled()
   })
 
   it("search button is enabled when name has content and location is empty", () => {
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onPlaceSearch={vi.fn()} />)
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onPlaceSearch={vi.fn()} initialMode="text" />)
     openNameField()
     fireEvent.change(getNameInput(), { target: { value: "Hotel Adlon" } })
     const btn = screen.getByRole("button", { name: "Suchen" })
@@ -488,7 +480,7 @@ describe("ChatPanel place-search", () => {
   it("clicking Suchen with name+no-location calls onPlaceSearch, not onSearch", () => {
     const onSearch = vi.fn()
     const onPlaceSearch = vi.fn()
-    render(<ChatPanel onSearch={onSearch} isLoading={false} onPlaceSearch={onPlaceSearch} />)
+    render(<ChatPanel onSearch={onSearch} isLoading={false} onPlaceSearch={onPlaceSearch} initialMode="text" />)
     openNameField()
     fireEvent.change(getNameInput(), { target: { value: "Hotel Adlon" } })
     fireEvent.click(screen.getByRole("button", { name: "Suchen" }))
@@ -498,7 +490,7 @@ describe("ChatPanel place-search", () => {
 
   it("pressing Enter in name field with no location calls onPlaceSearch", () => {
     const onPlaceSearch = vi.fn()
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onPlaceSearch={onPlaceSearch} />)
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onPlaceSearch={onPlaceSearch} initialMode="text" />)
     openNameField()
     fireEvent.change(getNameInput(), { target: { value: "Goldener Löwe" } })
     fireEvent.keyDown(getNameInput(), { key: "Enter" })
@@ -508,7 +500,7 @@ describe("ChatPanel place-search", () => {
   it("pressing Enter in name field WITH location calls onSearch, not onPlaceSearch", () => {
     const onSearch = vi.fn()
     const onPlaceSearch = vi.fn()
-    render(<ChatPanel onSearch={onSearch} isLoading={false} onPlaceSearch={onPlaceSearch} />)
+    render(<ChatPanel onSearch={onSearch} isLoading={false} onPlaceSearch={onPlaceSearch} initialMode="text" />)
     fireEvent.change(getInput(), { target: { value: "Berlin" } })
     openNameField()
     fireEvent.change(getNameInput(), { target: { value: "Goldener Löwe" } })
@@ -518,7 +510,7 @@ describe("ChatPanel place-search", () => {
   })
 
   it("place-search hint is not shown in text/Erkunden mode", () => {
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
     openNameField()
     fireEvent.change(getNameInput(), { target: { value: "Hotel Adlon" } })
     expect(screen.queryByText(/Direkte Ortssuche|Direct place search/i)).not.toBeInTheDocument()
