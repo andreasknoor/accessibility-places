@@ -357,7 +357,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     if (!term) return
     autoSearchFiredRef.current = true
     const queryTerm = locale === "en" ? term.en : term.de
-    handleSearch(`${queryTerm} in ${initialCity}`)
+    handleSearch(`${queryTerm} in ${initialCity}`, undefined, undefined, initialSelectName ?? undefined)
   // Only run once on mount — initialCity/initialCategory are stable URL-derived values
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -623,7 +623,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
               <span className="relative">
                 <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
                 {[filters.entrance, filters.toilet, filters.parking, filters.seating, filters.onlyVerified].filter(Boolean).length > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[1.125rem] h-[1.125rem] rounded-full bg-red-500 text-white text-[10px] font-bold leading-none flex items-center justify-center px-1">
+                  <span className="absolute -top-3 -right-1.5 min-w-[1.125rem] h-[1.125rem] rounded-full bg-red-500 text-white text-[10px] font-bold leading-none flex items-center justify-center px-1">
                     {[filters.entrance, filters.toilet, filters.parking, filters.seating, filters.onlyVerified].filter(Boolean).length}
                   </span>
                 )}
