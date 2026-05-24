@@ -6,7 +6,7 @@ import {
   Utensils, Leaf, Dog, Wifi, Star, DollarSign,
   MessageSquare, ExternalLink, Accessibility,
   ShieldCheck, Award, ChevronDown, ChevronUp,
-  Truck, ShoppingBag, Link2, Car, Hash, Navigation,
+  Truck, ShoppingBag, Link2, Car, Hash, Navigation, Copy,
 } from "lucide-react"
 import { SOURCE_LABELS } from "@/lib/config"
 import { useTranslations } from "@/lib/i18n"
@@ -74,8 +74,18 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function PlaceDebugSheet({ place, onClose }: Props) {
-  const [linkCopied, setLinkCopied] = useState(false)
-  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [linkCopied,   setLinkCopied]   = useState(false)
+  const [copiedField,  setCopiedField]  = useState<"address" | "osm" | null>(null)
+  const copyTimerRef      = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const fieldTimerRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleCopyField(text: string, field: "address" | "osm") {
+    void navigator.clipboard.writeText(text).then(() => {
+      setCopiedField(field)
+      if (fieldTimerRef.current) clearTimeout(fieldTimerRef.current)
+      fieldTimerRef.current = setTimeout(() => setCopiedField(null), 2000)
+    })
+  }
   const [resolvedAddr, setResolvedAddr] = useState<string | null>(null)
   const [placeImage,   setPlaceImage]   = useState<string | null>(null)
   const [imageLoaded,  setImageLoaded]  = useState(false)
@@ -294,7 +304,23 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
           {/* ── Grunddaten ── */}
           <Section title={ti.basicInfo}>
             {addrStr && (
-              <InfoRow icon={MapPin} label={ti.address}>{addrStr}</InfoRow>
+              <InfoRow icon={MapPin} label={ti.address}>
+                <span className="flex items-center gap-1.5 flex-wrap">
+                  <span>{addrStr}</span>
+                  {copiedField === "address" ? (
+                    <span className="text-green-600 text-[11px] shrink-0">{t.common.copied}</span>
+                  ) : (
+                    <button
+                      onClick={() => handleCopyField(addrStr, "address")}
+                      className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                      aria-label={t.common.copied}
+                      title={t.common.copied}
+                    >
+                      <Copy className="w-3 h-3" />
+                    </button>
+                  )}
+                </span>
+              </InfoRow>
             )}
             {place.phone && (
               <InfoRow icon={Phone} label={ti.phone}>
@@ -417,9 +443,23 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
           <Section title={ti.externalLinks}>
             {osmLink && (
               <InfoRow icon={ExternalLink} label="OpenStreetMap">
-                <a href={osmLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                  {osmRecord?.externalId}
-                </a>
+                <span className="flex items-center gap-1.5 flex-wrap">
+                  <a href={osmLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                    {osmRecord?.externalId}
+                  </a>
+                  {copiedField === "osm" ? (
+                    <span className="text-green-600 text-[11px] shrink-0">{t.common.copied}</span>
+                  ) : (
+                    <button
+                      onClick={() => handleCopyField(osmRecord?.externalId ?? "", "osm")}
+                      className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                      aria-label={t.common.copied}
+                      title={t.common.copied}
+                    >
+                      <Copy className="w-3 h-3" />
+                    </button>
+                  )}
+                </span>
               </InfoRow>
             )}
             <InfoRow icon={Accessibility} label="Wheelmap">

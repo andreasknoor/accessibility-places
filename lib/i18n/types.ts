@@ -14,6 +14,7 @@ export interface Translations {
     close:       string
     loading:     string
     dismissHint: string
+    copied:      string
   }
   chat: {
     locationPlaceholder: string

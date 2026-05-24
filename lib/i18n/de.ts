@@ -18,6 +18,7 @@ const de: Translations = {
     close:       "Schließen",
     loading:     "Lädt …",
     dismissHint: "Hinweis schließen",
+    copied:      "In die Zwischenablage kopiert",
   },
   chat: {
     locationPlaceholder: "Ort eingeben, z. B. Berlin Mitte",
