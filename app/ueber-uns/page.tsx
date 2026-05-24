@@ -28,7 +28,7 @@ export default function UeberUnsPage() {
         </Link>
 
         <h1 className="text-2xl font-bold mb-3 leading-snug">
-          Accessible Places: Die neue Echtzeit-Plattform für verlässliche Rollstuhl-Navigation in der DACH-Region
+          Accessible Places: Die neue Echtzeit-Plattform für verlässliche Barrierefreiheit in der DACH-Region
         </h1>
         <p className="text-sm text-muted-foreground mb-8">Ein Überblick über das Projekt, die Idee dahinter und wie die App funktioniert.</p>
 
@@ -168,10 +168,7 @@ export default function UeberUnsPage() {
           </section>
 
           <p className="text-muted-foreground pt-2 border-t border-border">
-            Einfach, unabhängig und wirklich nützlich. Probieren Sie es am besten direkt selbst aus unter:{" "}
-            <Link href="/" className="text-primary hover:underline font-medium">
-              accessible-places.org
-            </Link>
+            Einfach, unabhängig und wirklich nützlich: Accessible Places
           </p>
 
         </div>

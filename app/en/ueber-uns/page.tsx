@@ -28,7 +28,7 @@ export default function AboutPage() {
         </Link>
 
         <h1 className="text-2xl font-bold mb-3 leading-snug">
-          Accessible Places: Real-Time Accessibility Navigation for the DACH Region
+          Accessible Places: The New Real-Time Platform for Reliable Accessibility in the DACH Region
         </h1>
         <p className="text-sm text-muted-foreground mb-8">An overview of the project, the idea behind it, and how the app works.</p>
 
@@ -168,10 +168,7 @@ export default function AboutPage() {
           </section>
 
           <p className="text-muted-foreground pt-2 border-t border-border">
-            Simple, independent, and genuinely useful. Try it yourself at:{" "}
-            <Link href="/en" className="text-primary hover:underline font-medium">
-              accessible-places.org
-            </Link>
+            Simple, independent, and genuinely useful: Accessible Places
           </p>
 
         </div>
