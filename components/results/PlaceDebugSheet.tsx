@@ -190,16 +190,33 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
 
   const osmRecord  = place.sourceRecords.find((r) => r.sourceId === "osm")
 
-  // Image: Option 3 (OSM image/wikimedia_commons tag) → Option 1 (Wikidata P18)
+  const googleRecord = place.sourceRecords.find((r) => r.sourceId === "google_places")
+
+  // Image priority: Google Places photo (if source active) → OSM image/wikimedia_commons → Wikidata P18
   useEffect(() => {
     setPlaceImage(null)
     setImageLoaded(false)
 
-    const meta = osmRecord ? (osmRecord.metadata ?? osmRecord.raw) as Record<string, unknown> | null : null
-    if (!meta) return
+    const controller = new AbortController()
 
-    // Option 3a: direct image URL or File: reference
-    const imageTag = str(meta.image)
+    // Google: photoName is stored as photos[0].name in Google Places metadata
+    const googleMeta = googleRecord ? (googleRecord.metadata ?? googleRecord.raw) as Record<string, unknown> | null : null
+    const photoName  = (Array.isArray(googleMeta?.photos) && googleMeta.photos.length > 0)
+      ? (googleMeta.photos[0] as Record<string, unknown>)?.name
+      : undefined
+    if (typeof photoName === "string" && photoName) {
+      fetch(`/api/image/google?photoName=${encodeURIComponent(photoName)}`, { signal: controller.signal })
+        .then((r) => r.ok ? r.json() : null)
+        .then((d) => { if (d?.url) setPlaceImage(d.url) })
+        .catch(() => {})
+      return () => controller.abort()
+    }
+
+    // Fallback: OSM image/wikimedia_commons/wikidata
+    const osmMeta = osmRecord ? (osmRecord.metadata ?? osmRecord.raw) as Record<string, unknown> | null : null
+    if (!osmMeta) return
+
+    const imageTag = str(osmMeta.image)
     if (imageTag) {
       if (imageTag.startsWith("File:")) {
         setPlaceImage(`https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(imageTag.slice(5))}?width=500`)
@@ -209,18 +226,15 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
       return
     }
 
-    // Option 3b: wikimedia_commons tag (File: only, skip Category:)
-    const commonsTag = str(meta.wikimedia_commons)
+    const commonsTag = str(osmMeta.wikimedia_commons)
     if (commonsTag?.startsWith("File:")) {
       setPlaceImage(`https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(commonsTag.slice(5))}?width=500`)
       return
     }
 
-    // Option 1: wikidata tag → Wikidata API (P18 = image)
-    const wikidataId = str(meta.wikidata)
+    const wikidataId = str(osmMeta.wikidata)
     if (!wikidataId) return
 
-    const controller = new AbortController()
     fetch(
       `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${wikidataId}&props=claims&format=json&origin=*`,
       { signal: controller.signal },
@@ -235,7 +249,7 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
       .catch(() => {})
     return () => controller.abort()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [osmRecord?.externalId])
+  }, [googleRecord?.externalId, osmRecord?.externalId])
 
   const osmLink    = osmRecord?.externalId
     ? `https://www.openstreetmap.org/${osmRecord.externalId}`

@@ -130,6 +130,7 @@ export async function fetchGooglePlaces(params: SearchParams): Promise<Place[]> 
     "places.nationalPhoneNumber",
     "places.types",
     "places.primaryType",
+    "places.photos",
   ].join(",")
 
   const results = await Promise.all(
