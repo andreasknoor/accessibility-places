@@ -411,7 +411,10 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
 
   const relatedCategoriesLabel = locale === "de" ? `Weitere Kategorien in ${cityName}` : `More categories in ${cityName}`
   const relatedCitiesLabel     = locale === "de" ? `${catLabel} in anderen Städten`     : `${catLabel} in other cities`
-  const ctaLabel               = locale === "de" ? `Suche öffnen für ${cityName}` : `Open search for ${cityName}`
+  const ctaLabel               = locale === "de" ? `Weitere ${catLabel} in ${cityName} anzeigen` : `View more ${catLabel} in ${cityName}`
+  const placesHeading          = locale === "de"
+    ? `${places.length} rollstuhlgerechte ${catLabel} in ${cityName}`
+    : `${places.length} wheelchair-accessible ${catLabel} in ${cityName}`
   const noResultsLabel         = locale === "de" ? "Aktuell sind keine Einträge verfügbar." : "No entries available at this time."
   const sourceLabel            = locale === "de" ? "Datenquelle:" : "Source:"
   const backLabel              = locale === "de" ? "← Zur Suche" : "← Back to search"
@@ -531,34 +534,10 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
           <h1 className="text-2xl font-bold text-gray-900 mb-3">{heading}</h1>
           <p className="text-gray-600 mb-6 max-w-2xl">{intro}</p>
 
-          {/* CTA */}
-          <Link
-            href={searchUrl}
-            className="inline-flex items-center gap-2 bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors mb-8"
-          >
-            {ctaLabel}
-          </Link>
-
-          {/* Place grid */}
-          {places.length === 0 ? (
-            <p className="text-gray-500 py-8">{noResultsLabel}</p>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {places.map((place) => (
-                <SeoPlaceCard key={place.id} place={place} locale={locale} searchBaseUrl={searchUrl} />
-              ))}
-            </div>
-          )}
-
-          {/* Source note */}
-          <p className="text-xs text-gray-400 mt-6">
-            {sourceLabel} OpenStreetMap, accessibility.cloud, Ginto (CH)
-          </p>
-
           {/* Stats summary + mini-FAQ */}
           {showSummary && stats && (
             <>
-              <div className="mt-8 rounded-lg border border-gray-200 bg-white p-4">
+              <div className="mb-8 rounded-lg border border-gray-200 bg-white p-4">
                 <h2 className="text-sm font-semibold text-gray-700 mb-3">
                   {locale === "de"
                     ? `Kurzübersicht · ${catLabel} in ${cityName}`
@@ -579,7 +558,7 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
                 </dl>
               </div>
 
-              <section aria-labelledby="faq-heading" className="mt-8">
+              <section aria-labelledby="faq-heading" className="mb-8">
                 <h2 id="faq-heading" className="text-base font-semibold text-gray-700 mb-3">
                   {locale === "de"
                     ? `Häufige Fragen zu barrierefreien ${catLabel} in ${cityName}`
@@ -596,6 +575,35 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
               </section>
             </>
           )}
+
+          {/* Place grid */}
+          {places.length === 0 ? (
+            <p className="text-gray-500 py-8">{noResultsLabel}</p>
+          ) : (
+            <section aria-labelledby="places-heading">
+              <h2 id="places-heading" className="text-base font-semibold text-gray-700 mb-4">
+                {placesHeading}
+              </h2>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {places.map((place) => (
+                  <SeoPlaceCard key={place.id} place={place} locale={locale} searchBaseUrl={searchUrl} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Source note */}
+          <p className="text-xs text-gray-400 mt-6">
+            {sourceLabel} OpenStreetMap, accessibility.cloud, Ginto (CH)
+          </p>
+
+          {/* CTA */}
+          <Link
+            href={searchUrl}
+            className="inline-flex items-center gap-2 bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors mt-6 mb-2"
+          >
+            {ctaLabel}
+          </Link>
 
           {/* Related categories */}
           {relatedCategories.length > 0 && (
