@@ -52,8 +52,10 @@ export interface Translations {
     welcomeSubtitle:    string
     welcomeGpsHint:     string
     welcomeOrDivider:   string
-    welcomeTextCard:    string
-    welcomePlaceCard:   string
+    welcomeTextCard:     string
+    welcomeTextCardHint: string
+    welcomePlaceCard:    string
+    welcomePlaceCardHint:string
   }
   filters: {
     title:               string

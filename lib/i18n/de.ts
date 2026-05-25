@@ -59,8 +59,10 @@ const de: Translations = {
     welcomeSubtitle:  "Finde barrierefreie Cafés, Hotels, Restaurants und mehr in Deutschland, Österreich und der Schweiz.",
     welcomeGpsHint:   "Drücke oben auf 'Standort ermitteln', um sofort Orte in deiner Nähe zu finden.",
     welcomeOrDivider: "Oder wähle einen anderen Einstieg:",
-    welcomeTextCard:  "Stadt & Kategorie eingeben",
-    welcomePlaceCard: "Bestimmten Ort suchen",
+    welcomeTextCard:      "Stadt & Kategorie eingeben",
+    welcomeTextCardHint:  "z. B. Café in München oder Restaurant in Wien",
+    welcomePlaceCard:     "Bestimmten Ort suchen",
+    welcomePlaceCardHint: "z. B. Restaurant Zur Post oder Hotel Adlon",
   },
   filters: {
     title: "Filter",

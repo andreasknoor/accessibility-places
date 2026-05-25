@@ -59,8 +59,10 @@ const en: Translations = {
     welcomeSubtitle:  "Find accessible cafés, hotels, restaurants and more across Germany, Austria and Switzerland.",
     welcomeGpsHint:   "Press \"Find my location\" above to instantly find places near you.",
     welcomeOrDivider: "Or choose a different starting point:",
-    welcomeTextCard:  "Enter city & category",
-    welcomePlaceCard: "Find a specific place",
+    welcomeTextCard:      "Enter city & category",
+    welcomeTextCardHint:  "e.g. café in Munich or restaurant in Vienna",
+    welcomePlaceCard:     "Find a specific place",
+    welcomePlaceCardHint: "e.g. Restaurant The Post or Hotel Adlon",
   },
   filters: {
     title: "Filters",

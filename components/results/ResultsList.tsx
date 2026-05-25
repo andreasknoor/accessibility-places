@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useMemo } from "react"
-import { Loader2, RefreshCw, MapPin, Building2, X, ChevronDown, ArrowUpDown, SlidersHorizontal, Search } from "lucide-react"
+import { Loader2, RefreshCw, MapPin, Building2, X, ChevronDown, ChevronRight, ArrowUpDown, SlidersHorizontal, Search } from "lucide-react"
 import PlaceCard from "./PlaceCard"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
@@ -230,19 +230,31 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
                 {onSwitchToText && (
                   <button
                     onClick={onSwitchToText}
-                    className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-sm hover:bg-muted transition-colors text-left"
+                    className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3.5 hover:bg-muted hover:border-primary/30 transition-colors text-left group"
                   >
-                    <Search className="w-4 h-4 text-muted-foreground shrink-0" />
-                    {t.chat.welcomeTextCard}
+                    <span className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <Search className="w-4 h-4 text-primary" />
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-sm font-medium text-foreground">{t.chat.welcomeTextCard}</span>
+                      <span className="block text-xs text-muted-foreground mt-0.5">{t.chat.welcomeTextCardHint}</span>
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 group-hover:text-foreground transition-colors" />
                   </button>
                 )}
                 {onSwitchToPlace && (
                   <button
                     onClick={onSwitchToPlace}
-                    className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-sm hover:bg-muted transition-colors text-left"
+                    className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3.5 hover:bg-muted hover:border-primary/30 transition-colors text-left group"
                   >
-                    <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
-                    {t.chat.welcomePlaceCard}
+                    <span className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <Building2 className="w-4 h-4 text-primary" />
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-sm font-medium text-foreground">{t.chat.welcomePlaceCard}</span>
+                      <span className="block text-xs text-muted-foreground mt-0.5">{t.chat.welcomePlaceCardHint}</span>
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 group-hover:text-foreground transition-colors" />
                   </button>
                 )}
               </div>
