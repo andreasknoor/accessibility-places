@@ -25,6 +25,7 @@ interface Props {
   parkingRadiusKm?:  number
   skipAutoLocate?:   boolean
   hasGpsCoords?:     boolean
+  locateTrigger?:    number
   biasCoords?:       Coords
 }
 
@@ -92,7 +93,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
   return data.district ?? ""
 }
 
-export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm, skipAutoLocate, hasGpsCoords, biasCoords }: Props) {
+export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm, skipAutoLocate, hasGpsCoords, locateTrigger, biasCoords }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
   const isMobile = useIsMobile()
@@ -124,6 +125,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // skipSuggestRef too early. Cleared when the user types.
   const restoredLocRef    = useRef("")
   const inputRef          = useRef<HTMLInputElement>(null)
+  const handleLocateRef   = useRef<() => void>(() => {})
 
   const district = typeof nearbyPhase === "object" ? nearbyPhase.district : null
 
@@ -193,6 +195,18 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       setInputPulse(true)
     }
   }, [])
+
+  // Keep ref pointing at latest handleLocate to avoid stale closure in the trigger effect
+  useEffect(() => { handleLocateRef.current = handleLocate })
+
+  // Fire locate when the parent bumps locateTrigger (e.g. welcome-screen dismiss)
+  useEffect(() => {
+    if (!locateTrigger) return
+    setMode("nearby")
+    onModeChange?.("nearby")
+    handleLocateRef.current()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locateTrigger])
 
   // Fetch location autocomplete suggestions (Photon via backend proxy)
   useEffect(() => {
