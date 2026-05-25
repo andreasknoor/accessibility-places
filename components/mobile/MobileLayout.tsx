@@ -63,6 +63,8 @@ interface Props {
   onResetOnboarding?:   () => void
   onSwitchToText?:      () => void
   onSwitchToPlace?:     () => void
+  chatMode:             "text" | "nearby" | "place"
+  onChatModeChange:     (mode: "text" | "nearby" | "place") => void
 }
 
 export default function MobileLayout({
@@ -73,11 +75,11 @@ export default function MobileLayout({
   showParking, onToggleParking, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
   onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm, isFirstVisit, onResetOnboarding, onSwitchToText, onSwitchToPlace,
+  chatMode, onChatModeChange,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
   const [panTrigger,  setPanTrigger]  = useState(0)
-  const [chatMode,    setChatMode]    = useState<"text" | "nearby" | "place">(settings.defaultSearchMode ?? "nearby")
   const [scrollToId,  setScrollToId]  = useState<string | undefined>()
 
   function handleShowInResults(place: Place) {
@@ -156,7 +158,7 @@ export default function MobileLayout({
       <h1 className="sr-only">{t.app.srHeading}</h1>
 
       {/* ── Search bar (always visible) ── */}
-      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={setChatMode} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={settings.defaultSearchMode ?? undefined} onShowParking={handleShowParking} onGpsResolved={onGpsResolved} isParkingLoading={isParkingLoading} hasParkingNearby={hasParkingNearby} parkingRadiusKm={parkingRadiusKm} skipAutoLocate={isFirstVisit} />
+      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onShowParking={handleShowParking} onGpsResolved={onGpsResolved} isParkingLoading={isParkingLoading} hasParkingNearby={hasParkingNearby} parkingRadiusKm={parkingRadiusKm} skipAutoLocate={isFirstVisit} />
 
       {/* ── Error banner ── */}
       {error && (

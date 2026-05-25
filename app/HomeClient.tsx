@@ -539,6 +539,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onResetOnboarding={() => { try { localStorage.removeItem("ap_visited") } catch { /* ignore */ }; setIsFirstVisit(true) }}
         onSwitchToText={() => handleSwitchMode("text")}
         onSwitchToPlace={() => handleSwitchMode("place")}
+        chatMode={chatMode}
+        onChatModeChange={handleModeChange}
       />
     )
   }
