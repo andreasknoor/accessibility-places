@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useMemo } from "react"
-import { Loader2, RefreshCw, MapPin, Building2, X, ChevronDown, ArrowUpDown, SlidersHorizontal } from "lucide-react"
+import { Loader2, RefreshCw, MapPin, Building2, X, ChevronDown, ArrowUpDown, SlidersHorizontal, Search } from "lucide-react"
 import PlaceCard from "./PlaceCard"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
@@ -33,9 +33,10 @@ interface Props {
   chatMode?:            "text" | "nearby" | "place"
   onSwitchToPlace?:     () => void
   onSwitchToText?:      () => void
+  isFirstVisit?:        boolean
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToPlace, onSwitchToText }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToPlace, onSwitchToText, isFirstVisit }: Props) {
   const t = useTranslations()
   const [mapHintSeen, setMapHintSeen] = useState(() =>
     typeof window !== "undefined" && !!localStorage.getItem("ap_map_hint_seen")
@@ -209,6 +210,42 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
               {[1, 2, 3].map((i) => (
                 <div key={i} className="h-36 rounded-lg bg-muted animate-pulse" />
               ))}
+            </div>
+          )}
+
+          {!isLoading && places.length === 0 && !hasSearched && chatMode === "nearby" && isFirstVisit && (
+            <div className="flex flex-col items-center gap-5 py-12 px-6 text-center">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <MapPin className="w-8 h-8 text-primary" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <p className="font-semibold text-foreground">{t.chat.welcomeTitle}</p>
+                <p className="text-sm text-muted-foreground">{t.chat.welcomeSubtitle}</p>
+              </div>
+              <div className="w-full rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground/80">
+                {t.chat.welcomeGpsHint}
+              </div>
+              <div className="w-full flex flex-col gap-2">
+                <p className="text-xs text-muted-foreground">{t.chat.welcomeOrDivider}</p>
+                {onSwitchToText && (
+                  <button
+                    onClick={onSwitchToText}
+                    className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-sm hover:bg-muted transition-colors text-left"
+                  >
+                    <Search className="w-4 h-4 text-muted-foreground shrink-0" />
+                    {t.chat.welcomeTextCard}
+                  </button>
+                )}
+                {onSwitchToPlace && (
+                  <button
+                    onClick={onSwitchToPlace}
+                    className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-sm hover:bg-muted transition-colors text-left"
+                  >
+                    <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
+                    {t.chat.welcomePlaceCard}
+                  </button>
+                )}
+              </div>
             </div>
           )}
 

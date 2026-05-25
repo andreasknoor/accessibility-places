@@ -101,6 +101,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [scrollToId,          setScrollToId]          = useState<string | undefined>()
   const [isParkingLoading,    setIsParkingLoading]    = useState(false)
   const [hasParkingNearby,    setHasParkingNearby]    = useState(false)
+  const [isFirstVisit,        setIsFirstVisit]        = useState(() => { try { return !localStorage.getItem("ap_visited") } catch { return false } })
   const gpsCoordRef  = useRef<{ lat: number; lon: number } | null>(null)
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
@@ -110,6 +111,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       : null,
   )
   const hasAutoSelected = useRef(false)
+
+  function markVisited() {
+    try { localStorage.setItem("ap_visited", "1") } catch { /* ignore */ }
+    setIsFirstVisit(false)
+  }
 
   // Persist filter/source/radius preferences across sessions.
   // alwaysShowParking is intentionally excluded — it's a per-session display toggle.
@@ -121,6 +127,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   }, [filters, sources, radiusKm])
 
   const handleSearch = useCallback(async (query: string, radiusKmOverride?: number, coords?: { lat: number; lon: number }, nameHint?: string, filtersOverride?: Partial<SearchFilters>, sourcesOverride?: Partial<ActiveSources>, placeSearch?: boolean) => {
+    markVisited()
     setLastQuery(query)
     setLastCoords(coords)
     setLastNameHint(nameHint)
@@ -293,10 +300,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setSourceStates({})
     setIsLoading(false)
     setHasParkingNearby(false)
+    setIsFirstVisit(true)
     setChatMode(settings.defaultSearchMode ?? "nearby")
     setSortBy(settings.sortOrder)
     setFilterCollapsed(true)
     try { localStorage.removeItem("ap_last_search") } catch { /* ignore */ }
+    try { localStorage.removeItem("ap_visited") } catch { /* ignore */ }
     // Clean up any deep-link or SEO params from the URL without a page reload
     window.history.replaceState({}, "", locale === "en" ? "/en/" : "/")
     setResetKey((k) => k + 1)
@@ -385,6 +394,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   }, [])
 
   const handleGpsResolved = useCallback((coords: { lat: number; lon: number }) => {
+    markVisited()
     gpsCoordRef.current = coords
     // Fire-and-forget: only show the parking button when spots actually exist nearby.
     // Uses the real GPS coords from navigator.geolocation — accurate on mobile.
@@ -525,6 +535,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         isParkingLoading={isParkingLoading}
         hasParkingNearby={hasParkingNearby}
         parkingRadiusKm={settings.parkingRadiusKm}
+        isFirstVisit={isFirstVisit}
+        onResetOnboarding={() => { try { localStorage.removeItem("ap_visited") } catch { /* ignore */ }; setIsFirstVisit(true) }}
       />
     )
   }
@@ -568,7 +580,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           </div>
         </button>
         <div className="flex items-center gap-1">
-          <SettingsSheet settings={settings} onUpdate={handleUpdateSettings} />
+          <SettingsSheet settings={settings} onUpdate={handleUpdateSettings} onResetOnboarding={() => { try { localStorage.removeItem("ap_visited") } catch { /* ignore */ }; setIsFirstVisit(true) }} />
           <LanguageSwitcher />
         </div>
       </header>
@@ -591,6 +603,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         isParkingLoading={isParkingLoading}
         hasParkingNearby={hasParkingNearby}
         parkingRadiusKm={settings.parkingRadiusKm}
+        skipAutoLocate={isFirstVisit}
       />
 
       {/* ── Error banner ── */}
@@ -666,8 +679,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             sortBy={sortBy}
             onSortChange={(s) => { setSortBy(s); updateSettings({ sortOrder: s }) }}
             chatMode={chatMode}
-            onSwitchToPlace={chatMode === "text" ? () => handleSwitchMode("place") : undefined}
-            onSwitchToText={chatMode === "place" ? () => handleSwitchMode("text") : undefined}
+            onSwitchToPlace={chatMode !== "place" ? () => handleSwitchMode("place") : undefined}
+            onSwitchToText={chatMode !== "text" ? () => handleSwitchMode("text") : undefined}
+            isFirstVisit={isFirstVisit}
           />
           <div className="shrink-0 border-t border-border px-4 py-2 flex justify-end gap-4">
             <Link href={locale === "en" ? "/en/faq" : "/faq"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">

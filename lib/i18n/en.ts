@@ -55,6 +55,12 @@ const en: Translations = {
       const dist = km < 1 ? `${Math.round(km * 1000)} m` : `${(Math.round(km * 10) / 10).toFixed(1)} km`
       return `Show nearby wheelchair parking (${dist})`
     },
+    welcomeTitle:     "Welcome to Accessible Places",
+    welcomeSubtitle:  "Find accessible cafés, hotels, restaurants and more across Germany, Austria and Switzerland.",
+    welcomeGpsHint:   "Press \"Find my location\" above to instantly find places near you.",
+    welcomeOrDivider: "Or choose a different starting point:",
+    welcomeTextCard:  "Enter city & category",
+    welcomePlaceCard: "Find a specific place",
   },
   filters: {
     title: "Filters",

@@ -8,8 +8,9 @@ import { SETTING_CHIPS, DEFAULT_APP_SETTINGS } from "@/lib/settings"
 import type { AppSettings } from "@/lib/settings"
 
 interface Props {
-  settings: AppSettings
-  onUpdate: (patch: Partial<AppSettings>) => void
+  settings:           AppSettings
+  onUpdate:           (patch: Partial<AppSettings>) => void
+  onResetOnboarding?: () => void
 }
 
 function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
@@ -89,7 +90,7 @@ function SliderInput({ value, min, max, step, onChange, displayLabel }: {
   )
 }
 
-function SettingsPanel({ settings, onUpdate, onClose }: Props & { onClose: () => void }) {
+function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props & { onClose: () => void }) {
   const t  = useTranslations()
   const ts = t.settings
   const { locale } = useLocale()
@@ -209,7 +210,7 @@ function SettingsPanel({ settings, onUpdate, onClose }: Props & { onClose: () =>
           <div className="border-t border-border mt-6 pt-4 flex justify-end">
             <button
               type="button"
-              onClick={() => onUpdate(DEFAULT_APP_SETTINGS)}
+              onClick={() => { onUpdate(DEFAULT_APP_SETTINGS); onResetOnboarding?.() }}
               className="text-xs text-muted-foreground hover:text-destructive transition-colors"
             >
               {ts.resetToDefaults}
@@ -222,7 +223,7 @@ function SettingsPanel({ settings, onUpdate, onClose }: Props & { onClose: () =>
   )
 }
 
-export default function SettingsSheet({ settings, onUpdate }: Props) {
+export default function SettingsSheet({ settings, onUpdate, onResetOnboarding }: Props) {
   const [open, setOpen] = useState(false)
   const t = useTranslations()
 
@@ -237,7 +238,7 @@ export default function SettingsSheet({ settings, onUpdate }: Props) {
         <Settings className="w-4 h-4" />
       </button>
       {open && createPortal(
-        <SettingsPanel settings={settings} onUpdate={onUpdate} onClose={() => setOpen(false)} />,
+        <SettingsPanel settings={settings} onUpdate={onUpdate} onResetOnboarding={onResetOnboarding} onClose={() => setOpen(false)} />,
         document.body,
       )}
     </>

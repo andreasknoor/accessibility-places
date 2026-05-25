@@ -23,6 +23,7 @@ interface Props {
   isParkingLoading?: boolean
   hasParkingNearby?: boolean
   parkingRadiusKm?:  number
+  skipAutoLocate?:   boolean
 }
 
 const CHIPS = [
@@ -89,7 +90,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
   return data.district ?? ""
 }
 
-export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm }: Props) {
+export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm, skipAutoLocate }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
   const isMobile = useIsMobile()
@@ -165,7 +166,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // Auto-trigger geolocation when the effective start mode is "nearby"
   // (either an explicit prop or the default when no preference is saved)
   useEffect(() => {
-    if ((initialMode ?? "nearby") === "nearby") {
+    if (!skipAutoLocate && (initialMode ?? "nearby") === "nearby") {
       onModeChange?.("nearby")
       handleLocate()
     }

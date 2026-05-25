@@ -59,6 +59,8 @@ interface Props {
   isParkingLoading?:    boolean
   hasParkingNearby?:    boolean
   parkingRadiusKm?:     number
+  isFirstVisit?:        boolean
+  onResetOnboarding?:   () => void
 }
 
 export default function MobileLayout({
@@ -68,7 +70,7 @@ export default function MobileLayout({
   onReset, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
   showParking, onToggleParking, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
-  onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm,
+  onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm, isFirstVisit, onResetOnboarding,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -142,7 +144,7 @@ export default function MobileLayout({
           </div>
         </button>
         <div className="flex items-center gap-1">
-          <SettingsSheet settings={settings} onUpdate={onUpdateSettings} />
+          <SettingsSheet settings={settings} onUpdate={onUpdateSettings} onResetOnboarding={onResetOnboarding} />
           <LanguageSwitcher />
         </div>
       </header>
@@ -150,7 +152,7 @@ export default function MobileLayout({
       <h1 className="sr-only">{t.app.srHeading}</h1>
 
       {/* ── Search bar (always visible) ── */}
-      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={setChatMode} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={settings.defaultSearchMode ?? undefined} onShowParking={handleShowParking} onGpsResolved={onGpsResolved} isParkingLoading={isParkingLoading} hasParkingNearby={hasParkingNearby} parkingRadiusKm={parkingRadiusKm} />
+      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={setChatMode} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={settings.defaultSearchMode ?? undefined} onShowParking={handleShowParking} onGpsResolved={onGpsResolved} isParkingLoading={isParkingLoading} hasParkingNearby={hasParkingNearby} parkingRadiusKm={parkingRadiusKm} skipAutoLocate={isFirstVisit} />
 
       {/* ── Error banner ── */}
       {error && (
@@ -182,6 +184,10 @@ export default function MobileLayout({
             parkingSpotCount={parkingSpotCount}
             sortBy={sortBy}
             onSortChange={onSortChange}
+            chatMode={chatMode}
+            onSwitchToPlace={chatMode !== "place" ? () => setChatMode("place") : undefined}
+            onSwitchToText={chatMode !== "text"  ? () => setChatMode("text")  : undefined}
+            isFirstVisit={isFirstVisit}
           />
         </div>
 

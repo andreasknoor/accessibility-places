@@ -55,6 +55,12 @@ const de: Translations = {
       const dist = km < 1 ? `${Math.round(km * 1000)} m` : `${(Math.round(km * 10) / 10).toFixed(1).replace(".", ",")} km`
       return `Rollstuhl-Parkplätze in der Nähe zeigen (${dist})`
     },
+    welcomeTitle:     "Willkommen bei Accessible Places",
+    welcomeSubtitle:  "Finde barrierefreie Cafés, Hotels, Restaurants und mehr in Deutschland, Österreich und der Schweiz.",
+    welcomeGpsHint:   "Drücke oben auf 'Standort ermitteln', um sofort Orte in deiner Nähe zu finden.",
+    welcomeOrDivider: "Oder wähle einen anderen Einstieg:",
+    welcomeTextCard:  "Stadt & Kategorie eingeben",
+    welcomePlaceCard: "Bestimmten Ort suchen",
   },
   filters: {
     title: "Filter",

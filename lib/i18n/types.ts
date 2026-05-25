@@ -47,7 +47,13 @@ export interface Translations {
     placeSearchHint:   string
     placeNotFound:     string
     placeNoData:       (name: string) => string
-    showParkingButton: (km: number) => string
+    showParkingButton:  (km: number) => string
+    welcomeTitle:       string
+    welcomeSubtitle:    string
+    welcomeGpsHint:     string
+    welcomeOrDivider:   string
+    welcomeTextCard:    string
+    welcomePlaceCard:   string
   }
   filters: {
     title:               string
