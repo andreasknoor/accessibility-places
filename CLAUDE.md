@@ -205,6 +205,12 @@ In production, `raw` adapter response data is stripped from `sourceRecords` befo
 
 `POST /api/log-error` — client-side error forwarding. `HomeClient` calls this fire-and-forget in its search `catch` block; the route logs via `console.error` (appears as Error in Vercel Function Logs).
 
+`GET /api/image/google?photoName=` — proxy for Google Places photo URLs. Validates `photoName` against `places/*/photos/*` pattern (SSRF guard), then calls the Places API with `skipHttpRedirect=true` and returns `{ url }` JSON with a 24 h / 7-day SWR cache header. Requires `GOOGLE_PLACES_API_KEY`.
+
+**Place photo** (`PlaceDebugSheet`) — loaded client-side with priority: (1) Google Places via `/api/image/google` (only if Google source is active); (2) OSM `image` tag — `File:…` → Wikimedia Commons `Special:FilePath`, `http…` → direct; (3) OSM `wikimedia_commons` tag; (4) Wikidata P18 claim (fetched from the Wikidata API using the OSM `wikidata` tag). All are best-effort; no photo shown if all fail.
+
+**Vercel Analytics** (`@vercel/analytics`) — `track()` fires custom events from `HomeClient`: `search` (mode, result_count), `search_no_results` (mode, radius_km), `place_not_found` (reason: `no_data` | `not_found`), `filter_apply` (criteria), `parking_shown`. No PII is sent.
+
 `GET /api/stats?token=SECRET` — token-protected adapter usage stats (requires `KV_REST_API_URL`). `lib/stats.ts` tracks per-source call counts, error counts, and response time (min/max/avg) in Upstash Redis using hour-granularity keys (`stats:h:<metric>:<sourceId>:<YYYY-MM-DDTHH>`) with a 90-day TTL. `trackCall`, `trackError`, and `trackDuration` are called fire-and-forget from `app/api/search/route.ts` after all adapters complete — **not** from `safeRun`. This keeps `safeRun` and `fetchAllSources` side-effect-free so they can be called safely from ISR pages (a `no-store` Upstash fetch inside an ISR page would demote it to dynamic at runtime).
 
 `GET /api/nearby-parking?lat=&lon=&radius=` — fetches disabled-parking OSM nodes within `radius` km (0.05–1.0 km, default 0.3). Exists as a standalone endpoint; parking spots for the main UI are delivered via the `result` event of `/api/search`, not this route.
@@ -253,7 +259,7 @@ No `q=` (no city name). On mount, `HomeClient` detects `selectLat`/`selectLon` w
 
 ### Static pages
 
-`app/faq/page.tsx` — FAQ page, rendered statically. Contains bilingual content (DE/EN inline, not via the i18n system). `app/impressum/page.tsx` — Legal notice; includes obfuscated contact email to avoid scraping.
+`app/faq/page.tsx` — FAQ page, rendered statically. Contains bilingual content (DE/EN inline, not via the i18n system). `app/impressum/page.tsx` — Legal notice; includes obfuscated contact email to avoid scraping. `app/ueber-uns/page.tsx` and `app/en/ueber-uns/page.tsx` — "Über die App" / "About" marketing page; bilingual pair using the same inline-content pattern as FAQ (no `LocaleProvider` i18n).
 
 ### PWA / Service Worker
 
