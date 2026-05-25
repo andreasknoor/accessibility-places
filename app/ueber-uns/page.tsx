@@ -167,6 +167,39 @@ export default function UeberUnsPage() {
             </p>
           </section>
 
+          <section>
+            <h2 className="text-lg font-bold mb-3">Starke Partner im Hintergrund: Woher stammen die Daten?</h2>
+            <p className="text-muted-foreground">
+              Sämtliche angezeigten Informationen basieren auf den offenen Datenbanken unserer starken Partner-Websites. Ohne diese großartigen Open-Data-Projekte wäre dieser Dienst überhaupt nicht möglich. Ein ganz persönlicher Dank geht daher an die jeweiligen Communities und Teams für die Bereitstellung der notwendigen Schnittstellen und Zugänge.
+            </p>
+            <p className="text-muted-foreground mt-3">
+              Die Daten von Accessible Places speisen sich aus folgenden Quellen:
+            </p>
+            <ul className="flex flex-col gap-4 mt-4">
+              <li>
+                <p className="font-semibold text-foreground">OpenStreetMap</p>
+                <p className="text-muted-foreground mt-0.5">
+                  Das „Wikipedia der Weltkarten". Es bildet nicht nur die visuelle Grundlage für das gesamte Kartenmaterial, sondern steuert über eine weltweite Community auch wertvolle geografische Basisdaten sowie erste wichtige Barrierefreiheits-Markierungen (z.&nbsp;B. zu stufenlosen Eingängen) bei.{" "}
+                  <a href="https://www.openstreetmap.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">openstreetmap.org</a>
+                </p>
+              </li>
+              <li>
+                <p className="font-semibold text-foreground">Accessibility-Cloud</p>
+                <p className="text-muted-foreground mt-0.5">
+                  Ein globales Netzwerk der Sozialhelden e.V., das Daten zur Barrierefreiheit weltweit bündelt. Über diese Cloud fließen unter anderem die unzähligen, von Nutzern manuell geprüften Daten der bekannten Plattform Wheelmap.org in Echtzeit in die App ein. Besonders nachhaltig: Viele der dort erfassten Daten fließen am Ende auch wieder direkt zurück in OpenStreetMap, um das freie Weltkarten-Projekt kontinuierlich für alle zu verbessern.{" "}
+                  <a href="https://accessibility.cloud" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">accessibility.cloud</a>
+                </p>
+              </li>
+              <li>
+                <p className="font-semibold text-foreground">Ginto</p>
+                <p className="text-muted-foreground mt-0.5">
+                  Der absolute Spezialist für Barrierefreiheit, mit einem starken Fokus auf die Schweiz und Österreich. Ginto ermöglicht es Institutionen und Communities, detaillierte Zugänglichkeitsinformationen (wie exakte Türbreiten oder Steigungen) zu erfassen und bereitzustellen, was die Datenqualität in der DACH-Region massiv aufwertet.{" "}
+                  <a href="https://www.ginto.ch" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">ginto.ch</a>
+                </p>
+              </li>
+            </ul>
+          </section>
+
           <p className="text-muted-foreground pt-2 border-t border-border">
             Einfach, unabhängig und wirklich nützlich: Accessible Places
           </p>

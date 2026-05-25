@@ -167,6 +167,39 @@ export default function AboutPage() {
             </p>
           </section>
 
+          <section>
+            <h2 className="text-lg font-bold mb-3">Strong Partners Behind the Scenes: Where Does the Data Come From?</h2>
+            <p className="text-muted-foreground">
+              All displayed information is based on the open databases of our strong partner websites. Without these outstanding open-data projects, this service would not be possible at all. A very personal thank-you goes to the respective communities and teams for providing the necessary interfaces and access.
+            </p>
+            <p className="text-muted-foreground mt-3">
+              The data in Accessible Places comes from the following sources:
+            </p>
+            <ul className="flex flex-col gap-4 mt-4">
+              <li>
+                <p className="font-semibold text-foreground">OpenStreetMap</p>
+                <p className="text-muted-foreground mt-0.5">
+                  The "Wikipedia of World Maps". It not only forms the visual foundation for all the map content, but also contributes valuable geographic base data and important first accessibility markers (e.g. for step-free entrances) through a worldwide community.{" "}
+                  <a href="https://www.openstreetmap.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">openstreetmap.org</a>
+                </p>
+              </li>
+              <li>
+                <p className="font-semibold text-foreground">Accessibility-Cloud</p>
+                <p className="text-muted-foreground mt-0.5">
+                  A global network by Sozialhelden e.V. that consolidates accessibility data worldwide. Through this cloud, the countless manually verified entries from the well-known platform Wheelmap.org flow into the app in real time. Particularly sustainable: many of the records captured there ultimately flow back directly into OpenStreetMap, continuously improving the free world map project for everyone.{" "}
+                  <a href="https://accessibility.cloud" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">accessibility.cloud</a>
+                </p>
+              </li>
+              <li>
+                <p className="font-semibold text-foreground">Ginto</p>
+                <p className="text-muted-foreground mt-0.5">
+                  The absolute specialist in accessibility, with a strong focus on Switzerland and Austria. Ginto enables institutions and communities to capture and publish detailed accessibility information (such as exact door widths or gradients), which massively improves data quality across the DACH region.{" "}
+                  <a href="https://www.ginto.ch" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">ginto.ch</a>
+                </p>
+              </li>
+            </ul>
+          </section>
+
           <p className="text-muted-foreground pt-2 border-t border-border">
             Simple, independent, and genuinely useful: Accessible Places
           </p>
