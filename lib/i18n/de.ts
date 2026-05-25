@@ -314,6 +314,7 @@ const de: Translations = {
     mobileViewList:    "Liste",
     mobileViewMap:     "Karte",
     resetToDefaults:   "Auf Standard zurücksetzen",
+    resetDone:         "Zurückgesetzt",
     parkingRadius:     "Parkplatz-Suchradius",
   },
 }

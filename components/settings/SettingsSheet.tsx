@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { createPortal } from "react-dom"
-import { Settings, X } from "lucide-react"
+import { Settings, X, Check } from "lucide-react"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { SETTING_CHIPS, DEFAULT_APP_SETTINGS } from "@/lib/settings"
+import { cn } from "@/lib/utils"
 import type { AppSettings } from "@/lib/settings"
 
 interface Props {
@@ -94,6 +95,8 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
   const t  = useTranslations()
   const ts = t.settings
   const { locale } = useLocale()
+  const [resetDone, setResetDone] = useState(false)
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   return (
     <div onClick={(e) => e.stopPropagation()}>
@@ -210,10 +213,24 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
           <div className="border-t border-border mt-6 pt-4 flex justify-end">
             <button
               type="button"
-              onClick={() => { onUpdate(DEFAULT_APP_SETTINGS); onResetOnboarding?.() }}
-              className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+              onClick={() => {
+                onUpdate(DEFAULT_APP_SETTINGS)
+                onResetOnboarding?.()
+                setResetDone(true)
+                if (resetTimer.current) clearTimeout(resetTimer.current)
+                resetTimer.current = setTimeout(() => setResetDone(false), 2000)
+              }}
+              className={cn(
+                "text-xs transition-colors flex items-center gap-1",
+                resetDone
+                  ? "text-green-600"
+                  : "text-muted-foreground hover:text-destructive",
+              )}
             >
-              {ts.resetToDefaults}
+              {resetDone
+                ? <><Check className="w-3 h-3" />{ts.resetDone}</>
+                : ts.resetToDefaults
+              }
             </button>
           </div>
 

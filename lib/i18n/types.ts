@@ -286,6 +286,7 @@ export interface Translations {
     mobileViewList:    string
     mobileViewMap:     string
     resetToDefaults:   string
+    resetDone:         string
     parkingRadius:     string
   }
 }

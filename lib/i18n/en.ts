@@ -314,6 +314,7 @@ const en: Translations = {
     mobileViewList:    "List",
     mobileViewMap:     "Map",
     resetToDefaults:   "Reset to defaults",
+    resetDone:         "Reset",
     parkingRadius:     "Parking search radius",
   },
 } as const
