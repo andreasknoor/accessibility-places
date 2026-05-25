@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import type { ReactNode } from "react"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
   },
 }
 
-const FAQ_DE = [
+const FAQ_DE: { q: string; a: ReactNode; schemaText?: string }[] = [
   {
     q: "Was ist Accessible Places?",
     a: "Accessible Places hilft Menschen mit Rollstuhl oder eingeschränkter Mobilität, barrierefreie Orte in Deutschland, Österreich und der Schweiz zu finden. Im Mittelpunkt steht die Verlässlichkeit der Informationen: Daten aus Google Maps sind in puncto Barrierefreiheit oft unvollständig und lassen sich dort kaum gezielt filtern. Accessible Places löst genau dieses Problem — mit einer schnellen, einfach zu bedienenden Suche, die Informationen aus mehreren Quellen zusammenführt und bewertet.",
@@ -58,15 +59,37 @@ const FAQ_DE = [
     q: "Wie kann ich Feedback geben oder einen Fehler melden?",
     a: 'Über den „Feedback"-Link am unteren Rand der Seite öffnet sich ein kurzes Formular. Kein Account, keine Registrierung notwendig.',
   },
+  {
+    q: "Wie kann ich selbst Informationen zur Barrierefreiheit von Orten hinzufügen oder ändern?",
+    a: (
+      <>
+        Der einfachste Weg: Rufe den gewünschten Ort auf Wheelmap.org auf und trage dort die
+        Barrierefreiheitsinformationen direkt ein — kostenlos und ohne Vorkenntnisse. Wie das Schritt
+        für Schritt funktioniert, erklärt das{" "}
+        <a
+          href="https://news.wheelmap.org/faq/#:~:text=Ortsdetails%20bearbeiten"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline hover:opacity-80"
+        >
+          Wheelmap-FAQ
+        </a>
+        . Da Accessible Places die Wheelmap-Daten regelmäßig abruft, stehen neue oder korrigierte
+        Einträge in der Regel nach etwa 24 Stunden auch hier zur Verfügung.
+      </>
+    ),
+    schemaText:
+      "Der einfachste Weg: Rufe den gewünschten Ort auf Wheelmap.org auf und trage dort die Barrierefreiheitsinformationen direkt ein — kostenlos und ohne Vorkenntnisse. Wie das Schritt für Schritt funktioniert, erklärt das Wheelmap-FAQ unter https://news.wheelmap.org/faq/. Da Accessible Places die Wheelmap-Daten regelmäßig abruft, stehen neue oder korrigierte Einträge in der Regel nach etwa 24 Stunden auch hier zur Verfügung.",
+  },
 ]
 
 const faqSchema = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
-  mainEntity: FAQ_DE.map(({ q, a }) => ({
+  mainEntity: FAQ_DE.map(({ q, a, schemaText }) => ({
     "@type": "Question",
     name: q,
-    acceptedAnswer: { "@type": "Answer", text: a },
+    acceptedAnswer: { "@type": "Answer", text: schemaText ?? (a as string) },
   })),
 }
 
