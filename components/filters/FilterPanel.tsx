@@ -95,6 +95,7 @@ const SOURCE_DISABLED: Partial<Record<SourceId, true>> = {}
 
 export default function FilterPanel({ filters, sources, radiusKm, onFilters, onSources, onRadius, sourceStates, onRerun, isLoading }: Props) {
   const t = useTranslations()
+  const isMobile = useIsMobile()
 
   function toggleSource(id: keyof ActiveSources) {
     onSources({ ...sources, [id]: !sources[id] })
@@ -105,7 +106,7 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
   }
 
   return (
-    <aside className="flex flex-col gap-5 w-64 shrink-0 p-4 border-r border-border bg-card overflow-y-auto">
+    <aside className={cn("flex flex-col gap-5 w-64 shrink-0 border-r border-border bg-card overflow-y-auto", isMobile ? "p-4" : "px-4 pb-4 pt-9")}>
       {/* ── Rerun button ── */}
       {onRerun && (
         <button

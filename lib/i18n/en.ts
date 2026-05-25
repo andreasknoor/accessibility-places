@@ -86,7 +86,7 @@ const en: Translations = {
       medium: "Moderate",
       low:    "Uncertain",
     },
-    rerun:           "Search again",
+    rerun:           "Apply filters",
     expandRadius:    "Expand search radius?",
     expandRadiusYes: "Yes",
     conflict: "Sources disagree",
