@@ -102,6 +102,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [isParkingLoading,    setIsParkingLoading]    = useState(false)
   const [hasParkingNearby,    setHasParkingNearby]    = useState(false)
   const [isFirstVisit,        setIsFirstVisit]        = useState(() => { try { return !localStorage.getItem("ap_visited") && !localStorage.getItem("ap_welcome_dismissed") } catch { return false } })
+  const [locateTriggerKey,    setLocateTriggerKey]    = useState(0)
   const [hasGpsCoords,        setHasGpsCoords]        = useState(false)
   const [gpsCoords,           setGpsCoords]           = useState<{ lat: number; lon: number } | null>(null)
   const gpsCoordRef  = useRef<{ lat: number; lon: number } | null>(null)
@@ -399,6 +400,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const handleDismissWelcome = useCallback(() => {
     try { localStorage.setItem("ap_welcome_dismissed", "1") } catch { /* ignore */ }
     setIsFirstVisit(false)
+    setLocateTriggerKey((k) => k + 1)
   }, [])
 
   const handleGpsResolved = useCallback((coords: { lat: number; lon: number }) => {
@@ -553,6 +555,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onResetOnboarding={() => { try { localStorage.removeItem("ap_visited"); localStorage.removeItem("ap_welcome_dismissed") } catch { /* ignore */ }; setIsFirstVisit(true) }}
         onDismissWelcome={handleDismissWelcome}
         hasGpsCoords={hasGpsCoords}
+        locateTrigger={locateTriggerKey}
         biasCoords={searchCenter ?? gpsCoords ?? undefined}
         onSwitchToText={() => handleSwitchMode("text")}
         onSwitchToPlace={() => handleSwitchMode("place")}
@@ -626,6 +629,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         parkingRadiusKm={settings.parkingRadiusKm}
         skipAutoLocate={isFirstVisit}
         hasGpsCoords={hasGpsCoords}
+        locateTrigger={locateTriggerKey}
         biasCoords={searchCenter ?? gpsCoords ?? undefined}
       />
 
