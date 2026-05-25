@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Send, Loader2, LocateFixed, Compass, X, CircleParking, Building2 } from "lucide-react"
+import { Send, Loader2, LocateFixed, Compass, X, CircleParking, Building2, Coffee, UtensilsCrossed, Beer, BookOpen, Hotel, Landmark, Film, Library, GalleryHorizontal, Star, IceCream, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { useIsMobile } from "@/hooks/useIsMobile"
@@ -44,6 +44,44 @@ type NearbyPhase = "idle" | "locating" | { district: string; lat: number; lon: n
 
 type Suggestion = { display: string; name: string }
 
+type PlaceSuggestion = Suggestion & { lat: number | null; lon: number | null; osmKey: string | null; osmValue: string | null }
+
+function PlaceCategoryIcon({ osmKey, osmValue }: { osmKey: string | null; osmValue: string | null }) {
+  const Icon = (() => {
+    if (osmKey === "amenity") {
+      switch (osmValue) {
+        case "cafe":       return Coffee
+        case "restaurant": return UtensilsCrossed
+        case "bar":
+        case "pub":
+        case "biergarten": return Beer
+        case "fast_food":
+        case "food_court": return UtensilsCrossed
+        case "cinema":     return Film
+        case "library":    return Library
+        case "theatre":    return Landmark
+        case "ice_cream":  return IceCream
+      }
+    }
+    if (osmKey === "tourism") {
+      switch (osmValue) {
+        case "hotel":
+        case "motel":
+        case "guest_house":
+        case "hostel":
+        case "apartment":  return Hotel
+        case "museum":     return BookOpen
+        case "gallery":
+        case "arts_centre":return GalleryHorizontal
+        case "attraction":
+        case "theme_park": return Star
+      }
+    }
+    return MapPin
+  })()
+  return <Icon className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+}
+
 async function reverseGeocode(lat: number, lon: number): Promise<string> {
   const res = await fetch(`/api/geocode/reverse?lat=${lat}&lon=${lon}`)
   if (!res.ok) throw new Error("reverse geocode failed")
@@ -65,7 +103,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [highlightedIdx, setHighlightedIdx] = useState(-1)
   const [inputPulse,         setInputPulse]         = useState(false)
-  const [nameSuggestions,    setNameSuggestions]    = useState<(Suggestion & { lat: number | null; lon: number | null })[]>([])
+  const [nameSuggestions,    setNameSuggestions]    = useState<PlaceSuggestion[]>([])
   const [showNameSuggestions, setShowNameSuggestions] = useState(false)
   const [nameHighlightedIdx,  setNameHighlightedIdx]  = useState(-1)
   const selectedIdxRef       = useRef(0)
@@ -672,8 +710,13 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                           : "hover:bg-muted",
                       )}
                     >
-                      <span className="font-semibold">{s.name}</span>
-                      {s.display !== s.name && <span className="text-muted-foreground">{s.display.slice(s.name.length)}</span>}
+                      <span className="flex items-center gap-2">
+                        <PlaceCategoryIcon osmKey={s.osmKey} osmValue={s.osmValue} />
+                        <span>
+                          <span className="font-semibold">{s.name}</span>
+                          {s.display !== s.name && <span className="text-muted-foreground">{s.display.slice(s.name.length)}</span>}
+                        </span>
+                      </span>
                     </li>
                   ))}
                 </ul>

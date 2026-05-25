@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
       const pLon   = typeof coords?.[0] === "number" ? coords[0] : null
       const pLat   = typeof coords?.[1] === "number" ? coords[1] : null
 
-      return [{ display, name, lat: pLat, lon: pLon }]
+      return [{ display, name, lat: pLat, lon: pLon, osmKey: p.osm_key ?? null, osmValue: p.osm_value ?? null }]
     }).slice(0, 5)
 
     return NextResponse.json(suggestions)
