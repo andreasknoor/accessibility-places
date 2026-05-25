@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import dynamic from "next/dynamic"
 import Script from "next/script"
 import Link from "next/link"
-import { Map, List, SlidersHorizontal } from "lucide-react"
+import { Map, List, SlidersHorizontal, Search, Building2, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import ChatPanel       from "@/components/chat/ChatPanel"
@@ -108,6 +108,8 @@ export default function MobileLayout({
     if (chatMode === "place" && activeTab === "filter") setActiveTab("results")
   }, [chatMode, activeTab])
 
+  const showWelcome = !!isFirstVisit && chatMode === "nearby" && !hasSearched && places.length === 0 && !isLoading
+
   const activeFilterCount = [filters.entrance, filters.toilet, filters.parking, filters.seating, filters.onlyVerified].filter(Boolean).length
 
   const allTabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
@@ -163,8 +165,57 @@ export default function MobileLayout({
         </div>
       )}
 
+      {/* ── Welcome screen (first-time nearby, no results yet) ──
+           Rendered outside the overflow-hidden tab wrapper so iOS WebKit
+           pointer events reach the buttons without a stacking-context dead zone. */}
+      {showWelcome && (
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 flex flex-col items-center gap-3 text-center">
+          <img src="/icons/icon-preview.svg" className="w-12 h-12 rounded-xl" alt="" aria-hidden />
+          <div className="flex flex-col gap-1">
+            <p className="font-semibold text-foreground">{t.chat.welcomeTitle}</p>
+            <p className="text-sm text-muted-foreground">{t.chat.welcomeSubtitle}</p>
+          </div>
+          <div className="w-full rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm text-foreground/80">
+            {t.chat.welcomeGpsHint}
+          </div>
+          <div className="w-full flex flex-col gap-2">
+            <p className="text-xs text-muted-foreground">{t.chat.welcomeOrDivider}</p>
+            {onSwitchToText && (
+              <button
+                onClick={onSwitchToText}
+                className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 hover:bg-muted hover:border-primary/30 transition-colors text-left group"
+              >
+                <span className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Search className="w-4 h-4 text-primary" />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-sm font-medium text-foreground">{t.chat.welcomeTextCard}</span>
+                  <span className="block text-xs text-muted-foreground mt-0.5">{t.chat.welcomeTextCardHint}</span>
+                </span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 group-hover:text-foreground transition-colors" />
+              </button>
+            )}
+            {onSwitchToPlace && (
+              <button
+                onClick={onSwitchToPlace}
+                className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 hover:bg-muted hover:border-primary/30 transition-colors text-left group"
+              >
+                <span className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Building2 className="w-4 h-4 text-primary" />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-sm font-medium text-foreground">{t.chat.welcomePlaceCard}</span>
+                  <span className="block text-xs text-muted-foreground mt-0.5">{t.chat.welcomePlaceCardHint}</span>
+                </span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 group-hover:text-foreground transition-colors" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Tab content ── */}
-      <div className="flex-1 min-h-0 overflow-hidden isolate">
+      {!showWelcome && <div className="flex-1 min-h-0 overflow-hidden isolate">
 
         {/* Results tab */}
         <div className={cn("h-full", activeTab !== "results" && "hidden")}>
@@ -231,7 +282,7 @@ export default function MobileLayout({
           />
         </div>
 
-      </div>
+      </div>}
 
       {/* ── Footer links ── */}
       <div className="flex justify-center gap-5 border-t border-border bg-card px-4 py-1.5 shrink-0">

@@ -115,6 +115,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const skipNameSuggestRef   = useRef(false)
   const skipSuggestRef       = useRef(false)
   const locatingRef          = useRef(false)
+  const watchIdRef           = useRef<number | null>(null)
   // Holds the location value that was set programmatically on restore.
   // Autocomplete is suppressed as long as location equals this value —
   // survives locale re-renders that would otherwise consume the one-shot
@@ -171,6 +172,15 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       handleLocate()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Stop watchPosition on unmount
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current)
+      }
+    }
   }, [])
 
   // Show attention pulse only on the very first page visit
@@ -259,6 +269,12 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     setName("")
     setNameSuggestions([])
     setShowNameSuggestions(false)
+    if (next !== "nearby") {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current)
+        watchIdRef.current = null
+      }
+    }
     if (next === "place") {
       // Clear location so name-suggest fires unconditionally in place mode
       setLocation("")
@@ -382,6 +398,19 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
         } catch {
           setNearbyPhase("error")
         }
+        // Silently track position changes after the initial fix
+        if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current)
+        watchIdRef.current = navigator.geolocation.watchPosition(
+          (p) => {
+            setNearbyPhase((prev) =>
+              typeof prev === "object"
+                ? { ...prev, lat: p.coords.latitude, lon: p.coords.longitude }
+                : prev
+            )
+          },
+          () => {},
+          { enableHighAccuracy: true, maximumAge: 30_000 },
+        )
       },
       () => { locatingRef.current = false; setNearbyPhase("error") },
       { timeout: 10_000, enableHighAccuracy: true },

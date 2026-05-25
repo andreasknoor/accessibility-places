@@ -330,7 +330,7 @@ describe("ChatPanel initialChipIdx restore", () => {
 
 describe("ChatPanel initialMode", () => {
   it("defaults to nearby mode when initialMode is not passed", () => {
-    vi.stubGlobal("navigator", { geolocation: { getCurrentPosition: vi.fn() }, clipboard: navigator.clipboard })
+    vi.stubGlobal("navigator", { geolocation: { getCurrentPosition: vi.fn(), watchPosition: vi.fn(), clearWatch: vi.fn() }, clipboard: navigator.clipboard })
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
     const nearbyTab = screen.getByText(/In der Nähe/)
     expect(nearbyTab.closest("button")).toHaveClass("bg-primary")
@@ -344,7 +344,7 @@ describe("ChatPanel initialMode", () => {
   })
 
   it("shows nearby mode tab as active when initialMode='nearby'", () => {
-    vi.stubGlobal("navigator", { geolocation: { getCurrentPosition: vi.fn() }, clipboard: navigator.clipboard })
+    vi.stubGlobal("navigator", { geolocation: { getCurrentPosition: vi.fn(), watchPosition: vi.fn(), clearWatch: vi.fn() }, clipboard: navigator.clipboard })
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="nearby" />)
     const nearbyTab = screen.getByText(/In der Nähe/)
     expect(nearbyTab.closest("button")).toHaveClass("bg-primary")
@@ -373,6 +373,8 @@ function simulateGpsSuccess(lat = 52.52, lon = 13.405, district = "Mitte") {
     geolocation: {
       getCurrentPosition: (success: PositionCallback) =>
         success({ coords: { latitude: lat, longitude: lon } } as GeolocationPosition),
+      watchPosition: vi.fn().mockReturnValue(1),
+      clearWatch: vi.fn(),
     },
   })
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
@@ -389,7 +391,7 @@ describe("ChatPanel parking button", () => {
   it("is not shown in nearby mode before GPS resolves", () => {
     vi.stubGlobal("navigator", {
       clipboard: navigator.clipboard,
-      geolocation: { getCurrentPosition: vi.fn() }, // never calls success
+      geolocation: { getCurrentPosition: vi.fn(), watchPosition: vi.fn(), clearWatch: vi.fn() }, // never calls success
     })
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={vi.fn()} />)
     fireEvent.click(screen.getByText(/In der Nähe/))
