@@ -100,6 +100,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [resetKey,            setResetKey]            = useState(0)
   const [scrollToId,          setScrollToId]          = useState<string | undefined>()
   const [isParkingLoading,    setIsParkingLoading]    = useState(false)
+  const [hasParkingNearby,    setHasParkingNearby]    = useState(false)
   const gpsCoordRef  = useRef<{ lat: number; lon: number } | null>(null)
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
@@ -291,6 +292,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setError(undefined)
     setSourceStates({})
     setIsLoading(false)
+    setHasParkingNearby(false)
     setChatMode(settings.defaultSearchMode ?? "nearby")
     setSortBy(settings.sortOrder)
     setFilterCollapsed(true)
@@ -384,7 +386,13 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
   const handleGpsResolved = useCallback((coords: { lat: number; lon: number }) => {
     gpsCoordRef.current = coords
-  }, [])
+    // Fire-and-forget: only show the parking button when spots actually exist nearby.
+    // Uses the real GPS coords from navigator.geolocation — accurate on mobile.
+    fetch(`/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=${settings.parkingRadiusKm}`)
+      .then(r => r.ok ? r.json() : [])
+      .then((spots: unknown[]) => { if (spots.length > 0) setHasParkingNearby(true) })
+      .catch(() => {})
+  }, [settings.parkingRadiusKm])
 
   // Silently pre-fetch GPS when entering place-search mode so coords are
   // available immediately when the user submits (avoids mid-submit delay).
@@ -515,7 +523,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onShowParking={handleShowParking}
         onGpsResolved={handleGpsResolved}
         isParkingLoading={isParkingLoading}
-
+        hasParkingNearby={hasParkingNearby}
         parkingRadiusKm={settings.parkingRadiusKm}
       />
     )
@@ -581,7 +589,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onShowParking={handleShowParking}
         onGpsResolved={handleGpsResolved}
         isParkingLoading={isParkingLoading}
-
+        hasParkingNearby={hasParkingNearby}
         parkingRadiusKm={settings.parkingRadiusKm}
       />
 

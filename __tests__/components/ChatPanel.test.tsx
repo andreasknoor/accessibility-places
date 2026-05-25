@@ -398,7 +398,7 @@ describe("ChatPanel parking button", () => {
 
   it("appears after GPS resolves when onShowParking is defined", async () => {
     simulateGpsSuccess()
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={vi.fn()} />)
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={vi.fn()} hasParkingNearby={true} />)
     fireEvent.click(screen.getByText(/In der Nähe/))
     await act(() => vi.runAllTimersAsync())
     expect(screen.getByText(/Rollstuhl-Parkplätze/)).toBeInTheDocument()
@@ -406,7 +406,7 @@ describe("ChatPanel parking button", () => {
 
   it("button label includes radius", async () => {
     simulateGpsSuccess()
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={vi.fn()} parkingRadiusKm={0.5} />)
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={vi.fn()} hasParkingNearby={true} parkingRadiusKm={0.5} />)
     fireEvent.click(screen.getByText(/In der Nähe/))
     await act(() => vi.runAllTimersAsync())
     expect(screen.getByText(/500 m/)).toBeInTheDocument()
@@ -424,7 +424,7 @@ describe("ChatPanel parking button", () => {
   it("calls onShowParking with GPS coords on click", async () => {
     simulateGpsSuccess(48.137, 11.576, "Maxvorstadt")
     const onShowParking = vi.fn()
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={onShowParking} />)
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={onShowParking} hasParkingNearby={true} />)
     fireEvent.click(screen.getByText(/In der Nähe/))
     await act(() => vi.runAllTimersAsync())
     fireEvent.click(screen.getByText(/Rollstuhl-Parkplätze/))
@@ -433,7 +433,7 @@ describe("ChatPanel parking button", () => {
 
   it("shows spinner and is disabled when isParkingLoading=true", async () => {
     simulateGpsSuccess()
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={vi.fn()} isParkingLoading={true} />)
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={vi.fn()} hasParkingNearby={true} isParkingLoading={true} />)
     fireEvent.click(screen.getByText(/In der Nähe/))
     await act(() => vi.runAllTimersAsync())
     const btn = screen.getByText(/Rollstuhl-Parkplätze/).closest("button")
