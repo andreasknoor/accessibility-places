@@ -294,6 +294,8 @@ const en: Translations = {
   },
   settings: {
     title:             "Settings",
+    autoSaveHint:      "Changes are saved automatically",
+    done:              "Done",
     sectionGeneral:    "General",
     sectionMap:        "Map",
     sectionResults:    "Results",

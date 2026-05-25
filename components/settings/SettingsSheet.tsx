@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react"
 import { createPortal } from "react-dom"
-import { Settings, X, Check } from "lucide-react"
+import { Settings, Check } from "lucide-react"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { SETTING_CHIPS, DEFAULT_APP_SETTINGS } from "@/lib/settings"
 import { cn } from "@/lib/utils"
@@ -104,14 +104,17 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
       <div className="fixed right-0 top-0 z-[1051] h-full w-[380px] max-w-full bg-white shadow-2xl border-l border-border flex flex-col">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-          <p className="font-semibold text-sm">{ts.title}</p>
+        <div className="flex items-start justify-between px-4 py-3 border-b border-border shrink-0">
+          <div>
+            <p className="font-semibold text-sm">{ts.title}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{ts.autoSaveHint}</p>
+          </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="text-sm font-medium text-primary hover:opacity-70 transition-opacity ml-4 mt-0.5 shrink-0"
             aria-label={t.common.close}
           >
-            <X className="w-4 h-4" />
+            {ts.done}
           </button>
         </div>
 

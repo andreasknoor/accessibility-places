@@ -266,6 +266,8 @@ export interface Translations {
   }
   settings: {
     title:             string
+    autoSaveHint:      string
+    done:              string
     sectionGeneral:    string
     sectionMap:        string
     sectionResults:    string
