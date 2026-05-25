@@ -103,6 +103,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [hasParkingNearby,    setHasParkingNearby]    = useState(false)
   const [isFirstVisit,        setIsFirstVisit]        = useState(() => { try { return !localStorage.getItem("ap_visited") && !localStorage.getItem("ap_welcome_dismissed") } catch { return false } })
   const [hasGpsCoords,        setHasGpsCoords]        = useState(false)
+  const [gpsCoords,           setGpsCoords]           = useState<{ lat: number; lon: number } | null>(null)
   const gpsCoordRef  = useRef<{ lat: number; lon: number } | null>(null)
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
@@ -403,6 +404,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const handleGpsResolved = useCallback((coords: { lat: number; lon: number }) => {
     markVisited()
     gpsCoordRef.current = coords
+    setGpsCoords(coords)
     setHasGpsCoords(true)
     // Fire-and-forget: only show the parking button when spots actually exist nearby.
     // Uses the real GPS coords from navigator.geolocation — accurate on mobile.
@@ -419,7 +421,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     if (gpsCoordRef.current) return
     if (!("geolocation" in navigator)) return
     navigator.geolocation.getCurrentPosition(
-      (pos) => { gpsCoordRef.current = { lat: pos.coords.latitude, lon: pos.coords.longitude } },
+      (pos) => {
+        const c = { lat: pos.coords.latitude, lon: pos.coords.longitude }
+        gpsCoordRef.current = c
+        setGpsCoords(c)
+      },
       () => { /* silently ignored — place search has other fallbacks */ },
       { timeout: 8000, maximumAge: 60_000 },
     )
@@ -547,6 +553,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onResetOnboarding={() => { try { localStorage.removeItem("ap_visited"); localStorage.removeItem("ap_welcome_dismissed") } catch { /* ignore */ }; setIsFirstVisit(true) }}
         onDismissWelcome={handleDismissWelcome}
         hasGpsCoords={hasGpsCoords}
+        biasCoords={searchCenter ?? gpsCoords ?? undefined}
         onSwitchToText={() => handleSwitchMode("text")}
         onSwitchToPlace={() => handleSwitchMode("place")}
         chatMode={chatMode}
@@ -619,6 +626,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         parkingRadiusKm={settings.parkingRadiusKm}
         skipAutoLocate={isFirstVisit}
         hasGpsCoords={hasGpsCoords}
+        biasCoords={searchCenter ?? gpsCoords ?? undefined}
       />
 
       {/* ── Error banner ── */}

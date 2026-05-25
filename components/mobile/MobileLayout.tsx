@@ -67,6 +67,7 @@ interface Props {
   onSwitchToPlace?:     () => void
   chatMode:             "text" | "nearby" | "place"
   onChatModeChange:     (mode: "text" | "nearby" | "place") => void
+  biasCoords?:          { lat: number; lon: number }
 }
 
 export default function MobileLayout({
@@ -77,7 +78,7 @@ export default function MobileLayout({
   showParking, onToggleParking, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
   onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm, isFirstVisit, onResetOnboarding, onDismissWelcome, hasGpsCoords, onSwitchToText, onSwitchToPlace,
-  chatMode, onChatModeChange,
+  chatMode, onChatModeChange, biasCoords,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -160,7 +161,7 @@ export default function MobileLayout({
       <h1 className="sr-only">{t.app.srHeading}</h1>
 
       {/* ── Search bar (always visible) ── */}
-      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onShowParking={handleShowParking} onGpsResolved={onGpsResolved} isParkingLoading={isParkingLoading} hasParkingNearby={hasParkingNearby} parkingRadiusKm={parkingRadiusKm} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} />
+      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onShowParking={handleShowParking} onGpsResolved={onGpsResolved} isParkingLoading={isParkingLoading} hasParkingNearby={hasParkingNearby} parkingRadiusKm={parkingRadiusKm} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} biasCoords={biasCoords} />
 
       {/* ── Error banner ── */}
       {error && (

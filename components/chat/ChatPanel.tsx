@@ -25,6 +25,7 @@ interface Props {
   parkingRadiusKm?:  number
   skipAutoLocate?:   boolean
   hasGpsCoords?:     boolean
+  biasCoords?:       Coords
 }
 
 const CHIPS = [
@@ -91,7 +92,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
   return data.district ?? ""
 }
 
-export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm, skipAutoLocate, hasGpsCoords }: Props) {
+export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm, skipAutoLocate, hasGpsCoords, biasCoords }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
   const isMobile = useIsMobile()
@@ -249,7 +250,8 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       const ac = new AbortController()
       nameAbortRef.current = ac
       try {
-        const res = await fetch(`/api/geocode/place-suggest?q=${encodeURIComponent(name)}&lang=${locale}`, { signal: ac.signal })
+        const bias = biasCoords ? `&lat=${biasCoords.lat}&lon=${biasCoords.lon}` : ""
+        const res = await fetch(`/api/geocode/place-suggest?q=${encodeURIComponent(name)}&lang=${locale}${bias}`, { signal: ac.signal })
         if (!res.ok) return
         const data = await res.json()
         setNameSuggestions(data)
@@ -261,7 +263,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       clearTimeout(nameDebounceRef.current)
       nameAbortRef.current?.abort()
     }
-  }, [name, location, locale, mode])
+  }, [name, location, locale, mode, biasCoords?.lat, biasCoords?.lon])
 
   function switchMode(next: Mode) {
     setMode(next)
