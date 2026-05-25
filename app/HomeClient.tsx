@@ -537,6 +537,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         parkingRadiusKm={settings.parkingRadiusKm}
         isFirstVisit={isFirstVisit}
         onResetOnboarding={() => { try { localStorage.removeItem("ap_visited") } catch { /* ignore */ }; setIsFirstVisit(true) }}
+        onSwitchToText={() => handleSwitchMode("text")}
+        onSwitchToPlace={() => handleSwitchMode("place")}
       />
     )
   }

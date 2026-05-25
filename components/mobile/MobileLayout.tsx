@@ -61,6 +61,8 @@ interface Props {
   parkingRadiusKm?:     number
   isFirstVisit?:        boolean
   onResetOnboarding?:   () => void
+  onSwitchToText?:      () => void
+  onSwitchToPlace?:     () => void
 }
 
 export default function MobileLayout({
@@ -70,7 +72,7 @@ export default function MobileLayout({
   onReset, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
   showParking, onToggleParking, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
-  onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm, isFirstVisit, onResetOnboarding,
+  onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm, isFirstVisit, onResetOnboarding, onSwitchToText, onSwitchToPlace,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -185,8 +187,8 @@ export default function MobileLayout({
             sortBy={sortBy}
             onSortChange={onSortChange}
             chatMode={chatMode}
-            onSwitchToPlace={chatMode !== "place" ? () => setChatMode("place") : undefined}
-            onSwitchToText={chatMode !== "text"  ? () => setChatMode("text")  : undefined}
+            onSwitchToPlace={onSwitchToPlace}
+            onSwitchToText={onSwitchToText}
             isFirstVisit={isFirstVisit}
           />
         </div>
