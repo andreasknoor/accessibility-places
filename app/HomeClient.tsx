@@ -114,6 +114,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       : null,
   )
   const hasAutoSelected = useRef(false)
+  // Tracks the in-flight /api/search request so rapid re-fires (filter toggle, source
+  // toggle, radius change) abort the previous stream instead of racing it to setState.
+  const searchAbortRef  = useRef<AbortController | null>(null)
 
   function markVisited() {
     try { localStorage.setItem("ap_visited", "1") } catch { /* ignore */ }
@@ -130,6 +133,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   }, [filters, sources, radiusKm])
 
   const handleSearch = useCallback(async (query: string, radiusKmOverride?: number, coords?: { lat: number; lon: number }, nameHint?: string, filtersOverride?: Partial<SearchFilters>, sourcesOverride?: Partial<ActiveSources>, placeSearch?: boolean) => {
+    // Cancel any in-flight search so its NDJSON stream cannot overwrite this one's state.
+    searchAbortRef.current?.abort()
+    const controller = new AbortController()
+    searchAbortRef.current = controller
+
     markVisited()
     setLastQuery(query)
     setLastCoords(coords)
@@ -153,6 +161,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ userQuery: query, radiusKm: radiusKmOverride ?? radiusKm, filters: { ...filters, ...filtersOverride }, sources: { ...sources, ...sourcesOverride }, locale, coordinates: coords, nameHint, placeSearch }),
+        signal:  controller.signal,
       })
 
       if (!res.ok || !res.body) {
@@ -170,6 +179,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       while (true) {
         const { value, done } = await reader.read()
         if (done) break
+        // If a newer search aborted us between iterations, drop any buffered data
+        // rather than calling setState with stale results.
+        if (controller.signal.aborted) break
         buffer += decoder.decode(value, { stream: true })
         const lines = buffer.split("\n")
         buffer = lines.pop() ?? ""
@@ -251,6 +263,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         setError(t.chat.placeNoData(nameHint ?? ""))
       }
     } catch (err) {
+      // Aborted by a newer search — silently bail; the newer request owns the UI state.
+      if (controller.signal.aborted) return
       setError(t.chat.errorGeneric)
       console.error(err)
       const e = err instanceof Error ? err : new Error(String(err))
@@ -260,7 +274,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         body:    JSON.stringify({ message: e.message, stack: e.stack, context: query }),
       }).catch(() => undefined)
     } finally {
-      setIsLoading(false)
+      // Only the *current* (non-aborted) request should clear the loading flag —
+      // an aborted older request must not toggle it off while the newer one runs.
+      if (!controller.signal.aborted) setIsLoading(false)
     }
   }, [filters, sources, radiusKm, t])
 

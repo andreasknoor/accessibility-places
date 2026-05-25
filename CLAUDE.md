@@ -146,9 +146,13 @@ nominatim:           0     // stats-only
 
 `MapView` (`components/map/MapView.tsx`) uses Leaflet and is loaded via `dynamic(..., { ssr: false })` to prevent server-side rendering errors.
 
+**Marker clustering** — place markers are grouped via `leaflet.markercluster`. `PLACE_CLUSTER_MAX_RADIUS = 50 px` controls grouping radius; clustering is disabled at zoom ≥ `PLACE_CLUSTER_DISABLE_AT_ZOOM = 17` (street level, every pin always visible). Cluster icons use the same confidence-colour scheme as individual pins and are styled with custom CSS classes (`ap-cluster`, `ap-cluster-sm/md/lg`). The default Leaflet.markercluster theme is replaced entirely — do not import its default CSS.
+
 **CSS stacking context invariant**: the desktop map container div has `isolation: isolate` (`<div className="flex-1 min-h-0 relative isolate">`). Leaflet injects pane z-indexes of 200–700 directly; without isolation these leak into the page stacking context and paint over ChatPanel (`z-20`), hiding autocomplete dropdowns. `isolate` traps all Leaflet z-indexes inside the map container. Do not remove it.
 
 **Filter/source/radius persistence** — `HomeClient.tsx` persists the active filter criteria, source toggles, and radius to `localStorage` via lazy `useState` initialisers, so user preferences survive page reloads. `alwaysShowParking` is intentionally excluded (it is a per-session display toggle). `handleReset` restores defaults and writes them back, so the stored value self-heals on reset.
+
+**Welcome / onboarding screen** — first-time visitors see a welcome screen instead of the normal UI. Controlled by `isFirstVisit` in `HomeClient`, initialised lazily: `true` when neither `ap_visited` nor `ap_welcome_dismissed` is set in `localStorage`. Dismissing via "Nicht mehr anzeigen" sets `ap_welcome_dismissed` and optionally triggers a nearby GPS search. The normal `ap_visited` key is set on any regular search. Both keys can be cleared via `onResetOnboarding` in `SettingsSheet` (gear icon → Reset → reset onboarding). The welcome UI lives inside `MobileLayout` and `ChatPanel`, not in a dedicated component.
 
 ### User settings (`lib/settings.ts`)
 
@@ -192,7 +196,7 @@ The name field is a separate input, **not** embedded in the query string. `ChatP
 Four proxy routes forward to external geocoding services (all restricted to DACH):
 - `GET /api/geocode?q=` — Nominatim forward geocoding; returns `{ lat, lon, displayName }`. Accepts optional `?lat=&lon=` to bias results via a ±0.2° viewbox (`bounded=0` so it falls back globally).
 - `GET /api/geocode/suggest?q=&lang=` — Photon/Komoot autocomplete restricted to `layer=city,district,locality`; returns `[{ display, name }]`. Used by the location field.
-- `GET /api/geocode/place-suggest?q=&lang=` — Photon/Komoot POI autocomplete **without** layer restrictions; returns `[{ display, name, lat, lon }]`. Used by the name field. Requests 20 candidates, deduplicates, slices to 5. Photon often omits `countrycode` for POIs — the filter is `if (cc && !DACH_CODES.has(cc))` (only hard-exclude explicit non-DACH), trusting the bbox for geographic containment.
+- `GET /api/geocode/place-suggest?q=&lang=` — Photon/Komoot POI autocomplete **without** layer restrictions; returns `[{ display, name, lat, lon }]`. Used by the name field. Accepts optional `?lat=&lon=` to bias results toward last-known coordinates (forwarded to Photon's `lat`/`lon` bias params). Requests 20 candidates, deduplicates, slices to 5. Photon often omits `countrycode` for POIs — the filter is `if (cc && !DACH_CODES.has(cc))` (only hard-exclude explicit non-DACH), trusting the bbox for geographic containment.
 - `GET /api/geocode/reverse?lat=&lon=` — Nominatim reverse geocoding; returns `{ district }` for the "Nearby" label.
 
 The `countrycodes=de,at,ch` constraint in Nominatim calls and the Photon bounding box must both be updated when expanding beyond DACH.
@@ -219,7 +223,7 @@ In production, `raw` adapter response data is stripped from `sourceRecords` befo
 
 ### Local SEO pages (`app/[city]/[category]/` and `app/en/[city]/[category]/`)
 
-ISR landing pages for 32 DACH cities × 10 categories × 2 locales = **640 pages** total. `generateStaticParams` pre-renders all combinations at build time; `dynamicParams = false` returns 404 for unknown slugs. The DE route uses `export const revalidate = 432000` (5 days); the EN route uses `Math.round(5.5 * 24 * 3600)` (5.5 days) to stagger revalidation across locales. Data is fetched live at render time via `fetchPlacesForSeoPage(...).catch(() => [])` — if the fetch fails the page renders with an empty list rather than erroring, and the ISR stale copy is served until the next successful revalidation.
+ISR landing pages for 32 DACH cities × 10 categories × 2 locales = **640 potential routes**. `generateStaticParams` returns `[]` and `dynamicParams` is left at the default `true` — pages render **lazily on first request** (no build-time pre-rendering). Unknown slugs fall through to `notFound()` after a `CITY_MAP`/`SEO_CATEGORY_SLUGS` lookup at the top of the page component. The DE route uses `export const revalidate = 432000` (5 days); the EN route uses `Math.round(5.5 * 24 * 3600)` (5.5 days) to stagger revalidation across locales. Data is fetched live at render time via `fetchPlacesForSeoPage(...).catch(() => [])` — if the fetch fails the page renders with an empty list rather than erroring, and the ISR stale copy is served until the next successful revalidation.
 
 **City/category configuration — `lib/cities.ts`:**
 - `CITIES` — 32 cities with slug, nameDe, nameEn, country, lat, lon. `CitySlug` union type must be kept in sync with this array.

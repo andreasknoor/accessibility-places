@@ -1,21 +1,31 @@
 import { NextRequest, NextResponse } from "next/server"
+import { ipFromRequest, isRateLimited, rateLimitResponse } from "@/lib/rate-limit"
 
 const PHOTON_URL = "https://photon.komoot.io/api/"
 const DACH_BBOX  = "5.87,45.82,17.17,55.06"
 const DACH_CODES = new Set(["DE", "AT", "CH"])
 
 export async function GET(req: NextRequest) {
+  if (isRateLimited("place-suggest", ipFromRequest(req), 60)) return rateLimitResponse()
+
   const q    = req.nextUrl.searchParams.get("q")?.trim()
   const lang = req.nextUrl.searchParams.get("lang") ?? "de"
-  const lat  = req.nextUrl.searchParams.get("lat")
-  const lon  = req.nextUrl.searchParams.get("lon")
+  const latRaw = req.nextUrl.searchParams.get("lat")
+  const lonRaw = req.nextUrl.searchParams.get("lon")
 
-  if (!q || q.length < 2) return NextResponse.json([])
+  if (!q || q.length < 2 || q.length > 200) return NextResponse.json([])
+
+  // Validate coordinates as finite numbers in range — never pass user input verbatim
+  // into the upstream URL, which would let callers smuggle additional Photon parameters.
+  const lat = latRaw != null ? parseFloat(latRaw) : NaN
+  const lon = lonRaw != null ? parseFloat(lonRaw) : NaN
+  const biasOk = Number.isFinite(lat) && Number.isFinite(lon) &&
+                 Math.abs(lat) <= 90 && Math.abs(lon) <= 180
 
   // No layer restriction — include POIs (hotels, restaurants, offices, …).
   // Ask for more candidates than needed so deduplication still yields 5 results.
   let url = `${PHOTON_URL}?q=${encodeURIComponent(q)}&limit=20&lang=${lang}&bbox=${DACH_BBOX}`
-  if (lat && lon) url += `&lat=${lat}&lon=${lon}`
+  if (biasOk) url += `&lat=${lat}&lon=${lon}`
 
   try {
     const res = await fetch(url, {

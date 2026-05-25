@@ -70,13 +70,45 @@ async function geocode(
   }
 }
 
-// ─── Strip raw API data from sourceRecords before sending to client ──────────
+// ─── Strip raw + narrow metadata before sending to client ────────────────────
+//
+// Adapters store the full upstream object in `metadata` for debugging. In production
+// we whitelist only the fields PlaceDebugSheet actually renders — keeps phone numbers,
+// third-party IDs, full address blocks, and similar data off the wire.
+
+const METADATA_WHITELIST: Partial<Record<SourceId, readonly string[]>> = {
+  osm: [
+    "opening_hours", "email", "contact:email", "cuisine", "stars", "tourism:stars",
+    "takeaway", "delivery", "internet_access", "dog", "dogs",
+    "wheelchair:description", "wheelchair:description:de",
+    "image", "wikimedia_commons", "wikidata",
+  ],
+  google_places: [
+    "regularOpeningHours", "rating", "userRatingCount", "priceLevel", "photos",
+  ],
+  // accessibility_cloud, reisen_fuer_alle, ginto: no fields currently read from
+  // metadata in the UI; default to {} in prod so nothing leaks.
+}
+
+function pickMetadata(sourceId: SourceId, metadata: unknown): Record<string, unknown> | undefined {
+  if (!metadata || typeof metadata !== "object") return undefined
+  const keys = METADATA_WHITELIST[sourceId]
+  if (!keys) return {}
+  const src = metadata as Record<string, unknown>
+  const out: Record<string, unknown> = {}
+  for (const k of keys) if (k in src) out[k] = src[k]
+  return out
+}
 
 function stripRaw(places: Place[]): Place[] {
   if (process.env.NODE_ENV === "development") return places
   return places.map((p) => ({
     ...p,
-    sourceRecords: p.sourceRecords.map(({ raw: _raw, ...rest }) => rest),
+    sourceRecords: p.sourceRecords.map(({ raw: _raw, metadata, sourceId, ...rest }) => ({
+      ...rest,
+      sourceId,
+      metadata: pickMetadata(sourceId, metadata),
+    })),
   }))
 }
 
@@ -90,15 +122,7 @@ type StreamEvent =
 // ─── Route handler (NDJSON streaming) ──────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  // ── Rate limiting ─────────────────────────────────────────────────────────
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown"
-  if (isRateLimited(ip)) {
-    return new Response(JSON.stringify({ error: "Too many requests. Please wait a minute." }), {
-      status:  429,
-      headers: { "Content-Type": "application/json", "Retry-After": "60" },
-    })
-  }
-
   const t0 = Date.now()
 
   let rawBody: Record<string, unknown>
@@ -108,6 +132,15 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: "Invalid JSON" }), {
       status:  400,
       headers: { "Content-Type": "application/json" },
+    })
+  }
+
+  // ── Rate limiting ─────────────────────────────────────────────────────────
+  // Counted only after the request body parses, so malformed POSTs cannot burn a quota slot.
+  if (isRateLimited(ip)) {
+    return new Response(JSON.stringify({ error: "Too many requests. Please wait a minute." }), {
+      status:  429,
+      headers: { "Content-Type": "application/json", "Retry-After": "60" },
     })
   }
 

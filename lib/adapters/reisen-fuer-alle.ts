@@ -115,8 +115,10 @@ function toPlace(item: any): Place | null {
   const toiletVal   = criteriaValue(item, CRITERIA.toilet)
   const parkingVal  = criteriaValue(item, CRITERIA.parking)
 
+  const externalId = String(item.id ?? item.businessId ?? "")
+
   return {
-    id: nanoid(),
+    id: externalId ? `reisen_fuer_alle:${externalId}` : nanoid(),
     name:     item.name,
     category: mapCategory(item),
     address: {
@@ -138,7 +140,7 @@ function toPlace(item: any): Place | null {
     primarySource: "reisen_fuer_alle",
     sourceRecords: [{
       sourceId:   "reisen_fuer_alle",
-      externalId: String(item.id ?? item.businessId ?? ""),
+      externalId,
       fetchedAt:  new Date().toISOString(),
       raw:        item,
       metadata:   item,

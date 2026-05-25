@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { ipFromRequest, isRateLimited, rateLimitResponse } from "@/lib/rate-limit"
 
 const PHOTON_URL  = "https://photon.komoot.io/api/"
 // Bounding box covering DE + AT + CH (minLon, minLat, maxLon, maxLat)
@@ -6,10 +7,12 @@ const DACH_BBOX   = "5.87,45.82,17.17,55.06"
 const DACH_CODES  = new Set(["DE", "AT", "CH"])
 
 export async function GET(req: NextRequest) {
+  if (isRateLimited("suggest", ipFromRequest(req), 60)) return rateLimitResponse()
+
   const q    = req.nextUrl.searchParams.get("q")?.trim()
   const lang = req.nextUrl.searchParams.get("lang") ?? "de"
 
-  if (!q || q.length < 2) return NextResponse.json([])
+  if (!q || q.length < 2 || q.length > 200) return NextResponse.json([])
 
   const url =
     `${PHOTON_URL}?q=${encodeURIComponent(q)}&limit=6&lang=${lang}` +

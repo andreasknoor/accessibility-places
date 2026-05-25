@@ -3,6 +3,12 @@ import HomeClient from "./HomeClient"
 
 const BASE = "https://accessible-places.org"
 
+function parseCoord(raw: string | undefined, maxAbs: number): number | undefined {
+  if (!raw) return undefined
+  const n = parseFloat(raw)
+  return Number.isFinite(n) && Math.abs(n) <= maxAbs ? n : undefined
+}
+
 export const metadata: Metadata = {
   alternates: {
     canonical: `${BASE}/`,
@@ -24,8 +30,8 @@ export default async function Page({
     <HomeClient
       initialCity={q}
       initialCategory={cat}
-      initialSelectLat={selectLat  ? parseFloat(selectLat)  : undefined}
-      initialSelectLon={selectLon  ? parseFloat(selectLon)  : undefined}
+      initialSelectLat={parseCoord(selectLat, 90)}
+      initialSelectLon={parseCoord(selectLon, 180)}
       initialSelectName={selectName}
     />
   )

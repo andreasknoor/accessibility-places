@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from "next/server"
 import { NOMINATIM_ENDPOINT } from "@/lib/config"
+import { ipFromRequest, isRateLimited, rateLimitResponse } from "@/lib/rate-limit"
 
 export async function GET(req: NextRequest) {
+  if (isRateLimited("geocode", ipFromRequest(req), 30)) return rateLimitResponse()
+
   const q   = req.nextUrl.searchParams.get("q")
   const lat = req.nextUrl.searchParams.get("lat")
   const lon = req.nextUrl.searchParams.get("lon")
-  if (!q) return NextResponse.json({ error: "Missing q" }, { status: 400 })
+  if (!q || q.length > 200) return NextResponse.json({ error: "Missing or oversized q" }, { status: 400 })
 
   const latN = lat ? parseFloat(lat) : NaN
   const lonN = lon ? parseFloat(lon) : NaN
-  const viewbox = !isNaN(latN) && !isNaN(lonN)
+  const biasOk = Number.isFinite(latN) && Number.isFinite(lonN) &&
+                 Math.abs(latN) <= 90 && Math.abs(lonN) <= 180
+  const viewbox = biasOk
     ? `&viewbox=${lonN - 0.2},${latN + 0.2},${lonN + 0.2},${latN - 0.2}&bounded=0`
     : ""
 

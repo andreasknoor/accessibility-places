@@ -126,6 +126,10 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const restoredLocRef    = useRef("")
   const inputRef          = useRef<HTMLInputElement>(null)
   const handleLocateRef   = useRef<() => void>(() => {})
+  // Refs mirror `name` and `locale` so async callbacks in handleLocate (GPS success,
+  // watchPosition) read the current value rather than the closure-captured snapshot.
+  const nameRef           = useRef("")
+  const localeRef         = useRef(locale)
 
   const district = typeof nearbyPhase === "object" ? nearbyPhase.district : null
 
@@ -198,6 +202,10 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
 
   // Keep ref pointing at latest handleLocate to avoid stale closure in the trigger effect
   useEffect(() => { handleLocateRef.current = handleLocate })
+
+  // Keep mirrors of name/locale in refs so the async GPS callbacks read live values.
+  useEffect(() => { nameRef.current = name })
+  useEffect(() => { localeRef.current = locale })
 
   // Fire locate when the parent bumps locateTrigger (e.g. welcome-screen dismiss)
   useEffect(() => {
@@ -410,8 +418,11 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           setNearbyPhase({ district: d, lat, lon })
           onGpsResolved?.({ lat, lon })
           const chip = CHIPS[selectedIdxRef.current]
-          const label = locale === "de" ? chip.de : chip.en
-          onSearch(d ? `${label} in ${d}` : label, { lat, lon }, name.trim() || undefined)
+          // Read locale/name from refs so a fix that arrives after the user typed
+          // or switched language still uses the current values.
+          const label = localeRef.current === "de" ? chip.de : chip.en
+          const nameHint = nameRef.current.trim() || undefined
+          onSearch(d ? `${label} in ${d}` : label, { lat, lon }, nameHint)
         } catch {
           setNearbyPhase("error")
         }

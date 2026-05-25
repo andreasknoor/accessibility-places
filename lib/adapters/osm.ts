@@ -257,8 +257,12 @@ function elementToPlace(el: any): Place | null {
   const allowsDogs = osmAllowsDogs(tags)
   const diet       = osmDiet(tags)
 
+  // OSM-style "type/id" — stable across requests so that selectedId/scrollToId
+  // survive a "Filter anwenden" rerun.
+  const externalId = `${el.type ?? "node"}/${el.id}`
+
   return {
-    id: nanoid(),
+    id: `osm:${externalId}`,
     name,
     category: osmCategory(tags),
     address: {
@@ -285,9 +289,7 @@ function elementToPlace(el: any): Place | null {
     osmWheelchairIsOverall: wheelchairVal !== "unknown",
     sourceRecords: [{
       sourceId:   "osm",
-      // OSM-style "type/id" so consumers (e.g. Wheelmap deep-link) can
-      // distinguish nodes/ways/relations.
-      externalId: `${el.type ?? "node"}/${el.id}`,
+      externalId,
       fetchedAt:  new Date().toISOString(),
       raw:        tags,
       metadata:   tags,

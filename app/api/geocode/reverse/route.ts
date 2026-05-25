@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { NOMINATIM_ENDPOINT } from "@/lib/config"
+import { ipFromRequest, isRateLimited, rateLimitResponse } from "@/lib/rate-limit"
 
 export async function GET(req: NextRequest) {
+  if (isRateLimited("reverse", ipFromRequest(req), 30)) return rateLimitResponse()
+
   const lat = req.nextUrl.searchParams.get("lat")
   const lon = req.nextUrl.searchParams.get("lon")
 

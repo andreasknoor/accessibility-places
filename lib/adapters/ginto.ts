@@ -200,7 +200,7 @@ function nodeToPlace(node: GintoNode): Place {
     buildAttribute("ginto", value, rawValue, {}, false, weightMultiplier, undefined, false)
 
   return {
-    id:          nanoid(),
+    id:          node.entryId ? `ginto:${node.entryId}` : nanoid(),
     name:        node.name,
     category,
     address: {

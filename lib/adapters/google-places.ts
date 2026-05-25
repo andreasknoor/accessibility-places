@@ -73,8 +73,10 @@ function toPlace(item: any, category: Category): Place | null {
 
   const seatingDetails: SeatingDetails = { isAccessible: a11y.wheelchairAccessibleSeating ?? undefined }
 
+  const externalId = item.id ?? item.name ?? ""
+
   return {
-    id: nanoid(),
+    id: externalId ? `google_places:${externalId}` : nanoid(),
     name:     item.displayName.text,
     category,
     address: {
@@ -102,7 +104,7 @@ function toPlace(item: any, category: Category): Place | null {
     ...(isVegan      !== undefined ? { isVeganFriendly:      isVegan }      : {}),
     sourceRecords: [{
       sourceId:   "google_places",
-      externalId: item.id ?? item.name ?? "",
+      externalId,
       fetchedAt:  new Date().toISOString(),
       raw:        item,
       metadata:   item,

@@ -53,13 +53,11 @@ export default async function CityPageEn({ params }: { params: Promise<Params> }
 
   const { city, category } = resolved
   const slug   = Object.keys(SEO_CATEGORY_SLUGS).find((k) => SEO_CATEGORY_SLUGS[k] === category)!
-  let places
-  try {
-    places = await fetchPlacesForSeoPage(city.lat, city.lon, category)
-  } catch (err) {
+  // On adapter failure, render the page with an empty list rather than 500.
+  const places = await fetchPlacesForSeoPage(city.lat, city.lon, category).catch((err) => {
     console.error(`[seo] fetch failed for ${city.slug}/${slug}:`, err)
-    throw err  // let Next.js serve the stale ISR cache instead of caching an empty page
-  }
+    return []
+  })
 
   if (places.length === 0 && !hasData(city.slug, slug)) notFound()
 

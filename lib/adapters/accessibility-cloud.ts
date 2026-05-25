@@ -176,8 +176,10 @@ function toPlace(feature: any): Place | null {
     a.parking                             !== undefined
   const dogPolicyOnly = allowsDogs !== undefined && !hasWheelchairData
 
+  const externalId = feature._id ?? feature.id ?? ""
+
   return {
-    id: nanoid(),
+    id: externalId ? `accessibility_cloud:${externalId}` : nanoid(),
     name,
     category,
     address: {
@@ -203,7 +205,7 @@ function toPlace(feature: any): Place | null {
     primarySource: "accessibility_cloud",
     sourceRecords: [{
       sourceId:   "accessibility_cloud",
-      externalId: feature._id ?? feature.id ?? "",
+      externalId,
       fetchedAt:  new Date().toISOString(),
       raw:        props,
       metadata:   props,

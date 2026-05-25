@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
+import { ipFromRequest, isRateLimited, rateLimitResponse } from "@/lib/rate-limit"
 
 // Validates that photoName matches the Google Places photo resource pattern.
 // Prevents SSRF: only exact-format strings are forwarded to the Google API.
 const PHOTO_NAME_RE = /^places\/[A-Za-z0-9_-]+\/photos\/[A-Za-z0-9_-]+$/
 
 export async function GET(req: NextRequest) {
+  if (isRateLimited("photo", ipFromRequest(req), 20)) return rateLimitResponse()
+
   const photoName = req.nextUrl.searchParams.get("photoName") ?? ""
 
-  if (!PHOTO_NAME_RE.test(photoName)) {
+  // Length cap is defence-in-depth: real photoNames are ~80 chars.
+  if (photoName.length > 200 || !PHOTO_NAME_RE.test(photoName)) {
     return NextResponse.json({ error: "Invalid photoName" }, { status: 400 })
   }
 
