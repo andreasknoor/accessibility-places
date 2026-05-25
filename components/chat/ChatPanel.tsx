@@ -781,7 +781,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       {/* ── Nearby mode ── */}
       {mode === "nearby" && (
         <>
-          {nearbyPhase === "idle" && (
+          {nearbyPhase === "idle" && !skipAutoLocate && (
             <Button onClick={handleLocate} disabled={isLoading} variant="outline" className="w-full gap-2">
               <LocateFixed className="w-4 h-4" />
               {t.chat.locateButton}
