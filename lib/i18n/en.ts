@@ -58,6 +58,7 @@ const en: Translations = {
     welcomeTitle:     "Welcome to Accessible Places",
     welcomeSubtitle:  "Find accessible cafés, hotels, restaurants and more across Germany, Austria and Switzerland.",
     welcomeGpsHint:   "Tap 'Nearby' to instantly find accessible places around you.",
+    welcomeDismiss:   "Don't show again",
     welcomeOrDivider: "Or choose a different starting point:",
     welcomeTextCard:      "Explore",
     welcomeTextCardHint:  "Choose city & category – e.g. café in Munich",

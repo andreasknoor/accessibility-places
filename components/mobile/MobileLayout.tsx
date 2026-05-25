@@ -61,6 +61,8 @@ interface Props {
   parkingRadiusKm?:     number
   isFirstVisit?:        boolean
   onResetOnboarding?:   () => void
+  onDismissWelcome?:    () => void
+  hasGpsCoords?:        boolean
   onSwitchToText?:      () => void
   onSwitchToPlace?:     () => void
   chatMode:             "text" | "nearby" | "place"
@@ -74,7 +76,7 @@ export default function MobileLayout({
   onReset, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
   showParking, onToggleParking, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
-  onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm, isFirstVisit, onResetOnboarding, onSwitchToText, onSwitchToPlace,
+  onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm, isFirstVisit, onResetOnboarding, onDismissWelcome, hasGpsCoords, onSwitchToText, onSwitchToPlace,
   chatMode, onChatModeChange,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
@@ -158,7 +160,7 @@ export default function MobileLayout({
       <h1 className="sr-only">{t.app.srHeading}</h1>
 
       {/* ── Search bar (always visible) ── */}
-      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onShowParking={handleShowParking} onGpsResolved={onGpsResolved} isParkingLoading={isParkingLoading} hasParkingNearby={hasParkingNearby} parkingRadiusKm={parkingRadiusKm} skipAutoLocate={isFirstVisit} />
+      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onShowParking={handleShowParking} onGpsResolved={onGpsResolved} isParkingLoading={isParkingLoading} hasParkingNearby={hasParkingNearby} parkingRadiusKm={parkingRadiusKm} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} />
 
       {/* ── Error banner ── */}
       {error && (
@@ -213,6 +215,14 @@ export default function MobileLayout({
               </button>
             )}
           </div>
+          {onDismissWelcome && (
+            <button
+              onClick={onDismissWelcome}
+              className="mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+            >
+              {t.chat.welcomeDismiss}
+            </button>
+          )}
         </div>
       )}
 

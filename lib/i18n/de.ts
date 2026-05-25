@@ -58,6 +58,7 @@ const de: Translations = {
     welcomeTitle:     "Willkommen bei Accessible Places",
     welcomeSubtitle:  "Finde barrierefreie Cafés, Hotels, Restaurants und mehr in Deutschland, Österreich und der Schweiz.",
     welcomeGpsHint:   "Tippe auf 'In der Nähe', um sofort barrierefreie Orte in deiner Nähe zu finden.",
+    welcomeDismiss:   "Nicht mehr anzeigen",
     welcomeOrDivider: "Oder wähle einen anderen Einstieg:",
     welcomeTextCard:      "Erkunden",
     welcomeTextCardHint:  "Stadt & Kategorie wählen – z. B. Café in München",

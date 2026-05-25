@@ -24,6 +24,7 @@ interface Props {
   hasParkingNearby?: boolean
   parkingRadiusKm?:  number
   skipAutoLocate?:   boolean
+  hasGpsCoords?:     boolean
 }
 
 const CHIPS = [
@@ -90,7 +91,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
   return data.district ?? ""
 }
 
-export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm, skipAutoLocate }: Props) {
+export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm, skipAutoLocate, hasGpsCoords }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
   const isMobile = useIsMobile()
@@ -437,10 +438,13 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
               {m === "nearby" && <LocateFixed className="w-[1.125rem] h-[1.125rem]" />}
               {m === "text"   && <Compass     className="w-[1.125rem] h-[1.125rem]" />}
               {m === "place"  && <Building2   className="w-[1.125rem] h-[1.125rem]" />}
-              <span className="text-xs font-medium leading-none">
+              <span className="text-xs font-medium leading-none flex items-center gap-1">
                 {m === "text"   && t.chat.modeText}
                 {m === "nearby" && t.chat.modeNearby}
                 {m === "place"  && t.chat.modePlace}
+                {m === "nearby" && (
+                  <span className={cn("inline-block w-1.5 h-1.5 rounded-full", hasGpsCoords ? "bg-green-500" : "bg-muted-foreground/30")} />
+                )}
               </span>
               {mode === m && <span className="absolute bottom-0 inset-x-0 h-0.5 bg-primary" />}
             </button>
@@ -462,10 +466,13 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
               {m === "nearby" && <LocateFixed className="w-5 h-5" />}
               {m === "text"   && <Compass     className="w-5 h-5" />}
               {m === "place"  && <Building2   className="w-5 h-5" />}
-              <span className="text-sm font-semibold leading-tight">
+              <span className="text-sm font-semibold leading-tight flex items-center gap-1">
                 {m === "text"   && t.chat.modeText}
                 {m === "nearby" && t.chat.modeNearby}
                 {m === "place"  && t.chat.modePlace}
+                {m === "nearby" && (
+                  <span className={cn("inline-block w-1.5 h-1.5 rounded-full", hasGpsCoords ? "bg-green-400" : "bg-white/30")} />
+                )}
               </span>
             </button>
           ))}

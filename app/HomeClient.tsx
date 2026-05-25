@@ -101,7 +101,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [scrollToId,          setScrollToId]          = useState<string | undefined>()
   const [isParkingLoading,    setIsParkingLoading]    = useState(false)
   const [hasParkingNearby,    setHasParkingNearby]    = useState(false)
-  const [isFirstVisit,        setIsFirstVisit]        = useState(() => { try { return !localStorage.getItem("ap_visited") } catch { return false } })
+  const [isFirstVisit,        setIsFirstVisit]        = useState(() => { try { return !localStorage.getItem("ap_visited") && !localStorage.getItem("ap_welcome_dismissed") } catch { return false } })
+  const [hasGpsCoords,        setHasGpsCoords]        = useState(false)
   const gpsCoordRef  = useRef<{ lat: number; lon: number } | null>(null)
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
@@ -300,7 +301,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setSourceStates({})
     setIsLoading(false)
     setHasParkingNearby(false)
-    setIsFirstVisit(true)
+    const dismissed = (() => { try { return !!localStorage.getItem("ap_welcome_dismissed") } catch { return false } })()
+    if (!dismissed) setIsFirstVisit(true)
     setChatMode(settings.defaultSearchMode ?? "nearby")
     setSortBy(settings.sortOrder)
     setFilterCollapsed(true)
@@ -393,9 +395,15 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const handleDismissWelcome = useCallback(() => {
+    try { localStorage.setItem("ap_welcome_dismissed", "1") } catch { /* ignore */ }
+    setIsFirstVisit(false)
+  }, [])
+
   const handleGpsResolved = useCallback((coords: { lat: number; lon: number }) => {
     markVisited()
     gpsCoordRef.current = coords
+    setHasGpsCoords(true)
     // Fire-and-forget: only show the parking button when spots actually exist nearby.
     // Uses the real GPS coords from navigator.geolocation — accurate on mobile.
     fetch(`/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=${settings.parkingRadiusKm}`)
@@ -536,7 +544,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         hasParkingNearby={hasParkingNearby}
         parkingRadiusKm={settings.parkingRadiusKm}
         isFirstVisit={isFirstVisit}
-        onResetOnboarding={() => { try { localStorage.removeItem("ap_visited") } catch { /* ignore */ }; setIsFirstVisit(true) }}
+        onResetOnboarding={() => { try { localStorage.removeItem("ap_visited"); localStorage.removeItem("ap_welcome_dismissed") } catch { /* ignore */ }; setIsFirstVisit(true) }}
+        onDismissWelcome={handleDismissWelcome}
+        hasGpsCoords={hasGpsCoords}
         onSwitchToText={() => handleSwitchMode("text")}
         onSwitchToPlace={() => handleSwitchMode("place")}
         chatMode={chatMode}
@@ -584,7 +594,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           </div>
         </button>
         <div className="flex items-center gap-1">
-          <SettingsSheet settings={settings} onUpdate={handleUpdateSettings} onResetOnboarding={() => { try { localStorage.removeItem("ap_visited") } catch { /* ignore */ }; setIsFirstVisit(true) }} />
+          <SettingsSheet settings={settings} onUpdate={handleUpdateSettings} onResetOnboarding={() => { try { localStorage.removeItem("ap_visited"); localStorage.removeItem("ap_welcome_dismissed") } catch { /* ignore */ }; setIsFirstVisit(true) }} />
           <LanguageSwitcher />
         </div>
       </header>
@@ -608,6 +618,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         hasParkingNearby={hasParkingNearby}
         parkingRadiusKm={settings.parkingRadiusKm}
         skipAutoLocate={isFirstVisit}
+        hasGpsCoords={hasGpsCoords}
       />
 
       {/* ── Error banner ── */}
