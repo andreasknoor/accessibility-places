@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useMemo } from "react"
-import { Loader2, RefreshCw, MapPin, Building2, X, ChevronDown, ChevronRight, ArrowUpDown, SlidersHorizontal, Search } from "lucide-react"
+import { Loader2, RefreshCw, MapPin, Building2, X, ChevronDown, ChevronRight, ArrowUpDown, SlidersHorizontal, Compass } from "lucide-react"
 import PlaceCard from "./PlaceCard"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
@@ -220,7 +220,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
                 className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 hover:bg-muted hover:border-primary/30 transition-colors text-left group"
               >
                 <span className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <Search className="w-4 h-4 text-primary" />
+                  <Compass className="w-4 h-4 text-primary" />
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm font-medium text-foreground">{t.chat.welcomeTextCard}</span>

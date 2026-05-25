@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import dynamic from "next/dynamic"
 import Script from "next/script"
 import Link from "next/link"
-import { Map, List, SlidersHorizontal, Search, Building2, ChevronRight } from "lucide-react"
+import { Map, List, SlidersHorizontal, Compass, Building2, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import ChatPanel       from "@/components/chat/ChatPanel"
@@ -188,7 +188,7 @@ export default function MobileLayout({
                 className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 hover:bg-muted hover:border-primary/30 transition-colors text-left group"
               >
                 <span className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <Search className="w-4 h-4 text-primary" />
+                  <Compass className="w-4 h-4 text-primary" />
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm font-medium text-foreground">{t.chat.welcomeTextCard}</span>
