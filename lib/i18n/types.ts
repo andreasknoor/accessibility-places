@@ -56,6 +56,7 @@ export interface Translations {
     welcomeTextCardHint: string
     welcomePlaceCard:    string
     welcomePlaceCardHint:string
+    welcomeDismiss:      string
   }
   filters: {
     title:               string
