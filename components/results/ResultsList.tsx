@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useMemo } from "react"
-import { Loader2, RefreshCw, MapPin, Building2, X, ChevronDown, ChevronRight, ArrowUpDown, SlidersHorizontal, Compass } from "lucide-react"
+import { Loader2, RefreshCw, MapPin, Building2, X, ChevronDown, ChevronRight, ArrowUpDown, SlidersHorizontal, Compass, LocateFixed } from "lucide-react"
 import PlaceCard from "./PlaceCard"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
@@ -34,9 +34,10 @@ interface Props {
   onSwitchToPlace?:     () => void
   onSwitchToText?:      () => void
   isFirstVisit?:        boolean
+  onDismissWelcome?:    () => void
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToPlace, onSwitchToText, isFirstVisit }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToPlace, onSwitchToText, isFirstVisit, onDismissWelcome }: Props) {
   const t = useTranslations()
   const [mapHintSeen, setMapHintSeen] = useState(() =>
     typeof window !== "undefined" && !!localStorage.getItem("ap_map_hint_seen")
@@ -209,7 +210,8 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
             <p className="font-semibold text-foreground">{t.chat.welcomeTitle}</p>
             <p className="text-sm text-muted-foreground">{t.chat.welcomeSubtitle}</p>
           </div>
-          <div className="w-full rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm text-foreground/80">
+          <div className="w-full rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm text-foreground/80 flex items-center gap-2">
+            <LocateFixed className="w-4 h-4 text-primary shrink-0" />
             {t.chat.welcomeGpsHint}
           </div>
           <div className="w-full flex flex-col gap-2">
@@ -245,6 +247,14 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
               </button>
             )}
           </div>
+          {onDismissWelcome && (
+            <button
+              onClick={onDismissWelcome}
+              className="mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+            >
+              {t.chat.welcomeDismiss}
+            </button>
+          )}
         </div>
       )}
 
