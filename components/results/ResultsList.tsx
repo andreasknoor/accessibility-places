@@ -42,6 +42,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
     typeof window !== "undefined" && !!localStorage.getItem("ap_map_hint_seen")
   )
   const [localSortBy, setLocalSortBy] = useState<"confidence" | "distance">("confidence")
+  const showWelcome = !isLoading && places.length === 0 && !hasSearched && chatMode === "nearby" && isFirstVisit
   const sortBy = sortByProp ?? localSortBy
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
@@ -199,63 +200,65 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
         </div>
       )}
 
+      {/* Welcome state — rendered as a direct flex child (NOT inside overflow-y-auto)
+          to avoid iOS WebKit's pointer-event dead zone in nested overflow containers */}
+      {showWelcome && (
+        <div className="flex-1 px-5 py-4 flex flex-col items-center gap-3 text-center">
+          <img src="/icons/icon-preview.svg" className="w-12 h-12 rounded-xl" alt="" aria-hidden />
+          <div className="flex flex-col gap-1">
+            <p className="font-semibold text-foreground">{t.chat.welcomeTitle}</p>
+            <p className="text-sm text-muted-foreground">{t.chat.welcomeSubtitle}</p>
+          </div>
+          <div className="w-full rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm text-foreground/80">
+            {t.chat.welcomeGpsHint}
+          </div>
+          <div className="w-full flex flex-col gap-2">
+            <p className="text-xs text-muted-foreground">{t.chat.welcomeOrDivider}</p>
+            {onSwitchToText && (
+              <button
+                onClick={onSwitchToText}
+                className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 hover:bg-muted hover:border-primary/30 transition-colors text-left group"
+              >
+                <span className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Search className="w-4 h-4 text-primary" />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-sm font-medium text-foreground">{t.chat.welcomeTextCard}</span>
+                  <span className="block text-xs text-muted-foreground mt-0.5">{t.chat.welcomeTextCardHint}</span>
+                </span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 group-hover:text-foreground transition-colors" />
+              </button>
+            )}
+            {onSwitchToPlace && (
+              <button
+                onClick={onSwitchToPlace}
+                className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 hover:bg-muted hover:border-primary/30 transition-colors text-left group"
+              >
+                <span className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Building2 className="w-4 h-4 text-primary" />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-sm font-medium text-foreground">{t.chat.welcomePlaceCard}</span>
+                  <span className="block text-xs text-muted-foreground mt-0.5">{t.chat.welcomePlaceCardHint}</span>
+                </span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 group-hover:text-foreground transition-colors" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* List */}
       {/* Plain overflow-y-auto avoids Radix ScrollArea's internal display:table wrapper,
           which causes horizontal width inflation in iOS Safari when any child has
           white-space:nowrap content wider than the viewport. */}
-      <div className="flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
+      {!showWelcome && <div className="flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
         <div className="p-3 flex flex-col gap-2">
           {isLoading && (
             <div className="flex flex-col gap-2">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="h-36 rounded-lg bg-muted animate-pulse" />
               ))}
-            </div>
-          )}
-
-          {!isLoading && places.length === 0 && !hasSearched && chatMode === "nearby" && isFirstVisit && (
-            <div className="flex flex-col items-center gap-3 py-4 px-5 text-center">
-              <img src="/icons/icon-preview.svg" className="w-12 h-12 rounded-xl" alt="" aria-hidden />
-              <div className="flex flex-col gap-1">
-                <p className="font-semibold text-foreground">{t.chat.welcomeTitle}</p>
-                <p className="text-sm text-muted-foreground">{t.chat.welcomeSubtitle}</p>
-              </div>
-              <div className="w-full rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm text-foreground/80">
-                {t.chat.welcomeGpsHint}
-              </div>
-              <div className="w-full flex flex-col gap-2">
-                <p className="text-xs text-muted-foreground">{t.chat.welcomeOrDivider}</p>
-                {onSwitchToText && (
-                  <button
-                    onClick={onSwitchToText}
-                    className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 hover:bg-muted hover:border-primary/30 transition-colors text-left group"
-                  >
-                    <span className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <Search className="w-4 h-4 text-primary" />
-                    </span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block text-sm font-medium text-foreground">{t.chat.welcomeTextCard}</span>
-                      <span className="block text-xs text-muted-foreground mt-0.5">{t.chat.welcomeTextCardHint}</span>
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 group-hover:text-foreground transition-colors" />
-                  </button>
-                )}
-                {onSwitchToPlace && (
-                  <button
-                    onClick={onSwitchToPlace}
-                    className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 hover:bg-muted hover:border-primary/30 transition-colors text-left group"
-                  >
-                    <span className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <Building2 className="w-4 h-4 text-primary" />
-                    </span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block text-sm font-medium text-foreground">{t.chat.welcomePlaceCard}</span>
-                      <span className="block text-xs text-muted-foreground mt-0.5">{t.chat.welcomePlaceCardHint}</span>
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 group-hover:text-foreground transition-colors" />
-                  </button>
-                )}
-              </div>
             </div>
           )}
 
@@ -374,7 +377,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
             </div>
           ))}
         </div>
-      </div>
+      </div>}
     </div>
   )
 }
