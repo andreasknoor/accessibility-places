@@ -553,10 +553,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           className="flex items-center gap-2.5 hover:opacity-75 transition-opacity cursor-pointer"
           title="Reset"
         >
-          <img src="/icons/icon-preview.svg" className="w-7 h-7 rounded-lg" alt="" aria-hidden />
+          <img src="/icons/icon-preview.svg" className="w-11 h-11 rounded-xl" alt="" aria-hidden />
           <div className="text-left">
-            <span className="font-bold text-base leading-none block">{t.app.title}</span>
-            <p className="text-xs text-muted-foreground mt-0.5">{t.app.subtitle}</p>
+            <span className="font-bold text-xl leading-none block">{t.app.title}</span>
+            <p className="text-xs text-muted-foreground mt-1">{t.app.subtitle}</p>
           </div>
         </button>
         <div className="flex items-center gap-1">

@@ -384,7 +384,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
               key={m}
               onClick={() => switchMode(m)}
               className={cn(
-                "flex flex-col items-center gap-1 rounded-lg border py-3 px-2 transition-colors cursor-pointer",
+                "flex flex-col items-center gap-1.5 rounded-lg border py-2 px-2 transition-colors cursor-pointer",
                 mode === m
                   ? "bg-primary text-primary-foreground border-primary shadow-sm"
                   : "bg-card border-border text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -397,11 +397,6 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                 {m === "text"   && t.chat.modeText}
                 {m === "nearby" && t.chat.modeNearby}
                 {m === "place"  && t.chat.modePlace}
-              </span>
-              <span className={cn("text-xs leading-tight text-center", mode === m ? "text-primary-foreground/75" : "text-muted-foreground/80")}>
-                {m === "text"   && t.chat.modeTextSub}
-                {m === "nearby" && t.chat.modeNearbySub}
-                {m === "place"  && t.chat.modePlaceSub}
               </span>
             </button>
           ))}
