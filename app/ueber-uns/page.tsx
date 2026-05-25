@@ -194,7 +194,7 @@ export default function UeberUnsPage() {
                 <p className="font-semibold text-foreground">Ginto</p>
                 <p className="text-muted-foreground mt-0.5">
                   Der absolute Spezialist für Barrierefreiheit, mit einem starken Fokus auf die Schweiz und Österreich. Ginto ermöglicht es Institutionen und Communities, detaillierte Zugänglichkeitsinformationen (wie exakte Türbreiten oder Steigungen) zu erfassen und bereitzustellen, was die Datenqualität in der DACH-Region massiv aufwertet.{" "}
-                  <a href="https://www.ginto.ch" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">ginto.ch</a>
+                  <a href="https://about.ginto.guide/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">about.ginto.guide</a>
                 </p>
               </li>
             </ul>

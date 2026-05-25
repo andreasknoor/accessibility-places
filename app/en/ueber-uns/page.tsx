@@ -194,7 +194,7 @@ export default function AboutPage() {
                 <p className="font-semibold text-foreground">Ginto</p>
                 <p className="text-muted-foreground mt-0.5">
                   The absolute specialist in accessibility, with a strong focus on Switzerland and Austria. Ginto enables institutions and communities to capture and publish detailed accessibility information (such as exact door widths or gradients), which massively improves data quality across the DACH region.{" "}
-                  <a href="https://www.ginto.ch" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">ginto.ch</a>
+                  <a href="https://about.ginto.guide/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">about.ginto.guide</a>
                 </p>
               </li>
             </ul>
