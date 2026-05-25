@@ -214,15 +214,13 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
           )}
 
           {!isLoading && places.length === 0 && !hasSearched && chatMode === "nearby" && isFirstVisit && (
-            <div className="flex flex-col items-center gap-5 py-12 px-6 text-center">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <MapPin className="w-8 h-8 text-primary" />
-              </div>
-              <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col items-center gap-3 py-4 px-5 text-center">
+              <img src="/icons/icon-preview.svg" className="w-12 h-12 rounded-xl" alt="" aria-hidden />
+              <div className="flex flex-col gap-1">
                 <p className="font-semibold text-foreground">{t.chat.welcomeTitle}</p>
                 <p className="text-sm text-muted-foreground">{t.chat.welcomeSubtitle}</p>
               </div>
-              <div className="w-full rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground/80">
+              <div className="w-full rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm text-foreground/80">
                 {t.chat.welcomeGpsHint}
               </div>
               <div className="w-full flex flex-col gap-2">
@@ -230,7 +228,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
                 {onSwitchToText && (
                   <button
                     onClick={onSwitchToText}
-                    className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3.5 hover:bg-muted hover:border-primary/30 transition-colors text-left group"
+                    className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 hover:bg-muted hover:border-primary/30 transition-colors text-left group"
                   >
                     <span className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                       <Search className="w-4 h-4 text-primary" />
@@ -245,7 +243,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
                 {onSwitchToPlace && (
                   <button
                     onClick={onSwitchToPlace}
-                    className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3.5 hover:bg-muted hover:border-primary/30 transition-colors text-left group"
+                    className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 hover:bg-muted hover:border-primary/30 transition-colors text-left group"
                   >
                     <span className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                       <Building2 className="w-4 h-4 text-primary" />
