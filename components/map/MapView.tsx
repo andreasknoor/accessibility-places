@@ -12,6 +12,9 @@ import type { Place, ParkingSpot } from "@/lib/types"
 // Leaflet is ESM-only — loaded dynamically to avoid SSR issues
 let L: typeof import("leaflet") | null = null
 
+const PLACE_CLUSTER_MAX_RADIUS = 50            // px — grouping radius at low zoom
+const PLACE_CLUSTER_DISABLE_AT_ZOOM = 17       // street-level: always show every pin
+
 interface Props {
   places:        Place[]
   parkingSpots?: ParkingSpot[]
@@ -79,6 +82,8 @@ export default function MapView({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapInst  = useRef<any>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const placeClusterRef = useRef<any>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markers  = useRef<Map<string, any>>(new Map())
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const parkingMarkersRef = useRef<any[]>([])
@@ -101,6 +106,10 @@ export default function MapView({
     async function init() {
       L = (await import("leaflet")).default
       await import("leaflet/dist/leaflet.css")
+      // Marker clustering: behavior CSS only — the default theme is replaced
+      // by our custom .ap-cluster-* styles below.
+      await import("leaflet.markercluster")
+      await import("leaflet.markercluster/dist/MarkerCluster.css")
 
       // Guard: effect may have been cleaned up while awaiting dynamic imports
       if (cancelled || mapInst.current || !mapRef.current) return
@@ -119,6 +128,37 @@ export default function MapView({
 
       mapInst.current = map
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const Lany = L as any
+      placeClusterRef.current = Lany.markerClusterGroup({
+        maxClusterRadius:         PLACE_CLUSTER_MAX_RADIUS,
+        disableClusteringAtZoom:  PLACE_CLUSTER_DISABLE_AT_ZOOM,
+        spiderfyOnMaxZoom:        true,
+        spiderfyDistanceMultiplier: 1.5,
+        showCoverageOnHover:      false,
+        removeOutsideVisibleBounds: true,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        iconCreateFunction: (cluster: any) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const children = cluster.getAllChildMarkers() as any[]
+          const best = children.reduce(
+            (m: number, c) => Math.max(m, (c.options.placeConfidence ?? 0) as number),
+            0,
+          )
+          const color = markerColor(best)
+          const count = cluster.getChildCount()
+          const sizeClass = count >= 100 ? "lg" : count >= 10 ? "md" : "sm"
+          const size      = count >= 100 ? 48  : count >= 10 ? 42  : 36
+          return L!.divIcon({
+            html: `<div class="ap-cluster ap-cluster-${sizeClass}" style="background:${color}"><span>${count}</span></div>`,
+            className: "ap-cluster-divicon",
+            iconSize:  [size, size],
+            iconAnchor:[size / 2, size / 2],
+          })
+        },
+      })
+      placeClusterRef.current.addTo(map)
+
       setMapReady(true)
     }
     init()
@@ -129,6 +169,7 @@ export default function MapView({
         mapInst.current.remove()
         mapInst.current = null
       }
+      placeClusterRef.current = null
     }
   }, [])
 
@@ -154,6 +195,18 @@ export default function MapView({
         background:#3b82f6; border:2.5px solid #fff;
         box-shadow:0 1px 4px rgba(0,0,0,0.3);
       }
+      .ap-cluster-divicon { background:transparent; border:0; }
+      .ap-cluster {
+        width:100%; height:100%; border-radius:50%;
+        display:flex; align-items:center; justify-content:center;
+        color:#fff; font-family:sans-serif; font-weight:600;
+        border:3px solid #fff;
+        box-shadow:0 1px 4px rgba(0,0,0,0.3);
+        cursor:pointer;
+      }
+      .ap-cluster-sm { font-size:13px; }
+      .ap-cluster-md { font-size:14px; }
+      .ap-cluster-lg { font-size:15px; }
     `
     document.head.appendChild(style)
   }, [])
@@ -259,13 +312,13 @@ export default function MapView({
 
   // Update markers when places change
   useEffect(() => {
-    if (!mapInst.current || !L) return
+    if (!mapInst.current || !L || !placeClusterRef.current) return
 
     // Remove stale markers
     const currentIds = new Set(places.map((p) => p.id))
     for (const [id, m] of markers.current) {
       if (!currentIds.has(id)) {
-        m.remove()
+        placeClusterRef.current.removeLayer(m)
         markers.current.delete(id)
       }
     }
@@ -338,12 +391,14 @@ export default function MapView({
 
         const marker = L!.marker(
           [place.coordinates.lat, place.coordinates.lon],
-          { icon },
+          // placeConfidence is read by the cluster's iconCreateFunction so the
+          // cluster colour reflects the best contained confidence.
+          { icon, placeConfidence: place.overallConfidence } as L.MarkerOptions & { placeConfidence: number },
         )
-          .addTo(mapInst.current)
           .bindPopup(popup)
           .on("click", () => onSelect(place))
 
+        placeClusterRef.current.addLayer(marker)
         markers.current.set(place.id, marker)
       }
     }
@@ -364,14 +419,16 @@ export default function MapView({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [places, mapReady, autoZoom])
 
-  // Pan to selected — also re-fires when panTrigger increments so that
+  // Pan/zoom to selected — also re-fires when panTrigger increments so that
   // clicking the same result after manually panning the map still re-centers.
+  // If the marker is currently inside a cluster, zoomToShowLayer animates the
+  // map to a zoom level where the marker becomes individually visible, then
+  // opens its popup. For uncluttered markers it pans without changing zoom.
   useEffect(() => {
     if (!mapInst.current || !selectedId) return
-    const place = places.find((p) => p.id === selectedId)
-    if (!place) return
-    mapInst.current.panTo([place.coordinates.lat, place.coordinates.lon])
-    markers.current.get(selectedId)?.openPopup()
+    const marker = markers.current.get(selectedId)
+    if (!marker || !placeClusterRef.current) return
+    placeClusterRef.current.zoomToShowLayer(marker, () => marker.openPopup())
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, panTrigger, mapReady])
 
