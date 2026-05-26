@@ -308,7 +308,7 @@ function SeoPlaceCard({ place, locale, searchBaseUrl }: { place: Place; locale: 
             const level = confidenceLabel(place.overallConfidence)
             return (
               <span className={`shrink-0 text-xs font-semibold px-2.5 py-0.5 rounded-full ${CONFIDENCE_COLORS[level]}`}>
-                {Math.round(place.overallConfidence * 100)}% · {CONFIDENCE_LABEL[level][locale]}
+                {locale === "de" ? "Daten: " : "Data: "}{Math.round(place.overallConfidence * 100)}% · {CONFIDENCE_LABEL[level][locale]}
               </span>
             )
           })()}

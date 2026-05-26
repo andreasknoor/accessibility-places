@@ -150,7 +150,7 @@ export default function ConfidenceBadge({ confidence, place, className }: Props)
       COLORS[level],
       place ? "cursor-pointer" : "cursor-default",
     )}>
-      {pct}% · {t.results.confidence[level]}
+      {t.results.scorePrefix}{pct}% · {t.results.confidence[level]}
     </span>
   )
 

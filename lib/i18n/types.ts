@@ -109,6 +109,7 @@ export interface Translations {
     showOnMap:         string
     mapHint:           string
     scoreCalculation:     string
+    scorePrefix:          string
     scoreDataQualityNote: string
     scoreCriterion:       string
     scoreValueWeight:     string
