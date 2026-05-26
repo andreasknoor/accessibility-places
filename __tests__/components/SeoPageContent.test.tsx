@@ -124,7 +124,7 @@ describe("SeoPageContent — stats summary", () => {
     }})
     const noParking     = makePlace({ id: "nopar", name: "No Parking" })
     render(<SeoPageContent locale="de" city={BERLIN} categorySlug="restaurant" places={[withParking, noParking, noParking, noParking, noParking]} />)
-    const dt = screen.getByText("Mit Parkplatz")
+    const dt = screen.getByText("Mit Parkplatz in der Nähe")
     expect(dt.nextElementSibling?.textContent).toBe("1")
   })
 

@@ -547,7 +547,7 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
                   {([
                     { value: stats.total,             label: locale === "de" ? "Einträge"            : "Entries"            },
                     { value: stats.nHighConf,          label: locale === "de" ? "Verlässlichkeit ≥ 70 %" : "Reliability ≥ 70%" },
-                    { value: stats.nParking,           label: locale === "de" ? "Mit Parkplatz"       : "With parking"       },
+                    { value: stats.nParking,           label: locale === "de" ? "Mit Parkplatz in der Nähe" : "With nearby parking" },
                     { value: stats.nToiletYes,         label: locale === "de" ? "WC voll zugänglich"  : "Toilet fully accessible" },
                   ] as { value: number; label: string }[]).map(({ value, label }) => (
                     <div key={label} className="flex flex-col">
