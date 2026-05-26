@@ -86,7 +86,10 @@ export default function RootLayout({
         <LocaleProvider>
           <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
         </LocaleProvider>
-        <Analytics />
+        <Analytics beforeSend={(event) => {
+          if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("notrack")) return null
+          return event
+        }} />
       </body>
     </html>
   )
