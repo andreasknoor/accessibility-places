@@ -161,18 +161,18 @@ function buildAmenityFeatures(place: Place): LdFeature[] {
 // ─── Page stats + mini-FAQ ───────────────────────────────────────────────────
 
 interface PageStats {
-  total:             number
-  nHighConf:         number  // overallConfidence >= 0.70
-  nParking:          number  // parking yes/limited
-  nDesignatedToilet: number  // toilet.details.isDesignated === true
+  total:        number
+  nHighConf:    number  // overallConfidence >= 0.70
+  nParking:     number  // parking yes/limited
+  nToiletYes:   number  // toilet.value === "yes" (fully accessible, not just limited)
 }
 
 function computePageStats(places: Place[]): PageStats {
   return {
-    total:             places.length,
-    nHighConf:         places.filter(p => p.overallConfidence >= 0.70).length,
-    nParking:          places.filter(p => p.accessibility.parking.value === "yes" || p.accessibility.parking.value === "limited").length,
-    nDesignatedToilet: places.filter(p => (p.accessibility.toilet?.details as ToiletDetails | undefined)?.isDesignated === true).length,
+    total:      places.length,
+    nHighConf:  places.filter(p => p.overallConfidence >= 0.70).length,
+    nParking:   places.filter(p => p.accessibility.parking.value === "yes" || p.accessibility.parking.value === "limited").length,
+    nToiletYes: places.filter(p => p.accessibility.toilet?.value === "yes").length,
   }
 }
 
@@ -198,10 +198,10 @@ function buildFaqItems(
       : `Accessible Places currently lists ${stats.total} ${catLabel} in ${cityName} – all with a wheelchair-accessible entrance and toilet. ${stats.nHighConf} entries have a reliability score of at least 70%.`,
   })
 
-  // Q2 — designated wheelchair toilet (only when data exists)
-  if (stats.nDesignatedToilet > 0) {
+  // Q2 — fully accessible toilet (only when data exists)
+  if (stats.nToiletYes > 0) {
     const top3Names = places
-      .filter(p => (p.accessibility.toilet?.details as ToiletDetails | undefined)?.isDesignated === true)
+      .filter(p => p.accessibility.toilet?.value === "yes")
       .sort((a, b) => b.overallConfidence - a.overallConfidence)
       .slice(0, 3)
       .map(p => p.name)
@@ -210,11 +210,11 @@ function buildFaqItems(
       : ""
     items.push({
       question: de
-        ? `Welche ${catLabel} in ${cityName} haben ein ausgewiesenes Rollstuhl-WC?`
-        : `Which ${catLabel} in ${cityName} have a designated wheelchair toilet?`,
+        ? `Welche ${catLabel} in ${cityName} haben ein voll zugängliches Rollstuhl-WC?`
+        : `Which ${catLabel} in ${cityName} have a fully accessible wheelchair toilet?`,
       answer: de
-        ? `${stats.nDesignatedToilet} von ${stats.total} ${catLabel} haben ein ausgewiesenes Rollstuhl-WC${nameStr}.`
-        : `${stats.nDesignatedToilet} of ${stats.total} ${catLabel} have a designated wheelchair toilet${nameStr}.`,
+        ? `${stats.nToiletYes} von ${stats.total} ${catLabel} haben ein voll zugängliches barrierefreies WC${nameStr}.`
+        : `${stats.nToiletYes} of ${stats.total} ${catLabel} have a fully accessible wheelchair toilet${nameStr}.`,
     })
   }
 
@@ -548,7 +548,7 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
                     { value: stats.total,             label: locale === "de" ? "Einträge"            : "Entries"            },
                     { value: stats.nHighConf,          label: locale === "de" ? "Verlässlichkeit ≥ 70 %" : "Reliability ≥ 70%" },
                     { value: stats.nParking,           label: locale === "de" ? "Mit Parkplatz"       : "With parking"       },
-                    { value: stats.nDesignatedToilet,  label: locale === "de" ? "Rollstuhl-WC"        : "Wheelchair toilet"  },
+                    { value: stats.nToiletYes,         label: locale === "de" ? "WC voll zugänglich"  : "Toilet fully accessible" },
                   ] as { value: number; label: string }[]).map(({ value, label }) => (
                     <div key={label} className="flex flex-col">
                       <dt className="text-xs text-gray-500">{label}</dt>

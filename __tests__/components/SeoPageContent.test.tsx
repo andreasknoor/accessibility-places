@@ -162,7 +162,7 @@ describe("SeoPageContent — mini-FAQ", () => {
     })
     render(<SeoPageContent locale="de" city={BERLIN} categorySlug="hotel" places={[withDesig, ...makePlaces(4)]} />)
     // The phrase appears in both <dt> (question) and <dd> (answer)
-    expect(screen.getAllByText(/ausgewiesenes Rollstuhl-WC/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/voll zugängliches.*WC|WC.*voll zugänglich/i).length).toBeGreaterThan(0)
     // Name appears in the place card h3 AND in the FAQ answer
     expect(screen.getAllByText(/Hotel Barrierefrei/).length).toBeGreaterThan(0)
   })
