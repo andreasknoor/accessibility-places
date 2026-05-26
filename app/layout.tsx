@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
+import AnalyticsProvider from "@/components/AnalyticsProvider"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { LocaleProvider } from "@/lib/i18n"
 // Static metadata is built at compile time and can't follow the visitor's
@@ -86,10 +86,7 @@ export default function RootLayout({
         <LocaleProvider>
           <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
         </LocaleProvider>
-        <Analytics beforeSend={(event) => {
-          if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("notrack")) return null
-          return event
-        }} />
+        <AnalyticsProvider />
       </body>
     </html>
   )
