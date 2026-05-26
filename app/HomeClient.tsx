@@ -94,7 +94,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [lastQuery,     setLastQuery]    = useState<string | undefined>()
   const [lastCoords,    setLastCoords]   = useState<{ lat: number; lon: number } | undefined>()
   const [lastNameHint,  setLastNameHint] = useState<string | undefined>()
-  const [chatMode,      setChatMode]     = useState<"text" | "nearby" | "place">(() => loadSettings().defaultSearchMode ?? "nearby")
+  const [chatMode,      setChatMode]     = useState<"text" | "nearby" | "place">(() => {
+    if (initialCity) return "text"   // SEO deep-link: force Erkunden mode, prevent GPS auto-locate
+    return loadSettings().defaultSearchMode ?? "nearby"
+  })
   const [filterCollapsed, setFilterCollapsed] = useState(true)
   const [sortBy,        setSortBy]       = useState<"confidence" | "distance">(() => loadSettings().sortOrder)
   const [resetKey,            setResetKey]            = useState(0)
