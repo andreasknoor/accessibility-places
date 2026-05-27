@@ -116,6 +116,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [hasGpsCoords,        setHasGpsCoords]        = useState(false)
   const [gpsCoords,           setGpsCoords]           = useState<{ lat: number; lon: number } | null>(null)
   const gpsCoordRef  = useRef<{ lat: number; lon: number } | null>(null)
+  // Snapshot of the result-nearby parkingSpots (500m server-derived) taken right
+  // before entering Parkplatz-Modus. Restored on exit so the toggle returns to
+  // its pre-focus content — focus mode loads GPS-radius spots that would
+  // otherwise overwrite the originals.
+  const parkingSpotsBackupRef = useRef<ParkingSpot[] | null>(null)
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
   const selectTarget = useRef(
@@ -159,6 +164,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setSelectedId(undefined)
     setFilterDebug(undefined)
     setParkingFocusMode(false)
+    parkingSpotsBackupRef.current = null
     // Initialise per-source loading state for each active source so the
     // FilterPanel renders spinners immediately.
     const initial: Partial<Record<SourceId, SourceState>> = {}
@@ -302,6 +308,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setError(undefined)
     setSourceStates({})
     setParkingFocusMode(false)
+    parkingSpotsBackupRef.current = null
   }, [])
 
   const handleSwitchMode = useCallback((mode: "text" | "nearby" | "place") => {
@@ -331,6 +338,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setSourceStates({})
     setIsLoading(false)
     setParkingFocusMode(false)
+    parkingSpotsBackupRef.current = null
     const dismissed = (() => { try { return !!localStorage.getItem("ap_welcome_dismissed") } catch { return false } })()
     if (!dismissed) setIsFirstVisit(true)
     setChatMode(settings.defaultSearchMode ?? "nearby")
@@ -462,6 +470,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     const coords = gpsCoordRef.current ?? gpsCoords
     if (!coords) return
     track("parking_focus_enter")
+    // Snapshot the result-nearby spots so exit can restore them.
+    parkingSpotsBackupRef.current = parkingSpots
     setIsParkingLoading(true)
     try {
       const res = await fetch(`/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=${settings.parkingRadiusKm}`)
@@ -473,9 +483,13 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       setIsParkingLoading(false)
       setParkingFocusMode(true)
     }
-  }, [gpsCoords, settings.parkingRadiusKm])
+  }, [gpsCoords, parkingSpots, settings.parkingRadiusKm])
 
   const handleExitParkingFocus = useCallback(() => {
+    if (parkingSpotsBackupRef.current !== null) {
+      setParkingSpots(parkingSpotsBackupRef.current)
+      parkingSpotsBackupRef.current = null
+    }
     setParkingFocusMode(false)
   }, [])
 
