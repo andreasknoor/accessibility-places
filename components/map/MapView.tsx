@@ -540,11 +540,13 @@ export default function MapView({
       )}
 
       {/* ── Parkplatz-Modus banner (top) ── */}
+      {/* left-14 leaves room for Leaflet's default zoom control (top-left).
+          max-w keeps the banner clear of the fullscreen button (top-right). */}
       {parkingFocusMode && (
         <div
           role="status"
           aria-live="polite"
-          className="absolute top-3 left-3 z-[1000] flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium shadow-md border border-blue-200 bg-blue-50 text-blue-900 max-w-[calc(100%-7rem)] sm:max-w-md"
+          className="absolute top-3 left-14 z-[1000] flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium shadow-md border border-blue-200 bg-blue-50 text-blue-900 max-w-[calc(100%-8rem)] sm:max-w-md"
         >
           <CircleParking className="w-4 h-4 shrink-0" aria-hidden />
           <span className="flex-1 truncate">
