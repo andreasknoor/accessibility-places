@@ -44,6 +44,7 @@ const en: Translations = {
     locateButton:  "Detect location",
     locationError: "Location could not be determined.",
     nearbyIn:        (d: string) => `Near ${d}`,
+    parkingModeToggle:    "Parking around me",
     namePlaceholder:      "e.g. \"The Crown\" or \"Hilton\"",
     nameToggleShow:       "+ Filter results by name",
     nameToggleHide:       "Remove name filter",
@@ -214,13 +215,6 @@ const en: Translations = {
     parkingSpots:   (n: number) => `${n} accessible parking spaces`,
     toggleParking:  "Show wheelchair parking on map",
     nearbyParking:  "Nearby parking",
-    parkingFocusEnter:  "Parking focus",
-    parkingFocusExit:   "Close",
-    parkingFocusActive: (km: number) => {
-      const dist = km < 1 ? `${Math.round(km * 1000)} m` : `${(Math.round(km * 10) / 10).toFixed(1)} km`
-      return `Parking focus active · ${dist} around you`
-    },
-    parkingFocusEmpty:  "No wheelchair parking found in your area",
     parkingFree:      "Free",
     parkingPaid:      "Paid",
     parkingMaxstay:   "Max. stay",

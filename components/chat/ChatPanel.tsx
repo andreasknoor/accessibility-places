@@ -23,6 +23,10 @@ interface Props {
   hasGpsCoords?:     boolean
   locateTrigger?:    number
   biasCoords?:       Coords
+  // Parkplatz-Modus toggle in the nearby-info row.
+  parkingFocusMode?:        boolean
+  onToggleParkingFocus?:    () => void
+  isParkingFocusLoading?:   boolean
 }
 
 const CHIPS = [
@@ -89,7 +93,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
   return data.district ?? ""
 }
 
-export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onGpsResolved, skipAutoLocate, hasGpsCoords, locateTrigger, biasCoords }: Props) {
+export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onGpsResolved, skipAutoLocate, hasGpsCoords, locateTrigger, biasCoords, parkingFocusMode, onToggleParkingFocus, isParkingFocusLoading }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
   const isMobile = useIsMobile()
@@ -835,11 +839,33 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             </div>
           )}
 
-          {district !== null && (
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <LocateFixed className="w-3 h-3 shrink-0 text-primary" />
-              <span className="text-primary font-medium">{t.chat.nearbyIn(district)}</span>
-            </p>
+          {(district !== null || (onToggleParkingFocus && typeof nearbyPhase === "object")) && (
+            <div className="flex items-center gap-2 min-w-0">
+              {district !== null && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1 min-w-0">
+                  <LocateFixed className="w-3 h-3 shrink-0 text-primary" />
+                  <span className="text-primary font-medium truncate">{t.chat.nearbyIn(district)}</span>
+                </p>
+              )}
+              {onToggleParkingFocus && typeof nearbyPhase === "object" && (
+                <button
+                  onClick={onToggleParkingFocus}
+                  disabled={isParkingFocusLoading}
+                  role="switch"
+                  aria-checked={parkingFocusMode}
+                  className="ml-auto flex items-center gap-1.5 shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-60 disabled:cursor-wait"
+                >
+                  {isParkingFocusLoading
+                    ? <Loader2 className="w-3 h-3 animate-spin" aria-hidden />
+                    : <span aria-hidden>🅿</span>
+                  }
+                  <span>{t.chat.parkingModeToggle}</span>
+                  <span className={`relative inline-flex h-4 w-7 shrink-0 rounded-full transition-colors ${parkingFocusMode ? "bg-blue-600" : "bg-muted-foreground/40"}`}>
+                    <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${parkingFocusMode ? "translate-x-3" : "translate-x-0.5"}`} />
+                  </span>
+                </button>
+              )}
+            </div>
           )}
 
         </>

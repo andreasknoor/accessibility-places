@@ -494,6 +494,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setParkingFocusMode(false)
   }, [])
 
+  const handleToggleParkingFocus = useCallback(() => {
+    if (parkingFocusMode) handleExitParkingFocus()
+    else handleEnterParkingFocus()
+  }, [parkingFocusMode, handleEnterParkingFocus, handleExitParkingFocus])
+
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     isDragging.current = true
     dragStart.current  = { x: e.clientX, width: resultsWidth }
@@ -608,9 +613,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         chatMode={chatMode}
         onChatModeChange={handleModeChange}
         parkingFocusMode={parkingFocusMode}
-        onEnterParkingFocus={canEnterParkingFocus ? handleEnterParkingFocus : undefined}
-        onExitParkingFocus={handleExitParkingFocus}
-        parkingFocusRadiusKm={settings.parkingRadiusKm}
+        onToggleParkingFocus={canEnterParkingFocus ? handleToggleParkingFocus : undefined}
         isParkingFocusLoading={isParkingLoading}
       />
     )
@@ -662,6 +665,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           hasGpsCoords={hasGpsCoords}
           locateTrigger={locateTriggerKey}
           biasCoords={searchCenter ?? gpsCoords ?? undefined}
+          parkingFocusMode={parkingFocusMode}
+          onToggleParkingFocus={canEnterParkingFocus ? handleToggleParkingFocus : undefined}
+          isParkingFocusLoading={isParkingLoading}
         />
       </div>
 
@@ -787,10 +793,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             onToggleParking={hasParkingToggle ? handleToggleParking : undefined}
             autoZoom={settings.autoZoom}
             parkingFocusMode={parkingFocusMode}
-            onEnterParkingFocus={canEnterParkingFocus ? handleEnterParkingFocus : undefined}
-            onExitParkingFocus={handleExitParkingFocus}
-            parkingFocusRadiusKm={settings.parkingRadiusKm}
-            isParkingFocusLoading={isParkingLoading}
           />
         </div>
       </div>

@@ -56,9 +56,7 @@ interface Props {
   defaultMobileView:    "results" | "map"
   onGpsResolved?:       (coords: { lat: number; lon: number }) => void
   parkingFocusMode?:    boolean
-  onEnterParkingFocus?: () => void
-  onExitParkingFocus?:  () => void
-  parkingFocusRadiusKm?: number
+  onToggleParkingFocus?: () => void
   isParkingFocusLoading?: boolean
   isFirstVisit?:        boolean
   onResetOnboarding?:   () => void
@@ -81,7 +79,7 @@ export default function MobileLayout({
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
   onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, hasGpsCoords, locateTrigger, onSwitchToText, onSwitchToPlace,
   chatMode, onChatModeChange, biasCoords,
-  parkingFocusMode, onEnterParkingFocus, onExitParkingFocus, parkingFocusRadiusKm, isParkingFocusLoading,
+  parkingFocusMode, onToggleParkingFocus, isParkingFocusLoading,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -98,9 +96,13 @@ export default function MobileLayout({
   const handleSearch = (query: string, coords?: { lat: number; lon: number }, nameHint?: string) => { setActiveTab(defaultMobileView ?? "results"); onSearch(query, coords, nameHint) }
   const handleRerun = onRerun ? () => { setActiveTab(defaultMobileView ?? "results"); onRerun() } : undefined
   const handleExpandRadius = onExpandRadius ? () => { setActiveTab(defaultMobileView ?? "results"); onExpandRadius() } : undefined
-  // Parkplatz-Modus opens the map tab automatically before entering focus mode.
-  const handleEnterParkingFocus = onEnterParkingFocus
-    ? () => { setActiveTab("map"); onEnterParkingFocus() }
+  // When the user activates Parkplatz-Modus on mobile, jump to the map tab so
+  // the effect is visible immediately. Toggling off stays on the current tab.
+  const handleToggleParkingFocus = onToggleParkingFocus
+    ? () => {
+        if (!parkingFocusMode) setActiveTab("map")
+        onToggleParkingFocus()
+      }
     : undefined
   const t = useTranslations()
   const { locale } = useLocale()
@@ -164,7 +166,7 @@ export default function MobileLayout({
       <h1 className="sr-only">{t.app.srHeading}</h1>
 
       {/* ── Search bar (always visible) ── */}
-      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} locateTrigger={locateTrigger} biasCoords={biasCoords} />
+      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} locateTrigger={locateTrigger} biasCoords={biasCoords} parkingFocusMode={parkingFocusMode} onToggleParkingFocus={handleToggleParkingFocus} isParkingFocusLoading={isParkingFocusLoading} />
 
       {/* ── Error banner ── */}
       {error && (
@@ -281,10 +283,6 @@ export default function MobileLayout({
               onToggleParking={onToggleParking}
               autoZoom={settings.autoZoom}
               parkingFocusMode={parkingFocusMode}
-              onEnterParkingFocus={handleEnterParkingFocus}
-              onExitParkingFocus={onExitParkingFocus}
-              parkingFocusRadiusKm={parkingFocusRadiusKm}
-              isParkingFocusLoading={isParkingFocusLoading}
             />
           )}
         </div>

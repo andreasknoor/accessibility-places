@@ -44,6 +44,7 @@ const de: Translations = {
     locateButton:  "Standort ermitteln",
     locationError: "Standort konnte nicht ermittelt werden.",
     nearbyIn:        (d: string) => `In der Nähe von ${d}`,
+    parkingModeToggle:    "Parkplätze um mich",
     namePlaceholder:      'z. B. „Zur Linde" oder „Hilton"',
     nameToggleShow:       "+ Ergebnisse nach Name eingrenzen",
     nameToggleHide:       "Namensfilter entfernen",
@@ -214,13 +215,6 @@ const de: Translations = {
     parkingSpots:   (n: number) => `${n} barrierefreie Parkplätze`,
     toggleParking:  "Rollstuhlparkplätze in Karte anzeigen",
     nearbyParking:  "Parkplätze in der Nähe",
-    parkingFocusEnter:  "Parkplatz-Modus",
-    parkingFocusExit:   "Schließen",
-    parkingFocusActive: (km: number) => {
-      const dist = km < 1 ? `${Math.round(km * 1000)} m` : `${(Math.round(km * 10) / 10).toFixed(1).replace(".", ",")} km`
-      return `Parkplatz-Modus aktiv · ${dist} um dich`
-    },
-    parkingFocusEmpty:  "Keine Rollstuhl-Parkplätze in deinem Umkreis gefunden",
     parkingFree:      "Kostenlos",
     parkingPaid:      "Kostenpflichtig",
     parkingMaxstay:   "Max. Parkzeit",

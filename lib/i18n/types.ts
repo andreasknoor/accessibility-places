@@ -40,6 +40,7 @@ export interface Translations {
     locateButton:  string
     locationError: string
     nearbyIn:        (district: string) => string
+    parkingModeToggle:    string
     namePlaceholder:      string
     nameToggleShow:       string
     nameToggleHide:       string
@@ -189,10 +190,6 @@ export interface Translations {
     parkingSpots:           (n: number) => string
     toggleParking:          string
     nearbyParking:          string
-    parkingFocusEnter:      string
-    parkingFocusExit:       string
-    parkingFocusActive:     (km: number) => string
-    parkingFocusEmpty:      string
     parkingFree:            string
     parkingPaid:            string
     parkingMaxstay:         string

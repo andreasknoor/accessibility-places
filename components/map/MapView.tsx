@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Maximize2, Minimize2, CircleParking, X, Loader2 } from "lucide-react"
+import { Maximize2, Minimize2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS } from "@/lib/config"
@@ -31,14 +31,9 @@ interface Props {
   showParking?:        boolean
   onToggleParking?:    () => void
   autoZoom?:           boolean
-  // Parkplatz-Modus: focuses the map on disabled-parking spots within
-  // `parkingFocusRadiusKm` of the user's GPS location. Place pins are hidden,
-  // a banner indicates the mode. Only shown when in nearby search mode with GPS.
+  // Parkplatz-Modus: when true, hides place markers and shows GPS-radius
+  // parking spots only. Triggered from the ChatPanel toggle in nearby mode.
   parkingFocusMode?:       boolean
-  onEnterParkingFocus?:    () => void
-  onExitParkingFocus?:     () => void
-  parkingFocusRadiusKm?:   number
-  isParkingFocusLoading?:  boolean
 }
 
 const CONFIDENCE_COLORS = {
@@ -85,10 +80,6 @@ export default function MapView({
   onToggleParking,
   autoZoom = true,
   parkingFocusMode = false,
-  onEnterParkingFocus,
-  onExitParkingFocus,
-  parkingFocusRadiusKm,
-  isParkingFocusLoading = false,
 }: Props) {
   const t        = useTranslations()
   const mapRef   = useRef<HTMLDivElement>(null)
@@ -473,20 +464,16 @@ export default function MapView({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [center, parkingSpots, mapReady, parkingFocusMode])
 
-  // ESC key behaviour: in fullscreen, exit fullscreen first; outside fullscreen,
-  // exit Parkplatz-Modus. This matches the user expectation that ESC dismisses
-  // the topmost overlay (fullscreen) before deeper-nested modes.
+  // ESC exits fullscreen. Parkplatz-Modus has its own explicit toggle in the
+  // ChatPanel, so no keyboard shortcut is needed for it.
   useEffect(() => {
-    const wantsHandler = isFullscreen || (parkingFocusMode && !!onExitParkingFocus)
-    if (!wantsHandler) return
+    if (!isFullscreen) return
     function onKey(e: KeyboardEvent) {
-      if (e.key !== "Escape") return
-      if (isFullscreen) { onToggleFullscreen(); return }
-      if (parkingFocusMode && onExitParkingFocus) onExitParkingFocus()
+      if (e.key === "Escape") onToggleFullscreen()
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [isFullscreen, parkingFocusMode, onExitParkingFocus, onToggleFullscreen])
+  }, [isFullscreen, onToggleFullscreen])
 
   // Re-measure and re-center whenever the map container becomes visible.
   // Called for both tab reveals and fullscreen toggles — both change the
@@ -539,69 +526,26 @@ export default function MapView({
         </Button>
       )}
 
-      {/* ── Parkplatz-Modus banner (top) ── */}
-      {/* left-14 leaves room for Leaflet's default zoom control (top-left).
-          max-w keeps the banner clear of the fullscreen button (top-right). */}
-      {parkingFocusMode && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="absolute top-3 left-14 z-[1000] flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium shadow-md border border-blue-200 bg-blue-50 text-blue-900 max-w-[calc(100%-8rem)] sm:max-w-md"
+      {/* ── Toggle C: result-nearby parking visibility ── */}
+      {/* Disabled while Parkplatz-Modus is active because that mode overrides
+          map content with its own GPS-radius spot set. */}
+      {onToggleParking && (
+        <button
+          onClick={parkingFocusMode ? undefined : onToggleParking}
+          role="switch"
+          aria-checked={showParking}
+          aria-disabled={parkingFocusMode}
+          disabled={parkingFocusMode}
+          title={t.map.toggleParking}
+          className="absolute bottom-3 left-3 z-[1000] flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium shadow-md border border-border bg-background/95 backdrop-blur-sm transition-colors hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-background/95"
         >
-          <CircleParking className="w-4 h-4 shrink-0" aria-hidden />
-          <span className="flex-1 truncate">
-            {(parkingSpots?.length ?? 0) === 0 && !isParkingFocusLoading
-              ? t.map.parkingFocusEmpty
-              : t.map.parkingFocusActive(parkingFocusRadiusKm ?? 1)}
+          <span aria-hidden>🅿</span>
+          <span className="hidden sm:inline">{t.map.nearbyParking}</span>
+          <span className={`relative inline-flex h-4 w-7 shrink-0 rounded-full transition-colors ${showParking || parkingFocusMode ? "bg-blue-600" : "bg-muted-foreground/40"}`}>
+            <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${showParking || parkingFocusMode ? "translate-x-3" : "translate-x-0.5"}`} />
           </span>
-          {onExitParkingFocus && (
-            <button
-              onClick={onExitParkingFocus}
-              className="shrink-0 rounded p-1 hover:bg-blue-100 transition-colors"
-              aria-label={t.map.parkingFocusExit}
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+        </button>
       )}
-
-      {/* ── Bottom-left controls (stacked) ── */}
-      <div className="absolute bottom-3 left-3 z-[1000] flex flex-col gap-2 items-start">
-        {onEnterParkingFocus && !parkingFocusMode && (
-          <button
-            onClick={onEnterParkingFocus}
-            disabled={isParkingFocusLoading}
-            title={t.map.parkingFocusEnter}
-            className="flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium shadow-md border border-border bg-background/95 backdrop-blur-sm transition-colors hover:bg-muted disabled:opacity-60 disabled:cursor-wait"
-          >
-            {isParkingFocusLoading
-              ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
-              : <CircleParking className="w-4 h-4" aria-hidden />
-            }
-            <span>{t.map.parkingFocusEnter}</span>
-          </button>
-        )}
-
-        {onToggleParking && (
-          <button
-            onClick={parkingFocusMode ? undefined : onToggleParking}
-            role="switch"
-            aria-checked={showParking}
-            aria-disabled={parkingFocusMode}
-            disabled={parkingFocusMode}
-            title={t.map.toggleParking}
-            className="flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium shadow-md border border-border bg-background/95 backdrop-blur-sm transition-colors hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-background/95"
-          >
-            <span aria-hidden>🅿</span>
-            <span className="hidden sm:inline">{t.map.nearbyParking}</span>
-            {/* Toggle track */}
-            <span className={`relative inline-flex h-4 w-7 shrink-0 rounded-full transition-colors ${showParking || parkingFocusMode ? "bg-blue-600" : "bg-muted-foreground/40"}`}>
-              <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${showParking || parkingFocusMode ? "translate-x-3" : "translate-x-0.5"}`} />
-            </span>
-          </button>
-        )}
-      </div>
     </div>
   )
 }
