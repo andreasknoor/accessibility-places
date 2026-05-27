@@ -29,6 +29,11 @@ const DEFAULT_FILTERS: SearchFilters = {
   entrance:         true,
   toilet:           true,
   parking:          false,
+  // Default `true`: when the parking filter is enabled, nearby-only
+  // enrichment counts as a pass — preserves the legacy behaviour before
+  // parkingNearby became an explicit toggle. Migrated saved prefs without
+  // this key fall through to this default.
+  parkingNearby:    true,
   seating:          false,
   onlyVerified:     false,
   acceptUnknown:    false,

@@ -334,6 +334,7 @@ export function passesFiltersForSource(
     entrance: boolean
     toilet: boolean
     parking: boolean
+    parkingNearby?: boolean
     seating: boolean
     onlyVerified?: boolean
     acceptUnknown: boolean
@@ -350,7 +351,17 @@ export function passesFiltersForSource(
   }
   if (filters.entrance && !check(place.accessibility.entrance)) return false
   if (filters.toilet   && !check(place.accessibility.toilet))   return false
-  if (filters.parking  && !check(place.accessibility.parking))  return false
+  if (filters.parking) {
+    // When parkingNearby is explicitly false, reject places whose parking value
+    // exists only because of nearby-parking enrichment (no real on-site source).
+    // The enrichment never adds a SourceAttribution, so per-source check is
+    // already strict — but the place-level details.nearbyOnly flag is the
+    // ground truth for whether this attribute was derived from an off-site
+    // parking node.
+    const nearbyOnly = (place.accessibility.parking.details as { nearbyOnly?: boolean } | undefined)?.nearbyOnly === true
+    if (filters.parkingNearby === false && nearbyOnly) return false
+    if (!check(place.accessibility.parking)) return false
+  }
   if (filters.seating) {
     if (!place.accessibility.seating) {
       if (!filters.acceptUnknown) return false
@@ -376,6 +387,7 @@ export function passesFilters(
     entrance: boolean
     toilet: boolean
     parking: boolean
+    parkingNearby?: boolean
     seating: boolean
     onlyVerified?: boolean
     acceptUnknown: boolean
@@ -389,7 +401,15 @@ export function passesFilters(
 
   if (filters.entrance && !check(place.accessibility.entrance)) return false
   if (filters.toilet   && !check(place.accessibility.toilet))   return false
-  if (filters.parking  && !check(place.accessibility.parking))  return false
+  if (filters.parking) {
+    // When parkingNearby is explicitly false, exclude places whose parking
+    // value was derived only from nearby-parking enrichment (no real on-site
+    // attribution). details.nearbyOnly is set by enrichWithNearbyParking and
+    // is the authoritative signal.
+    const nearbyOnly = (place.accessibility.parking.details as { nearbyOnly?: boolean } | undefined)?.nearbyOnly === true
+    if (filters.parkingNearby === false && nearbyOnly) return false
+    if (!check(place.accessibility.parking)) return false
+  }
   if (filters.seating) {
     if (!place.accessibility.seating) {
       if (!filters.acceptUnknown) return false

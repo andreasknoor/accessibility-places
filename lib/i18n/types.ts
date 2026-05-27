@@ -69,11 +69,12 @@ export interface Translations {
     alwaysShowParking:   string
     sourceCountTooltip:  (raw: number, final: number) => string
     criteriaItems: {
-      entrance:     string
-      toilet:       string
-      parking:      string
-      seating:      string
-      onlyVerified: string
+      entrance:      string
+      toilet:        string
+      parking:       string
+      parkingNearby: string
+      seating:       string
+      onlyVerified:  string
     }
   }
   results: {

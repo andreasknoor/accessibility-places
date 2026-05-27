@@ -76,11 +76,12 @@ const de: Translations = {
     alwaysShowParking: "Rollstuhlparkplätze immer in Karte anzeigen",
     sourceCountTooltip: (raw: number, final: number) => `Rohtreffer: ${raw} → nach Filter: ${final}`,
     criteriaItems: {
-      entrance:     "Rollstuhlgerechter Eingang",
-      toilet:       "Rollstuhlgerechte Toilette",
-      parking:      "Rollstuhlgerechter Parkplatz",
-      seating:      "Rollstuhlgerechte Sitzplätze",
-      onlyVerified: "Nur manuell verifizierte Orte",
+      entrance:      "Rollstuhlgerechter Eingang",
+      toilet:        "Rollstuhlgerechte Toilette",
+      parking:       "Rollstuhlgerechter Parkplatz",
+      parkingNearby: "Auch Parkplätze in der Nähe akzeptieren",
+      seating:       "Rollstuhlgerechte Sitzplätze",
+      onlyVerified:  "Nur manuell verifizierte Orte",
     },
   },
   results: {

@@ -165,6 +165,12 @@ export interface SearchFilters {
   entrance: boolean
   toilet: boolean
   parking: boolean
+  // Only meaningful when `parking` is true. When `true`, places whose parking
+  // attribute was upgraded via nearby-parking enrichment (details.nearbyOnly)
+  // also pass the parking filter. When `false`, only places with their own
+  // on-site parking attribution pass. Default `true` preserves the legacy
+  // behaviour (parking filter accepts nearby-only enrichment).
+  parkingNearby: boolean
   seating: boolean
   // Restrict results to places where at least one source attribution is
   // marked `verifiedRecently` (= a check_date:wheelchair tag within 2 years).

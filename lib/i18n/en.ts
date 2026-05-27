@@ -76,11 +76,12 @@ const en: Translations = {
     alwaysShowParking: "Always show wheelchair parking on map",
     sourceCountTooltip: (raw: number, final: number) => `Raw: ${raw} → after filter: ${final}`,
     criteriaItems: {
-      entrance:     "Wheelchair-accessible entrance",
-      toilet:       "Wheelchair-accessible toilet",
-      parking:      "Wheelchair-accessible parking",
-      seating:      "Wheelchair-accessible seating",
-      onlyVerified: "Only manually verified places",
+      entrance:      "Wheelchair-accessible entrance",
+      toilet:        "Wheelchair-accessible toilet",
+      parking:       "Wheelchair-accessible parking",
+      parkingNearby: "Also accept parking nearby",
+      seating:       "Wheelchair-accessible seating",
+      onlyVerified:  "Only manually verified places",
     },
   },
   results: {
