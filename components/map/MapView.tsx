@@ -473,15 +473,20 @@ export default function MapView({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [center, parkingSpots, mapReady, parkingFocusMode])
 
-  // ESC key exits Parkplatz-Modus.
+  // ESC key behaviour: in fullscreen, exit fullscreen first; outside fullscreen,
+  // exit Parkplatz-Modus. This matches the user expectation that ESC dismisses
+  // the topmost overlay (fullscreen) before deeper-nested modes.
   useEffect(() => {
-    if (!parkingFocusMode || !onExitParkingFocus) return
+    const wantsHandler = isFullscreen || (parkingFocusMode && !!onExitParkingFocus)
+    if (!wantsHandler) return
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onExitParkingFocus!()
+      if (e.key !== "Escape") return
+      if (isFullscreen) { onToggleFullscreen(); return }
+      if (parkingFocusMode && onExitParkingFocus) onExitParkingFocus()
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [parkingFocusMode, onExitParkingFocus])
+  }, [isFullscreen, parkingFocusMode, onExitParkingFocus, onToggleFullscreen])
 
   // Re-measure and re-center whenever the map container becomes visible.
   // Called for both tab reveals and fullscreen toggles — both change the
@@ -539,7 +544,7 @@ export default function MapView({
         <div
           role="status"
           aria-live="polite"
-          className="absolute top-3 left-3 right-14 z-[1000] flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium shadow-md border border-blue-200 bg-blue-50 text-blue-900"
+          className="absolute top-3 left-3 z-[1000] flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium shadow-md border border-blue-200 bg-blue-50 text-blue-900 max-w-[calc(100%-7rem)] sm:max-w-md"
         >
           <CircleParking className="w-4 h-4 shrink-0" aria-hidden />
           <span className="flex-1 truncate">

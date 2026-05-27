@@ -19,6 +19,7 @@ import { SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
 import { useSettings, loadSettings } from "@/lib/settings"
+import { cn } from "@/lib/utils"
 import type { AppSettings } from "@/lib/settings"
 import type { Place, ParkingSpot, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug } from "@/lib/types"
 
@@ -615,38 +616,16 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     )
   }
 
-  // Fullscreen map overlay
-  if (isFullscreen) {
-    return (
-      <div className="fixed inset-0 z-50 bg-background">
-        <MapView
-          places={places}
-          parkingSpots={visibleParkingSpots}
-          center={searchCenter}
-          userLocation={chatMode === "nearby" ? searchCenter : undefined}
-          selectedId={selectedId}
-          onSelect={(p) => setSelectedId(p.id)}
-          isFullscreen
-          onToggleFullscreen={() => setIsFullscreen(false)}
-          showParking={filters.alwaysShowParking}
-          onToggleParking={hasParkingToggle ? handleToggleParking : undefined}
-          autoZoom={settings.autoZoom}
-          parkingFocusMode={parkingFocusMode}
-          onEnterParkingFocus={canEnterParkingFocus ? handleEnterParkingFocus : undefined}
-          onExitParkingFocus={handleExitParkingFocus}
-          parkingFocusRadiusKm={settings.parkingRadiusKm}
-          isParkingFocusLoading={isParkingLoading}
-        />
-      </div>
-    )
-  }
-
+  // Desktop layout. Fullscreen is implemented via CSS class swap on the MapView
+  // container — NOT a separate render path — so MapView stays mounted across
+  // toggles and parkingFocusMode survives. Header / ChatPanel / FilterPanel /
+  // ResultsList are hidden via `display: none` so their internal state survives.
   return (
     <>
     <Script src="https://tally.so/widgets/embed.js" strategy="lazyOnload" />
     <div className="flex flex-col h-screen overflow-hidden bg-background text-foreground">
       {/* ── Top bar ── */}
-      <header className="flex items-center justify-between px-5 py-3 border-b border-border bg-card shrink-0">
+      <header className={cn("flex items-center justify-between px-5 py-3 border-b border-border bg-card shrink-0", isFullscreen && "hidden")}>
         <button
           onClick={handleReset}
           className="flex items-center gap-2.5 hover:opacity-75 transition-opacity cursor-pointer"
@@ -667,26 +646,28 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       <h1 className="sr-only">{t.app.srHeading}</h1>
 
       {/* ── Chat / search bar ── */}
-      <ChatPanel
-        key={resetKey}
-        onSearch={(query, coords, nameHint) => handleSearch(query, undefined, coords, nameHint)}
-        onPlaceSearch={handlePlaceSearch}
-        isLoading={isLoading}
-        onModeChange={handleModeChange}
-        autoFocus
-        initialLocation={resetKey === 0 ? initialCity : undefined}
-        initialChipIdx={initialCategory && resetKey === 0 ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : settings.defaultChipIdx ?? undefined}
-        initialMode={chatMode}
-        onGpsResolved={handleGpsResolved}
-        skipAutoLocate={isFirstVisit}
-        hasGpsCoords={hasGpsCoords}
-        locateTrigger={locateTriggerKey}
-        biasCoords={searchCenter ?? gpsCoords ?? undefined}
-      />
+      <div className={cn(isFullscreen && "hidden")}>
+        <ChatPanel
+          key={resetKey}
+          onSearch={(query, coords, nameHint) => handleSearch(query, undefined, coords, nameHint)}
+          onPlaceSearch={handlePlaceSearch}
+          isLoading={isLoading}
+          onModeChange={handleModeChange}
+          autoFocus
+          initialLocation={resetKey === 0 ? initialCity : undefined}
+          initialChipIdx={initialCategory && resetKey === 0 ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : settings.defaultChipIdx ?? undefined}
+          initialMode={chatMode}
+          onGpsResolved={handleGpsResolved}
+          skipAutoLocate={isFirstVisit}
+          hasGpsCoords={hasGpsCoords}
+          locateTrigger={locateTriggerKey}
+          biasCoords={searchCenter ?? gpsCoords ?? undefined}
+        />
+      </div>
 
       {/* ── Error banner ── */}
       {error && (
-        <div className="px-4 py-2 bg-destructive/10 text-destructive text-sm border-b border-destructive/20 shrink-0">
+        <div className={cn("px-4 py-2 bg-destructive/10 text-destructive text-sm border-b border-destructive/20 shrink-0", isFullscreen && "hidden")}>
           {error}
         </div>
       )}
@@ -697,7 +678,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           filterCollapsed ? (
             <button
               onClick={() => setFilterCollapsed(false)}
-              className="shrink-0 w-12 border-r border-border flex flex-col items-center justify-center gap-3 py-6 hover:bg-muted/50 transition-colors cursor-pointer"
+              className={cn("shrink-0 w-12 border-r border-border flex flex-col items-center justify-center gap-3 py-6 hover:bg-muted/50 transition-colors cursor-pointer", isFullscreen && "hidden")}
               aria-label={t.filters.title}
             >
               <span className="relative">
@@ -712,7 +693,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
           ) : (
-            <div className="relative flex flex-col shrink-0">
+            <div className={cn("relative flex flex-col shrink-0", isFullscreen && "hidden")}>
               <FilterPanel
                 filters={filters}
                 sources={sources}
@@ -736,7 +717,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         )}
 
         <div
-          className="shrink-0 border-r border-border flex flex-col min-h-0"
+          className={cn("shrink-0 border-r border-border flex flex-col min-h-0", isFullscreen && "hidden")}
           style={{ width: resultsWidth }}
         >
           <ResultsList
@@ -785,10 +766,14 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
         {/* Draggable divider */}
         <div
-          className="w-1.5 shrink-0 bg-border hover:bg-primary/40 cursor-col-resize transition-colors"
+          className={cn("w-1.5 shrink-0 bg-border hover:bg-primary/40 cursor-col-resize transition-colors", isFullscreen && "hidden")}
           onMouseDown={handleDividerMouseDown}
         />
-        <div className="flex-1 min-h-0 relative isolate">
+        <div className={cn(
+          isFullscreen
+            ? "fixed inset-0 z-50 bg-background"
+            : "flex-1 min-h-0 relative isolate",
+        )}>
           <MapView
             places={places}
             parkingSpots={visibleParkingSpots}
@@ -796,8 +781,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             userLocation={chatMode === "nearby" ? searchCenter : undefined}
             selectedId={selectedId}
             onSelect={(p) => { setSelectedId(p.id); setScrollToId(p.id) }}
-            isFullscreen={false}
-            onToggleFullscreen={() => setIsFullscreen(true)}
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={() => setIsFullscreen((v) => !v)}
             showParking={filters.alwaysShowParking}
             onToggleParking={hasParkingToggle ? handleToggleParking : undefined}
             autoZoom={settings.autoZoom}
