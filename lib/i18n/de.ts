@@ -51,10 +51,6 @@ const de: Translations = {
     placeSearchHint:   "Direkte Ortssuche — aktuell nur DE, AT, CH",
     placeNotFound:     "Diesen Ort konnten wir nicht finden. Versuche einen präziseren Namen oder füge die Stadt hinzu.",
     placeNoData:       (name: string) => `Wir haben „${name}" gefunden, haben aber keine Barrierefreiheits-Daten für diesen Ort.`,
-    showParkingButton: (km: number) => {
-      const dist = km < 1 ? `${Math.round(km * 1000)} m` : `${(Math.round(km * 10) / 10).toFixed(1).replace(".", ",")} km`
-      return `Rollstuhl-Parkplätze in der Nähe zeigen (${dist})`
-    },
     welcomeTitle:     "Willkommen bei Accessible Places",
     welcomeSubtitle:  "Finde barrierefreie Cafés, Hotels, Restaurants und mehr in Deutschland, Österreich und der Schweiz.",
     welcomeGpsHint:   "Tippe auf 'In der Nähe', um sofort barrierefreie Orte in deiner Nähe zu finden.",
@@ -218,6 +214,13 @@ const de: Translations = {
     parkingSpots:   (n: number) => `${n} barrierefreie Parkplätze`,
     toggleParking:  "Rollstuhlparkplätze in Karte anzeigen",
     nearbyParking:  "Parkplätze in der Nähe",
+    parkingFocusEnter:  "Parkplatz-Modus",
+    parkingFocusExit:   "Schließen",
+    parkingFocusActive: (km: number) => {
+      const dist = km < 1 ? `${Math.round(km * 1000)} m` : `${(Math.round(km * 10) / 10).toFixed(1).replace(".", ",")} km`
+      return `Parkplatz-Modus aktiv · ${dist} um dich`
+    },
+    parkingFocusEmpty:  "Keine Rollstuhl-Parkplätze in deinem Umkreis gefunden",
     parkingFree:      "Kostenlos",
     parkingPaid:      "Kostenpflichtig",
     parkingMaxstay:   "Max. Parkzeit",

@@ -108,7 +108,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [resetKey,            setResetKey]            = useState(0)
   const [scrollToId,          setScrollToId]          = useState<string | undefined>()
   const [isParkingLoading,    setIsParkingLoading]    = useState(false)
-  const [hasParkingNearby,    setHasParkingNearby]    = useState(false)
+  // Parkplatz-Modus (proposal #6): focus the map on disabled-parking spots
+  // within parkingRadiusKm of the user's GPS coords. Per-session only.
+  const [parkingFocusMode,    setParkingFocusMode]    = useState(false)
   const [isFirstVisit,        setIsFirstVisit]        = useState(() => { try { return !localStorage.getItem("ap_visited") && !localStorage.getItem("ap_welcome_dismissed") } catch { return false } })
   const [locateTriggerKey,    setLocateTriggerKey]    = useState(0)
   const [hasGpsCoords,        setHasGpsCoords]        = useState(false)
@@ -156,6 +158,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setParkingSpots([])
     setSelectedId(undefined)
     setFilterDebug(undefined)
+    setParkingFocusMode(false)
     // Initialise per-source loading state for each active source so the
     // FilterPanel renders spinners immediately.
     const initial: Partial<Record<SourceId, SourceState>> = {}
@@ -298,6 +301,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setFilterDebug(undefined)
     setError(undefined)
     setSourceStates({})
+    setParkingFocusMode(false)
   }, [])
 
   const handleSwitchMode = useCallback((mode: "text" | "nearby" | "place") => {
@@ -326,7 +330,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setError(undefined)
     setSourceStates({})
     setIsLoading(false)
-    setHasParkingNearby(false)
+    setParkingFocusMode(false)
     const dismissed = (() => { try { return !!localStorage.getItem("ap_welcome_dismissed") } catch { return false } })()
     if (!dismissed) setIsFirstVisit(true)
     setChatMode(settings.defaultSearchMode ?? "nearby")
@@ -432,13 +436,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     gpsCoordRef.current = coords
     setGpsCoords(coords)
     setHasGpsCoords(true)
-    // Fire-and-forget: only show the parking button when spots actually exist nearby.
-    // Uses the real GPS coords from navigator.geolocation — accurate on mobile.
-    fetch(`/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=${settings.parkingRadiusKm}`)
-      .then(r => r.ok ? r.json() : [])
-      .then((spots: unknown[]) => { if (spots.length > 0) setHasParkingNearby(true) })
-      .catch(() => {})
-  }, [settings.parkingRadiusKm])
+  }, [])
 
   // Silently pre-fetch GPS when entering place-search mode so coords are
   // available immediately when the user submits (avoids mid-submit delay).
@@ -457,20 +455,29 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     )
   }, [chatMode])
 
-  const handleShowParking = useCallback(async (coords: { lat: number; lon: number }) => {
+  // Parkplatz-Modus enter: fetch spots for the user's GPS location, then activate
+  // the mode. Doesn't toggle alwaysShowParking (focus mode overrides display so
+  // the toggle state stays preserved for after-exit).
+  const handleEnterParkingFocus = useCallback(async () => {
+    const coords = gpsCoordRef.current ?? gpsCoords
+    if (!coords) return
+    track("parking_focus_enter")
     setIsParkingLoading(true)
-    setSearchCenter(coords)
     try {
       const res = await fetch(`/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=${settings.parkingRadiusKm}`)
       if (res.ok) {
         const spots = await res.json()
         setParkingSpots(spots)
-        setFilters((f) => ({ ...f, alwaysShowParking: true }))
       }
     } catch { /* ignore — parking is non-fatal */ } finally {
       setIsParkingLoading(false)
+      setParkingFocusMode(true)
     }
-  }, [settings.parkingRadiusKm])
+  }, [gpsCoords, settings.parkingRadiusKm])
+
+  const handleExitParkingFocus = useCallback(() => {
+    setParkingFocusMode(false)
+  }, [])
 
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     isDragging.current = true
@@ -494,7 +501,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
   }, [])
 
-  const visibleParkingSpots = filters.alwaysShowParking ? parkingSpots : []
+  // In Parkplatz-Modus we always show all loaded spots regardless of the toggle.
+  const visibleParkingSpots = parkingFocusMode || filters.alwaysShowParking ? parkingSpots : []
 
   const handleFilters = useCallback((next: SearchFilters) => {
     const activated = (["entrance", "toilet", "parking", "seating", "onlyVerified"] as const)
@@ -531,6 +539,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const hasParkingToggle = parkingSpots.length > 0 || places.some(
     (p) => (p.accessibility.parking.details as { nearbyOnly?: boolean } | undefined)?.nearbyOnly === true,
   )
+
+  // Parkplatz-Modus is only meaningful in Nearby mode with resolved GPS coords.
+  const canEnterParkingFocus = chatMode === "nearby" && (hasGpsCoords || gpsCoords !== null)
 
   // Mobile layout
   if (isMobile) {
@@ -570,11 +581,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         sortBy={sortBy}
         onSortChange={(s) => { setSortBy(s); updateSettings({ sortOrder: s }) }}
         defaultMobileView={settings.defaultMobileView}
-        onShowParking={handleShowParking}
         onGpsResolved={handleGpsResolved}
-        isParkingLoading={isParkingLoading}
-        hasParkingNearby={hasParkingNearby}
-        parkingRadiusKm={settings.parkingRadiusKm}
         isFirstVisit={isFirstVisit}
         onResetOnboarding={() => { try { localStorage.removeItem("ap_visited"); localStorage.removeItem("ap_welcome_dismissed") } catch { /* ignore */ }; setIsFirstVisit(true) }}
         onDismissWelcome={handleDismissWelcome}
@@ -585,6 +592,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onSwitchToPlace={() => handleSwitchMode("place")}
         chatMode={chatMode}
         onChatModeChange={handleModeChange}
+        parkingFocusMode={parkingFocusMode}
+        onEnterParkingFocus={canEnterParkingFocus ? handleEnterParkingFocus : undefined}
+        onExitParkingFocus={handleExitParkingFocus}
+        parkingFocusRadiusKm={settings.parkingRadiusKm}
+        isParkingFocusLoading={isParkingLoading}
       />
     )
   }
@@ -605,6 +617,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           showParking={filters.alwaysShowParking}
           onToggleParking={hasParkingToggle ? handleToggleParking : undefined}
           autoZoom={settings.autoZoom}
+          parkingFocusMode={parkingFocusMode}
+          onEnterParkingFocus={canEnterParkingFocus ? handleEnterParkingFocus : undefined}
+          onExitParkingFocus={handleExitParkingFocus}
+          parkingFocusRadiusKm={settings.parkingRadiusKm}
+          isParkingFocusLoading={isParkingLoading}
         />
       </div>
     )
@@ -646,11 +663,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         initialLocation={resetKey === 0 ? initialCity : undefined}
         initialChipIdx={initialCategory && resetKey === 0 ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : settings.defaultChipIdx ?? undefined}
         initialMode={chatMode}
-        onShowParking={handleShowParking}
         onGpsResolved={handleGpsResolved}
-        isParkingLoading={isParkingLoading}
-        hasParkingNearby={hasParkingNearby}
-        parkingRadiusKm={settings.parkingRadiusKm}
         skipAutoLocate={isFirstVisit}
         hasGpsCoords={hasGpsCoords}
         locateTrigger={locateTriggerKey}
@@ -774,6 +787,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             showParking={filters.alwaysShowParking}
             onToggleParking={hasParkingToggle ? handleToggleParking : undefined}
             autoZoom={settings.autoZoom}
+            parkingFocusMode={parkingFocusMode}
+            onEnterParkingFocus={canEnterParkingFocus ? handleEnterParkingFocus : undefined}
+            onExitParkingFocus={handleExitParkingFocus}
+            parkingFocusRadiusKm={settings.parkingRadiusKm}
+            isParkingFocusLoading={isParkingLoading}
           />
         </div>
       </div>

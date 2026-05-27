@@ -47,7 +47,6 @@ export interface Translations {
     placeSearchHint:   string
     placeNotFound:     string
     placeNoData:       (name: string) => string
-    showParkingButton:  (km: number) => string
     welcomeTitle:       string
     welcomeSubtitle:    string
     welcomeGpsHint:     string
@@ -190,6 +189,10 @@ export interface Translations {
     parkingSpots:           (n: number) => string
     toggleParking:          string
     nearbyParking:          string
+    parkingFocusEnter:      string
+    parkingFocusExit:       string
+    parkingFocusActive:     (km: number) => string
+    parkingFocusEmpty:      string
     parkingFree:            string
     parkingPaid:            string
     parkingMaxstay:         string

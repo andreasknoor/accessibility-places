@@ -51,10 +51,6 @@ const en: Translations = {
     placeSearchHint:   "Direct place search — currently DE, AT, CH only",
     placeNotFound:     "We couldn't find this place. Try a more specific name or add the city.",
     placeNoData:       (name: string) => `We found "${name}" but have no accessibility data for this place.`,
-    showParkingButton: (km: number) => {
-      const dist = km < 1 ? `${Math.round(km * 1000)} m` : `${(Math.round(km * 10) / 10).toFixed(1)} km`
-      return `Show nearby wheelchair parking (${dist})`
-    },
     welcomeTitle:     "Welcome to Accessible Places",
     welcomeSubtitle:  "Find accessible cafés, hotels, restaurants and more across Germany, Austria and Switzerland.",
     welcomeGpsHint:   "Tap 'Nearby' to instantly find accessible places around you.",
@@ -218,6 +214,13 @@ const en: Translations = {
     parkingSpots:   (n: number) => `${n} accessible parking spaces`,
     toggleParking:  "Show wheelchair parking on map",
     nearbyParking:  "Nearby parking",
+    parkingFocusEnter:  "Parking focus",
+    parkingFocusExit:   "Close",
+    parkingFocusActive: (km: number) => {
+      const dist = km < 1 ? `${Math.round(km * 1000)} m` : `${(Math.round(km * 10) / 10).toFixed(1)} km`
+      return `Parking focus active · ${dist} around you`
+    },
+    parkingFocusEmpty:  "No wheelchair parking found in your area",
     parkingFree:      "Free",
     parkingPaid:      "Paid",
     parkingMaxstay:   "Max. stay",

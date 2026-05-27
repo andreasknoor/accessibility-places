@@ -382,38 +382,7 @@ function simulateGpsSuccess(lat = 52.52, lon = 13.405, district = "Mitte") {
   ))
 }
 
-describe("ChatPanel parking button", () => {
-  it("is not shown in text mode", () => {
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={vi.fn()} />)
-    expect(screen.queryByText(/Rollstuhl-Parkplätze/)).toBeNull()
-  })
-
-  it("is not shown in nearby mode before GPS resolves", () => {
-    vi.stubGlobal("navigator", {
-      clipboard: navigator.clipboard,
-      geolocation: { getCurrentPosition: vi.fn(), watchPosition: vi.fn(), clearWatch: vi.fn() }, // never calls success
-    })
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={vi.fn()} />)
-    fireEvent.click(screen.getByText(/In der Nähe/))
-    expect(screen.queryByText(/Rollstuhl-Parkplätze/)).toBeNull()
-  })
-
-  it("appears after GPS resolves when onShowParking is defined", async () => {
-    simulateGpsSuccess()
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={vi.fn()} hasParkingNearby={true} />)
-    fireEvent.click(screen.getByText(/In der Nähe/))
-    await act(() => vi.runAllTimersAsync())
-    expect(screen.getByText(/Rollstuhl-Parkplätze/)).toBeInTheDocument()
-  })
-
-  it("button label includes radius", async () => {
-    simulateGpsSuccess()
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={vi.fn()} hasParkingNearby={true} parkingRadiusKm={0.5} />)
-    fireEvent.click(screen.getByText(/In der Nähe/))
-    await act(() => vi.runAllTimersAsync())
-    expect(screen.getByText(/500 m/)).toBeInTheDocument()
-  })
-
+describe("ChatPanel GPS resolution", () => {
   it("calls onGpsResolved with coords after GPS success", async () => {
     simulateGpsSuccess(48.137, 11.576, "Maxvorstadt")
     const onGpsResolved = vi.fn()
@@ -421,33 +390,6 @@ describe("ChatPanel parking button", () => {
     fireEvent.click(screen.getByText(/In der Nähe/))
     await act(() => vi.runAllTimersAsync())
     expect(onGpsResolved).toHaveBeenCalledWith({ lat: 48.137, lon: 11.576 })
-  })
-
-  it("calls onShowParking with GPS coords on click", async () => {
-    simulateGpsSuccess(48.137, 11.576, "Maxvorstadt")
-    const onShowParking = vi.fn()
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={onShowParking} hasParkingNearby={true} />)
-    fireEvent.click(screen.getByText(/In der Nähe/))
-    await act(() => vi.runAllTimersAsync())
-    fireEvent.click(screen.getByText(/Rollstuhl-Parkplätze/))
-    expect(onShowParking).toHaveBeenCalledWith({ lat: 48.137, lon: 11.576 })
-  })
-
-  it("shows spinner and is disabled when isParkingLoading=true", async () => {
-    simulateGpsSuccess()
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onShowParking={vi.fn()} hasParkingNearby={true} isParkingLoading={true} />)
-    fireEvent.click(screen.getByText(/In der Nähe/))
-    await act(() => vi.runAllTimersAsync())
-    const btn = screen.getByText(/Rollstuhl-Parkplätze/).closest("button")
-    expect(btn).toBeDisabled()
-  })
-
-  it("is not shown when onShowParking prop is absent", async () => {
-    simulateGpsSuccess()
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
-    fireEvent.click(screen.getByText(/In der Nähe/))
-    await act(() => vi.runAllTimersAsync())
-    expect(screen.queryByText(/Rollstuhl-Parkplätze/)).toBeNull()
   })
 })
 
