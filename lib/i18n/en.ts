@@ -133,7 +133,7 @@ const en: Translations = {
     vegetarian: "Vegetarian",
     vegan:      "Vegan",
     showOnMap:  "Show on map",
-    mapHint:    "Tip: tap an entry to show it on the map",
+    mapHint:    "Tip: tap an entry to open details",
     scoreCalculation:      "Score calculation",
     scorePrefix:           "Data: ",
     scoreDataQualityNote:  "How reliable is the underlying source data?",

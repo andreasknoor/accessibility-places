@@ -133,7 +133,7 @@ const de: Translations = {
     vegetarian: "Vegetarisch",
     vegan:      "Vegan",
     showOnMap:  "Auf Karte zeigen",
-    mapHint:    "Tipp: Eintrag antippen → auf Karte anzeigen",
+    mapHint:    "Tipp: Eintrag antippen → Detailinfos öffnen",
     scoreCalculation:      "Score-Berechnung",
     scorePrefix:           "Daten: ",
     scoreDataQualityNote:  "Wie verlässlich sind die zugrunde liegenden Quelldaten?",
