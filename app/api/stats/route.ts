@@ -123,7 +123,7 @@ function renderHtml({ sources: stats, oldestHour }: StatsResponse): string {
 </head>
 <body>
 <h1>♿ Adapter Stats Dashboard</h1>
-<p class="subtitle">Last updated: ${now} &nbsp;·&nbsp; 90-day window &nbsp;·&nbsp; hourly granularity${oldestHour ? ` &nbsp;·&nbsp; Since: ${formatHour(oldestHour)}` : ""}</p>
+<p class="subtitle">Last updated: ${now} &nbsp;·&nbsp; 90-day window &nbsp;·&nbsp; hourly granularity${oldestHour ? (() => { const days = Math.max(1, Math.round((Date.now() - new Date(oldestHour.replace("T", " ") + ":00:00Z").getTime()) / 86_400_000)); return ` &nbsp;·&nbsp; Since: ${formatHour(oldestHour)} (${days} day${days !== 1 ? "s" : ""})`; })() : ""}</p>
 
 ${entries.length === 0 ? `
 <div class="empty">
