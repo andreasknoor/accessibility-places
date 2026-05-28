@@ -84,9 +84,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
   const [settings, updateSettings] = useSettings()
 
-  const [filters,       setFilters]      = useState<SearchFilters>(() => loadSavedPrefs().filters)
-  const [sources,       setSources]      = useState<ActiveSources>(() => loadSavedPrefs().sources)
-  const [radiusKm,      setRadiusKm]     = useState<number>(() => loadSavedPrefs().radiusKm)
+  const [filters,       setFilters]      = useState<SearchFilters>(DEFAULT_FILTERS)
+  const [sources,       setSources]      = useState<ActiveSources>(DEFAULT_SOURCES)
+  const [radiusKm,      setRadiusKm]     = useState<number>(DEFAULT_RADIUS_KM)
   const [places,        setPlaces]       = useState<Place[]>([])
   const [parkingSpots,  setParkingSpots]  = useState<ParkingSpot[]>([])
   const [selectedId,    setSelectedId]   = useState<string | undefined>()
@@ -122,6 +122,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // its pre-focus content — focus mode loads GPS-radius spots that would
   // otherwise overwrite the originals.
   const parkingSpotsBackupRef = useRef<ParkingSpot[] | null>(null)
+  // Tracks whether the initial localStorage prefs have been loaded into state.
+  // The persist effect must skip until the load effect has fired (otherwise
+  // it would overwrite the user's saved prefs with defaults on first render).
+  const prefsLoadedRef = useRef(false)
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
   const selectTarget = useRef(
@@ -141,12 +145,28 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
   // Persist filter/source/radius preferences across sessions.
   // alwaysShowParking is intentionally excluded — it's a per-session display toggle.
+  // Guard: skip until the load effect below has fired so we don't overwrite
+  // the user's saved prefs with defaults on the first render.
   useEffect(() => {
+    if (!prefsLoadedRef.current) return
     try {
       const { alwaysShowParking: _ap, ...persistableFilters } = filters
       localStorage.setItem(PREFS_KEY, JSON.stringify({ filters: persistableFilters, sources, radiusKm }))
     } catch { /* ignore — localStorage unavailable (private mode, quota) */ }
   }, [filters, sources, radiusKm])
+
+  // Load persisted prefs from localStorage after hydration.
+  // Declared AFTER the persist effect so it executes second on mount —
+  // persist skips (prefsLoadedRef=false), then this sets the ref to true
+  // and applies the saved values; the subsequent re-render triggers persist
+  // with the correct state.
+  useEffect(() => {
+    const prefs = loadSavedPrefs()
+    prefsLoadedRef.current = true
+    setFilters(prefs.filters)
+    setSources(prefs.sources)
+    setRadiusKm(prefs.radiusKm)
+  }, [])
 
   const handleSearch = useCallback(async (query: string, radiusKmOverride?: number, coords?: { lat: number; lon: number }, nameHint?: string, filtersOverride?: Partial<SearchFilters>, sourcesOverride?: Partial<ActiveSources>, placeSearch?: boolean) => {
     // Cancel any in-flight search so its NDJSON stream cannot overwrite this one's state.

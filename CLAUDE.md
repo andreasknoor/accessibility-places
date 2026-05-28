@@ -324,6 +324,7 @@ docker run -d --name overpass --restart always -p 8080:80 \
   -e OVERPASS_META=yes \
   -e OVERPASS_MODE=clone \
   -e OVERPASS_REPLICATION_URL=https://download.geofabrik.de/europe/dach-updates/ \
+  -e OVERPASS_DIFF_URL=https://download.geofabrik.de/europe/dach-updates/ \
   -e OVERPASS_REPLICATION_DELAY=3600 \
   -e OVERPASS_USE_AREAS=true \
   -e OVERPASS_RULES_LOAD=1 \
@@ -333,5 +334,9 @@ docker run -d --name overpass --restart always -p 8080:80 \
   -e OVERPASS_TIME=300 \
   wiktorn/overpass-api
 ```
+
+**Critical after any fresh container start:** the `update_overpass` supervisor process runs as `user=overpass` (uid=1000 inside the container). The host volume `/overpass-data` must be owned by uid=1000; otherwise the replication script cannot create `/db/replicate_id.backup` and loops with `Permission denied`. Fix: `chown 1000:1000 /overpass-data` on the host. Also, `OVERPASS_DIFF_URL` is what the `update_overpass` script reads for ongoing diff updates — `OVERPASS_REPLICATION_URL` is used only for the initial clone. Both must point to the same URL.
+
+**If replication stopped** (data timestamp stops advancing): check `docker logs overpass` for `OVERPASS_DIFF_URL is not set` (wrong env var name) or `replicate_id` missing/wrong permissions. Bootstrap the sequence file with: `docker exec overpass /app/venv/bin/pyosmium-get-changes --server https://download.geofabrik.de/europe/dach-updates/ -D <TIMESTAMP> -f /db/replicate_id` where `<TIMESTAMP>` is the OSM base timestamp from `/api/status`.
 
 **Overpass HTML 200 responses:** when the daemon is overloaded it returns `Content-Type: text/html` with HTTP 200 (not 5xx). The OSM adapter guard (`res.headers?.get("content-type")`) detects this and rejects the endpoint so the parallel race falls through to the public mirrors.
