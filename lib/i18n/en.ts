@@ -44,7 +44,7 @@ const en: Translations = {
     locateButton:  "Detect location",
     locationError: "Location could not be determined.",
     nearbyIn:        (d: string) => `Near ${d}`,
-    parkingModeToggle:    "Parking around me",
+    parkingModeToggle:    "Wheelchair parking nearby",
     namePlaceholder:      "e.g. \"The Crown\" or \"Hilton\"",
     nameToggleShow:       "+ Filter results by name",
     nameToggleHide:       "Remove name filter",
