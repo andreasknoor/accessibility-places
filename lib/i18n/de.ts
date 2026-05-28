@@ -44,6 +44,7 @@ const de: Translations = {
     locateButton:  "Standort ermitteln",
     locationError: "Standort konnte nicht ermittelt werden.",
     nearbyIn:        (d: string) => `In der Nähe von ${d}`,
+    parkingModeToggle:    "Rollstuhl-Parkplätze hier",
     namePlaceholder:      'z. B. „Zur Linde" oder „Hilton"',
     nameToggleShow:       "+ Ergebnisse nach Name eingrenzen",
     nameToggleHide:       "Namensfilter entfernen",
@@ -51,10 +52,6 @@ const de: Translations = {
     placeSearchHint:   "Direkte Ortssuche — aktuell nur DE, AT, CH",
     placeNotFound:     "Diesen Ort konnten wir nicht finden. Versuche einen präziseren Namen oder füge die Stadt hinzu.",
     placeNoData:       (name: string) => `Wir haben „${name}" gefunden, haben aber keine Barrierefreiheits-Daten für diesen Ort.`,
-    showParkingButton: (km: number) => {
-      const dist = km < 1 ? `${Math.round(km * 1000)} m` : `${(Math.round(km * 10) / 10).toFixed(1).replace(".", ",")} km`
-      return `Rollstuhl-Parkplätze in der Nähe zeigen (${dist})`
-    },
     welcomeTitle:     "Willkommen bei Accessible Places",
     welcomeSubtitle:  "Finde barrierefreie Cafés, Hotels, Restaurants und mehr in Deutschland, Österreich und der Schweiz.",
     welcomeGpsHint:   "Tippe auf 'In der Nähe', um sofort barrierefreie Orte in deiner Nähe zu finden.",
@@ -76,11 +73,12 @@ const de: Translations = {
     alwaysShowParking: "Rollstuhlparkplätze immer in Karte anzeigen",
     sourceCountTooltip: (raw: number, final: number) => `Rohtreffer: ${raw} → nach Filter: ${final}`,
     criteriaItems: {
-      entrance:     "Rollstuhlgerechter Eingang",
-      toilet:       "Rollstuhlgerechte Toilette",
-      parking:      "Rollstuhlgerechter Parkplatz",
-      seating:      "Rollstuhlgerechte Sitzplätze",
-      onlyVerified: "Nur manuell verifizierte Orte",
+      entrance:      "Rollstuhlgerechter Eingang",
+      toilet:        "Rollstuhlgerechte Toilette",
+      parking:       "Rollstuhlgerechter Parkplatz",
+      parkingNearby: "Auch Parkplätze in der Nähe akzeptieren",
+      seating:       "Rollstuhlgerechte Sitzplätze",
+      onlyVerified:  "Nur manuell verifizierte Orte",
     },
   },
   results: {
@@ -135,7 +133,7 @@ const de: Translations = {
     vegetarian: "Vegetarisch",
     vegan:      "Vegan",
     showOnMap:  "Auf Karte zeigen",
-    mapHint:    "Tipp: Eintrag antippen → auf Karte anzeigen",
+    mapHint:    "Tipp: Eintrag antippen → Detailinfos öffnen",
     scoreCalculation:      "Score-Berechnung",
     scorePrefix:           "Daten: ",
     scoreDataQualityNote:  "Wie verlässlich sind die zugrunde liegenden Quelldaten?",
@@ -319,7 +317,7 @@ const de: Translations = {
     mobileViewMap:     "Karte",
     resetToDefaults:   "Auf Standard zurücksetzen",
     resetDone:         "Zurückgesetzt",
-    parkingRadius:     "Parkplatz-Suchradius",
+    parkingRadius:     '„Rollstuhl-Parkplätze hier": Radius',
   },
 }
 

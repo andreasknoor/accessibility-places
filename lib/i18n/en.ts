@@ -44,6 +44,7 @@ const en: Translations = {
     locateButton:  "Detect location",
     locationError: "Location could not be determined.",
     nearbyIn:        (d: string) => `Near ${d}`,
+    parkingModeToggle:    "Wheelchair parking nearby",
     namePlaceholder:      "e.g. \"The Crown\" or \"Hilton\"",
     nameToggleShow:       "+ Filter results by name",
     nameToggleHide:       "Remove name filter",
@@ -51,10 +52,6 @@ const en: Translations = {
     placeSearchHint:   "Direct place search — currently DE, AT, CH only",
     placeNotFound:     "We couldn't find this place. Try a more specific name or add the city.",
     placeNoData:       (name: string) => `We found "${name}" but have no accessibility data for this place.`,
-    showParkingButton: (km: number) => {
-      const dist = km < 1 ? `${Math.round(km * 1000)} m` : `${(Math.round(km * 10) / 10).toFixed(1)} km`
-      return `Show nearby wheelchair parking (${dist})`
-    },
     welcomeTitle:     "Welcome to Accessible Places",
     welcomeSubtitle:  "Find accessible cafés, hotels, restaurants and more across Germany, Austria and Switzerland.",
     welcomeGpsHint:   "Tap 'Nearby' to instantly find accessible places around you.",
@@ -76,11 +73,12 @@ const en: Translations = {
     alwaysShowParking: "Always show wheelchair parking on map",
     sourceCountTooltip: (raw: number, final: number) => `Raw: ${raw} → after filter: ${final}`,
     criteriaItems: {
-      entrance:     "Wheelchair-accessible entrance",
-      toilet:       "Wheelchair-accessible toilet",
-      parking:      "Wheelchair-accessible parking",
-      seating:      "Wheelchair-accessible seating",
-      onlyVerified: "Only manually verified places",
+      entrance:      "Wheelchair-accessible entrance",
+      toilet:        "Wheelchair-accessible toilet",
+      parking:       "Wheelchair-accessible parking",
+      parkingNearby: "Also accept parking nearby",
+      seating:       "Wheelchair-accessible seating",
+      onlyVerified:  "Only manually verified places",
     },
   },
   results: {
@@ -135,7 +133,7 @@ const en: Translations = {
     vegetarian: "Vegetarian",
     vegan:      "Vegan",
     showOnMap:  "Show on map",
-    mapHint:    "Tip: tap an entry to show it on the map",
+    mapHint:    "Tip: tap an entry to open details",
     scoreCalculation:      "Score calculation",
     scorePrefix:           "Data: ",
     scoreDataQualityNote:  "How reliable is the underlying source data?",
@@ -319,7 +317,7 @@ const en: Translations = {
     mobileViewMap:     "Map",
     resetToDefaults:   "Reset to defaults",
     resetDone:         "Reset",
-    parkingRadius:     "Parking search radius",
+    parkingRadius:     "\"Wheelchair parking nearby\": radius",
   },
 } as const
 

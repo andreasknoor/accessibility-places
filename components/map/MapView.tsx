@@ -31,6 +31,9 @@ interface Props {
   showParking?:        boolean
   onToggleParking?:    () => void
   autoZoom?:           boolean
+  // Parkplatz-Modus: when true, hides place markers and shows GPS-radius
+  // parking spots only. Triggered from the ChatPanel toggle in nearby mode.
+  parkingFocusMode?:       boolean
 }
 
 const CONFIDENCE_COLORS = {
@@ -76,6 +79,7 @@ export default function MapView({
   showParking,
   onToggleParking,
   autoZoom = true,
+  parkingFocusMode = false,
 }: Props) {
   const t        = useTranslations()
   const mapRef   = useRef<HTMLDivElement>(null)
@@ -237,7 +241,8 @@ export default function MapView({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userLocation, mapReady])
 
-  // Parking spot markers — shown only when parkingSpots is a non-empty array
+  // Parking spot markers — shown only when parkingSpots is a non-empty array.
+  // In focus mode all spots render regardless of the showParking toggle.
   useEffect(() => {
     if (!mapInst.current || !L) return
     for (const m of parkingMarkersRef.current) m.remove()
@@ -310,9 +315,16 @@ export default function MapView({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parkingSpots, mapReady])
 
-  // Update markers when places change
+  // Update markers when places change. In Parkplatz-Modus the cluster is
+  // cleared so only parking spots and the user dot remain visible.
   useEffect(() => {
     if (!mapInst.current || !L || !placeClusterRef.current) return
+
+    if (parkingFocusMode) {
+      placeClusterRef.current.clearLayers()
+      markers.current.clear()
+      return
+    }
 
     // Remove stale markers
     const currentIds = new Set(places.map((p) => p.id))
@@ -404,7 +416,7 @@ export default function MapView({
     }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [places, selectedId, mapReady])
+  }, [places, selectedId, mapReady, parkingFocusMode])
 
   // Fit bounds to show all results — runs only when places changes, not on marker click.
   // Separating this from the selectedId effect prevents fitBounds from firing when the
@@ -412,12 +424,13 @@ export default function MapView({
   // Skipped entirely when autoZoom is disabled.
   useEffect(() => {
     if (!mapInst.current || !L || places.length === 0 || !autoZoom) return
+    if (parkingFocusMode) return  // focus-mode fit handled below
     const latlngs: [number, number][] = places.map((p) => [p.coordinates.lat, p.coordinates.lon])
     const ul = userLocationRef.current
     if (ul) latlngs.push([ul.lat, ul.lon])
     mapInst.current.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 15 })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [places, mapReady, autoZoom])
+  }, [places, mapReady, autoZoom, parkingFocusMode])
 
   // Pan/zoom to selected — also re-fires when panTrigger increments so that
   // clicking the same result after manually panning the map still re-centers.
@@ -434,8 +447,10 @@ export default function MapView({
 
   // Pan to center — only when no results (e.g. failed search, initial state, or parking-only view)
   // When parking spots are visible without venue results, fit the view to all spots + GPS location.
+  // In focus mode we always fit to spots regardless of how many places exist.
   useEffect(() => {
-    if (!mapInst.current || places.length > 0) return
+    if (!mapInst.current) return
+    if (!parkingFocusMode && places.length > 0) return
     const spots = parkingSpots ?? []
     if (spots.length > 0) {
       const latlngs: [number, number][] = spots.map((s) => [s.lat, s.lon])
@@ -447,7 +462,18 @@ export default function MapView({
     if (!center) return
     mapInst.current.setView([center.lat, center.lon], 13)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [center, parkingSpots, mapReady])
+  }, [center, parkingSpots, mapReady, parkingFocusMode])
+
+  // ESC exits fullscreen. Parkplatz-Modus has its own explicit toggle in the
+  // ChatPanel, so no keyboard shortcut is needed for it.
+  useEffect(() => {
+    if (!isFullscreen) return
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onToggleFullscreen()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [isFullscreen, onToggleFullscreen])
 
   // Re-measure and re-center whenever the map container becomes visible.
   // Called for both tab reveals and fullscreen toggles — both change the
@@ -500,19 +526,23 @@ export default function MapView({
         </Button>
       )}
 
+      {/* ── Toggle C: result-nearby parking visibility ── */}
+      {/* Disabled while Parkplatz-Modus is active because that mode overrides
+          map content with its own GPS-radius spot set. */}
       {onToggleParking && (
         <button
-          onClick={onToggleParking}
+          onClick={parkingFocusMode ? undefined : onToggleParking}
           role="switch"
           aria-checked={showParking}
+          aria-disabled={parkingFocusMode}
+          disabled={parkingFocusMode}
           title={t.map.toggleParking}
-          className="absolute bottom-3 left-3 z-[1000] flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium shadow-md border border-border bg-background/95 backdrop-blur-sm transition-colors hover:bg-muted"
+          className="absolute bottom-3 left-3 z-[1000] flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium shadow-md border border-border bg-background/95 backdrop-blur-sm transition-colors hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-background/95"
         >
           <span aria-hidden>🅿</span>
           <span className="hidden sm:inline">{t.map.nearbyParking}</span>
-          {/* Toggle track */}
-          <span className={`relative inline-flex h-4 w-7 shrink-0 rounded-full transition-colors ${showParking ? "bg-blue-600" : "bg-muted-foreground/40"}`}>
-            <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${showParking ? "translate-x-3" : "translate-x-0.5"}`} />
+          <span className={`relative inline-flex h-4 w-7 shrink-0 rounded-full transition-colors ${showParking || parkingFocusMode ? "bg-blue-600" : "bg-muted-foreground/40"}`}>
+            <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${showParking || parkingFocusMode ? "translate-x-3" : "translate-x-0.5"}`} />
           </span>
         </button>
       )}

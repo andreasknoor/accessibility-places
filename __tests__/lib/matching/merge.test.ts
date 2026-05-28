@@ -35,7 +35,7 @@ function makePlace(overrides: Partial<Place> = {}): Place {
 }
 
 const ALL_FILTERS: SearchFilters = {
-  entrance: true, toilet: true, parking: true, seating: false, onlyVerified: false, acceptUnknown: false, alwaysShowParking: false,
+  entrance: true, toilet: true, parking: true, parkingNearby: true, seating: false, onlyVerified: false, acceptUnknown: false, alwaysShowParking: false,
 }
 
 // ─── buildAttribute ──────────────────────────────────────────────────────────
@@ -330,8 +330,35 @@ describe("passesFilters", () => {
 
   it("ignores inactive filters", () => {
     const p = place(noAttr, noAttr, noAttr)
-    const noFilters = { entrance: false, toilet: false, parking: false, seating: false, onlyVerified: false, acceptUnknown: false, alwaysShowParking: false }
+    const noFilters = { entrance: false, toilet: false, parking: false, parkingNearby: true, seating: false, onlyVerified: false, acceptUnknown: false, alwaysShowParking: false }
     expect(passesFilters(p, noFilters)).toBe(true)
+  })
+
+  describe("parkingNearby sub-filter", () => {
+    function placeWithNearbyParking(): Place {
+      const attr = buildAttribute("osm", "yes", "yes", { nearbyOnly: true, nearbyParkingDistanceM: 180 })
+      return makePlace({ accessibility: { entrance: yesAttr, toilet: yesAttr, parking: attr } })
+    }
+    function placeWithOnSiteParking(): Place {
+      const attr = buildAttribute("osm", "yes", "yes", {})
+      return makePlace({ accessibility: { entrance: yesAttr, toilet: yesAttr, parking: attr } })
+    }
+
+    it("accepts nearbyOnly parking when parkingNearby=true (default)", () => {
+      expect(passesFilters(placeWithNearbyParking(), ALL_FILTERS)).toBe(true)
+    })
+
+    it("rejects nearbyOnly parking when parkingNearby=false", () => {
+      expect(passesFilters(placeWithNearbyParking(), { ...ALL_FILTERS, parkingNearby: false })).toBe(false)
+    })
+
+    it("still accepts on-site parking when parkingNearby=false", () => {
+      expect(passesFilters(placeWithOnSiteParking(), { ...ALL_FILTERS, parkingNearby: false })).toBe(true)
+    })
+
+    it("parkingNearby is irrelevant when the parking filter itself is off", () => {
+      expect(passesFilters(placeWithNearbyParking(), { ...ALL_FILTERS, parking: false, parkingNearby: false })).toBe(true)
+    })
   })
 
   it("onlyVerified rejects places without any verifiedRecently source", () => {

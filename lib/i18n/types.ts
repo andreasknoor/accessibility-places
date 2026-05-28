@@ -40,6 +40,7 @@ export interface Translations {
     locateButton:  string
     locationError: string
     nearbyIn:        (district: string) => string
+    parkingModeToggle:    string
     namePlaceholder:      string
     nameToggleShow:       string
     nameToggleHide:       string
@@ -47,7 +48,6 @@ export interface Translations {
     placeSearchHint:   string
     placeNotFound:     string
     placeNoData:       (name: string) => string
-    showParkingButton:  (km: number) => string
     welcomeTitle:       string
     welcomeSubtitle:    string
     welcomeGpsHint:     string
@@ -69,11 +69,12 @@ export interface Translations {
     alwaysShowParking:   string
     sourceCountTooltip:  (raw: number, final: number) => string
     criteriaItems: {
-      entrance:     string
-      toilet:       string
-      parking:      string
-      seating:      string
-      onlyVerified: string
+      entrance:      string
+      toilet:        string
+      parking:       string
+      parkingNearby: string
+      seating:       string
+      onlyVerified:  string
     }
   }
   results: {

@@ -19,6 +19,7 @@ import { SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
 import { useSettings, loadSettings } from "@/lib/settings"
+import { cn } from "@/lib/utils"
 import type { AppSettings } from "@/lib/settings"
 import type { Place, ParkingSpot, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug } from "@/lib/types"
 
@@ -29,6 +30,11 @@ const DEFAULT_FILTERS: SearchFilters = {
   entrance:         true,
   toilet:           true,
   parking:          false,
+  // Default `true`: when the parking filter is enabled, nearby-only
+  // enrichment counts as a pass — preserves the legacy behaviour before
+  // parkingNearby became an explicit toggle. Migrated saved prefs without
+  // this key fall through to this default.
+  parkingNearby:    true,
   seating:          false,
   onlyVerified:     false,
   acceptUnknown:    false,
@@ -78,9 +84,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
   const [settings, updateSettings] = useSettings()
 
-  const [filters,       setFilters]      = useState<SearchFilters>(() => loadSavedPrefs().filters)
-  const [sources,       setSources]      = useState<ActiveSources>(() => loadSavedPrefs().sources)
-  const [radiusKm,      setRadiusKm]     = useState<number>(() => loadSavedPrefs().radiusKm)
+  const [filters,       setFilters]      = useState<SearchFilters>(DEFAULT_FILTERS)
+  const [sources,       setSources]      = useState<ActiveSources>(DEFAULT_SOURCES)
+  const [radiusKm,      setRadiusKm]     = useState<number>(DEFAULT_RADIUS_KM)
   const [places,        setPlaces]       = useState<Place[]>([])
   const [parkingSpots,  setParkingSpots]  = useState<ParkingSpot[]>([])
   const [selectedId,    setSelectedId]   = useState<string | undefined>()
@@ -103,12 +109,23 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [resetKey,            setResetKey]            = useState(0)
   const [scrollToId,          setScrollToId]          = useState<string | undefined>()
   const [isParkingLoading,    setIsParkingLoading]    = useState(false)
-  const [hasParkingNearby,    setHasParkingNearby]    = useState(false)
+  // Parkplatz-Modus (proposal #6): focus the map on disabled-parking spots
+  // within parkingRadiusKm of the user's GPS coords. Per-session only.
+  const [parkingFocusMode,    setParkingFocusMode]    = useState(false)
   const [isFirstVisit,        setIsFirstVisit]        = useState(() => { try { return !localStorage.getItem("ap_visited") && !localStorage.getItem("ap_welcome_dismissed") } catch { return false } })
   const [locateTriggerKey,    setLocateTriggerKey]    = useState(0)
   const [hasGpsCoords,        setHasGpsCoords]        = useState(false)
   const [gpsCoords,           setGpsCoords]           = useState<{ lat: number; lon: number } | null>(null)
   const gpsCoordRef  = useRef<{ lat: number; lon: number } | null>(null)
+  // Snapshot of the result-nearby parkingSpots (500m server-derived) taken right
+  // before entering Parkplatz-Modus. Restored on exit so the toggle returns to
+  // its pre-focus content — focus mode loads GPS-radius spots that would
+  // otherwise overwrite the originals.
+  const parkingSpotsBackupRef = useRef<ParkingSpot[] | null>(null)
+  // Tracks whether the initial localStorage prefs have been loaded into state.
+  // The persist effect must skip until the load effect has fired (otherwise
+  // it would overwrite the user's saved prefs with defaults on first render).
+  const prefsLoadedRef = useRef(false)
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
   const selectTarget = useRef(
@@ -128,12 +145,28 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
   // Persist filter/source/radius preferences across sessions.
   // alwaysShowParking is intentionally excluded — it's a per-session display toggle.
+  // Guard: skip until the load effect below has fired so we don't overwrite
+  // the user's saved prefs with defaults on the first render.
   useEffect(() => {
+    if (!prefsLoadedRef.current) return
     try {
       const { alwaysShowParking: _ap, ...persistableFilters } = filters
       localStorage.setItem(PREFS_KEY, JSON.stringify({ filters: persistableFilters, sources, radiusKm }))
     } catch { /* ignore — localStorage unavailable (private mode, quota) */ }
   }, [filters, sources, radiusKm])
+
+  // Load persisted prefs from localStorage after hydration.
+  // Declared AFTER the persist effect so it executes second on mount —
+  // persist skips (prefsLoadedRef=false), then this sets the ref to true
+  // and applies the saved values; the subsequent re-render triggers persist
+  // with the correct state.
+  useEffect(() => {
+    const prefs = loadSavedPrefs()
+    prefsLoadedRef.current = true
+    setFilters(prefs.filters)
+    setSources(prefs.sources)
+    setRadiusKm(prefs.radiusKm)
+  }, [])
 
   const handleSearch = useCallback(async (query: string, radiusKmOverride?: number, coords?: { lat: number; lon: number }, nameHint?: string, filtersOverride?: Partial<SearchFilters>, sourcesOverride?: Partial<ActiveSources>, placeSearch?: boolean) => {
     // Cancel any in-flight search so its NDJSON stream cannot overwrite this one's state.
@@ -151,6 +184,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setParkingSpots([])
     setSelectedId(undefined)
     setFilterDebug(undefined)
+    setParkingFocusMode(false)
+    parkingSpotsBackupRef.current = null
     // Initialise per-source loading state for each active source so the
     // FilterPanel renders spinners immediately.
     const initial: Partial<Record<SourceId, SourceState>> = {}
@@ -293,6 +328,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setFilterDebug(undefined)
     setError(undefined)
     setSourceStates({})
+    setParkingFocusMode(false)
+    parkingSpotsBackupRef.current = null
   }, [])
 
   const handleSwitchMode = useCallback((mode: "text" | "nearby" | "place") => {
@@ -321,7 +358,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setError(undefined)
     setSourceStates({})
     setIsLoading(false)
-    setHasParkingNearby(false)
+    setParkingFocusMode(false)
+    parkingSpotsBackupRef.current = null
     const dismissed = (() => { try { return !!localStorage.getItem("ap_welcome_dismissed") } catch { return false } })()
     if (!dismissed) setIsFirstVisit(true)
     setChatMode(settings.defaultSearchMode ?? "nearby")
@@ -427,13 +465,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     gpsCoordRef.current = coords
     setGpsCoords(coords)
     setHasGpsCoords(true)
-    // Fire-and-forget: only show the parking button when spots actually exist nearby.
-    // Uses the real GPS coords from navigator.geolocation — accurate on mobile.
-    fetch(`/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=${settings.parkingRadiusKm}`)
-      .then(r => r.ok ? r.json() : [])
-      .then((spots: unknown[]) => { if (spots.length > 0) setHasParkingNearby(true) })
-      .catch(() => {})
-  }, [settings.parkingRadiusKm])
+  }, [])
 
   // Silently pre-fetch GPS when entering place-search mode so coords are
   // available immediately when the user submits (avoids mid-submit delay).
@@ -452,20 +484,40 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     )
   }, [chatMode])
 
-  const handleShowParking = useCallback(async (coords: { lat: number; lon: number }) => {
+  // Parkplatz-Modus enter: fetch spots for the user's GPS location, then activate
+  // the mode. Doesn't toggle alwaysShowParking (focus mode overrides display so
+  // the toggle state stays preserved for after-exit).
+  const handleEnterParkingFocus = useCallback(async () => {
+    const coords = gpsCoordRef.current ?? gpsCoords
+    if (!coords) return
+    track("parking_focus_enter")
+    // Snapshot the result-nearby spots so exit can restore them.
+    parkingSpotsBackupRef.current = parkingSpots
     setIsParkingLoading(true)
-    setSearchCenter(coords)
     try {
       const res = await fetch(`/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=${settings.parkingRadiusKm}`)
       if (res.ok) {
         const spots = await res.json()
         setParkingSpots(spots)
-        setFilters((f) => ({ ...f, alwaysShowParking: true }))
       }
     } catch { /* ignore — parking is non-fatal */ } finally {
       setIsParkingLoading(false)
+      setParkingFocusMode(true)
     }
-  }, [settings.parkingRadiusKm])
+  }, [gpsCoords, parkingSpots, settings.parkingRadiusKm])
+
+  const handleExitParkingFocus = useCallback(() => {
+    if (parkingSpotsBackupRef.current !== null) {
+      setParkingSpots(parkingSpotsBackupRef.current)
+      parkingSpotsBackupRef.current = null
+    }
+    setParkingFocusMode(false)
+  }, [])
+
+  const handleToggleParkingFocus = useCallback(() => {
+    if (parkingFocusMode) handleExitParkingFocus()
+    else handleEnterParkingFocus()
+  }, [parkingFocusMode, handleEnterParkingFocus, handleExitParkingFocus])
 
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     isDragging.current = true
@@ -489,7 +541,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
   }, [])
 
-  const visibleParkingSpots = filters.alwaysShowParking ? parkingSpots : []
+  // In Parkplatz-Modus we always show all loaded spots regardless of the toggle.
+  const visibleParkingSpots = parkingFocusMode || filters.alwaysShowParking ? parkingSpots : []
 
   const handleFilters = useCallback((next: SearchFilters) => {
     const activated = (["entrance", "toilet", "parking", "seating", "onlyVerified"] as const)
@@ -526,6 +579,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const hasParkingToggle = parkingSpots.length > 0 || places.some(
     (p) => (p.accessibility.parking.details as { nearbyOnly?: boolean } | undefined)?.nearbyOnly === true,
   )
+
+  // Parkplatz-Modus is only meaningful in Nearby mode with resolved GPS coords.
+  const canEnterParkingFocus = chatMode === "nearby" && (hasGpsCoords || gpsCoords !== null)
 
   // Mobile layout
   if (isMobile) {
@@ -565,11 +621,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         sortBy={sortBy}
         onSortChange={(s) => { setSortBy(s); updateSettings({ sortOrder: s }) }}
         defaultMobileView={settings.defaultMobileView}
-        onShowParking={handleShowParking}
         onGpsResolved={handleGpsResolved}
-        isParkingLoading={isParkingLoading}
-        hasParkingNearby={hasParkingNearby}
-        parkingRadiusKm={settings.parkingRadiusKm}
         isFirstVisit={isFirstVisit}
         onResetOnboarding={() => { try { localStorage.removeItem("ap_visited"); localStorage.removeItem("ap_welcome_dismissed") } catch { /* ignore */ }; setIsFirstVisit(true) }}
         onDismissWelcome={handleDismissWelcome}
@@ -580,37 +632,23 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onSwitchToPlace={() => handleSwitchMode("place")}
         chatMode={chatMode}
         onChatModeChange={handleModeChange}
+        parkingFocusMode={parkingFocusMode}
+        onToggleParkingFocus={canEnterParkingFocus ? handleToggleParkingFocus : undefined}
+        isParkingFocusLoading={isParkingLoading}
       />
     )
   }
 
-  // Fullscreen map overlay
-  if (isFullscreen) {
-    return (
-      <div className="fixed inset-0 z-50 bg-background">
-        <MapView
-          places={places}
-          parkingSpots={visibleParkingSpots}
-          center={searchCenter}
-          userLocation={chatMode === "nearby" ? searchCenter : undefined}
-          selectedId={selectedId}
-          onSelect={(p) => setSelectedId(p.id)}
-          isFullscreen
-          onToggleFullscreen={() => setIsFullscreen(false)}
-          showParking={filters.alwaysShowParking}
-          onToggleParking={hasParkingToggle ? handleToggleParking : undefined}
-          autoZoom={settings.autoZoom}
-        />
-      </div>
-    )
-  }
-
+  // Desktop layout. Fullscreen is implemented via CSS class swap on the MapView
+  // container — NOT a separate render path — so MapView stays mounted across
+  // toggles and parkingFocusMode survives. Header / ChatPanel / FilterPanel /
+  // ResultsList are hidden via `display: none` so their internal state survives.
   return (
     <>
     <Script src="https://tally.so/widgets/embed.js" strategy="lazyOnload" />
     <div className="flex flex-col h-screen overflow-hidden bg-background text-foreground">
       {/* ── Top bar ── */}
-      <header className="flex items-center justify-between px-5 py-3 border-b border-border bg-card shrink-0">
+      <header className={cn("flex items-center justify-between px-5 py-3 border-b border-border bg-card shrink-0", isFullscreen && "hidden")}>
         <button
           onClick={handleReset}
           className="flex items-center gap-2.5 hover:opacity-75 transition-opacity cursor-pointer"
@@ -631,30 +669,31 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       <h1 className="sr-only">{t.app.srHeading}</h1>
 
       {/* ── Chat / search bar ── */}
-      <ChatPanel
-        key={resetKey}
-        onSearch={(query, coords, nameHint) => handleSearch(query, undefined, coords, nameHint)}
-        onPlaceSearch={handlePlaceSearch}
-        isLoading={isLoading}
-        onModeChange={handleModeChange}
-        autoFocus
-        initialLocation={resetKey === 0 ? initialCity : undefined}
-        initialChipIdx={initialCategory && resetKey === 0 ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : settings.defaultChipIdx ?? undefined}
-        initialMode={chatMode}
-        onShowParking={handleShowParking}
-        onGpsResolved={handleGpsResolved}
-        isParkingLoading={isParkingLoading}
-        hasParkingNearby={hasParkingNearby}
-        parkingRadiusKm={settings.parkingRadiusKm}
-        skipAutoLocate={isFirstVisit}
-        hasGpsCoords={hasGpsCoords}
-        locateTrigger={locateTriggerKey}
-        biasCoords={searchCenter ?? gpsCoords ?? undefined}
-      />
+      <div className={cn(isFullscreen && "hidden")}>
+        <ChatPanel
+          key={resetKey}
+          onSearch={(query, coords, nameHint) => handleSearch(query, undefined, coords, nameHint)}
+          onPlaceSearch={handlePlaceSearch}
+          isLoading={isLoading}
+          onModeChange={handleModeChange}
+          autoFocus
+          initialLocation={resetKey === 0 ? initialCity : undefined}
+          initialChipIdx={initialCategory && resetKey === 0 ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : settings.defaultChipIdx ?? undefined}
+          initialMode={chatMode}
+          onGpsResolved={handleGpsResolved}
+          skipAutoLocate={isFirstVisit}
+          hasGpsCoords={hasGpsCoords}
+          locateTrigger={locateTriggerKey}
+          biasCoords={searchCenter ?? gpsCoords ?? undefined}
+          parkingFocusMode={parkingFocusMode}
+          onToggleParkingFocus={canEnterParkingFocus ? handleToggleParkingFocus : undefined}
+          isParkingFocusLoading={isParkingLoading}
+        />
+      </div>
 
       {/* ── Error banner ── */}
       {error && (
-        <div className="px-4 py-2 bg-destructive/10 text-destructive text-sm border-b border-destructive/20 shrink-0">
+        <div className={cn("px-4 py-2 bg-destructive/10 text-destructive text-sm border-b border-destructive/20 shrink-0", isFullscreen && "hidden")}>
           {error}
         </div>
       )}
@@ -665,7 +704,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           filterCollapsed ? (
             <button
               onClick={() => setFilterCollapsed(false)}
-              className="shrink-0 w-12 border-r border-border flex flex-col items-center justify-center gap-3 py-6 hover:bg-muted/50 transition-colors cursor-pointer"
+              className={cn("shrink-0 w-12 border-r border-border flex flex-col items-center justify-center gap-3 py-6 hover:bg-muted/50 transition-colors cursor-pointer", isFullscreen && "hidden")}
               aria-label={t.filters.title}
             >
               <span className="relative">
@@ -680,7 +719,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
           ) : (
-            <div className="relative flex flex-col shrink-0">
+            <div className={cn("relative flex flex-col shrink-0", isFullscreen && "hidden")}>
               <FilterPanel
                 filters={filters}
                 sources={sources}
@@ -704,7 +743,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         )}
 
         <div
-          className="shrink-0 border-r border-border flex flex-col min-h-0"
+          className={cn("shrink-0 border-r border-border flex flex-col min-h-0", isFullscreen && "hidden")}
           style={{ width: resultsWidth }}
         >
           <ResultsList
@@ -753,10 +792,14 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
         {/* Draggable divider */}
         <div
-          className="w-1.5 shrink-0 bg-border hover:bg-primary/40 cursor-col-resize transition-colors"
+          className={cn("w-1.5 shrink-0 bg-border hover:bg-primary/40 cursor-col-resize transition-colors", isFullscreen && "hidden")}
           onMouseDown={handleDividerMouseDown}
         />
-        <div className="flex-1 min-h-0 relative isolate">
+        <div className={cn(
+          isFullscreen
+            ? "fixed inset-0 z-50 bg-background"
+            : "flex-1 min-h-0 relative isolate",
+        )}>
           <MapView
             places={places}
             parkingSpots={visibleParkingSpots}
@@ -764,11 +807,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             userLocation={chatMode === "nearby" ? searchCenter : undefined}
             selectedId={selectedId}
             onSelect={(p) => { setSelectedId(p.id); setScrollToId(p.id) }}
-            isFullscreen={false}
-            onToggleFullscreen={() => setIsFullscreen(true)}
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={() => setIsFullscreen((v) => !v)}
             showParking={filters.alwaysShowParking}
             onToggleParking={hasParkingToggle ? handleToggleParking : undefined}
             autoZoom={settings.autoZoom}
+            parkingFocusMode={parkingFocusMode}
           />
         </div>
       </div>

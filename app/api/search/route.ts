@@ -185,6 +185,10 @@ export async function POST(req: NextRequest) {
     entrance:          Boolean(rawF.entrance),
     toilet:            Boolean(rawF.toilet),
     parking:           Boolean(rawF.parking),
+    // Default `true` when the client doesn't send the key: legacy clients
+    // (and any caller not yet aware of parkingNearby) get the previous
+    // behaviour — parking filter accepts nearby-only enrichment.
+    parkingNearby:     rawF.parkingNearby === undefined ? true : Boolean(rawF.parkingNearby),
     seating:           Boolean(rawF.seating),
     onlyVerified:      Boolean(rawF.onlyVerified),
     acceptUnknown:     Boolean(rawF.acceptUnknown),

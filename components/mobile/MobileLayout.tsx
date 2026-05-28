@@ -54,11 +54,10 @@ interface Props {
   sortBy:               "confidence" | "distance"
   onSortChange:         (s: "confidence" | "distance") => void
   defaultMobileView:    "results" | "map"
-  onShowParking?:       (coords: { lat: number; lon: number }) => void
   onGpsResolved?:       (coords: { lat: number; lon: number }) => void
-  isParkingLoading?:    boolean
-  hasParkingNearby?:    boolean
-  parkingRadiusKm?:     number
+  parkingFocusMode?:    boolean
+  onToggleParkingFocus?: () => void
+  isParkingFocusLoading?: boolean
   isFirstVisit?:        boolean
   onResetOnboarding?:   () => void
   onDismissWelcome?:    () => void
@@ -78,8 +77,9 @@ export default function MobileLayout({
   onReset, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
   showParking, onToggleParking, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
-  onShowParking, onGpsResolved, isParkingLoading, hasParkingNearby, parkingRadiusKm, isFirstVisit, onResetOnboarding, onDismissWelcome, hasGpsCoords, locateTrigger, onSwitchToText, onSwitchToPlace,
+  onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, hasGpsCoords, locateTrigger, onSwitchToText, onSwitchToPlace,
   chatMode, onChatModeChange, biasCoords,
+  parkingFocusMode, onToggleParkingFocus, isParkingFocusLoading,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -96,9 +96,13 @@ export default function MobileLayout({
   const handleSearch = (query: string, coords?: { lat: number; lon: number }, nameHint?: string) => { setActiveTab(defaultMobileView ?? "results"); onSearch(query, coords, nameHint) }
   const handleRerun = onRerun ? () => { setActiveTab(defaultMobileView ?? "results"); onRerun() } : undefined
   const handleExpandRadius = onExpandRadius ? () => { setActiveTab(defaultMobileView ?? "results"); onExpandRadius() } : undefined
-  // Parking always opens the map tab directly
-  const handleShowParking = onShowParking
-    ? (coords: { lat: number; lon: number }) => { setActiveTab("map"); onShowParking(coords) }
+  // When the user activates Parkplatz-Modus on mobile, jump to the map tab so
+  // the effect is visible immediately. Toggling off stays on the current tab.
+  const handleToggleParkingFocus = onToggleParkingFocus
+    ? () => {
+        if (!parkingFocusMode) setActiveTab("map")
+        onToggleParkingFocus()
+      }
     : undefined
   const t = useTranslations()
   const { locale } = useLocale()
@@ -162,7 +166,7 @@ export default function MobileLayout({
       <h1 className="sr-only">{t.app.srHeading}</h1>
 
       {/* ── Search bar (always visible) ── */}
-      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onShowParking={handleShowParking} onGpsResolved={onGpsResolved} isParkingLoading={isParkingLoading} hasParkingNearby={hasParkingNearby} parkingRadiusKm={parkingRadiusKm} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} locateTrigger={locateTrigger} biasCoords={biasCoords} />
+      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} locateTrigger={locateTrigger} biasCoords={biasCoords} parkingFocusMode={parkingFocusMode} onToggleParkingFocus={handleToggleParkingFocus} isParkingFocusLoading={isParkingFocusLoading} />
 
       {/* ── Error banner ── */}
       {error && (
@@ -278,6 +282,7 @@ export default function MobileLayout({
               showParking={showParking}
               onToggleParking={onToggleParking}
               autoZoom={settings.autoZoom}
+              parkingFocusMode={parkingFocusMode}
             />
           )}
         </div>

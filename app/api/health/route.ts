@@ -21,7 +21,7 @@ const SCENARIO = {
   radiusKm:   2,
   categories: ["cafe"] as SearchParams["categories"],
   filters: {
-    entrance: true, toilet: true, parking: false, seating: false,
+    entrance: true, toilet: true, parking: false, parkingNearby: true, seating: false,
     onlyVerified: false, acceptUnknown: true, alwaysShowParking: false,
   },
   minResults:    3,

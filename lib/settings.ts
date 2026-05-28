@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 
 export interface AppSettings {
   defaultSearchMode:  "text" | "nearby" | "place" | null  // null = no preference (app default)
@@ -55,7 +55,11 @@ function saveSettings(s: AppSettings): void {
 }
 
 export function useSettings() {
-  const [settings, setSettings] = useState<AppSettings>(loadSettings)
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS)
+
+  useEffect(() => {
+    setSettings(loadSettings())
+  }, [])
 
   const updateSettings = useCallback((patch: Partial<AppSettings>) => {
     setSettings((prev) => {

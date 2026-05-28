@@ -159,16 +159,34 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
         </h2>
         <div className="flex flex-col gap-2.5">
           {(["entrance", "toilet", "parking"] as const).map((key) => (
-            <label key={key} className="flex items-center gap-2.5 cursor-pointer">
-              <Checkbox
-                checked={filters[key]}
-                onCheckedChange={() => toggleFilter(key)}
-                id={`crit-${key}`}
-              />
-              <span className="text-sm text-muted-foreground leading-snug">
-                {t.filters.criteriaItems[key]}
-              </span>
-            </label>
+            <div key={key} className="flex flex-col gap-2.5">
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <Checkbox
+                  checked={filters[key]}
+                  onCheckedChange={() => toggleFilter(key)}
+                  id={`crit-${key}`}
+                />
+                <span className="text-sm text-muted-foreground leading-snug">
+                  {t.filters.criteriaItems[key]}
+                </span>
+              </label>
+              {/* Parking sub-toggle: only meaningful when the parking filter
+                  itself is active. Lets users opt out of accepting nearby-only
+                  enrichment as a valid match. */}
+              {key === "parking" && filters.parking && (
+                <label className="flex items-start gap-2.5 cursor-pointer pl-6">
+                  <Checkbox
+                    checked={filters.parkingNearby}
+                    onCheckedChange={() => toggleFilter("parkingNearby")}
+                    id="crit-parking-nearby"
+                    className="mt-0.5"
+                  />
+                  <span className="text-xs text-muted-foreground/80 leading-snug">
+                    {t.filters.criteriaItems.parkingNearby}
+                  </span>
+                </label>
+              )}
+            </div>
           ))}
 
           {/* Only manually verified — data-quality filter that requires at least
