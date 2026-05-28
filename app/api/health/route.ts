@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import type { Place, SearchParams, SourceId } from "@/lib/types"
-import { OVERPASS_ENDPOINTS } from "@/lib/config"
+import { OVERPASS_ENDPOINTS, PUBLIC_OVERPASS_ENDPOINTS } from "@/lib/config"
 import { startAdapterTasks } from "@/lib/adapters"
 import { findMatch } from "@/lib/matching/match"
 import {
@@ -137,6 +137,36 @@ async function checkPhoton(): Promise<PhotonReport> {
   }
 }
 
+// ─── Overpass endpoint probe ─────────────────────────────────────────────────
+// Sends a no-op query ([out:json][timeout:5];out 0;) to verify the endpoint
+// is alive and returns JSON (not an HTML overload page).
+
+type OverpassProbeResult =
+  | { endpoint: string; kind: "private" | "public"; ok: true;  durationMs: number }
+  | { endpoint: string; kind: "private" | "public"; ok: false; durationMs: number; error: string }
+
+const PUBLIC_OVERPASS_SET = new Set(PUBLIC_OVERPASS_ENDPOINTS)
+
+async function probeOverpassEndpoint(endpoint: string): Promise<OverpassProbeResult> {
+  const kind: "private" | "public" = PUBLIC_OVERPASS_SET.has(endpoint) ? "public" : "private"
+  const t0 = Date.now()
+  try {
+    const res = await fetch(endpoint, {
+      method:  "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body:    "data=[out:json][timeout:5];out+0;",
+      signal:  AbortSignal.timeout(10_000),
+    })
+    const durationMs = Date.now() - t0
+    const ct = res.headers.get("content-type") ?? ""
+    if (!res.ok)             return { endpoint, kind, ok: false, durationMs, error: `HTTP ${res.status}` }
+    if (ct.includes("html")) return { endpoint, kind, ok: false, durationMs, error: "HTML response (overloaded)" }
+    return { endpoint, kind, ok: true, durationMs }
+  } catch (err) {
+    return { endpoint, kind, ok: false, durationMs: Date.now() - t0, error: String(err) }
+  }
+}
+
 // ─── Route handler ───────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -164,6 +194,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   // Start Photon check in parallel (live mode only; mock skips all external calls)
   const photonPromise = checkPhotonFlag && !isMock ? checkPhoton() : Promise.resolve<PhotonReport>({ status: "skipped" })
+
+  // Probe results for all Overpass endpoints (live mode only)
+  let overpassProbes: OverpassProbeResult[] = []
 
   if (isMock) {
     // ── Mock mode: fixture data through the real pipeline, no HTTP calls ──
@@ -196,6 +229,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       signal:     AbortSignal.timeout(35_000),
     }
 
+    // Probe each Overpass endpoint individually in parallel with the adapter run
+    const probePromise = Promise.all(OVERPASS_ENDPOINTS.map(probeOverpassEndpoint))
+
     try {
       const tasks        = startAdapterTasks(params)
       const adapterResults = await Promise.all(tasks.map((t) => t.promise))
@@ -214,12 +250,18 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       adapterReport.osm = { status: "error", error: String(err), durationMs: Date.now() - t0 }
     }
 
-    // OSM must respond successfully — it's the always-on, quota-free source
-    const osmReport = adapterReport.osm
-    if (!osmReport || osmReport.status === "error") {
-      checks.push({ name: "osm_responded", ok: false, error: osmReport?.status === "error" ? (osmReport as { error: string }).error : "no response" })
-    } else {
-      checks.push({ name: "osm_responded", ok: true })
+    overpassProbes = await probePromise
+
+    // Evaluate probes: private failure → fails the check; public failure → warn only
+    for (const probe of overpassProbes) {
+      if (probe.ok) continue
+      if (probe.kind === "private") {
+        console.error(`[health] Private Overpass endpoint down: ${probe.endpoint} — ${probe.error}`)
+        checks.push({ name: `overpass_private_${probe.endpoint}`, ok: false, error: probe.error })
+      } else {
+        console.warn(`[health] Public Overpass mirror degraded: ${probe.endpoint} — ${probe.error}`)
+        // public mirror failures are logged but do NOT fail the health check
+      }
     }
   }
 
@@ -262,6 +304,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     },
     adapters: adapterReport,
     photon:   photonReport,
+    overpassEndpoints: isMock ? [] : overpassProbes.map(p => ({
+      endpoint: p.endpoint, kind: p.kind, ok: p.ok, durationMs: p.durationMs,
+      ...(p.ok ? {} : { error: (p as { error: string }).error }),
+    })),
     checks,
     ...(allOk ? {} : { topResults: results.slice(0, 3).map((p) => ({ name: p.name, confidence: p.overallConfidence, entrance: p.accessibility.entrance.value })) }),
   }

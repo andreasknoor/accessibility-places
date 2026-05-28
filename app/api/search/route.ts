@@ -7,7 +7,7 @@ import { mergePlaces, passesFilters, finalisePlaceConfidence, computeFilteredCon
 import { fetchOsmDisabledParking, type NearbyParkingFeature } from "@/lib/adapters/osm"
 import { enrichWithNearbyParking, haversineMeters, NEARBY_PARKING_DISPLAY_RADIUS_M } from "@/lib/matching/nearby-parking"
 import { parseQuery } from "@/lib/llm"
-import { NOMINATIM_ENDPOINT, RADIUS_MIN_KM, RADIUS_MAX_KM } from "@/lib/config"
+import { NOMINATIM_ENDPOINT, RADIUS_MIN_KM, RADIUS_MAX_KM, PUBLIC_OVERPASS_ENDPOINTS } from "@/lib/config"
 
 // ─── In-memory rate limiters (sliding-window, per IP) ───────────────────────
 // NOTE: these reset on each serverless cold start. For multi-instance
@@ -275,10 +275,7 @@ export async function POST(req: NextRequest) {
         // ENABLE_NEARBY_PARKING defaults to OFF: only the literal string "1"
         // turns it on. Failure of this fetch is non-fatal — main search
         // proceeds and parking values stay as the adapters reported them.
-        const PUBLIC_OVERPASS = new Set([
-          "https://overpass-api.de/api/interpreter",
-          "https://overpass.kumi.systems/api/interpreter",
-        ])
+        const PUBLIC_OVERPASS = new Set(PUBLIC_OVERPASS_ENDPOINTS)
 
         const nearbyParkingEnabled = process.env.ENABLE_NEARBY_PARKING === "1"
         const nearbyParkingPromise: Promise<NearbyParkingFeature[]> = nearbyParkingEnabled
