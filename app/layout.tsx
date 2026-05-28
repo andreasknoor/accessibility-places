@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import AnalyticsProvider from "@/components/AnalyticsProvider"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { LocaleProvider } from "@/lib/i18n"
 // Static metadata is built at compile time and can't follow the visitor's
@@ -87,6 +88,7 @@ export default function RootLayout({
           <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
         </LocaleProvider>
         <AnalyticsProvider />
+        <SpeedInsights />
       </body>
     </html>
   )
