@@ -317,7 +317,7 @@ const en: Translations = {
     mobileViewMap:     "Map",
     resetToDefaults:   "Reset to defaults",
     resetDone:         "Reset",
-    parkingRadius:     "Parking search radius",
+    parkingRadius:     "\"Wheelchair parking nearby\": radius",
   },
 } as const
 

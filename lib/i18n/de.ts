@@ -317,7 +317,7 @@ const de: Translations = {
     mobileViewMap:     "Karte",
     resetToDefaults:   "Auf Standard zurücksetzen",
     resetDone:         "Zurückgesetzt",
-    parkingRadius:     "Parkplatz-Suchradius",
+    parkingRadius:     '„Rollstuhl-Parkplätze hier": Radius',
   },
 }
 
