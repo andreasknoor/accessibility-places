@@ -2,7 +2,7 @@ import type { SourceId, Category } from "./types"
 
 // User-visible app version, shown in the header next to the subtitle.
 // Bump on every meaningful release.
-export const APP_VERSION = "3.53"
+export const APP_VERSION = "3.54"
 
 export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
   reisen_fuer_alle:    1.00,
@@ -78,6 +78,13 @@ export const OVERPASS_ENDPOINTS: string[] = _overpassEnv?.length
     ]
 
 export const OVERPASS_ENDPOINT = OVERPASS_ENDPOINTS[0]
+
+// The two well-known public Overpass mirrors — used to distinguish private
+// self-hosted endpoints from public ones in health checks and stats tracking.
+export const PUBLIC_OVERPASS_ENDPOINTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+]
 
 // Set NOMINATIM_ENDPOINT to point to a private Nominatim instance.
 // Trailing slash is stripped to keep URL construction consistent.
