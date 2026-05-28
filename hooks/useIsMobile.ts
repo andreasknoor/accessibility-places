@@ -1,26 +1,26 @@
 "use client"
 
-import { useSyncExternalStore } from "react"
+import { useState, useEffect } from "react"
 
 const QUERY = "(pointer: coarse), (max-width: 767px)"
 
-function subscribe(cb: () => void): () => void {
-  const mq = window.matchMedia(QUERY)
-  mq.addEventListener("change", cb)
-  return () => mq.removeEventListener("change", cb)
-}
-
-function getSnapshot(): boolean {
-  return window.matchMedia(QUERY).matches
-}
-
-// Server snapshot is always false (desktop). When the client snapshot differs
-// (mobile viewport), React reconciles without throwing a hydration error —
-// useSyncExternalStore is the React-endorsed pattern for this.
-function getServerSnapshot(): boolean {
-  return false
-}
-
+// Synchronous read in the initialiser avoids the desktop-then-mobile remount that
+// would otherwise throw away ChatPanel state restored from localStorage on first paint.
+// SSR returns false (the desktop default) — the inevitable one-frame mismatch is preferable
+// to a full subtree swap after mount.
 export function useIsMobile(): boolean {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia(QUERY).matches,
+  )
+
+  useEffect(() => {
+    const mq = window.matchMedia(QUERY)
+    if (mq.matches !== isMobile) setIsMobile(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mq.addEventListener("change", handler)
+    return () => mq.removeEventListener("change", handler)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return isMobile
 }
