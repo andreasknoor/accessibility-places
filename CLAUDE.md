@@ -54,7 +54,7 @@ Client reads this as a `ReadableStream` in `app/HomeClient.tsx` and updates stat
 
 ### Query parsing (`lib/llm.ts`)
 
-No LLM is used at runtime (`@anthropic-ai/sdk` is an unused leftover in `package.json`). `parseQuery()` deterministically extracts `locationQuery` (for Nominatim) and `categories` (from `CATEGORY_HINTS` regex match). `extractQuotedName()` pulls text inside any quote style (straight, curly, guillemets) and is used by `ChatPanel` to populate `nameHint` when the user wraps a name in quotes. The name filter is entirely separate — it is passed as `nameHint` in the API body and applied server-side after all adapter results are merged.
+No LLM is used at runtime (despite the name, `lib/llm.ts` does no model inference). `parseQuery()` deterministically extracts `locationQuery` (for Nominatim) and `categories` (from `CATEGORY_HINTS` regex match). `extractQuotedName()` pulls text inside any quote style (straight, curly, guillemets) and is used by `ChatPanel` to populate `nameHint` when the user wraps a name in quotes. The name filter is entirely separate — it is passed as `nameHint` in the API body and applied server-side after all adapter results are merged.
 
 ### Adapters (`lib/adapters/`)
 
@@ -213,7 +213,7 @@ In production, `raw` adapter response data is stripped from `sourceRecords` befo
 
 **Place photo** (`PlaceDebugSheet`) — loaded client-side with priority: (1) Google Places via `/api/image/google` (only if Google source is active); (2) OSM `image` tag — `File:…` → Wikimedia Commons `Special:FilePath`, `http…` → direct; (3) OSM `wikimedia_commons` tag; (4) Wikidata P18 claim (fetched from the Wikidata API using the OSM `wikidata` tag). All are best-effort; no photo shown if all fail.
 
-**Vercel Analytics** (`@vercel/analytics`) — `track()` fires custom events from `HomeClient`: `search` (mode, result_count), `search_no_results` (mode, radius_km), `place_not_found` (reason: `no_data` | `not_found`), `filter_apply` (criteria), `parking_shown`. No PII is sent.
+**Vercel Analytics** (`@vercel/analytics`) — `track()` fires custom events from `HomeClient`: `search` (mode, result_count), `search_no_results` (mode, radius_km), `place_not_found` (reason: `no_data` | `not_found`), `filter_apply` (criteria), `parking_shown`. No PII is sent. **Vercel Speed Insights** (`@vercel/speed-insights`) — the `<SpeedInsights />` component is mounted once in `app/layout.tsx` (root) for Core Web Vitals reporting.
 
 `GET /api/stats?token=SECRET` — token-protected adapter usage stats (requires `KV_REST_API_URL`). `lib/stats.ts` tracks per-source call counts, error counts, and response time (min/max/avg) in Upstash Redis using hour-granularity keys (`stats:h:<metric>:<sourceId>:<YYYY-MM-DDTHH>`) with a 90-day TTL. `trackCall`, `trackError`, and `trackDuration` are called fire-and-forget from `app/api/search/route.ts` after all adapters complete — **not** from `safeRun`. This keeps `safeRun` and `fetchAllSources` side-effect-free so they can be called safely from ISR pages (a `no-store` Upstash fetch inside an ISR page would demote it to dynamic at runtime).
 
