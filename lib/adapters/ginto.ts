@@ -147,7 +147,10 @@ async function fetchPage(
 
 export async function fetchGinto(params: SearchParams): Promise<Place[]> {
   const apiKey = process.env.GINTO_API_KEY
-  if (!apiKey) throw new Error("GINTO_API_KEY not set")
+  if (!apiKey) {
+    console.warn("[adapter:ginto] No API key — skipping")
+    return []
+  }
 
   // Build Ginto category list from requested categories (deduplicated)
   const gintoCategories = params.categories?.length

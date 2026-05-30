@@ -24,6 +24,7 @@ jobs:
       - name: Run validity check
         run: npx tsx scripts/check-seo-validity.ts
         env:
+          OVERPASS_ENDPOINTS:          ${{ secrets.OVERPASS_ENDPOINTS }}
           ACCESSIBILITY_CLOUD_API_KEY: ${{ secrets.ACCESSIBILITY_CLOUD_API_KEY }}
           REISEN_FUER_ALLE_API_KEY:    ${{ secrets.REISEN_FUER_ALLE_API_KEY }}
           REISEN_FUER_ALLE_API_BASE:   ${{ secrets.REISEN_FUER_ALLE_API_BASE }}

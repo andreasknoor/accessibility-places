@@ -41,7 +41,7 @@ export function startAdapterTasks(
         const { places, winnerEndpoint } = await fetchOsm(params)
         return { sourceId: "osm", places, durationMs: Date.now() - t0, winnerEndpoint }
       } catch (err) {
-        console.error("[adapter:osm]", err)
+        console.error("[adapter:osm] Error:", err instanceof Error ? err.message : String(err))
         return { sourceId: "osm", places: [], error: String(err), durationMs: Date.now() - t0 }
       }
     })() })

@@ -10,16 +10,39 @@
  *   - The file is only written when the content actually changed.
  */
 
-import { CITIES, SEO_CATEGORY_SLUGS } from "../lib/cities"
-import { fetchPlacesForSeoPage }       from "../lib/seo-search"
 import { existsSync, readFileSync, writeFileSync, renameSync, mkdirSync } from "fs"
 import { join }                        from "path"
+import { CITIES, SEO_CATEGORY_SLUGS } from "../lib/cities"
+
+// Load .env.local BEFORE importing lib/seo-search (which transitively loads
+// lib/config.ts). lib/config.ts caches OVERPASS_ENDPOINTS as a module-level
+// constant at import time — so process.env must be populated first.
+// Static ESM imports are hoisted and execute before this block, which is why
+// lib/seo-search is imported dynamically inside main() instead.
+const envPath = join(process.cwd(), ".env.local")
+if (existsSync(envPath)) {
+  for (const line of readFileSync(envPath, "utf-8").split("\n")) {
+    if (!line || line.startsWith("#")) continue
+    const eq = line.indexOf("=")
+    if (eq < 0) continue
+    const key = line.slice(0, eq).trim()
+    const val = line.slice(eq + 1).trim().replace(/^["']|["']$/g, "")
+    if (key && !(key in process.env)) process.env[key] = val
+  }
+}
+
+// Parking enrichment is irrelevant for validity checks and doubles Overpass load.
+process.env.ENABLE_NEARBY_PARKING = "0"
 
 const VALIDITY_PATH = join(process.cwd(), "lib/generated/seo-validity.json")
 const CONCURRENCY   = 2
 const DELAY_MS      = 2000
 
 async function main() {
+  // Dynamic import runs after the env-loading block above, so lib/config.ts
+  // sees the correct OVERPASS_ENDPOINTS value when it initialises.
+  const { fetchPlacesForSeoPage } = await import("../lib/seo-search")
+
   const existingRaw: Record<string, unknown> = existsSync(VALIDITY_PATH)
     ? JSON.parse(readFileSync(VALIDITY_PATH, "utf-8"))
     : {}
@@ -45,21 +68,23 @@ async function main() {
       try {
         const places = await fetchPlacesForSeoPage(city.lat, city.lon, category)
         const hasData = places.length > 0
+        // Always trust a completed fetch — safeRun inside fetchPlacesForSeoPage
+        // catches adapter errors and returns [], so reaching here means the
+        // pipeline ran cleanly. Only actual throws (caught below) indicate a
+        // transient failure worth preserving the previous value for.
         if (existing[key] === true && !hasData) {
-          // Previously confirmed but now returns 0 results. Could be a transient
-          // Overpass timeout (safeRun swallows ETIMEDOUT and returns []). Keep true
-          // to avoid removing confirmed pages from the sitemap on a bad day.
-          console.warn(`  ⚠ ${key}: was confirmed, now 0 places — keeping true (possible timeout)`)
-        } else {
-          updated[key] = hasData
+          console.warn(`  ⚠ ${key}: was confirmed, now 0 places — updating to false`)
         }
+        updated[key] = hasData
         successCount++
         const status = hasData ? "✓" : "✗"
         console.log(`  ${status} ${key} (${places.length} places)`)
       } catch (err) {
+        // fetchPlacesForSeoPage threw — genuinely transient (bug, network split,
+        // etc.). Keep the existing value so a bad day doesn't gut the sitemap.
         failCount++
         const kept = existing[key] ?? "?"
-        console.warn(`  ? ${key} — check failed, keeping "${kept}"`)
+        console.warn(`  ? ${key} — check threw, keeping "${kept}"`)
       }
     }))
 
