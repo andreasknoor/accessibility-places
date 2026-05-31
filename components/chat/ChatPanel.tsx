@@ -115,7 +115,13 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const suggestAbortRef      = useRef<AbortController>(undefined)
   const nameDebounceRef      = useRef<ReturnType<typeof setTimeout>>(undefined)
   const nameAbortRef         = useRef<AbortController>(undefined)
-  const skipNameSuggestRef   = useRef(false)
+  // Holds the place-name set programmatically by selecting a name suggestion.
+  // Name autocomplete is suppressed while `name` equals this value — this
+  // survives the biasCoords/locale re-renders that fire after the place search
+  // completes (setSearchCenter → biasCoords change), which a one-shot flag would
+  // miss, causing the dropdown to re-open. Cleared when the user types. Same
+  // rationale as restoredLocRef for the location field.
+  const selectedNameRef      = useRef("")
   const skipSuggestRef       = useRef(false)
   const locatingRef          = useRef(false)
   const watchIdRef           = useRef<number | null>(null)
@@ -260,7 +266,13 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // Fetch place-name suggestions — only active in "place" mode; in text mode the
   // name field is a filter and Photon autocomplete would be confusing/redundant.
   useEffect(() => {
-    if (skipNameSuggestRef.current) { skipNameSuggestRef.current = false; return }
+    // Suppress while name matches a just-selected suggestion — survives the
+    // biasCoords re-render fired by setSearchCenter after the search completes.
+    if (name && name === selectedNameRef.current) {
+      setNameSuggestions([])
+      setShowNameSuggestions(false)
+      return
+    }
     if (mode !== "place" || location.trim() || name.length < 2) {
       setNameSuggestions([])
       setShowNameSuggestions(false)
@@ -292,6 +304,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     onModeChange?.(next)
     setShowNameField(false)
     setName("")
+    selectedNameRef.current = ""
     setNameSuggestions([])
     setShowNameSuggestions(false)
     if (next !== "nearby") {
@@ -357,7 +370,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   }
 
   function selectNameSuggestion(s: { display: string; name: string; lat: number | null; lon: number | null }) {
-    skipNameSuggestRef.current = true
+    selectedNameRef.current = s.name
     setName(s.name)
     setNameSuggestions([])
     setShowNameSuggestions(false)
@@ -720,7 +733,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             <div className="relative flex-1">
               <input
                 value={name}
-                onChange={(e) => { setName(e.target.value); setNameHighlightedIdx(-1) }}
+                onChange={(e) => { selectedNameRef.current = ""; setName(e.target.value); setNameHighlightedIdx(-1) }}
                 onKeyDown={(e) => {
                   if (showNameSuggestions && nameSuggestions.length > 0) {
                     if (e.key === "ArrowDown") { e.preventDefault(); setNameHighlightedIdx((i) => Math.min(i + 1, nameSuggestions.length - 1)); return }
