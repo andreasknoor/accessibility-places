@@ -278,11 +278,11 @@ export async function POST(req: NextRequest) {
         const PUBLIC_OVERPASS = new Set(PUBLIC_OVERPASS_ENDPOINTS)
 
         const nearbyParkingEnabled = process.env.ENABLE_NEARBY_PARKING === "1"
-        // Weak "accessible" parking tier (display-only). Requires its own flag so
-        // it can be tested independently and never affects enrichment/filters.
-        const accessibleTierEnabled = process.env.ENABLE_ACCESSIBLE_PARKING_TIER === "1"
+        // Always include the weak "accessible" tier in the parking fetch. It is
+        // display-only (never enriches/filters) and gated client-side by the
+        // showWeakParking setting. SEO opts out via the function-arg default.
         const nearbyParkingPromise: Promise<NearbyParkingFeature[]> = nearbyParkingEnabled
-          ? fetchOsmDisabledParking({ lat: geo.lat, lon: geo.lon }, radiusKm, signal, accessibleTierEnabled).then(
+          ? fetchOsmDisabledParking({ lat: geo.lat, lon: geo.lon }, radiusKm, signal, true).then(
               ({ features, winnerEndpoint, durationMs }) => {
                 const parkingSrc = PUBLIC_OVERPASS.has(winnerEndpoint) ? "osm_parking_public" : "osm_parking_private"
                 trackCall(parkingSrc)
@@ -406,9 +406,7 @@ export async function POST(req: NextRequest) {
                 f.tier !== "accessible" &&
                 nearbyOnlyPlaces.some((p) => haversineMeters(p.coordinates, f) <= NEARBY_PARKING_DISPLAY_RADIUS_M)
               )
-              const accessibleSpots = accessibleTierEnabled
-                ? parkingFeatures.filter((f) => f.tier === "accessible")
-                : []
+              const accessibleSpots = parkingFeatures.filter((f) => f.tier === "accessible")
               return [...disabledSpots, ...accessibleSpots]
                 .map((f) => ({
                   lat:      f.lat,
