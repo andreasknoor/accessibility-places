@@ -58,6 +58,7 @@ interface Props {
   parkingFocusMode?:    boolean
   onToggleParkingFocus?: () => void
   isParkingFocusLoading?: boolean
+  parkingFocusHint?:    string | null
   isFirstVisit?:        boolean
   onResetOnboarding?:   () => void
   onDismissWelcome?:    () => void
@@ -79,7 +80,7 @@ export default function MobileLayout({
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
   onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, hasGpsCoords, locateTrigger, onSwitchToText, onSwitchToPlace,
   chatMode, onChatModeChange, biasCoords,
-  parkingFocusMode, onToggleParkingFocus, isParkingFocusLoading,
+  parkingFocusMode, onToggleParkingFocus, isParkingFocusLoading, parkingFocusHint,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -166,7 +167,7 @@ export default function MobileLayout({
       <h1 className="sr-only">{t.app.srHeading}</h1>
 
       {/* ── Search bar (always visible) ── */}
-      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} locateTrigger={locateTrigger} biasCoords={biasCoords} parkingFocusMode={parkingFocusMode} onToggleParkingFocus={handleToggleParkingFocus} isParkingFocusLoading={isParkingFocusLoading} />
+      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} locateTrigger={locateTrigger} biasCoords={biasCoords} parkingFocusMode={parkingFocusMode} onToggleParkingFocus={handleToggleParkingFocus} isParkingFocusLoading={isParkingFocusLoading} parkingFocusHint={parkingFocusHint} />
 
       {/* ── Error banner ── */}
       {error && (
