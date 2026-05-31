@@ -240,6 +240,14 @@ export interface FilterDebug {
   toiletValueCounts: Record<A11yValue, number>
 }
 
+// Quality tier of a parking marker shown on the map.
+// "disabled"   = dedicated/reserved disabled spaces (capacity:disabled>0,
+//                parking_space=disabled, …) — the strong, verified signal.
+// "accessible" = amenity=parking tagged wheelchair=yes WITHOUT any reserved-space
+//                tag — a weak signal: the lot is wheelchair-accessible but has no
+//                reserved bays. Display-only; never enriches a venue's parking value.
+export type ParkingTier = "disabled" | "accessible"
+
 export interface ParkingSpot {
   lat:       number
   lon:       number
@@ -247,6 +255,8 @@ export interface ParkingSpot {
   fee?:      string   // "yes" | "no" | raw charge string
   maxstay?:  string   // e.g. "2 hours"
   access?:   string   // "private" | "customers" | …
+  // Absent on legacy payloads → treated as "disabled" by consumers.
+  tier?:     ParkingTier
 }
 
 export interface SearchResult {

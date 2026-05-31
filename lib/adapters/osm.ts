@@ -6,6 +6,7 @@ import type {
   EntranceDetails,
   ToiletDetails,
   ParkingDetails,
+  ParkingTier,
 } from "../types"
 import { buildAttribute, emptyAttribute } from "../matching/merge"
 import { OVERPASS_ENDPOINTS, CATEGORY_OSM_TAGS } from "../config"
@@ -376,6 +377,11 @@ export interface NearbyParkingFeature {
   fee?:       string
   maxstay?:   string
   access?:    string
+  // "disabled" = reserved disabled spaces; "accessible" = wheelchair=yes lot
+  // without reserved bays (weak tier, display-only). Inferred from tags.
+  // parseFeatures always sets it; optional only so test/legacy literals omit it
+  // (absent is treated as "disabled" by all consumers).
+  tier?:      ParkingTier
 }
 
 // Parking enrichment is capped at 25 km regardless of the main search radius.
@@ -387,6 +393,11 @@ export async function fetchOsmDisabledParking(
   location: { lat: number; lon: number },
   radiusKm: number,
   signal?: AbortSignal,
+  // When true, additionally fetch the weak "accessible" tier: amenity=parking
+  // lots tagged wheelchair=yes but WITHOUT any reserved-space tag (and excluding
+  // pure street-side parking). Display-only — never used for venue enrichment.
+  // Default false so callers that don't opt in (e.g. SEO pages) stay tier-A only.
+  includeAccessibleTier = false,
 ): Promise<{ features: NearbyParkingFeature[]; winnerEndpoint: string; durationMs: number }> {
   const r = Math.min(radiusKm + 0.5, NEARBY_PARKING_MAX_RADIUS_KM) * 1000
   const { lat, lon } = location
@@ -403,6 +414,16 @@ export async function fetchOsmDisabledParking(
   // scanning them causes disproportionate Overpass load → 504s.
   // amenity=parking_space covers both node and way: iD editor creates polygon
   // ways for individual spaces when drawn as areas, not just point nodes.
+  // Weak "accessible" tier (opt-in): amenity=parking lots that are merely tagged
+  // wheelchair=yes, without any reserved-space marker, and excluding pure
+  // street-side / lane parking (which is unspecific kerbside parking, not a lot).
+  // way only — these are polygons like the other amenity=parking clauses.
+  const accessibleClause = includeAccessibleTier
+    ? `way(around:${r},${lat},${lon})[amenity=parking][wheelchair=yes]` +
+      `[!"capacity:disabled"][!"capacity:wheelchair"]["disabled"!="designated"]` +
+      `["parking"!~"street_side|lane"];`
+    : ""
+
   const query = `[out:json][timeout:30];(` +
     `way(around:${r},${lat},${lon})[amenity=parking]["capacity:disabled"];` +
     `way(around:${r},${lat},${lon})[amenity=parking]["capacity:wheelchair"];` +
@@ -411,6 +432,7 @@ export async function fetchOsmDisabledParking(
     `node(around:${r},${lat},${lon})[amenity=parking_space][wheelchair=designated];` +
     `way(around:${r},${lat},${lon})[amenity=parking_space][parking_space=disabled];` +
     `way(around:${r},${lat},${lon})[amenity=parking_space][wheelchair=designated];` +
+    accessibleClause +
     `);out 2000 center tags;`
 
   const headers = {
@@ -439,7 +461,18 @@ export async function fetchOsmDisabledParking(
       const fee     = tags["fee"]     || undefined
       const maxstay = tags["maxstay"] || undefined
       const access  = tags["access"]  || undefined
-      out.push({ lat: featLat, lon: featLon, capacity: cap > 0 ? cap : undefined, fee, maxstay, access })
+      // Tier inference from tags (the Overpass union doesn't reveal which clause
+      // matched): a feature is the weak "accessible" tier only when it is an
+      // amenity=parking lot tagged wheelchair=yes with NO reserved-space marker.
+      // Everything else — capacity:disabled, parking_space=disabled,
+      // *=designated — is the strong "disabled" tier.
+      const isAccessibleTier =
+        tags["amenity"] === "parking" &&
+        tags["wheelchair"] === "yes" &&
+        !hasCapacityTag &&
+        tags["disabled"] !== "designated"
+      const tier: ParkingTier = isAccessibleTier ? "accessible" : "disabled"
+      out.push({ lat: featLat, lon: featLon, capacity: cap > 0 ? cap : undefined, fee, maxstay, access, tier })
     }
     return out
   }

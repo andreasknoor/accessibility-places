@@ -57,6 +57,26 @@ describe("enrichWithNearbyParking", () => {
     expect(parkingDetails(place).nearbyParkingDistanceM).toBeLessThan(70)
   })
 
+  it("ignores weak 'accessible' tier features — they never enrich a venue", () => {
+    const place   = makePlace()
+    // Within range, but tier "accessible" (wheelchair=yes lot, no reserved bays).
+    const feature = { lat: place.coordinates.lat + 0.0005, lon: place.coordinates.lon, tier: "accessible" as const }
+    enrichWithNearbyParking([place], [feature])
+
+    expect(place.accessibility.parking.value).toBe("unknown")
+    expect(parkingDetails(place).nearbyOnly).toBeUndefined()
+  })
+
+  it("still enriches from a 'disabled' tier feature when a weak one is also nearby", () => {
+    const place    = makePlace()
+    const weak     = { lat: place.coordinates.lat + 0.0003, lon: place.coordinates.lon, tier: "accessible" as const }
+    const reserved = { lat: place.coordinates.lat + 0.0006, lon: place.coordinates.lon, tier: "disabled" as const }
+    enrichWithNearbyParking([place], [weak, reserved])
+
+    expect(place.accessibility.parking.value).toBe("yes")
+    expect(parkingDetails(place).nearbyOnly).toBe(true)
+  })
+
   it("leaves parking untouched when the nearest feature is past the threshold", () => {
     const place   = makePlace()
     const feature = { lat: place.coordinates.lat + 0.005, lon: place.coordinates.lon } // ~556 m north

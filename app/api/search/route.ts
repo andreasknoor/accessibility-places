@@ -278,8 +278,11 @@ export async function POST(req: NextRequest) {
         const PUBLIC_OVERPASS = new Set(PUBLIC_OVERPASS_ENDPOINTS)
 
         const nearbyParkingEnabled = process.env.ENABLE_NEARBY_PARKING === "1"
+        // Weak "accessible" parking tier (display-only). Requires its own flag so
+        // it can be tested independently and never affects enrichment/filters.
+        const accessibleTierEnabled = process.env.ENABLE_ACCESSIBLE_PARKING_TIER === "1"
         const nearbyParkingPromise: Promise<NearbyParkingFeature[]> = nearbyParkingEnabled
-          ? fetchOsmDisabledParking({ lat: geo.lat, lon: geo.lon }, radiusKm, signal).then(
+          ? fetchOsmDisabledParking({ lat: geo.lat, lon: geo.lon }, radiusKm, signal, accessibleTierEnabled).then(
               ({ features, winnerEndpoint, durationMs }) => {
                 const parkingSrc = PUBLIC_OVERPASS.has(winnerEndpoint) ? "osm_parking_public" : "osm_parking_private"
                 trackCall(parkingSrc)
@@ -385,26 +388,38 @@ export async function POST(req: NextRequest) {
             location:      { lat: geo.lat, lon: geo.lon },
             locationLabel: geo.label,
             filterDebug,
-            // Only include parking markers that are within NEARBY_PARKING_DISPLAY_RADIUS_M
-            // of a result whose parking was auto-enriched (nearbyOnly: true).
-            // The client toggle controls visibility; the server always sends the filtered set.
+            // Parking markers sent to the client. Two tiers:
+            //  • "disabled" (strong): only spots within NEARBY_PARKING_DISPLAY_RADIUS_M
+            //    of a result whose parking was auto-enriched (nearbyOnly: true) —
+            //    anchored to displayed venues, as before.
+            //  • "accessible" (weak): ALL fetched accessible-tier lots in the area,
+            //    independent of any anchor (variant 2). Needed so the tier shows in
+            //    Parkplatz-Modus too, where there are no venue anchors.
+            // The client's showWeakParking setting controls visibility of the weak
+            // tier; the server always sends the same set (mirrors alwaysShowParking).
             parkingSpots:  (() => {
               const nearbyOnlyPlaces = filtered.filter((p) => {
                 const det = p.accessibility.parking.details as { nearbyOnly?: boolean } | undefined
                 return det?.nearbyOnly === true
               })
-              return parkingFeatures.filter((f) =>
+              const disabledSpots = parkingFeatures.filter((f) =>
+                f.tier !== "accessible" &&
                 nearbyOnlyPlaces.some((p) => haversineMeters(p.coordinates, f) <= NEARBY_PARKING_DISPLAY_RADIUS_M)
               )
-            })()
-              .map((f) => ({
-                lat:      f.lat,
-                lon:      f.lon,
-                ...(f.capacity != null ? { capacity: f.capacity } : {}),
-                ...(f.fee      != null ? { fee:      f.fee }      : {}),
-                ...(f.maxstay  != null ? { maxstay:  f.maxstay }  : {}),
-                ...(f.access   != null ? { access:   f.access }   : {}),
-              })),
+              const accessibleSpots = accessibleTierEnabled
+                ? parkingFeatures.filter((f) => f.tier === "accessible")
+                : []
+              return [...disabledSpots, ...accessibleSpots]
+                .map((f) => ({
+                  lat:      f.lat,
+                  lon:      f.lon,
+                  tier:     f.tier,
+                  ...(f.capacity != null ? { capacity: f.capacity } : {}),
+                  ...(f.fee      != null ? { fee:      f.fee }      : {}),
+                  ...(f.maxstay  != null ? { maxstay:  f.maxstay }  : {}),
+                  ...(f.access   != null ? { access:   f.access }   : {}),
+                }))
+            })(),
           },
         })
         controller.close()

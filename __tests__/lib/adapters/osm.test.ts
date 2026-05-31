@@ -587,6 +587,46 @@ describe("fetchOsmDisabledParking", () => {
     expect(f.lat).toBe(52.530)
   })
 
+  it("tags capacity:disabled features as the strong 'disabled' tier", async () => {
+    const element = {
+      type: "way", id: 10, center: { lat: 52.52, lon: 13.405 },
+      tags: { amenity: "parking", "capacity:disabled": "3", wheelchair: "yes" },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true, json: async () => ({ elements: [element] }),
+    }))
+    const { features: [f] } = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1, undefined, true)
+    expect(f.tier).toBe("disabled")
+  })
+
+  it("tags a wheelchair=yes lot WITHOUT reserved bays as the weak 'accessible' tier", async () => {
+    const element = {
+      type: "way", id: 11, center: { lat: 52.52, lon: 13.405 },
+      tags: { amenity: "parking", wheelchair: "yes" },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true, json: async () => ({ elements: [element] }),
+    }))
+    const { features: [f] } = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1, undefined, true)
+    expect(f.tier).toBe("accessible")
+  })
+
+  it("only emits the accessible-tier Overpass clause when includeAccessibleTier is true", async () => {
+    let capturedBody = ""
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((_url: unknown, init: RequestInit) => {
+      capturedBody = init?.body as string
+      return Promise.resolve({ ok: true, json: async () => ({ elements: [] }) })
+    }))
+    await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1)
+    const without = decodeURIComponent(capturedBody.replace(/^data=/, ""))
+    expect(without).not.toContain("[wheelchair=yes]")
+
+    await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1, undefined, true)
+    const withTier = decodeURIComponent(capturedBody.replace(/^data=/, ""))
+    expect(withTier).toContain("[wheelchair=yes]")
+    expect(withTier).toContain(`["parking"!~"street_side|lane"]`)
+  })
+
   it("returns empty array on non-200 response and tries next endpoint", async () => {
     let calls = 0
     vi.stubGlobal("fetch", vi.fn().mockImplementation(() => {

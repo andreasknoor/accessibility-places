@@ -168,6 +168,12 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
                 onChange={(v) => onUpdate({ alwaysShowParking: v })}
               />
             </Row>
+            <Row label={ts.showWeakParking} hint={ts.showWeakParkingHint}>
+              <Toggle
+                value={settings.showWeakParking}
+                onChange={(v) => onUpdate({ showWeakParking: v })}
+              />
+            </Row>
             <Row label={ts.parkingRadius}>
               <SliderInput
                 min={0.05}

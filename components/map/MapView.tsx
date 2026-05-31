@@ -7,7 +7,7 @@ import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS } from "@/lib/config"
 import { confidenceLabel } from "@/lib/matching/merge"
 import { haversineMetres } from "@/lib/matching/match"
-import type { Place, ParkingSpot } from "@/lib/types"
+import type { Place, ParkingSpot, ParkingTier } from "@/lib/types"
 
 // Leaflet is ESM-only — loaded dynamically to avoid SSR issues
 let L: typeof import("leaflet") | null = null
@@ -34,6 +34,9 @@ interface Props {
   // Parkplatz-Modus: when true, hides place markers and shows GPS-radius
   // parking spots only. Triggered from the ChatPanel toggle in nearby mode.
   parkingFocusMode?:       boolean
+  // Whether the weak "accessible" parking tier is enabled — drives the legend
+  // (the yellow entry is only relevant when those markers can appear).
+  showWeakParking?:        boolean
 }
 
 const CONFIDENCE_COLORS = {
@@ -46,10 +49,18 @@ function markerColor(confidence: number): string {
   return CONFIDENCE_COLORS[confidenceLabel(confidence)]
 }
 
-function svgParkingMarker() {
+// Parking marker colours per tier. The weak "accessible" tier uses amber with a
+// DARK "P" — white-on-amber fails contrast, and this is an accessibility app.
+const PARKING_TIER_STYLE: Record<ParkingTier, { fill: string; text: string }> = {
+  disabled:   { fill: "#1d4ed8", text: "white"   }, // blue-700, white P (as before)
+  accessible: { fill: "#eab308", text: "#1f2937" }, // yellow-500, dark P
+}
+
+function svgParkingMarker(tier: ParkingTier = "disabled") {
+  const { fill, text } = PARKING_TIER_STYLE[tier]
   return `<svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 26 26">
-    <rect x="1" y="1" width="24" height="24" rx="5" fill="#1d4ed8" stroke="white" stroke-width="1.5"/>
-    <text x="13" y="19" text-anchor="middle" font-size="15" font-weight="bold" fill="white" font-family="sans-serif">P</text>
+    <rect x="1" y="1" width="24" height="24" rx="5" fill="${fill}" stroke="white" stroke-width="1.5"/>
+    <text x="13" y="19" text-anchor="middle" font-size="15" font-weight="bold" fill="${text}" font-family="sans-serif">P</text>
   </svg>`
 }
 
@@ -80,6 +91,7 @@ export default function MapView({
   onToggleParking,
   autoZoom = true,
   parkingFocusMode = false,
+  showWeakParking = false,
 }: Props) {
   const t        = useTranslations()
   const mapRef   = useRef<HTMLDivElement>(null)
@@ -94,6 +106,7 @@ export default function MapView({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userMarker = useRef<any>(null)
   const [mapReady, setMapReady] = useState(false)
+  const [legendOpen, setLegendOpen] = useState(false)
   const onShowInResultsRef  = useRef(onShowInResults)
   const placesRef           = useRef(places)
   const userLocationRef     = useRef(userLocation)
@@ -249,8 +262,9 @@ export default function MapView({
     parkingMarkersRef.current = []
 
     for (const spot of parkingSpots ?? []) {
+      const tier: ParkingTier = spot.tier === "accessible" ? "accessible" : "disabled"
       const icon = L.divIcon({
-        html:        svgParkingMarker(),
+        html:        svgParkingMarker(tier),
         className:   "",
         iconSize:    [21, 21],
         iconAnchor:  [10, 10],
@@ -279,13 +293,18 @@ export default function MapView({
       // Max-stay label + raw OSM value (already human-readable: "2 hours", "30 minutes")
       const maxstayText = spot.maxstay ?? null
 
-      const title   = spot.capacity != null ? t.map.parkingSpots(spot.capacity) : t.map.parkingSpot
+      // Word-label per tier — colour alone must never carry the meaning (a11y).
+      const title = tier === "accessible"
+        ? t.map.parkingAccessible
+        : spot.capacity != null ? t.map.parkingSpots(spot.capacity) : t.map.parkingSpot
+      const subtitle = tier === "accessible" ? t.map.parkingAccessibleHint : null
       const mapsUrl = `https://www.google.com/maps?q=${spot.lat},${spot.lon}`
 
       const div = document.createElement("div")
       div.style.cssText = "font-family:sans-serif;font-size:12px;line-height:1.6;min-width:140px"
       div.innerHTML = `
-        <div style="font-weight:600;margin-bottom:5px">${title}</div>
+        <div style="font-weight:600;margin-bottom:${subtitle ? "1px" : "5px"}">${title}</div>
+        ${subtitle ? `<div style="color:#b45309;font-size:11px;margin-bottom:5px">${subtitle}</div>` : ""}
         <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:11px;margin-bottom:6px">
           ${distText     ? `<span style="color:#888">↔</span><span>${distText}</span>` : ""}
           ${feeText      ? `<span style="color:#888">€</span><span>${feeText}</span>` : ""}
@@ -545,6 +564,46 @@ export default function MapView({
             <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${showParking || parkingFocusMode ? "translate-x-3" : "translate-x-0.5"}`} />
           </span>
         </button>
+      )}
+
+      {/* ── Parking legend (collapsible) ── */}
+      {/* Shown only when parking markers are on the map. Explains the blue vs
+          yellow "P" so colour is never the sole information carrier. */}
+      {(parkingSpots?.length ?? 0) > 0 && (
+        <div className="absolute bottom-3 right-3 z-[1000]">
+          {legendOpen ? (
+            <div className="rounded-lg bg-background/95 backdrop-blur-sm shadow-md border border-border p-2.5 text-xs">
+              <div className="flex items-center justify-between gap-3 mb-1.5">
+                <span className="font-semibold">{t.map.legend}</span>
+                <button
+                  onClick={() => setLegendOpen(false)}
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label={t.common.close}
+                >✕</button>
+              </div>
+              <div className="flex items-center gap-2 py-0.5">
+                <span dangerouslySetInnerHTML={{ __html: svgParkingMarker("disabled") }} />
+                <span>{t.map.legendDisabled}</span>
+              </div>
+              {showWeakParking && (
+                <div className="flex items-center gap-2 py-0.5">
+                  <span dangerouslySetInnerHTML={{ __html: svgParkingMarker("accessible") }} />
+                  <span>{t.map.legendAccessible}</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => setLegendOpen(true)}
+              title={t.map.legend}
+              aria-label={t.map.legend}
+              className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium shadow-md border border-border bg-background/95 backdrop-blur-sm hover:bg-muted transition-colors"
+            >
+              <span dangerouslySetInnerHTML={{ __html: svgParkingMarker("disabled") }} />
+              <span className="hidden sm:inline">{t.map.legend}</span>
+            </button>
+          )}
+        </div>
       )}
     </div>
   )
