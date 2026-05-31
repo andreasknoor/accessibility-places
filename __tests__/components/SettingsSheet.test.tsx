@@ -29,25 +29,23 @@ describe("SettingsSheet", () => {
 
   it("panel is not visible initially", () => {
     renderSheet()
-    expect(screen.queryByText("Allgemein")).toBeNull()
+    expect(screen.queryByText("Start & Suche")).toBeNull()
   })
 
   it("panel opens when gear button is clicked", () => {
     renderSheet()
     fireEvent.click(screen.getByRole("button", { name: /Einstellungen/i }))
-    expect(screen.getByText("Allgemein")).toBeInTheDocument()
+    expect(screen.getByText("Start & Suche")).toBeInTheDocument()
     expect(screen.getByText("Ergebnisse")).toBeInTheDocument()
-    // "Karte" is both a section heading and a select option — check section heading via role
-    expect(screen.getAllByText("Karte").length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText("Mobil")).toBeInTheDocument()
+    expect(screen.getByText("Karte & Parkplätze")).toBeInTheDocument()
   })
 
   it("panel closes when the close button is clicked", () => {
     renderSheet()
     fireEvent.click(screen.getByRole("button", { name: /Einstellungen/i }))
-    expect(screen.getByText("Allgemein")).toBeInTheDocument()
+    expect(screen.getByText("Start & Suche")).toBeInTheDocument()
     fireEvent.click(screen.getByRole("button", { name: /Schließen/i }))
-    expect(screen.queryByText("Allgemein")).toBeNull()
+    expect(screen.queryByText("Start & Suche")).toBeNull()
   })
 
   it("toggling autoZoom calls onUpdate with { autoZoom: false }", () => {

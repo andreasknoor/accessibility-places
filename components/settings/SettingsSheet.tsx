@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react"
 import { createPortal } from "react-dom"
-import { Settings, Check } from "lucide-react"
+import { Settings, Check, Search, Map, SlidersHorizontal } from "lucide-react"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { SETTING_CHIPS, DEFAULT_APP_SETTINGS } from "@/lib/settings"
 import { cn } from "@/lib/utils"
@@ -43,11 +43,20 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
   )
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
+function SectionTitle({
+  icon: Icon,
+  chipClass,
+  children,
+}: {
+  icon: React.ElementType
+  chipClass: string
+  children: React.ReactNode
+}) {
   return (
-    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide pt-4 pb-1">
-      {children}
-    </p>
+    <div className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold mt-5 mb-2 border", chipClass)}>
+      <Icon className="w-3 h-3 shrink-0" />
+      <span className="uppercase tracking-wide">{children}</span>
+    </div>
   )
 }
 
@@ -121,8 +130,10 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-4 pb-6">
 
-          {/* ── Allgemein ── */}
-          <SectionTitle>{ts.sectionGeneral}</SectionTitle>
+          {/* ── Start & Suche ── */}
+          <SectionTitle icon={Search} chipClass="bg-blue-50 text-blue-700 border-blue-200">
+            {ts.sectionGeneral}
+          </SectionTitle>
           <div className="divide-y divide-border/60">
             <Row label={ts.searchMode}>
               <SelectInput
@@ -151,10 +162,21 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
                 ))}
               </SelectInput>
             </Row>
+            <Row label={ts.mobileView}>
+              <SelectInput
+                value={settings.defaultMobileView}
+                onChange={(v) => onUpdate({ defaultMobileView: v as "results" | "map" })}
+              >
+                <option value="results">{ts.mobileViewList}</option>
+                <option value="map">{ts.mobileViewMap}</option>
+              </SelectInput>
+            </Row>
           </div>
 
-          {/* ── Karte ── */}
-          <SectionTitle>{ts.sectionMap}</SectionTitle>
+          {/* ── Karte & Parkplätze ── */}
+          <SectionTitle icon={Map} chipClass="bg-green-50 text-green-700 border-green-200">
+            {ts.sectionMap}
+          </SectionTitle>
           <div className="divide-y divide-border/60">
             <Row label={ts.autoZoom} hint={ts.autoZoomHint}>
               <Toggle
@@ -191,7 +213,9 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
           </div>
 
           {/* ── Ergebnisse ── */}
-          <SectionTitle>{ts.sectionResults}</SectionTitle>
+          <SectionTitle icon={SlidersHorizontal} chipClass="bg-amber-50 text-amber-700 border-amber-200">
+            {ts.sectionResults}
+          </SectionTitle>
           <div className="divide-y divide-border/60">
             <Row label={ts.sortOrder}>
               <SelectInput
@@ -200,20 +224,6 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
               >
                 <option value="confidence">{ts.sortConfidence}</option>
                 <option value="distance">{ts.sortDistance}</option>
-              </SelectInput>
-            </Row>
-          </div>
-
-          {/* ── Mobil ── */}
-          <SectionTitle>{ts.sectionMobile}</SectionTitle>
-          <div className="divide-y divide-border/60">
-            <Row label={ts.mobileView}>
-              <SelectInput
-                value={settings.defaultMobileView}
-                onChange={(v) => onUpdate({ defaultMobileView: v as "results" | "map" })}
-              >
-                <option value="results">{ts.mobileViewList}</option>
-                <option value="map">{ts.mobileViewMap}</option>
               </SelectInput>
             </Row>
           </div>
