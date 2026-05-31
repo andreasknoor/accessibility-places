@@ -41,6 +41,7 @@ export interface Translations {
     locationError: string
     nearbyIn:        (district: string) => string
     parkingModeToggle:    string
+    parkingNoneFound:     string
     namePlaceholder:      string
     nameToggleShow:       string
     nameToggleHide:       string

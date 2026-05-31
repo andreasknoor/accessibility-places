@@ -1,6 +1,6 @@
 import { defaultCache } from "@serwist/next/worker"
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist"
-import { Serwist } from "serwist"
+import { Serwist, NetworkOnly } from "serwist"
 
 declare global {
   interface ServiceWorkerGlobalScope extends SerwistGlobalConfig {
@@ -15,7 +15,21 @@ const serwist = new Serwist({
   skipWaiting:       true,
   clientsClaim:      true,
   navigationPreload: true,
-  runtimeCaching:    defaultCache,
+  runtimeCaching: [
+    // Overpass-backed endpoints must always hit the network — their response
+    // time can exceed Serwist's 10 s NetworkFirst timeout, causing the SW to
+    // fall back to a stale or empty cache entry (visible as "no parking spots
+    // in installed PWA"). NetworkOnly bypasses the cache entirely.
+    {
+      matcher: ({ url: { pathname }, sameOrigin }) =>
+        sameOrigin && (
+          pathname === "/api/nearby-parking" ||
+          pathname === "/api/search"
+        ),
+      handler: new NetworkOnly(),
+    },
+    ...defaultCache,
+  ],
 })
 
 serwist.addEventListeners()

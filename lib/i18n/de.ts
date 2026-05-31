@@ -45,6 +45,7 @@ const de: Translations = {
     locationError: "Standort konnte nicht ermittelt werden.",
     nearbyIn:        (d: string) => `In der Nähe von ${d}`,
     parkingModeToggle:    "Rollstuhl-Parkplätze hier",
+    parkingNoneFound:     "Keine Parkplätze in der Nähe gefunden",
     namePlaceholder:      'z. B. „Zur Linde" oder „Hilton"',
     nameToggleShow:       "+ Ergebnisse nach Name eingrenzen",
     nameToggleHide:       "Namensfilter entfernen",

@@ -112,6 +112,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // Parkplatz-Modus (proposal #6): focus the map on disabled-parking spots
   // within parkingRadiusKm of the user's GPS coords. Per-session only.
   const [parkingFocusMode,    setParkingFocusMode]    = useState(false)
+  const [parkingFocusHint,    setParkingFocusHint]    = useState<string | null>(null)
   const [isFirstVisit,        setIsFirstVisit]        = useState(() => { try { return !localStorage.getItem("ap_visited") && !localStorage.getItem("ap_welcome_dismissed") } catch { return false } })
   const [locateTriggerKey,    setLocateTriggerKey]    = useState(0)
   const [hasGpsCoords,        setHasGpsCoords]        = useState(false)
@@ -491,20 +492,25 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     const coords = gpsCoordRef.current ?? gpsCoords
     if (!coords) return
     track("parking_focus_enter")
-    // Snapshot the result-nearby spots so exit can restore them.
     parkingSpotsBackupRef.current = parkingSpots
+    setParkingFocusHint(null)
     setIsParkingLoading(true)
     try {
       const res = await fetch(`/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=${settings.parkingRadiusKm}`)
       if (res.ok) {
         const spots = await res.json()
         setParkingSpots(spots)
+        if (spots.length === 0) setParkingFocusHint(t.chat.parkingNoneFound)
+      } else {
+        setParkingFocusHint(t.chat.parkingNoneFound)
       }
-    } catch { /* ignore — parking is non-fatal */ } finally {
+    } catch {
+      setParkingFocusHint(t.chat.parkingNoneFound)
+    } finally {
       setIsParkingLoading(false)
       setParkingFocusMode(true)
     }
-  }, [gpsCoords, parkingSpots, settings.parkingRadiusKm])
+  }, [gpsCoords, parkingSpots, settings.parkingRadiusKm, t.chat.parkingNoneFound])
 
   const handleExitParkingFocus = useCallback(() => {
     if (parkingSpotsBackupRef.current !== null) {
@@ -512,6 +518,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       parkingSpotsBackupRef.current = null
     }
     setParkingFocusMode(false)
+    setParkingFocusHint(null)
   }, [])
 
   const handleToggleParkingFocus = useCallback(() => {
@@ -641,6 +648,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         parkingFocusMode={parkingFocusMode}
         onToggleParkingFocus={canEnterParkingFocus ? handleToggleParkingFocus : undefined}
         isParkingFocusLoading={isParkingLoading}
+        parkingFocusHint={parkingFocusHint}
       />
     )
   }
@@ -694,6 +702,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           parkingFocusMode={parkingFocusMode}
           onToggleParkingFocus={canEnterParkingFocus ? handleToggleParkingFocus : undefined}
           isParkingFocusLoading={isParkingLoading}
+          parkingFocusHint={parkingFocusHint}
         />
       </div>
 
