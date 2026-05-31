@@ -26,6 +26,11 @@ const STRINGS = {
   },
 }
 
+function formatBuildDate(iso: string, lang: "de" | "en"): string {
+  const [y, m, d] = iso.split("-")
+  return lang === "de" ? `${d}.${m}.${y}` : `${m}/${d}/${y}`
+}
+
 interface Props { lang: "de" | "en" }
 
 export default function ImpressumContent({ lang }: Props) {
@@ -80,7 +85,9 @@ export default function ImpressumContent({ lang }: Props) {
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
             {s.version}
           </h2>
-          <p className="text-sm tabular-nums">{APP_VERSION}</p>
+          <p className="text-sm tabular-nums">
+            {APP_VERSION}{process.env.BUILD_DATE ? ` (${formatBuildDate(process.env.BUILD_DATE, lang)})` : ""}
+          </p>
         </section>
 
         <section className="border-t border-border pt-6">
