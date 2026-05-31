@@ -62,12 +62,23 @@ function InfoRow({
   )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  icon: Icon,
+  chipClass,
+  children,
+}: {
+  title: string
+  icon: React.ElementType
+  chipClass: string
+  children: React.ReactNode
+}) {
   return (
     <section className="py-4">
-      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-        {title}
-      </p>
+      <div className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold mb-3 border", chipClass)}>
+        <Icon className="w-3 h-3 shrink-0" />
+        <span className="uppercase tracking-wide">{title}</span>
+      </div>
       <div className="space-y-2">{children}</div>
     </section>
   )
@@ -315,8 +326,62 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-4 text-xs divide-y divide-border">
 
+          {/* ── Barrierefreiheit + Parkplatz ── */}
+          <Section
+            title={`${ti.accessibility} · ${Math.round(place.overallConfidence * 100)}%`}
+            icon={Accessibility}
+            chipClass="bg-green-50 text-green-700 border-green-200"
+          >
+            {wheelchairDesc && (
+              <InfoRow icon={MessageSquare} label={ti.description}>{wheelchairDesc}</InfoRow>
+            )}
+            {criteria.map(({ key, label, attr }) => (
+              <InfoRow key={key} icon={Accessibility} label={label}>
+                <span className={cn("font-medium", VALUE_COLORS[attr.value])}>
+                  {t.a11y[attr.value]}
+                </span>
+                {attr.sources.length > 0 && (
+                  <span className="text-muted-foreground ml-1.5">
+                    · {attr.sources.map((s) => SOURCE_LABELS[s.sourceId]).join(", ")}
+                  </span>
+                )}
+              </InfoRow>
+            ))}
+            {/* Parkplatz — innerhalb der Barrierefreiheits-Sektion */}
+            <InfoRow icon={Car} label={t.criteria.parking}>
+              <span className={cn("font-medium", VALUE_COLORS[parkingAttr.value])}>
+                {parkingValueLabel}
+              </span>
+              {parkingAttr.sources.length > 0 && (
+                <span className="text-muted-foreground ml-1.5">
+                  · {parkingAttr.sources.map((s) => SOURCE_LABELS[s.sourceId]).join(", ")}
+                </span>
+              )}
+            </InfoRow>
+            {parkingD.hasWheelchairSpaces != null && (
+              <InfoRow icon={Car} label={t.details.parking.hasWheelchairSpaces}>
+                {parkingD.hasWheelchairSpaces ? "✓" : "✗"}
+              </InfoRow>
+            )}
+            {parkingD.spaceCount != null && (
+              <InfoRow icon={Hash} label={t.details.parking.spaceCount}>
+                {parkingD.spaceCount}
+              </InfoRow>
+            )}
+            {parkingD.distanceToEntranceM != null && (
+              <InfoRow icon={MapPin} label={t.details.parking.distanceToEntranceM}>
+                {parkingD.distanceToEntranceM} {t.details.units.m}
+              </InfoRow>
+            )}
+            {parkingNearby && parkingNearbyDistM != null && (
+              <InfoRow icon={Navigation} label={t.details.parking.nearbyParkingDistanceM}>
+                {parkingNearbyDistM} {t.details.units.m}
+              </InfoRow>
+            )}
+          </Section>
+
           {/* ── Grunddaten ── */}
-          <Section title={ti.basicInfo}>
+          <Section title={ti.basicInfo} icon={MapPin} chipClass="bg-blue-50 text-blue-700 border-blue-200">
             {addrStr && (
               <InfoRow icon={MapPin} label={ti.address}>
                 <span className="flex items-center gap-1.5 flex-wrap">
@@ -372,7 +437,7 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
 
           {/* ── Angebot ── */}
           {hasAngebot && (
-            <Section title={ti.offer}>
+            <Section title={ti.offer} icon={Utensils} chipClass="bg-amber-50 text-amber-700 border-amber-200">
               {cuisine && <InfoRow icon={Utensils} label={ti.cuisine}>{cuisine}</InfoRow>}
               {stars && (
                 <InfoRow icon={Star} label={ti.stars}>{"★".repeat(Math.min(5, parseInt(stars, 10) || 0))} ({stars})</InfoRow>
@@ -400,61 +465,8 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
             </Section>
           )}
 
-          {/* ── Barrierefreiheit ── */}
-          <Section title={`${ti.accessibility} (${ti.reliability}: ${Math.round(place.overallConfidence * 100)}%)`}>
-            {wheelchairDesc && (
-              <InfoRow icon={MessageSquare} label={ti.description}>{wheelchairDesc}</InfoRow>
-            )}
-            {criteria.map(({ key, label, attr }) => (
-              <InfoRow key={key} icon={Accessibility} label={label}>
-                <span className={cn("font-medium", VALUE_COLORS[attr.value])}>
-                  {t.a11y[attr.value]}
-                </span>
-                {attr.sources.length > 0 && (
-                  <span className="text-muted-foreground ml-1.5">
-                    · {attr.sources.map((s) => SOURCE_LABELS[s.sourceId]).join(", ")}
-                  </span>
-                )}
-              </InfoRow>
-            ))}
-          </Section>
-
-          {/* ── Parkplatz ── */}
-          <Section title={t.criteria.parking}>
-            <InfoRow icon={Car} label={ti.accessibility}>
-              <span className={cn("font-medium", VALUE_COLORS[parkingAttr.value])}>
-                {parkingValueLabel}
-              </span>
-              {parkingAttr.sources.length > 0 && (
-                <span className="text-muted-foreground ml-1.5">
-                  · {parkingAttr.sources.map((s) => SOURCE_LABELS[s.sourceId]).join(", ")}
-                </span>
-              )}
-            </InfoRow>
-            {parkingD.hasWheelchairSpaces != null && (
-              <InfoRow icon={Car} label={t.details.parking.hasWheelchairSpaces}>
-                {parkingD.hasWheelchairSpaces ? "✓" : "✗"}
-              </InfoRow>
-            )}
-            {parkingD.spaceCount != null && (
-              <InfoRow icon={Hash} label={t.details.parking.spaceCount}>
-                {parkingD.spaceCount}
-              </InfoRow>
-            )}
-            {parkingD.distanceToEntranceM != null && (
-              <InfoRow icon={MapPin} label={t.details.parking.distanceToEntranceM}>
-                {parkingD.distanceToEntranceM} {t.details.units.m}
-              </InfoRow>
-            )}
-            {parkingNearby && parkingNearbyDistM != null && (
-              <InfoRow icon={Navigation} label={t.details.parking.nearbyParkingDistanceM}>
-                {parkingNearbyDistM} {t.details.units.m}
-              </InfoRow>
-            )}
-          </Section>
-
           {/* ── Externe Links ── */}
-          <Section title={ti.externalLinks}>
+          <Section title={ti.externalLinks} icon={ExternalLink} chipClass="bg-zinc-100 text-zinc-600 border-zinc-200">
             {osmLink && (
               <InfoRow icon={ExternalLink} label="OpenStreetMap">
                 <span className="flex items-center gap-1.5 flex-wrap">
