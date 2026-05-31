@@ -12,7 +12,7 @@ import FilterPanel     from "@/components/filters/FilterPanel"
 import ResultsList     from "@/components/results/ResultsList"
 import LanguageSwitcher from "@/components/LanguageSwitcher"
 import SettingsSheet   from "@/components/settings/SettingsSheet"
-import type { Place, SearchFilters, ActiveSources, SourceId, SourceState, FilterDebug } from "@/lib/types"
+import type { Place, SearchFilters, ActiveSources, SourceId, SourceState, FilterDebug, ParkingSpot } from "@/lib/types"
 import type { AppSettings } from "@/lib/settings"
 
 const MapView = dynamic(() => import("@/components/map/MapView"), { ssr: false })
@@ -21,7 +21,7 @@ type Tab = "results" | "map" | "filter"
 
 interface Props {
   places:        Place[]
-  parkingSpots?: { lat: number; lon: number; capacity?: number }[]
+  parkingSpots?: ParkingSpot[]
   selectedId?:   string
   onSelect:      (place: Place) => void
   isLoading:     boolean
@@ -283,6 +283,7 @@ export default function MobileLayout({
               onToggleParking={onToggleParking}
               autoZoom={settings.autoZoom}
               parkingFocusMode={parkingFocusMode}
+              showWeakParking={settings.showWeakParking}
             />
           )}
         </div>

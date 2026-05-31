@@ -112,6 +112,10 @@ where `addrScore = streetTrigram × 0.6 + cityMatch × 0.25 + zipMatch × 0.15`.
 
 **Parkplatz-Modus** (`parkingFocusMode` state in `HomeClient`) — a per-session map focus mode available only in Nearby mode with GPS coords. On enter: backs up the current `parkingSpots` to `parkingSpotsBackupRef`, then fetches disabled-parking OSM nodes within `parkingRadiusKm` of the user's GPS position and activates the mode. While active: place markers are hidden on the map, only parking spots are shown, and `visibleParkingSpots` bypasses the `alwaysShowParking` toggle. On exit: restores `parkingSpots` from the backup so result-nearby spots return. The toggle for this mode lives in the nearby info row of `ChatPanel`, not in `FilterPanel`.
 
+**Parking tiers (`ParkingTier` in `lib/types.ts`)** — every `ParkingSpot`/`NearbyParkingFeature` carries a `tier`:
+- **`"disabled"`** (strong): dedicated/reserved disabled spaces (`capacity:disabled>0`, `parking_space=disabled`, `*=designated`). Blue "P" on the map. The **only** tier that may enrich a venue's parking value — `enrichWithNearbyParking()` filters to this tier.
+- **`"accessible"`** (weak, **display-only**): `amenity=parking` lots merely tagged `wheelchair=yes` with **no** reserved-space tag, excluding `parking=street_side|lane`. Yellow "P" (dark letter — white-on-yellow fails contrast). **Never** enriches, filters, or affects confidence. Always fetched alongside the strong tier whenever `ENABLE_NEARBY_PARKING` is on (the `includeAccessibleTier` arg to `fetchOsmDisabledParking` is passed `true` by both `/api/search` and `/api/nearby-parking`). Tier inference happens in `parseFeatures` from tags, not from which Overpass clause matched. SEO pages never request this tier — `fetchPlacesForSeoPage` omits the arg, so it defaults to `false`. The weak tier is sent for the whole area independent of any venue anchor (so it also shows in Parkplatz-Modus), and is gated client-side by the `showWeakParking` setting — `visibleParkingSpots` strips `tier === "accessible"` when the setting is off, in both normal display and focus mode. `MapView` renders a collapsible legend (bottom-right) whenever parking markers are present.
+
 `buildAttribute(…, weightMultiplier)` — when `weightMultiplier > 1.0` the source gets `verifiedRecently: true`. Currently only the OSM adapter sets this (via `check_date:wheelchair` ≤ 2 years old). The `onlyVerified` filter in `SearchFilters` requires at least one attribution to carry this flag.
 
 ### Confidence weights (`lib/config.ts`)
@@ -162,7 +166,7 @@ nominatim:           0     // stats-only
 
 `AppSettings` is a user-configurable set of defaults persisted to `localStorage` under key `ap_settings`. `useSettings()` returns `[settings, updateSettings]`; `loadSettings()` is called in lazy `useState` initialisers in `HomeClient` for settings that must be available before React mounts.
 
-Fields: `defaultSearchMode` (`"text"` | `"nearby"` | `"place"`), `defaultMobileView` (`"results"` | `"map"`), `defaultChipIdx` (which chip is pre-selected, `null` = Restaurants), `sortOrder` (`"confidence"` | `"distance"`), `autoZoom` (MapView auto-fits after search), `alwaysShowParking` (default `false`), `parkingRadiusKm` (radius for Parkplatz-Modus fetch and pre-check, 0.05–3.0, default 2.0).
+Fields: `defaultSearchMode` (`"text"` | `"nearby"` | `"place"`), `defaultMobileView` (`"results"` | `"map"`), `defaultChipIdx` (which chip is pre-selected, `null` = Restaurants), `sortOrder` (`"confidence"` | `"distance"`), `autoZoom` (MapView auto-fits after search), `alwaysShowParking` (default `false`), `showWeakParking` (show the weak `"accessible"` parking tier as yellow markers, incl. in Parkplatz-Modus; default `false`), `parkingRadiusKm` (radius for Parkplatz-Modus fetch and pre-check, 0.05–3.0, default 2.0).
 
 **Critical invariant:** `SETTING_CHIPS` in `lib/settings.ts` and `CHIPS` in `ChatPanel.tsx` must stay in the **same order** — `defaultChipIdx` is an index into both simultaneously. Reordering chips in either file requires updating the other.
 
@@ -319,6 +323,7 @@ Self-hosted Overpass API for DACH at `overpass.accessible-places.org` (Caddy →
 | `OVERPASS_SPACE` | `6442450944` | Default 512 MB; CAX21 has 8 GB |
 | `OVERPASS_TIME` | `300` | Default 1000 s; queries use `[timeout:12]` anyway |
 | `OVERPASS_ALLOW_DUPLICATE_QUERIES` | `yes` | Default `no` rejects identical concurrent queries immediately with HTML 200 — primary cause of load-test failures |
+| `OVERPASS_HEALTHCHECK` | see below | Default healthcheck query has **no `[timeout:]`** — those queries hang ~15 s and 504 at the gateway, marking the container `(unhealthy)` even while real traffic is fine (the OSM adapter always sends `[timeout:12]`). Override to add `[timeout:5]` so the flag reflects real availability. |
 
 **Restart command** (e.g. after config change):
 ```bash
@@ -336,8 +341,12 @@ docker run -d --name overpass --restart always -p 8080:80 \
   -e OVERPASS_RATE_LIMIT=32 \
   -e OVERPASS_SPACE=6442450944 \
   -e OVERPASS_TIME=300 \
+  -e 'OVERPASS_HEALTHCHECK=curl --noproxy "*" -qf "http://localhost/api/interpreter?data=\[out:json\]\[timeout:5\];node(${NODE_ID});out;" | jq ".generator" | grep -q Overpass || exit 1' \
   wiktorn/overpass-api
 ```
+(`${NODE_ID}` stays literal — the in-container healthcheck script sets it; single-quote the `-e` arg so the host shell doesn't expand it. A ready-to-run copy of this exact command lives at `/root/restart-overpass.sh` on the server.)
+
+**Healthcheck note:** the bare default query `node(1);out;` (no `[timeout:]`) deterministically 504s on this server — a query-shape quirk, not load. The override above clears the `(unhealthy)` false alarm. Don't infer load from the health flag alone; check `uptime`, `docker stats`, and `/api/status` slot count instead.
 
 **Critical after any fresh container start:** the `update_overpass` supervisor process runs as `user=overpass` (uid=1000 inside the container). The host volume `/overpass-data` must be owned by uid=1000; otherwise the replication script cannot create `/db/replicate_id.backup` and loops with `Permission denied`. Fix: `chown 1000:1000 /overpass-data` on the host. Also, `OVERPASS_DIFF_URL` is what the `update_overpass` script reads for ongoing diff updates — `OVERPASS_REPLICATION_URL` is used only for the initial clone. Both must point to the same URL.
 

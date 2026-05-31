@@ -52,11 +52,17 @@ export function enrichWithNearbyParking(
   features: NearbyParkingFeature[],
   maxDistanceM: number = DEFAULT_MAX_NEARBY_PARKING_M,
 ): void {
-  if (features.length === 0) return
+  // Only the strong "disabled" tier may upgrade a venue's parking value. The
+  // weak "accessible" tier (wheelchair=yes lot without reserved bays) is
+  // display-only and must never enrich — a feature with tier "accessible"
+  // says nothing about reserved disabled parking for the venue.
+  // tier may be undefined on legacy/test features → treat as "disabled".
+  const features_ = features.filter((f) => f.tier !== "accessible")
+  if (features_.length === 0) return
   for (const place of places) {
     if (place.accessibility.parking.value !== "unknown") continue
     let bestDist = Infinity
-    for (const f of features) {
+    for (const f of features_) {
       const d = haversineMeters(place.coordinates, f)
       if (d < bestDist) bestDist = d
       if (bestDist === 0) break

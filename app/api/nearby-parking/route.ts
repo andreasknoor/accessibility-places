@@ -22,8 +22,10 @@ export async function GET(req: NextRequest) {
     ? Math.min(Math.max(radiusRaw, RADIUS_MIN_KM), RADIUS_MAX_KM)
     : 0.3
 
+  // Always include the weak "accessible" tier — the client (Parkplatz-Modus)
+  // filters it out again unless the user opted in via the showWeakParking setting.
   let failed = false
-  const { features } = await fetchOsmDisabledParking({ lat, lon }, radiusKm, req.signal).catch(() => {
+  const { features } = await fetchOsmDisabledParking({ lat, lon }, radiusKm, req.signal, true).catch(() => {
     failed = true
     return { features: [], winnerEndpoint: "", durationMs: 0 }
   })

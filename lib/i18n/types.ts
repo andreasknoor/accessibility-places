@@ -188,6 +188,8 @@ export interface Translations {
     showInResults:          string
     parkingSpot:            string
     parkingSpots:           (n: number) => string
+    parkingAccessible:      string
+    parkingAccessibleHint:  string
     toggleParking:          string
     nearbyParking:          string
     parkingFree:            string
@@ -195,6 +197,9 @@ export interface Translations {
     parkingMaxstay:         string
     parkingPrivate:         string
     parkingCustomers:       string
+    legend:                 string
+    legendDisabled:         string
+    legendAccessible:       string
   }
   categories: {
     cafe:        string
@@ -287,6 +292,8 @@ export interface Translations {
     autoZoom:          string
     autoZoomHint:      string
     alwaysShowParking: string
+    showWeakParking:     string
+    showWeakParkingHint: string
     mobileView:        string
     mobileViewList:    string
     mobileViewMap:     string

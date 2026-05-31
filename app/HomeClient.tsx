@@ -541,8 +541,14 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
   }, [])
 
-  // In Parkplatz-Modus we always show all loaded spots regardless of the toggle.
-  const visibleParkingSpots = parkingFocusMode || filters.alwaysShowParking ? parkingSpots : []
+  // In Parkplatz-Modus we always show all loaded spots regardless of the display
+  // toggle. The weak "accessible" tier (yellow markers) is additionally gated by
+  // the showWeakParking setting — applies in both normal display and focus mode,
+  // so a "find disabled parking now" view never shows unreserved lots unasked.
+  const baseParkingSpots = parkingFocusMode || filters.alwaysShowParking ? parkingSpots : []
+  const visibleParkingSpots = settings.showWeakParking
+    ? baseParkingSpots
+    : baseParkingSpots.filter((s) => s.tier !== "accessible")
 
   const handleFilters = useCallback((next: SearchFilters) => {
     const activated = (["entrance", "toilet", "parking", "seating", "onlyVerified"] as const)
@@ -813,6 +819,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             onToggleParking={hasParkingToggle ? handleToggleParking : undefined}
             autoZoom={settings.autoZoom}
             parkingFocusMode={parkingFocusMode}
+            showWeakParking={settings.showWeakParking}
           />
         </div>
       </div>
