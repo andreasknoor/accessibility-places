@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import type { ReactNode } from "react"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 
@@ -13,48 +14,108 @@ export const metadata: Metadata = {
   },
 }
 
-const FAQ_EN = [
+// `id` is a stable deep-link slug — kept identical to the DE file so /faq#slug
+// and /en/faq#slug resolve to the same question. Do not derive it from the
+// question text: rewording a question would silently break shared links.
+const FAQ_EN: { id: string; q: string; a: ReactNode; schemaText?: string }[] = [
   {
+    id: "what-is",
     q: "What is Accessible Places?",
     a: "Accessible Places helps people with wheelchairs or limited mobility find accessible venues in Germany, Austria and Switzerland. A key focus is data reliability: accessibility information in Google Maps is often incomplete and difficult to filter in a meaningful way. Accessible Places solves exactly this problem — offering a fast, easy-to-use search that aggregates and rates information from multiple sources.",
   },
   {
+    id: "how-to-find",
     q: "How do I find wheelchair-accessible places in Germany, Austria and Switzerland?",
     a: "Simply enter a location — for example \"Berlin Mitte\" or \"Vienna\" — and choose a category such as restaurant or hotel. Accessible Places searches multiple data sources instantly and shows you accessible venues nearby. The app covers the entire DACH region: Germany, Austria and Switzerland.",
   },
   {
+    id: "which-venues",
     q: "Which wheelchair-accessible venues can I find — restaurants, hotels, cafés?",
     a: "Restaurants, cafés, bars, pubs, beer gardens, fast food / snack bars, hotels, hostels, holiday apartments, museums, theatres, cinemas, libraries, galleries, attractions and ice cream shops.",
   },
   {
+    id: "find-nearby",
     q: "How do I find wheelchair-accessible restaurants or cafés near me?",
     a: "Tap \"Nearby\" and allow location access. Accessible Places automatically detects your position and searches for accessible restaurants, cafés or other venues in your immediate vicinity — no need to type a location.",
   },
   {
+    id: "vs-google-maps",
     q: "What is the difference from Google Maps when searching for accessible places?",
     a: "Google Maps contains little structured accessibility information and offers no dedicated filter for it. Accessible Places is built specifically for this search: it combines multiple specialised data sources, rates each piece of information by reliability, and shows at a glance how suitable a venue is for wheelchair users.",
   },
   {
-    q: "How reliable is the accessibility information?",
-    a: "The app combines data from three sources: OpenStreetMap (OSM), accessibility.cloud (including Wheelmap.org) and Google Places. Each source is weighted by its trustworthiness — from manually verified entries to automatically collected data. The coloured circle next to each entry shows at a glance how solid the data is.",
+    id: "vs-wheelmap",
+    q: "What is the difference between Wheelmap.org and Accessible Places?",
+    a: (
+      <>
+        <p>
+          Wheelmap.org and Accessible Places pursue similar goals but set different priorities —
+          they are not competitors but complement each other. Wheelmap is one of the largest
+          crowdsourcing platforms for accessibility: thousands of people add places there directly.
+          This valuable data also feeds into Accessible Places.
+        </p>
+        <p className="mt-2">Accessible Places focuses on four things:</p>
+        <ul className="mt-2 flex list-disc flex-col gap-1.5 pl-5">
+          <li>
+            <strong className="font-semibold text-foreground">Reliability:</strong> We show not only
+            whether a place is accessible, but also how reliable that information is — via a coloured
+            circle that rates the data quality.
+          </li>
+          <li>
+            <strong className="font-semibold text-foreground">Multiple sources combined:</strong>{" "}
+            Accessible Places merges data from different sources into a single, unified view.
+            Wheelmap and the underlying OpenStreetMap are two important building blocks, but not the
+            only ones.
+          </li>
+          <li>
+            <strong className="font-semibold text-foreground">Best data per region:</strong> For
+            each region we integrate the strongest local source. In Switzerland, for example, Ginto
+            provides particularly high-quality accessibility data. This creates the best possible
+            data basis everywhere.
+          </li>
+          <li>
+            <strong className="font-semibold text-foreground">Wheelchair parking:</strong> Accessible
+            Places shows wheelchair-accessible parking directly on the map. The question “Where is
+            the nearest accessible parking space?” can be answered with a single click — something
+            other platforms don’t offer in this way.
+          </li>
+        </ul>
+        <p className="mt-2">
+          If you’d like to contribute accessibility data yourself, Wheelmap.org is the best place to
+          do so — new entries appear here too after a short while.
+        </p>
+      </>
+    ),
+    schemaText:
+      "Wheelmap.org and Accessible Places pursue similar goals but set different priorities — they are not competitors but complement each other. Wheelmap is one of the largest crowdsourcing platforms for accessibility: thousands of people add places there directly. This valuable data also feeds into Accessible Places. Accessible Places focuses on four things: Reliability — we show not only whether a place is accessible, but also how reliable that information is, via a coloured circle that rates the data quality. Multiple sources combined — Accessible Places merges data from different sources into a single, unified view; Wheelmap and the underlying OpenStreetMap are two important building blocks, but not the only ones. Best data per region — for each region we integrate the strongest local source; in Switzerland, for example, Ginto provides particularly high-quality accessibility data. Wheelchair parking — Accessible Places shows wheelchair-accessible parking directly on the map, and the question \"Where is the nearest accessible parking space?\" can be answered with a single click. If you'd like to contribute accessibility data yourself, Wheelmap.org is the best place to do so — new entries appear here too after a short while.",
   },
   {
+    id: "reliability",
+    q: "How reliable is the accessibility information?",
+    a: "The app combines data from several specialised sources: OpenStreetMap (OSM), accessibility.cloud (including Wheelmap.org), Ginto (for Switzerland) and Google Places. Each source is weighted by its trustworthiness — from manually verified entries to automatically collected data. The coloured circle next to each entry shows at a glance how solid the data is.",
+  },
+  {
+    id: "coloured-circle",
     q: "What does the coloured circle next to each entry mean?",
     a: "Green means reliable accessibility information, yellow means moderate data quality, and red means uncertain or incomplete data. The colour reflects how trustworthy the available information is — not whether a place is accessible or not.",
   },
   {
+    id: "free",
     q: "Is searching for wheelchair-accessible places free?",
     a: "Yes, completely free and no registration required.",
   },
   {
+    id: "up-to-date",
     q: "Is the accessibility information up to date and verified?",
     a: "Data is fetched live from the sources on every search. Manually verified entries from Wheelmap contributors are highlighted with a special badge.",
   },
   {
+    id: "mobile-app",
     q: "Can I search for accessible places on my smartphone?",
     a: "Yes — Accessible Places can be installed as an app on your phone without the App Store or Play Store. On iPhone/iPad: open Safari → tap the Share icon → select \"Add to Home Screen\". On Android: open Chrome → tap the menu (three dots) → \"Install app\" or \"Add to home screen\". Once installed it behaves like a native app — with its own icon, full screen and no browser bar.",
   },
   {
+    id: "feedback",
     q: "How can I give feedback or report a bug?",
     a: "Use the \"Feedback\" link at the bottom of the page to open a short form. No account or registration required.",
   },
@@ -63,10 +124,10 @@ const FAQ_EN = [
 const faqSchema = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
-  mainEntity: FAQ_EN.map(({ q, a }) => ({
+  mainEntity: FAQ_EN.map(({ q, a, schemaText }) => ({
     "@type": "Question",
     name: q,
-    acceptedAnswer: { "@type": "Answer", text: a },
+    acceptedAnswer: { "@type": "Answer", text: schemaText ?? (a as string) },
   })),
 }
 
@@ -89,9 +150,26 @@ export default function FaqPageEn() {
         <h1 className="text-2xl font-bold mb-8">Frequently Asked Questions</h1>
 
         <dl className="flex flex-col gap-6">
-          {FAQ_EN.map(({ q, a }) => (
-            <div key={q} className="border-b border-border pb-6 last:border-0 last:pb-0">
-              <dt className="font-semibold text-sm mb-1.5">{q}</dt>
+          {FAQ_EN.map(({ id, q, a }) => (
+            <div
+              key={id}
+              id={id}
+              className="scroll-mt-20 border-b border-border pb-6 last:border-0 last:pb-0"
+            >
+              <dt className="font-semibold text-sm mb-1.5">
+                <a
+                  href={`#${id}`}
+                  className="group inline-flex items-baseline gap-1.5 hover:underline"
+                >
+                  <span>{q}</span>
+                  <span
+                    aria-hidden
+                    className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
+                  >
+                    #
+                  </span>
+                </a>
+              </dt>
               <dd className="text-sm text-muted-foreground leading-relaxed">{a}</dd>
             </div>
           ))}
