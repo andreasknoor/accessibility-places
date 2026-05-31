@@ -110,7 +110,7 @@ where `addrScore = streetTrigram × 0.6 + cityMatch × 0.25 + zipMatch × 0.15`.
 
 **`alwaysShowParking`** (`SearchFilters.alwaysShowParking`) — a **client-side display toggle**. The server always sends the same `parkingSpots` payload: disabled-parking OSM nodes within `NEARBY_PARKING_DISPLAY_RADIUS_M` of an enriched (`nearbyOnly`) result. `HomeClient` holds these in state; `visibleParkingSpots = parkingFocusMode || filters.alwaysShowParking ? parkingSpots : []` controls what reaches `MapView`. The toggle button is only shown when `hasParkingToggle` is true (enriched places or non-empty `parkingSpots`). `alwaysShowParking` is persisted via `AppSettings` (`ap_settings` key), not via the filter-prefs key.
 
-**Parkplatz-Modus** (`parkingFocusMode` state in `HomeClient`) — a per-session map focus mode available only in Nearby mode with GPS coords. On enter: backs up the current `parkingSpots` to `parkingSpotsBackupRef`, then fetches disabled-parking OSM nodes within `parkingRadiusKm` of the user's GPS position and activates the mode. While active: place markers are hidden on the map, only parking spots are shown, and `visibleParkingSpots` bypasses the `alwaysShowParking` toggle. On exit: restores `parkingSpots` from the backup so result-nearby spots return. The toggle for this mode lives in the nearby info row of `ChatPanel`, not in `FilterPanel`.
+**Parkplatz-Modus** (`parkingFocusMode` state in `HomeClient`) — a per-session map focus mode available only in Nearby mode with GPS coords. On enter: backs up the current `parkingSpots` to `parkingSpotsBackupRef`, then fetches disabled-parking OSM nodes within `parkingRadiusKm` of the user's GPS position and activates the mode. While active: place markers are hidden on the map, only parking spots are shown, and `visibleParkingSpots` bypasses the `alwaysShowParking` toggle. On exit: restores `parkingSpots` from the backup so result-nearby spots return. The toggle for this mode lives in the nearby info row of `ChatPanel`, not in `FilterPanel`. **`parkingFocusHint`** is a nullable string set alongside `parkingFocusMode`: `null` on enter (fetch in progress) or on exit, `t.chat.parkingNoneFound` when the fetch completes with zero results — shown as amber hint text below the toggle in `ChatPanel`. Passed through `MobileLayout` as a prop.
 
 **Parking tiers (`ParkingTier` in `lib/types.ts`)** — every `ParkingSpot`/`NearbyParkingFeature` carries a `tier`:
 - **`"disabled"`** (strong): dedicated/reserved disabled spaces (`capacity:disabled>0`, `parking_space=disabled`, `*=designated`). Blue "P" on the map. The **only** tier that may enrich a venue's parking value — `enrichWithNearbyParking()` filters to this tier.
@@ -277,11 +277,13 @@ No `q=` (no city name). On mount, `HomeClient` detects `selectLat`/`selectLon` w
 
 `app/sw.ts` + `@serwist/next`. The service worker is **disabled in development** (`disable: process.env.NODE_ENV === "development"` in `next.config.ts`).
 
+**`NetworkOnly` for API routes** — `/api/search` and `/api/nearby-parking` are explicitly excluded from runtime caching via a `NetworkOnly` handler. Serwist's default `NetworkFirst` has a 10 s timeout; Overpass queries regularly exceed this, causing the SW to fall back to a stale or empty cache entry (manifests as "no parking spots" in the installed PWA). Do not add these routes back to `defaultCache`.
+
 **CSP**: `next.config.ts` defines the `Content-Security-Policy` header. **Any new external domain** — whether a new API, CDN, or map tile server — requires adding it to the appropriate directive (`connect-src` for fetch/XHR, `img-src` for images). Forgetting this causes silent failures in production.
 
 ## Versioning
 
-`APP_VERSION` in `lib/config.ts` — bump on every meaningful release. Shown in the Impressum.
+`APP_VERSION` in `lib/config.ts` — bump on every meaningful release. Shown in the Impressum alongside `BUILD_DATE`, which is auto-injected by `next.config.ts` at build time (`new Date().toISOString().split("T")[0]` → `"YYYY-MM-DD"`). `BUILD_DATE` is a build-time env var — it is set automatically, never manually configured.
 
 ## Environment variables (server-side only)
 
