@@ -173,7 +173,7 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
             </Row>
           </div>
 
-          {/* ── Karte & Parkplätze ── */}
+          {/* ── Map & Parking ── */}
           <SectionTitle icon={Map} chipClass="bg-green-50 text-green-700 border-green-200">
             {ts.sectionMap}
           </SectionTitle>

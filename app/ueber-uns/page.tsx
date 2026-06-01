@@ -32,7 +32,7 @@ export default function UeberUnsPage() {
         </h1>
         <p className="text-sm text-muted-foreground mb-8">Ein Überblick über das Projekt, die Idee dahinter und wie die App funktioniert.</p>
 
-        {/* Projekt im Überblick — bordered box */}
+        {/* Project overview — bordered box */}
         <div className="rounded-xl border border-border bg-card p-5 mb-10">
           <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground mb-4">Das Projekt im Überblick</h2>
           <dl className="grid gap-2.5 text-sm">

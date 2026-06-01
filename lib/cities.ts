@@ -39,7 +39,7 @@ export const CITIES: City[] = [
   { slug: "augsburg",    nameDe: "Augsburg",    nameEn: "Augsburg",    country: "de", lat: 48.3705, lon: 10.8978 },
   { slug: "karlsruhe",   nameDe: "Karlsruhe",   nameEn: "Karlsruhe",   country: "de", lat: 49.0069, lon:  8.4037 },
   { slug: "mannheim",    nameDe: "Mannheim",    nameEn: "Mannheim",    country: "de", lat: 49.4875, lon:  8.4660 },
-  // Österreich
+  // Austria
   { slug: "wien",        nameDe: "Wien",        nameEn: "Vienna",      country: "at", lat: 48.2082, lon: 16.3738 },
   { slug: "graz",        nameDe: "Graz",        nameEn: "Graz",        country: "at", lat: 47.0700, lon: 15.4400 },
   { slug: "salzburg",    nameDe: "Salzburg",    nameEn: "Salzburg",    country: "at", lat: 47.8095, lon: 13.0550 },
