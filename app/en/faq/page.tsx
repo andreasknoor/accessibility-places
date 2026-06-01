@@ -54,7 +54,7 @@ const FAQ_EN: { id: string; q: string; a: ReactNode; schemaText?: string }[] = [
           crowdsourcing platforms for accessibility: thousands of people add places there directly.
           This valuable data also feeds into Accessible Places.
         </p>
-        <p className="mt-2">Accessible Places focuses on four things:</p>
+        <p className="mt-2">Accessible Places focuses on five things:</p>
         <ul className="mt-2 flex list-disc flex-col gap-1.5 pl-5">
           <li>
             <strong className="font-semibold text-foreground">Reliability:</strong> We show not only
@@ -74,20 +74,27 @@ const FAQ_EN: { id: string; q: string; a: ReactNode; schemaText?: string }[] = [
             data basis everywhere.
           </li>
           <li>
+            <strong className="font-semibold text-foreground">List view instead of map:</strong>{" "}
+            Wheelmap.org shows places primarily on a map — you navigate to see what&apos;s nearby.
+            Accessible Places delivers results as a sorted list first: with reliability rating,
+            entrance and toilet information at a glance. The map is always available as an
+            alternative, but isn&apos;t the primary view.
+          </li>
+          <li>
             <strong className="font-semibold text-foreground">Wheelchair parking:</strong> Accessible
-            Places shows wheelchair-accessible parking directly on the map. The question “Where is
-            the nearest accessible parking space?” can be answered with a single click — something
-            other platforms don’t offer in this way.
+            Places shows wheelchair-accessible parking directly on the map. The question &ldquo;Where is
+            the nearest accessible parking space?&rdquo; can be answered with a single click — something
+            other platforms don&apos;t offer in this way.
           </li>
         </ul>
         <p className="mt-2">
-          If you’d like to contribute accessibility data yourself, Wheelmap.org is the best place to
+          If you&apos;d like to contribute accessibility data yourself, Wheelmap.org is the best place to
           do so — new entries appear here too after a short while.
         </p>
       </>
     ),
     schemaText:
-      "Wheelmap.org and Accessible Places pursue similar goals but set different priorities — they are not competitors but complement each other. Wheelmap is one of the largest crowdsourcing platforms for accessibility: thousands of people add places there directly. This valuable data also feeds into Accessible Places. Accessible Places focuses on four things: Reliability — we show not only whether a place is accessible, but also how reliable that information is, via a coloured circle that rates the data quality. Multiple sources combined — Accessible Places merges data from different sources into a single, unified view; Wheelmap and the underlying OpenStreetMap are two important building blocks, but not the only ones. Best data per region — for each region we integrate the strongest local source; in Switzerland, for example, Ginto provides particularly high-quality accessibility data. Wheelchair parking — Accessible Places shows wheelchair-accessible parking directly on the map, and the question \"Where is the nearest accessible parking space?\" can be answered with a single click. If you'd like to contribute accessibility data yourself, Wheelmap.org is the best place to do so — new entries appear here too after a short while.",
+      "Wheelmap.org and Accessible Places pursue similar goals but set different priorities — they are not competitors but complement each other. Wheelmap is one of the largest crowdsourcing platforms for accessibility: thousands of people add places there directly. This valuable data also feeds into Accessible Places. Accessible Places focuses on four things: Reliability — we show not only whether a place is accessible, but also how reliable that information is, via a coloured circle that rates the data quality. Multiple sources combined — Accessible Places merges data from different sources into a single, unified view; Wheelmap and the underlying OpenStreetMap are two important building blocks, but not the only ones. Best data per region — for each region we integrate the strongest local source; in Switzerland, for example, Ginto provides particularly high-quality accessibility data. List view instead of map — Wheelmap.org shows places primarily on a map; Accessible Places delivers results as a sorted list first with reliability rating and details at a glance — the map is always available as an alternative. Wheelchair parking — Accessible Places shows wheelchair-accessible parking directly on the map, and the question \"Where is the nearest accessible parking space?\" can be answered with a single click. If you'd like to contribute accessibility data yourself, Wheelmap.org is the best place to do so — new entries appear here too after a short while.",
   },
   {
     id: "reliability",

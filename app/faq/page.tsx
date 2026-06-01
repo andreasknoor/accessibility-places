@@ -54,7 +54,7 @@ const FAQ_DE: { id: string; q: string; a: ReactNode; schemaText?: string }[] = [
           größten Crowdsourcing-Plattformen für Barrierefreiheit: Tausende Menschen tragen dort Orte
           direkt ein. Diese wertvollen Daten fließen auch in Accessible Places ein.
         </p>
-        <p className="mt-2">Accessible Places konzentriert sich auf vier Dinge:</p>
+        <p className="mt-2">Accessible Places konzentriert sich auf fünf Dinge:</p>
         <ul className="mt-2 flex list-disc flex-col gap-1.5 pl-5">
           <li>
             <strong className="font-semibold text-foreground">Verlässlichkeit:</strong> Wir zeigen
@@ -74,9 +74,16 @@ const FAQ_DE: { id: string; q: string; a: ReactNode; schemaText?: string }[] = [
             bestmögliche Datengrundlage.
           </li>
           <li>
+            <strong className="font-semibold text-foreground">Listenansicht statt Karte:</strong>{" "}
+            Wheelmap.org zeigt Orte primär als Karte — du navigierst, um zu sehen, was in der Nähe
+            ist. Accessible Places liefert die Ergebnisse zuerst als sortierte Liste: mit
+            Verlässlichkeitsgrad, Eingangs- und Toiletteninformationen auf einen Blick. Die Karte ist
+            als Alternative jederzeit verfügbar, steht aber nicht im Vordergrund.
+          </li>
+          <li>
             <strong className="font-semibold text-foreground">Rollstuhlparkplätze:</strong>{" "}
             Accessible Places zeigt rollstuhlgerechte Parkplätze direkt auf der Karte. Die Frage „Wo
-            ist der nächste Rollstuhlparkplatz?“ lässt sich mit einem Klick beantworten — das bieten
+            ist der nächste Rollstuhlparkplatz?&rdquo; lässt sich mit einem Klick beantworten — das bieten
             andere Plattformen so nicht.
           </li>
         </ul>
@@ -87,7 +94,7 @@ const FAQ_DE: { id: string; q: string; a: ReactNode; schemaText?: string }[] = [
       </>
     ),
     schemaText:
-      "Wheelmap.org und Accessible Places verfolgen ähnliche Ziele, setzen aber unterschiedliche Schwerpunkte — sie sind keine Konkurrenten, sondern ergänzen sich. Wheelmap ist eine der größten Crowdsourcing-Plattformen für Barrierefreiheit: Tausende Menschen tragen dort Orte direkt ein. Diese wertvollen Daten fließen auch in Accessible Places ein. Accessible Places konzentriert sich auf vier Dinge: Verlässlichkeit — wir zeigen nicht nur, ob ein Ort barrierefrei ist, sondern auch, wie verlässlich diese Information ist, über einen farbigen Kreis, der die Datenqualität bewertet. Mehrere Quellen vereint — Accessible Places führt Daten aus verschiedenen Quellen zu einer einheitlichen Ansicht zusammen; Wheelmap und das zugrunde liegende OpenStreetMap sind dabei zwei wichtige Bausteine, aber nicht die einzigen. Beste Daten je Region — für jede Region binden wir die jeweils stärkste lokale Quelle ein; in der Schweiz etwa liefert Ginto besonders hochwertige Barrierefreiheitsdaten. Rollstuhlparkplätze — Accessible Places zeigt rollstuhlgerechte Parkplätze direkt auf der Karte, und die Frage „Wo ist der nächste Rollstuhlparkplatz?“ lässt sich mit einem Klick beantworten. Wenn du selbst Barrierefreiheitsdaten beitragen möchtest, ist Wheelmap.org der beste Ort dafür — neue Einträge erscheinen nach kurzer Zeit auch bei uns.",
+      "Wheelmap.org und Accessible Places verfolgen ähnliche Ziele, setzen aber unterschiedliche Schwerpunkte — sie sind keine Konkurrenten, sondern ergänzen sich. Wheelmap ist eine der größten Crowdsourcing-Plattformen für Barrierefreiheit: Tausende Menschen tragen dort Orte direkt ein. Diese wertvollen Daten fließen auch in Accessible Places ein. Accessible Places konzentriert sich auf fünf Dinge: Verlässlichkeit — wir zeigen nicht nur, ob ein Ort barrierefrei ist, sondern auch, wie verlässlich diese Information ist, über einen farbigen Kreis, der die Datenqualität bewertet. Mehrere Quellen vereint — Accessible Places führt Daten aus verschiedenen Quellen zu einer einheitlichen Ansicht zusammen; Wheelmap und das zugrunde liegende OpenStreetMap sind dabei zwei wichtige Bausteine, aber nicht die einzigen. Beste Daten je Region — für jede Region binden wir die jeweils stärkste lokale Quelle ein; in der Schweiz etwa liefert Ginto besonders hochwertige Barrierefreiheitsdaten. Listenansicht statt Karte — Wheelmap.org zeigt Orte primär als Karte; Accessible Places liefert die Ergebnisse zuerst als sortierte Liste mit Verlässlichkeitsgrad und Detailinfos auf einen Blick — die Karte ist als Alternative jederzeit verfügbar. Rollstuhlparkplätze — Accessible Places zeigt rollstuhlgerechte Parkplätze direkt auf der Karte, und die Frage nach dem nächsten Rollstuhlparkplatz lässt sich mit einem Klick beantworten. Wenn du selbst Barrierefreiheitsdaten beitragen möchtest, ist Wheelmap.org der beste Ort dafür — neue Einträge erscheinen nach kurzer Zeit auch bei uns.",
   },
   {
     id: "reliability",
