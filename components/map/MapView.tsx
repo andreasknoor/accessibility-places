@@ -505,6 +505,19 @@ export default function MapView({
     if (!isVisible || !mapInst.current || !L) return
     const id = setTimeout(() => {
       mapInst.current?.invalidateSize()
+      // Selection-driven reveal (e.g. "show on map" switched to this tab and set
+      // selectedId in the same commit): don't fit to all results — that would
+      // zoom back out and re-cluster the just-selected marker, closing its popup.
+      // Show the selected marker instead. If it isn't built yet (fresh lazy mount,
+      // markers not ready 50 ms in), the selection effect above re-fires on
+      // mapReady and handles it — so we still skip the fit-to-all either way.
+      if (selectedId) {
+        const selMarker = placeClusterRef.current ? markers.current.get(selectedId) : undefined
+        if (selMarker && placeClusterRef.current) {
+          placeClusterRef.current.zoomToShowLayer(selMarker, () => selMarker.openPopup())
+        }
+        return
+      }
       if (places.length > 0) {
         const latlngs: [number, number][] = places.map((p) => [p.coordinates.lat, p.coordinates.lon])
         const ul = userLocationRef.current
