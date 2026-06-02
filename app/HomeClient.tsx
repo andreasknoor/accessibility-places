@@ -788,10 +788,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             <Link href={locale === "en" ? "/en/faq" : "/faq"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
               {t.faq.linkLabel}
             </Link>
-            <Link href={locale === "en" ? "/en/impressum" : "/impressum"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+            <Link href={locale === "en" ? "/en/legal-notice" : "/impressum"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
               {t.impressum.linkLabel}
             </Link>
-            <Link href={locale === "en" ? "/en/ueber-uns" : "/ueber-uns"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+            <Link href={locale === "en" ? "/en/about" : "/ueber-uns"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
               {t.about.linkLabel}
             </Link>
             <Link href={locale === "en" ? "/en/privacy" : "/datenschutz"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">

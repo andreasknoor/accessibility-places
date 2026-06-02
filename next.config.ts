@@ -43,6 +43,10 @@ const nextConfig: NextConfig = {
         destination: "https://accessible-places.org/:path*",
         permanent:   true,
       },
+      // Localised EN slugs (parity with /en/privacy). Old German-slug URLs may be
+      // indexed or bookmarked — 301 them to the new English slugs.
+      { source: "/en/ueber-uns", destination: "/en/about",        permanent: true },
+      { source: "/en/impressum", destination: "/en/legal-notice", permanent: true },
     ]
   },
 }

@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: "Impressum",
   alternates: {
     canonical: `${BASE}/impressum`,
-    languages: { de: `${BASE}/impressum`, en: `${BASE}/en/impressum` },
+    languages: { de: `${BASE}/impressum`, en: `${BASE}/en/legal-notice` },
   },
 }
 

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     "Accessible Places ist eine kostenlose Web-App, die Rollstuhlfahrern und Menschen mit Gehbehinderung hilft, verlässliche Barrierefreiheitsdaten in Deutschland, Österreich und der Schweiz zu finden.",
   alternates: {
     canonical: `${BASE}/ueber-uns`,
-    languages: { de: `${BASE}/ueber-uns`, en: `${BASE}/en/ueber-uns` },
+    languages: { de: `${BASE}/ueber-uns`, en: `${BASE}/en/about` },
   },
 }
 

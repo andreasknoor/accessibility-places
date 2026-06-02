@@ -9,8 +9,8 @@ export const metadata: Metadata = {
   description:
     "Accessible Places is a free web app helping wheelchair users and people with mobility impairments find reliable accessibility data across Germany, Austria and Switzerland.",
   alternates: {
-    canonical: `${BASE}/en/ueber-uns`,
-    languages: { de: `${BASE}/ueber-uns`, en: `${BASE}/en/ueber-uns` },
+    canonical: `${BASE}/en/about`,
+    languages: { de: `${BASE}/ueber-uns`, en: `${BASE}/en/about` },
   },
 }
 

@@ -34,7 +34,7 @@ export default function PrivacyPage() {
             <p>
               The controller within the meaning of the GDPR is Andreas Knoor. Contact
               details are listed in the{" "}
-              <Link href="/en/impressum" className="text-primary underline hover:opacity-80">
+              <Link href="/en/legal-notice" className="text-primary underline hover:opacity-80">
                 Legal Notice
               </Link>
               .
@@ -144,7 +144,7 @@ export default function PrivacyPage() {
               You have the right to access, rectification, erasure, and restriction of
               processing, as well as the right to data portability and to object.
               Requests should be directed to the contact address listed in the{" "}
-              <Link href="/en/impressum" className="text-primary underline hover:opacity-80">
+              <Link href="/en/legal-notice" className="text-primary underline hover:opacity-80">
                 Legal Notice
               </Link>
               . You also have the right to lodge a complaint with a data protection
