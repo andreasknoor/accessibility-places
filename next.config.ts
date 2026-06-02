@@ -1,10 +1,19 @@
 import type { NextConfig } from "next"
 import withSerwistInit from "@serwist/next"
 
+// Serwist is disabled entirely. It was never functional in production anyway —
+// the build uses Turbopack (see turbopack:{} below), which Serwist does not
+// support, so no SW was generated or registered originally. A brief webpack
+// build accidentally generated, committed, and shipped a caching SW that broke
+// the deployed map for returning visitors. public/sw.js is now a hand-written
+// self-destruct worker that unregisters that SW; keeping Serwist disabled means
+// no registration script is injected and the self-destruct file is never
+// overwritten by a regenerated caching SW. Re-enable only with an intentional
+// PWA rework (and add public/sw.js back to .gitignore as a build artifact).
 const withSerwist = withSerwistInit({
   swSrc:  "app/sw.ts",
   swDest: "public/sw.js",
-  disable: process.env.NODE_ENV === "development",
+  disable: true,
 })
 
 const securityHeaders = [
