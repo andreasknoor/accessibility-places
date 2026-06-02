@@ -2,13 +2,6 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Maximize2, Minimize2 } from "lucide-react"
-// Leaflet CSS must be statically imported so webpack extracts it into the CSS
-// bundle. Dynamic `await import("…css")` only injects styles under Turbopack;
-// under the production webpack build it is silently dropped, collapsing the
-// .leaflet-container to zero height (map renders blank). The JS modules below
-// stay dynamic because they touch `window` and must not run during SSR.
-import "leaflet/dist/leaflet.css"
-import "leaflet.markercluster/dist/MarkerCluster.css"
 import { Button } from "@/components/ui/button"
 import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS } from "@/lib/config"
@@ -129,10 +122,11 @@ export default function MapView({
 
     async function init() {
       L = (await import("leaflet")).default
-      // Marker clustering plugin (behaviour only — the default theme is replaced
-      // by our custom .ap-cluster-* styles below). CSS is statically imported at
-      // the top of the file so the production webpack build bundles it.
+      await import("leaflet/dist/leaflet.css")
+      // Marker clustering: behavior CSS only — the default theme is replaced
+      // by our custom .ap-cluster-* styles below.
       await import("leaflet.markercluster")
+      await import("leaflet.markercluster/dist/MarkerCluster.css")
 
       // Guard: effect may have been cleaned up while awaiting dynamic imports
       if (cancelled || mapInst.current || !mapRef.current) return

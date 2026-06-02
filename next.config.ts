@@ -32,6 +32,11 @@ const nextConfig: NextConfig = {
   env: {
     BUILD_DATE: new Date().toISOString().split("T")[0], // "YYYY-MM-DD", frozen at build time
   },
+  // Next.js 16 defaults to Turbopack for build + dev. Keep it explicit: the
+  // production build MUST use Turbopack. Switching to webpack (v3.84) broke the
+  // Leaflet map (dynamic CSS imports dropped / intermittent CSS race). This was
+  // the last known-good configuration.
+  turbopack: {},
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }]
   },
