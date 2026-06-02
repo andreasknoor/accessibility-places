@@ -288,6 +288,9 @@ const en: Translations = {
   about: {
     linkLabel: "About",
   },
+  privacy: {
+    linkLabel: "Privacy",
+  },
   impressum: {
     title:      "Legal Notice",
     back:       "Back",

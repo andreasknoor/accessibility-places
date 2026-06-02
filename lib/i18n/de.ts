@@ -288,6 +288,9 @@ const de: Translations = {
   about: {
     linkLabel: "Über die App",
   },
+  privacy: {
+    linkLabel: "Datenschutz",
+  },
   impressum: {
     title:      "Impressum",
     back:       "Zurück",

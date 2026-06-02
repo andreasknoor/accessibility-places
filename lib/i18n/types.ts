@@ -272,6 +272,9 @@ export interface Translations {
   about: {
     linkLabel: string
   }
+  privacy: {
+    linkLabel: string
+  }
   settings: {
     title:             string
     autoSaveHint:      string
