@@ -4,6 +4,8 @@ app/build/
 .gradle/
 *.apk
 *.aab
+*.apks
+*.idsig
 
 # Generated local config
 local.properties
