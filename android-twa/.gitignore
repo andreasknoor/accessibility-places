@@ -1,0 +1,13 @@
+# Android build output
+build/
+app/build/
+.gradle/
+*.apk
+*.aab
+
+# Generated local config
+local.properties
+
+# Keystores — NEVER commit signing keys
+*.keystore
+*.jks

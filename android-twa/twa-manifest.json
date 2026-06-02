@@ -1,0 +1,51 @@
+{
+  "packageId": "org.accessibleplaces.app",
+  "host": "accessible-places.org",
+  "name": "Accessible Places",
+  "launcherName": "AccessPlaces",
+  "display": "standalone",
+  "themeColor": "#2563EB",
+  "themeColorDark": "#000000",
+  "navigationColor": "#FFFFFF",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#E2E8F0",
+  "navigationDividerColorDark": "#1E293B",
+  "backgroundColor": "#FFFFFF",
+  "enableNotifications": false,
+  "startUrl": "/",
+  "iconUrl": "https://accessible-places.org/icons/icon-512.png",
+  "maskableIconUrl": "https://accessible-places.org/icons/icon-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "/Users/andreasknoor/accessible-places-keystore/android.keystore",
+    "alias": "android"
+  },
+  "appVersionName": "2",
+  "appVersionCode": 2,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://accessible-places.org/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {
+    "locationDelegation": {
+      "enabled": true
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://accessible-places.org/",
+  "minSdkVersion": 21,
+  "orientation": "portrait",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "displayOverride": [],
+  "appVersion": "2"
+}
