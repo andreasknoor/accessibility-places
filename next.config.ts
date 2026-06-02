@@ -32,7 +32,6 @@ const nextConfig: NextConfig = {
   env: {
     BUILD_DATE: new Date().toISOString().split("T")[0], // "YYYY-MM-DD", frozen at build time
   },
-  turbopack: {},
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }]
   },
