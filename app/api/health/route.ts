@@ -259,7 +259,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         console.error(`[health] Private Overpass endpoint down: ${probe.endpoint} — ${probe.error}`)
         checks.push({ name: `overpass_private_${probe.endpoint}`, ok: false, error: probe.error })
       } else {
-        console.warn(`[health] Public Overpass mirror degraded: ${probe.endpoint} — ${probe.error}`)
+        console.info(`[health] Public Overpass mirror degraded (non-critical): ${probe.endpoint} — ${probe.error}`)
         // public mirror failures are logged but do NOT fail the health check
       }
     }
