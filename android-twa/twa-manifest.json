@@ -20,8 +20,8 @@
     "path": "/Users/andreasknoor/accessible-places-keystore/android.keystore",
     "alias": "android"
   },
-  "appVersionName": "2",
-  "appVersionCode": 2,
+  "appVersionName": "4",
+  "appVersionCode": 4,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://accessible-places.org/manifest.webmanifest",
@@ -47,5 +47,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "2"
+  "appVersion": "4"
 }
