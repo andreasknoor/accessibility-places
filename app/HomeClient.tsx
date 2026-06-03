@@ -309,15 +309,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       console.error(err)
       const e = err instanceof Error ? err : new Error(String(err))
       // Report to GlitchTip (caught here, so it would not be picked up by the
-      // SDK's global handlers). The /api/log-error POST below is kept during
-      // rollout as a Vercel-log fallback; it can be removed once GlitchTip is
-      // confirmed to be receiving events.
+      // SDK's global handlers).
       Sentry.captureException(e, { tags: { context: "search" } })
-      void fetch("/api/log-error", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ message: e.message, stack: e.stack, context: query }),
-      }).catch(() => undefined)
     } finally {
       // Only the *current* (non-aborted) request should clear the loading flag —
       // an aborted older request must not toggle it off while the newer one runs.
