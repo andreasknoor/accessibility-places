@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react"
 import { track } from "@vercel/analytics"
+import * as Sentry from "@sentry/nextjs"
 import { SlidersHorizontal, ChevronRight, ChevronLeft } from "lucide-react"
 import dynamic from "next/dynamic"
 import Script from "next/script"
@@ -307,6 +308,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       setError(t.chat.errorGeneric)
       console.error(err)
       const e = err instanceof Error ? err : new Error(String(err))
+      // Report to GlitchTip (caught here, so it would not be picked up by the
+      // SDK's global handlers). The /api/log-error POST below is kept during
+      // rollout as a Vercel-log fallback; it can be removed once GlitchTip is
+      // confirmed to be receiving events.
+      Sentry.captureException(e, { tags: { context: "search" } })
       void fetch("/api/log-error", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
