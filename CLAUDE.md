@@ -273,7 +273,9 @@ No `q=` (no city name). On mount, `HomeClient` detects `selectLat`/`selectLon` w
 
 ### Static pages
 
-`app/faq/page.tsx` — FAQ page, rendered statically. Contains bilingual content (DE/EN inline, not via the i18n system). `app/impressum/page.tsx` — Legal notice; includes obfuscated contact email to avoid scraping. `app/ueber-uns/page.tsx` and `app/en/ueber-uns/page.tsx` — "Über die App" / "About" marketing page; bilingual pair using the same inline-content pattern as FAQ (no `LocaleProvider` i18n).
+`app/faq/page.tsx` — FAQ page, rendered statically. Contains bilingual content (DE/EN inline, not via the i18n system). `app/impressum/page.tsx` — Legal notice; includes obfuscated contact email to avoid scraping. `app/datenschutz/page.tsx` — Privacy policy (Datenschutzerklärung). `app/ueber-uns/page.tsx` and `app/en/ueber-uns/page.tsx` — "Über die App" / "About" marketing page; bilingual pair using the same inline-content pattern as FAQ (no `LocaleProvider` i18n).
+
+The EN routes use **localised slugs** distinct from the DE paths (set up in v3.85): `app/en/legal-notice` (↔ `/impressum`), `app/en/about` (↔ `/ueber-uns`), `app/en/privacy` (↔ `/datenschutz`), plus `app/en/faq`. When adding or renaming a static page, update both the DE and EN slug and the hreflang/canonical metadata on each.
 
 ### PWA / Service Worker
 
