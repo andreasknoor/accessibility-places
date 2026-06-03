@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef, useEffect } from "react"
+import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react"
 import { track } from "@vercel/analytics"
 import * as Sentry from "@sentry/nextjs"
 import { SlidersHorizontal, ChevronRight, ChevronLeft } from "lucide-react"
@@ -19,7 +19,7 @@ import { DEFAULT_RADIUS_KM, RADIUS_MAX_KM } from "@/lib/config"
 import { SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
-import { useSettings, loadSettings } from "@/lib/settings"
+import { useSettings, loadSettings, DEFAULT_APP_SETTINGS } from "@/lib/settings"
 import { cn } from "@/lib/utils"
 import type { AppSettings } from "@/lib/settings"
 import type { Place, ParkingSpot, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug } from "@/lib/types"
@@ -101,10 +101,13 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [lastQuery,     setLastQuery]    = useState<string | undefined>()
   const [lastCoords,    setLastCoords]   = useState<{ lat: number; lon: number } | undefined>()
   const [lastNameHint,  setLastNameHint] = useState<string | undefined>()
-  const [chatMode,      setChatMode]     = useState<"text" | "nearby" | "place">(() => {
-    if (initialCity) return "text"   // SEO deep-link: force Erkunden mode, prevent GPS auto-locate
-    return loadSettings().defaultSearchMode ?? "nearby"
-  })
+  // SSR-safe init: the server has no localStorage (loadSettings → defaults), so
+  // initialise to the same value the server renders. The stored preference is
+  // applied post-hydration in the useLayoutEffect below to avoid a server/client
+  // mismatch (React #418). initialCity is a prop → deterministic, safe here.
+  const [chatMode,      setChatMode]     = useState<"text" | "nearby" | "place">(
+    initialCity ? "text" : (DEFAULT_APP_SETTINGS.defaultSearchMode ?? "nearby"),
+  )
   const [filterCollapsed, setFilterCollapsed] = useState(true)
   const [sortBy,        setSortBy]       = useState<"confidence" | "distance">(() => loadSettings().sortOrder)
   const [resetKey,            setResetKey]            = useState(0)
@@ -114,7 +117,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // within parkingRadiusKm of the user's GPS coords. Per-session only.
   const [parkingFocusMode,    setParkingFocusMode]    = useState(false)
   const [parkingFocusHint,    setParkingFocusHint]    = useState<string | null>(null)
-  const [isFirstVisit,        setIsFirstVisit]        = useState(() => { try { return !localStorage.getItem("ap_visited") && !localStorage.getItem("ap_welcome_dismissed") } catch { return false } })
+  const [isFirstVisit,        setIsFirstVisit]        = useState(false)  // SSR-safe; real value read post-hydration (React #418)
   const [locateTriggerKey,    setLocateTriggerKey]    = useState(0)
   const [hasGpsCoords,        setHasGpsCoords]        = useState(false)
   const [gpsCoords,           setGpsCoords]           = useState<{ lat: number; lon: number } | null>(null)
@@ -144,6 +147,21 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     try { localStorage.setItem("ap_visited", "1") } catch { /* ignore */ }
     setIsFirstVisit(false)
   }
+
+  // Apply client-only initial state after hydration. The server renders the
+  // SSR-safe defaults above (no localStorage); this useLayoutEffect runs
+  // synchronously before paint, so the real values appear without a visible
+  // flash (same pattern as useIsMobile). Fixes the server/client hydration
+  // mismatch (React #418) for first-time visitors and users whose stored
+  // search mode differs from the default.
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional: hydration-safe sync of localStorage-derived state, mirrors useIsMobile */
+  useLayoutEffect(() => {
+    try {
+      setIsFirstVisit(!localStorage.getItem("ap_visited") && !localStorage.getItem("ap_welcome_dismissed"))
+    } catch { /* localStorage unavailable */ }
+    if (!initialCity) setChatMode(loadSettings().defaultSearchMode ?? "nearby")
+  }, [initialCity])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Persist filter/source/radius preferences across sessions.
   // alwaysShowParking is intentionally excluded — it's a per-session display toggle.
@@ -390,7 +408,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           navigator.geolocation.getCurrentPosition(
             (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
             () => resolve(null),
-            { timeout: 5_000, maximumAge: 60_000 },
+            { timeout: 20_000, enableHighAccuracy: false, maximumAge: 60_000 },
           )
         })
       }
@@ -480,7 +498,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         setGpsCoords(c)
       },
       () => { /* silently ignored — place search has other fallbacks */ },
-      { timeout: 8000, maximumAge: 60_000 },
+      { timeout: 20_000, enableHighAccuracy: false, maximumAge: 60_000 },
     )
   }, [chatMode])
 

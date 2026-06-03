@@ -455,7 +455,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
         )
       },
       () => { locatingRef.current = false; setNearbyPhase("error") },
-      { timeout: 10_000, enableHighAccuracy: true },
+      { timeout: 30_000, enableHighAccuracy: false, maximumAge: 60_000 },
     )
   }
 
