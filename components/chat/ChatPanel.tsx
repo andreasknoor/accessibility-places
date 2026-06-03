@@ -454,7 +454,12 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           { enableHighAccuracy: true, maximumAge: 30_000 },
         )
       },
-      () => { locatingRef.current = false; setNearbyPhase("error") },
+      (err) => {
+        locatingRef.current = false
+        setNearbyPhase("error")
+        // 1=PERMISSION_DENIED 2=POSITION_UNAVAILABLE 3=TIMEOUT
+        console.error("[geolocation] error", err.code, err.message)
+      },
       { timeout: 30_000, enableHighAccuracy: false, maximumAge: 60_000 },
     )
   }
