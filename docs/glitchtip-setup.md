@@ -392,6 +392,58 @@ As a guard against a runaway loop firing the same error thousands of times:
 automatic grouping (point 1) covers the UI, and you can add a simple request
 rate-limit on the GlitchTip ingest path in Caddy if needed.
 
+### 5i. Server-side captures for handled errors (#1/#2/#3)
+
+**What the SDK auto-captures vs what it doesn't.** The instrumentation files
+report only **unhandled** errors — on the client (window.onerror, unhandled
+rejections, error boundaries) and on the server via `onRequestError` (errors that
+propagate out of Server Components, route handlers, Server Actions, middleware).
+Errors the app **catches and handles** are invisible to GlitchTip unless reported
+explicitly. This app catches a lot on purpose — the `/api/search` pipeline runs
+each adapter through `safeRun`, which swallows per-source failures and streams a
+`source` status event instead. Those never reach GlitchTip on their own.
+
+So we add **three targeted captures**, all at the `/api/search` **API boundary**
+(`app/api/search/route.ts`) — never inside `safeRun` or the adapters, which must
+stay side-effect-free so they're safe to call from ISR SEO pages (same rule as
+the `trackError` stats):
+
+| # | Trigger | Call | Level / tags |
+|---|---|---|---|
+| **#1** | Unhandled pipeline crash (the route's final `catch`) | `captureException(err)` — real stack | `error` · `area:search-pipeline, kind:unhandled` |
+| **#2** | **All** active sources errored in one request | `captureMessage(...)` + `extra` with each source's error | `error` · `kind:all-sources-failed` |
+| **#3** | An **unexpected** adapter failure (e.g. changed API contract) | `captureMessage(...)`, gated by `isExpectedAdapterError()` | `error` · `area:adapter, source:<x>, kind:unexpected` |
+
+**The expected/unexpected split.** A single source failing with an HTTP/network
+error is normal operating noise — it stays a stats-only Upstash counter
+(`lib/stats.ts`, surfaced via `GET /api/stats`). Only *unexpected* failures are
+reported. The classifier (a helper in `route.ts`) treats these as **expected**
+(not reported):
+
+```ts
+function isExpectedAdapterError(errStr: string): boolean {
+  return /\b[45]\d\d\b/.test(errStr)                                               // HTTP status, e.g. "API error: 503", "returned 429"
+      || /timeout|abort|fetch failed|network|ECONN|ENOTFOUND|socket|terminated/i.test(errStr)
+}
+```
+
+Everything else (e.g. `"unexpected response shape"`, a parse/TypeError) is
+unexpected → reported under #3. Because `safeRun` stringifies the original Error,
+#3 has no adapter stack — it carries the message + source tag instead (the
+trade-off for keeping `safeRun` side-effect-free).
+
+**Deliberately NOT captured** (expected / best-effort / would be noise): single
+adapter failures in `safeRun`, `/api/nearby-parking`, the geocode autocomplete
+routes (suggest/place-suggest/reverse), the `/api/image/google` proxy, and
+`/api/health` (it is the monitor). These stay as stats counters and/or console
+logs only.
+
+**Filtering in GlitchTip.** Search by the `kind` tag — `kind:unhandled`,
+`kind:all-sources-failed`, `kind:unexpected` — to triage. Use the `level` field
+if you later downgrade some captures to `warning`. To distinguish expected from
+unexpected centrally, you can also gate in the server `beforeSend` (in
+`instrumentation.ts`) rather than at each call site.
+
 ---
 
 ## Phase 6 — Verify end-to-end
