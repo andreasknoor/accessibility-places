@@ -11,7 +11,7 @@
   "navigationDividerColor": "#E2E8F0",
   "navigationDividerColorDark": "#1E293B",
   "backgroundColor": "#FFFFFF",
-  "enableNotifications": false,
+  "enableNotifications": true,
   "startUrl": "/",
   "iconUrl": "https://accessible-places.org/icons/icon-512.png",
   "maskableIconUrl": "https://accessible-places.org/icons/icon-512.png",
@@ -20,8 +20,8 @@
     "path": "/Users/andreasknoor/accessible-places-keystore/android.keystore",
     "alias": "android"
   },
-  "appVersionName": "4",
-  "appVersionCode": 4,
+  "appVersionName": "8",
+  "appVersionCode": 8,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://accessible-places.org/manifest.webmanifest",
@@ -47,5 +47,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "4"
+  "appVersion": "8"
 }
