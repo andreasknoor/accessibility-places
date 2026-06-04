@@ -8,6 +8,18 @@ import { fetchOsmDisabledParking, type NearbyParkingFeature } from "@/lib/adapte
 import { enrichWithNearbyParking, haversineMeters, NEARBY_PARKING_DISPLAY_RADIUS_M } from "@/lib/matching/nearby-parking"
 import { parseQuery } from "@/lib/llm"
 import { NOMINATIM_ENDPOINT, RADIUS_MIN_KM, RADIUS_MAX_KM, PUBLIC_OVERPASS_ENDPOINTS } from "@/lib/config"
+import * as Sentry from "@sentry/nextjs"
+
+// Adapter errors come back from safeRun as plain strings (the original Error is
+// stringified there). At this API boundary we classify them: transient HTTP or
+// network failures are expected operating noise (tracked as Upstash stats only),
+// while anything else — e.g. a changed upstream API contract — is reported to
+// GlitchTip as an unexpected error (#3). Captures live here, never inside
+// safeRun/adapters, to keep those side-effect-free for ISR.
+function isExpectedAdapterError(errStr: string): boolean {
+  return /\b[45]\d\d\b/.test(errStr)                                               // HTTP status, e.g. "API error: 503", "returned 429"
+      || /timeout|abort|fetch failed|network|ECONN|ENOTFOUND|socket|terminated/i.test(errStr)
+}
 
 // ─── In-memory rate limiters (sliding-window, per IP) ───────────────────────
 // NOTE: these reset on each serverless cold start. For multi-instance
@@ -304,7 +316,29 @@ export async function POST(req: NextRequest) {
             : r.sourceId
           trackCall(statSrc)
           trackDuration(statSrc, r.durationMs)
-          if (r.error) trackError(statSrc)
+          if (r.error) {
+            trackError(statSrc)
+            // #3: report only *unexpected* adapter failures (e.g. a changed API
+            // contract / unexpected response shape). Transient HTTP/network
+            // errors stay stats-only to avoid noise.
+            if (!isExpectedAdapterError(r.error)) {
+              Sentry.captureMessage(`Adapter ${r.sourceId} failed unexpectedly: ${r.error}`, {
+                level: "error",
+                tags:  { area: "adapter", source: r.sourceId, kind: "unexpected" },
+              })
+            }
+          }
+        }
+
+        // #2: systemic outage — every active source errored. A single source
+        // failing is normal (stats only); all of them failing at once is a real
+        // signal worth an alert.
+        if (adapterResults.length > 0 && adapterResults.every((r) => r.error)) {
+          Sentry.captureMessage("All active search sources failed", {
+            level: "error",
+            tags:  { area: "search-pipeline", kind: "all-sources-failed", failed: String(adapterResults.length) },
+            extra: { errors: adapterResults.map((r) => ({ source: r.sourceId, error: r.error })) },
+          })
         }
 
         // ── 5. Match & merge ─────────────────────────────────────────────────
@@ -424,6 +458,9 @@ export async function POST(req: NextRequest) {
       } catch (err) {
         if (signal.aborted) { controller.close(); return }
         console.error("[search] unhandled error:", err)
+        // #1: a genuine pipeline crash (not a handled adapter failure) — always
+        // report to GlitchTip with the real stack.
+        Sentry.captureException(err, { level: "error", tags: { area: "search-pipeline", kind: "unhandled" } })
         emit({ type: "fatal", error: "An unexpected error occurred. Please try again." })
         controller.close()
       }
