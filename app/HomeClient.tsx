@@ -20,6 +20,7 @@ import { SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
 import { useSettings, loadSettings, DEFAULT_APP_SETTINGS } from "@/lib/settings"
+import { getCurrentPosition, isGeolocationAvailable } from "@/lib/native/geolocation"
 import { cn } from "@/lib/utils"
 import type { AppSettings } from "@/lib/settings"
 import type { Place, ParkingSpot, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug } from "@/lib/types"
@@ -404,13 +405,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       const getCoords = (): Promise<{ lat: number; lon: number } | null> => {
         if (searchCenter) return Promise.resolve(searchCenter)
         if (gpsCoordRef.current) return Promise.resolve(gpsCoordRef.current)
-        return new Promise((resolve) => {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-            () => resolve(null),
-            { timeout: 20_000, enableHighAccuracy: false, maximumAge: 60_000 },
-          )
-        })
+        return getCurrentPosition({ timeout: 20_000, enableHighAccuracy: false, maximumAge: 60_000 })
+          .then((c) => c)
+          .catch(() => null)
       }
       const coords = await getCoords()
       const qs = new URLSearchParams({ q: nameHint })
@@ -490,16 +487,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   useEffect(() => {
     if (chatMode !== "place") return
     if (gpsCoordRef.current) return
-    if (!("geolocation" in navigator)) return
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const c = { lat: pos.coords.latitude, lon: pos.coords.longitude }
-        gpsCoordRef.current = c
-        setGpsCoords(c)
-      },
-      () => { /* silently ignored — place search has other fallbacks */ },
-      { timeout: 20_000, enableHighAccuracy: false, maximumAge: 60_000 },
-    )
+    if (!isGeolocationAvailable()) return
+    getCurrentPosition({ timeout: 20_000, enableHighAccuracy: false, maximumAge: 60_000 })
+      .then((c) => { gpsCoordRef.current = c; setGpsCoords(c) })
+      .catch(() => { /* silently ignored — place search has other fallbacks */ })
   }, [chatMode])
 
   // Parkplatz-Modus enter: fetch spots for the user's GPS location, then activate

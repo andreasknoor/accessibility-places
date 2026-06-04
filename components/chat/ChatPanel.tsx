@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { cn } from "@/lib/utils"
+import { getCurrentPosition, isGeolocationAvailable } from "@/lib/native/geolocation"
 
 type Coords = { lat: number; lon: number }
 
@@ -420,13 +421,12 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
 
   function handleLocate() {
     if (locatingRef.current) return
-    if (!("geolocation" in navigator)) { setNearbyPhase("error"); return }
+    if (!isGeolocationAvailable()) { setNearbyPhase("error"); return }
     locatingRef.current = true
     setNearbyPhase("locating")
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
+    getCurrentPosition({ timeout: 30_000, enableHighAccuracy: false, maximumAge: 60_000 })
+      .then(async ({ lat, lon }) => {
         locatingRef.current = false
-        const { latitude: lat, longitude: lon } = pos.coords
         try {
           const d = await reverseGeocode(lat, lon)
           setNearbyPhase({ district: d, lat, lon })
@@ -440,7 +440,8 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
         } catch {
           setNearbyPhase("error")
         }
-        // Silently track position changes after the initial fix
+        // Silently track position changes after the initial fix (browser only —
+        // native foreground tracking via watchPosition is fine here)
         if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current)
         watchIdRef.current = navigator.geolocation.watchPosition(
           (p) => {
@@ -453,15 +454,12 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           () => {},
           { enableHighAccuracy: true, maximumAge: 30_000 },
         )
-      },
-      (err) => {
+      })
+      .catch((err) => {
         locatingRef.current = false
         setNearbyPhase("error")
-        // 1=PERMISSION_DENIED 2=POSITION_UNAVAILABLE 3=TIMEOUT
-        console.error("[geolocation] error", err.code, err.message)
-      },
-      { timeout: 30_000, enableHighAccuracy: false, maximumAge: 60_000 },
-    )
+        console.error("[geolocation] error", err instanceof Error ? err.message : String(err))
+      })
   }
 
   return (

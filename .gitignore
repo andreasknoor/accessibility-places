@@ -44,3 +44,18 @@ next-env.d.ts
 .claude/settings.local.json
 warm-failures.txt
 .env*.local
+
+# Capacitor / Android (keep source, ignore build output & secrets)
+/android/.gradle
+/android/build
+/android/app/build
+/android/app/release
+/android/local.properties
+/android/keystore.properties
+/android/.idea
+/android/capacitor-cordova-android-plugins
+*.keystore
+*.jks
+*.aab
+*.apks
+*.idsig

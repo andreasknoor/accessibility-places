@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Accessible Places</string>
+    <string name="title_activity_main">Accessible Places</string>
+    <string name="package_name">org.accessibleplaces.app</string>
+    <string name="custom_url_scheme">org.accessibleplaces.app</string>
+</resources>
