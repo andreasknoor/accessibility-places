@@ -107,6 +107,10 @@ export default function MapView({
   const userMarker = useRef<any>(null)
   const [mapReady, setMapReady] = useState(false)
   const [legendOpen, setLegendOpen] = useState(false)
+  function esc(s: string) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+  }
+
   const onShowInResultsRef  = useRef(onShowInResults)
   const placesRef           = useRef(places)
   const userLocationRef     = useRef(userLocation)
@@ -277,7 +281,7 @@ export default function MapView({
         return best === null || d < best.dist ? { name: p.name, dist: d } : best
       }, null)
       const distText = nearest !== null
-        ? t.map.parkingDistanceTo(t.results.distanceFromHere(Math.round(nearest.dist)), nearest.name)
+        ? t.map.parkingDistanceTo(t.results.distanceFromHere(Math.round(nearest.dist)), esc(nearest.name))
         : null
 
       // Fee badge: show only when tag is present
@@ -332,7 +336,7 @@ export default function MapView({
       parkingMarkersRef.current.push(marker)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parkingSpots, mapReady])
+  }, [parkingSpots, mapReady, t])
 
   // Update markers when places change. In Parkplatz-Modus the cluster is
   // cleared so only parking spots and the user dot remain visible.
