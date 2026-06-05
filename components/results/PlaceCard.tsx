@@ -236,6 +236,18 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
               <Map className="w-[1.1rem] h-[1.1rem]" />
             </a>
             <VerifiedBadge place={place} />
+          </div>
+
+          <div className="flex items-center gap-2">
+            {hasAnyDetails && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {expanded ? <ChevronUp className="w-[1.1rem] h-[1.1rem]" /> : <ChevronDown className="w-[1.1rem] h-[1.1rem]" />}
+                {expanded ? t.results.detailsCollapse : t.results.detailsExpand}
+              </button>
+            )}
             {onClick && (
               <button
                 onClick={(e) => { e.stopPropagation(); onClick() }}
@@ -248,16 +260,6 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
               </button>
             )}
           </div>
-
-          {hasAnyDetails && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {expanded ? <ChevronUp className="w-[1.1rem] h-[1.1rem]" /> : <ChevronDown className="w-[1.1rem] h-[1.1rem]" />}
-              {expanded ? t.results.detailsCollapse : t.results.detailsExpand}
-            </button>
-          )}
         </div>
       </CardContent>
 
