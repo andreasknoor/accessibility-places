@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, useLayoutEffect } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Send, Loader2, LocateFixed, Compass, X, Building2, Coffee, UtensilsCrossed, Beer, BookOpen, Hotel, Landmark, Film, Library, GalleryHorizontal, Star, IceCream, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTranslations, useLocale } from "@/lib/i18n"
@@ -134,7 +134,6 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const restoredLocRef    = useRef("")
   const inputRef          = useRef<HTMLInputElement>(null)
   const handleLocateRef      = useRef<() => void>(() => {})
-  const skipAutoLocateRef    = useRef(skipAutoLocate)
   // Refs mirror `name` and `locale` so async callbacks in handleLocate (GPS success,
   // watchPosition) read the current value rather than the closure-captured snapshot.
   const nameRef           = useRef("")
@@ -181,11 +180,22 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Auto-trigger geolocation when the effective start mode is "nearby".
-  // Reads skipAutoLocate via ref (not the closure-captured prop) so it sees the
-  // corrected value after the parent's useLayoutEffect has run (#418-fix timing).
+  // Auto-trigger geolocation when starting in "nearby" mode — but NOT for a
+  // first-time visitor (the welcome screen must stay until they interact).
+  //
+  // We read the first-visit state DIRECTLY from localStorage here rather than
+  // from the isFirstVisit-derived `skipAutoLocate` prop. That prop is racy: the
+  // #418 hydration fix initialises isFirstVisit=false and corrects it to true in
+  // a useLayoutEffect, but React flushes this passive mount effect BEFORE that
+  // correction's re-render settles — so any prop/ref read here still sees the
+  // stale `false`. localStorage is the ground truth, client-side and timing-
+  // independent. (Invisible on web with slow browser GPS; obvious on native.)
   useEffect(() => {
-    if (!skipAutoLocateRef.current && (initialMode ?? "nearby") === "nearby") {
+    const isFirstVisit = (() => {
+      try { return !localStorage.getItem("ap_visited") && !localStorage.getItem("ap_welcome_dismissed") }
+      catch { return false }
+    })()
+    if (!isFirstVisit && (initialMode ?? "nearby") === "nearby") {
       onModeChange?.("nearby")
       handleLocate()
     }
@@ -212,18 +222,6 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
 
   // Keep ref pointing at latest handleLocate to avoid stale closure in the trigger effect
   useEffect(() => { handleLocateRef.current = handleLocate })
-  // Mirror skipAutoLocate in a ref so the deps=[] auto-locate effect (a passive
-  // effect that runs after paint) reads the value AFTER the parent's #418-fix
-  // useLayoutEffect has corrected isFirstVisit. This MUST be useLayoutEffect, not
-  // useEffect: the parent's setIsFirstVisit(true) in useLayoutEffect triggers a
-  // synchronous re-render before paint, and this layout effect re-runs in that
-  // re-render's commit — so the ref holds the corrected value (true) before the
-  // passive auto-locate effect fires. A passive mirror runs too late (after, and
-  // after the auto-locate effect in declaration order), so the welcome screen
-  // would briefly appear and then vanish as the auto-locate search ran. The bug
-  // is invisible on web (slow browser GPS) but obvious on native (fast GPS).
-  useLayoutEffect(() => { skipAutoLocateRef.current = !!skipAutoLocate })
-
   // Keep mirrors of name/locale in refs so the async GPS callbacks read live values.
   useEffect(() => { nameRef.current = name })
   useEffect(() => { localeRef.current = locale })

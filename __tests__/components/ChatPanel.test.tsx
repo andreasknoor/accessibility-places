@@ -336,11 +336,22 @@ describe("ChatPanel initialMode", () => {
     expect(nearbyTab.closest("button")).toHaveClass("bg-primary")
   })
 
-  it("calls geolocation.getCurrentPosition on mount when initialMode is not passed", () => {
+  it("calls geolocation.getCurrentPosition on mount when initialMode is not passed (returning visitor)", () => {
+    localStorage.setItem("ap_visited", "1")   // not a first-time visitor → auto-locate is appropriate
     const getCurrentPosition = vi.fn()
     vi.stubGlobal("navigator", { geolocation: { getCurrentPosition }, clipboard: navigator.clipboard })
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
     expect(getCurrentPosition).toHaveBeenCalledOnce()
+  })
+
+  it("does NOT auto-locate on mount for a first-time visitor (welcome screen must stay)", () => {
+    // Empty localStorage = first visit. The auto-locate effect reads localStorage
+    // directly (not the racy isFirstVisit-derived prop), so it must skip here.
+    // Regression guard for the native welcome-screen-flash bug (v3.96–3.98).
+    const getCurrentPosition = vi.fn()
+    vi.stubGlobal("navigator", { geolocation: { getCurrentPosition }, clipboard: navigator.clipboard })
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="nearby" />)
+    expect(getCurrentPosition).not.toHaveBeenCalled()
   })
 
   it("shows nearby mode tab as active when initialMode='nearby'", () => {
@@ -350,7 +361,8 @@ describe("ChatPanel initialMode", () => {
     expect(nearbyTab.closest("button")).toHaveClass("bg-primary")
   })
 
-  it("calls geolocation.getCurrentPosition on mount when initialMode='nearby'", () => {
+  it("calls geolocation.getCurrentPosition on mount when initialMode='nearby' (returning visitor)", () => {
+    localStorage.setItem("ap_visited", "1")
     const getCurrentPosition = vi.fn()
     vi.stubGlobal("navigator", { geolocation: { getCurrentPosition }, clipboard: navigator.clipboard })
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="nearby" />)
