@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Accessibility, Check } from "lucide-react"
+import { BadgeCheck } from "lucide-react"
 import {
   Tooltip,
   TooltipContent,
@@ -135,8 +135,7 @@ export function VerifiedBadge({ place }: { place: Place }) {
 
   const icon = (
     <span role="img" aria-label={detailText} className="inline-flex items-center gap-0.5 text-emerald-600">
-      <Check className="w-3 h-3" />
-      <Accessibility className="w-3.5 h-3.5 -ml-0.5" />
+      <BadgeCheck className="w-3.5 h-3.5" />
       {ageLabel && (
         <span className="text-[10px] font-medium tabular-nums">{ageLabel}</span>
       )}
