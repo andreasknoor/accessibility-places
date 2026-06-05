@@ -47,6 +47,11 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
   const showWelcome = !isLoading && places.length === 0 && !hasSearched && chatMode === "nearby" && isFirstVisit
   const sortBy = sortByProp ?? localSortBy
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (isLoading) scrollContainerRef.current?.scrollTo({ top: 0 })
+  }, [isLoading])
 
   function handleSortToggle() {
     const next = sortBy === "confidence" ? "distance" : "confidence"
@@ -266,7 +271,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
       {/* Plain overflow-y-auto avoids Radix ScrollArea's internal display:table wrapper,
           which causes horizontal width inflation in iOS Safari when any child has
           white-space:nowrap content wider than the viewport. */}
-      {!showWelcome && <div className="flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
+      {!showWelcome && <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
         <div className="p-3 flex flex-col gap-2">
           {isLoading && (
             <div className="flex flex-col gap-2">
