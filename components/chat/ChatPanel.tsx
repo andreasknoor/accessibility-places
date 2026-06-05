@@ -133,7 +133,8 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // skipSuggestRef too early. Cleared when the user types.
   const restoredLocRef    = useRef("")
   const inputRef          = useRef<HTMLInputElement>(null)
-  const handleLocateRef   = useRef<() => void>(() => {})
+  const handleLocateRef      = useRef<() => void>(() => {})
+  const skipAutoLocateRef    = useRef(skipAutoLocate)
   // Refs mirror `name` and `locale` so async callbacks in handleLocate (GPS success,
   // watchPosition) read the current value rather than the closure-captured snapshot.
   const nameRef           = useRef("")
@@ -180,10 +181,11 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Auto-trigger geolocation when the effective start mode is "nearby"
-  // (either an explicit prop or the default when no preference is saved)
+  // Auto-trigger geolocation when the effective start mode is "nearby".
+  // Reads skipAutoLocate via ref (not the closure-captured prop) so it sees the
+  // corrected value after the parent's useLayoutEffect has run (#418-fix timing).
   useEffect(() => {
-    if (!skipAutoLocate && (initialMode ?? "nearby") === "nearby") {
+    if (!skipAutoLocateRef.current && (initialMode ?? "nearby") === "nearby") {
       onModeChange?.("nearby")
       handleLocate()
     }
@@ -210,6 +212,12 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
 
   // Keep ref pointing at latest handleLocate to avoid stale closure in the trigger effect
   useEffect(() => { handleLocateRef.current = handleLocate })
+  // Mirror skipAutoLocate in a ref so the deps=[] auto-locate effect reads the
+  // value AFTER useLayoutEffect has corrected isFirstVisit (fixes native GPS
+  // race: without this, the effect captures skipAutoLocate=false from the first
+  // render before the #418-fix useLayoutEffect runs, causing it to fire even
+  // for first-time visitors — the welcome screen then flashes and disappears).
+  useEffect(() => { skipAutoLocateRef.current = !!skipAutoLocate })
 
   // Keep mirrors of name/locale in refs so the async GPS callbacks read live values.
   useEffect(() => { nameRef.current = name })
