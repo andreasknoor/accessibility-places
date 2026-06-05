@@ -85,7 +85,7 @@ const de: Translations = {
   },
   results: {
     title: "Ergebnisse",
-    titleRadius: (km: number) => `(${km} km Radius)`,
+    titleRadius: (km: number) => `${km} km`,
     radiusPickerLabel: "Suchradius ändern",
     count:        (n: number) => `${n} Ort${n !== 1 ? "e" : ""}`,
     parkingCount: (n: number) => `(${n}x Parken)`,
@@ -96,6 +96,7 @@ const de: Translations = {
       low:     "Unsicher",
     },
     rerun:           "Filter anwenden",
+    retry:           "Erneut versuchen",
     expandRadius:    "Suchradius vergrößern?",
     expandRadiusYes: "Ja",
     conflict: "Quellen widersprechen sich",

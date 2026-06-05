@@ -341,6 +341,18 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       // it surfaces an error and clears loading below.
       if (controller.signal.aborted && !timedOut) return
       setError(timedOut ? t.chat.errorTimeout : t.chat.errorGeneric)
+      if (timedOut) {
+        // Sources still "loading" never answered before the deadline — mark them
+        // as errored so the FilterPanel shows the warning and the results-header
+        // retry button appears (gated on hasSourceError).
+        setSourceStates((prev) => {
+          const next: Partial<Record<SourceId, SourceState>> = { ...prev }
+          for (const id of Object.keys(next) as SourceId[]) {
+            if (next[id]?.status === "loading") next[id] = { status: "error", error: t.results.networkError }
+          }
+          return next
+        })
+      }
       console.error(err)
       const e = err instanceof Error ? err : new Error(String(err))
       // Report to GlitchTip (caught here, so it would not be picked up by the
@@ -623,6 +635,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // Parkplatz-Modus is only meaningful in Nearby mode with resolved GPS coords.
   const canEnterParkingFocus = chatMode === "nearby" && (hasGpsCoords || gpsCoords !== null)
 
+  // True when at least one source errored/timed out — gates the results-header
+  // retry button so it only appears when retrying is actually useful (frees the
+  // header width in the normal all-OK case).
+  const hasSourceError = Object.values(sourceStates).some((s) => s?.status === "error")
+
   // Mobile layout
   if (isMobile) {
     return (
@@ -643,6 +660,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onSearch={(query, coords, nameHint) => handleSearch(query, undefined, coords, nameHint)}
         onPlaceSearch={handlePlaceSearch}
         onRerun={lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords, lastNameHint) : undefined}
+        hasSourceError={hasSourceError}
         onExpandRadius={lastQuery && radiusKm < RADIUS_MAX_KM ? handleExpandRadius : undefined}
         onRadiusChange={handleRadiusChange}
         hasSearched={!!(lastQuery || lastNameHint)}
@@ -795,6 +813,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             onSelect={(p) => setSelectedId(p.id)}
             isLoading={isLoading}
             onRerun={lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords, lastNameHint) : undefined}
+            hasSourceError={hasSourceError}
             onExpandRadius={lastQuery && radiusKm < RADIUS_MAX_KM ? handleExpandRadius : undefined}
             radiusKm={radiusKm}
             onRadiusChange={handleRadiusChange}
