@@ -234,6 +234,16 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encoder.encode(JSON.stringify(e) + "\n"))
       }
 
+      // Flush queued Sentry events before closing the stream. On Vercel
+      // Fluid/serverless the instance can be frozen the moment the response
+      // ends, dropping any captured-but-not-yet-transmitted events (#1/#2/#3).
+      // flush() is a cheap no-op when nothing is queued, so the happy path is
+      // unaffected; telemetry must never block the response, hence the catch.
+      const flushAndClose = async () => {
+        try { await Sentry.flush(2000) } catch { /* ignore */ }
+        controller.close()
+      }
+
       try {
         // ── 1. Parse query (deterministic, no LLM) ───────────────────────────
         const parsed = parseQuery(userQuery)
@@ -271,6 +281,11 @@ export async function POST(req: NextRequest) {
         if (gpRateLimited) {
           emit({ type: "source", sourceId: "google_places", status: "error", error: "Rate limited", durationMs: 0 })
         }
+        // Set of public Overpass endpoints — labels OSM stats as public vs. the
+        // private Hetzner mirror. Defined here so the per-source diagnostics
+        // inside `wrapped` (below) can reference it.
+        const PUBLIC_OVERPASS = new Set(PUBLIC_OVERPASS_ENDPOINTS)
+
         const tasks = startAdapterTasks(params)
         const wrapped = tasks.map(({ sourceId, promise }) =>
           promise.then((r) => {
@@ -278,6 +293,29 @@ export async function POST(req: NextRequest) {
               ? { type: "source", sourceId, status: "error", error: "Source unavailable", durationMs: r.durationMs }
               : { type: "source", sourceId, status: "ok",    count: r.places.length,       durationMs: r.durationMs }
             emit(event)
+
+            // Per-source diagnostics run as each adapter settles — NOT gated
+            // behind the slowest one (a hanging source must not also hide the
+            // other sources' stats and alerts). Stats live at this API boundary,
+            // never inside safeRun, so fetchAllSources stays side-effect-free
+            // and safe to call from ISR.
+            const statSrc: SourceId = (r.sourceId === "osm" && r.winnerEndpoint)
+              ? (PUBLIC_OVERPASS.has(r.winnerEndpoint) ? "osm_public" : "osm_private")
+              : r.sourceId
+            trackCall(statSrc)
+            trackDuration(statSrc, r.durationMs)
+            if (r.error) {
+              trackError(statSrc)
+              // #3: report only *unexpected* adapter failures (e.g. a changed
+              // API contract / unexpected response shape). Transient HTTP/network
+              // errors stay stats-only to avoid noise.
+              if (!isExpectedAdapterError(r.error)) {
+                Sentry.captureMessage(`Adapter ${r.sourceId} failed unexpectedly: ${r.error}`, {
+                  level: "error",
+                  tags:  { area: "adapter", source: r.sourceId, kind: "unexpected" },
+                })
+              }
+            }
             return r
           }),
         )
@@ -287,8 +325,6 @@ export async function POST(req: NextRequest) {
         // ENABLE_NEARBY_PARKING defaults to OFF: only the literal string "1"
         // turns it on. Failure of this fetch is non-fatal — main search
         // proceeds and parking values stay as the adapters reported them.
-        const PUBLIC_OVERPASS = new Set(PUBLIC_OVERPASS_ENDPOINTS)
-
         const nearbyParkingEnabled = process.env.ENABLE_NEARBY_PARKING === "1"
         // Always include the weak "accessible" tier in the parking fetch. It is
         // display-only (never enriches/filters) and gated client-side by the
@@ -307,28 +343,6 @@ export async function POST(req: NextRequest) {
 
         const adapterResults = await Promise.all(wrapped)
         if (signal.aborted) { controller.close(); return }
-
-        // Fire-and-forget: stats belong here (API boundary), not inside safeRun,
-        // so that fetchAllSources stays side-effect-free and safe to call from ISR.
-        for (const r of adapterResults) {
-          const statSrc: SourceId = (r.sourceId === "osm" && r.winnerEndpoint)
-            ? (PUBLIC_OVERPASS.has(r.winnerEndpoint) ? "osm_public" : "osm_private")
-            : r.sourceId
-          trackCall(statSrc)
-          trackDuration(statSrc, r.durationMs)
-          if (r.error) {
-            trackError(statSrc)
-            // #3: report only *unexpected* adapter failures (e.g. a changed API
-            // contract / unexpected response shape). Transient HTTP/network
-            // errors stay stats-only to avoid noise.
-            if (!isExpectedAdapterError(r.error)) {
-              Sentry.captureMessage(`Adapter ${r.sourceId} failed unexpectedly: ${r.error}`, {
-                level: "error",
-                tags:  { area: "adapter", source: r.sourceId, kind: "unexpected" },
-              })
-            }
-          }
-        }
 
         // #2: systemic outage — every active source errored. A single source
         // failing is normal (stats only); all of them failing at once is a real
@@ -454,7 +468,8 @@ export async function POST(req: NextRequest) {
             })(),
           },
         })
-        controller.close()
+        // Flush before close: #2/#3 captures may have fired during this run.
+        await flushAndClose()
       } catch (err) {
         if (signal.aborted) { controller.close(); return }
         console.error("[search] unhandled error:", err)
@@ -462,7 +477,7 @@ export async function POST(req: NextRequest) {
         // report to GlitchTip with the real stack.
         Sentry.captureException(err, { level: "error", tags: { area: "search-pipeline", kind: "unhandled" } })
         emit({ type: "fatal", error: "An unexpected error occurred. Please try again." })
-        controller.close()
+        await flushAndClose()
       }
     },
 

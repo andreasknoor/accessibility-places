@@ -31,6 +31,7 @@ export interface Translations {
     noSearchYetExploreHint: string
     noSearchYetExploreLink: string
     errorGeneric:  string
+    errorTimeout:  string
     modeText:      string
     modeNearby:    string
     modePlace:     string

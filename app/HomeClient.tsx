@@ -53,6 +53,12 @@ const DEFAULT_SOURCES: ActiveSources = {
 
 const PREFS_KEY = "ap_prefs"
 
+// Overall client-side deadline for a search. The server's slowest legitimate
+// path is Ginto (up to 2 × 20 s) + merge, so 45 s leaves margin for a real
+// result while still catching a stalled stream (a hanging adapter that holds
+// the pipeline open with no result event).
+const SEARCH_TIMEOUT_MS = 45_000
+
 function loadSavedPrefs(): { filters: SearchFilters; sources: ActiveSources; radiusKm: number } {
   try {
     const raw = localStorage.getItem(PREFS_KEY)
@@ -195,6 +201,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     const controller = new AbortController()
     searchAbortRef.current = controller
 
+    // Overall deadline: if the stream stalls (slow/hanging adapter) and no result
+    // arrives, abort and surface an error rather than spinning forever. `timedOut`
+    // lets the catch distinguish this from a newer-search abort (which bails silently).
+    let timedOut = false
+    const timeoutId = setTimeout(() => { timedOut = true; controller.abort() }, SEARCH_TIMEOUT_MS)
+
     markVisited()
     setLastQuery(query)
     setLastCoords(coords)
@@ -256,6 +268,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
               : { status: "error", error: event.error as string,    durationMs: event.durationMs as number }
             setSourceStates((prev) => ({ ...prev, [sid]: update }))
           } else if (event.type === "result") {
+            // Result arrived — the stream is no longer at risk of stalling.
+            clearTimeout(timeoutId)
             const data = event.payload as SearchResult
             placesReceived = data.places.length > 0
             setPlaces(data.places)
@@ -322,18 +336,23 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         setError(t.chat.placeNoData(nameHint ?? ""))
       }
     } catch (err) {
-      // Aborted by a newer search — silently bail; the newer request owns the UI state.
-      if (controller.signal.aborted) return
-      setError(t.chat.errorGeneric)
+      // Aborted by a newer search — silently bail; the newer request owns the UI
+      // state. A timeout also aborts the controller, but must NOT bail silently:
+      // it surfaces an error and clears loading below.
+      if (controller.signal.aborted && !timedOut) return
+      setError(timedOut ? t.chat.errorTimeout : t.chat.errorGeneric)
       console.error(err)
       const e = err instanceof Error ? err : new Error(String(err))
       // Report to GlitchTip (caught here, so it would not be picked up by the
-      // SDK's global handlers).
-      Sentry.captureException(e, { tags: { context: "search" } })
+      // SDK's global handlers). A timeout is a strong signal that a source is
+      // stalling server-side — tag it so it stands out from generic failures.
+      Sentry.captureException(e, { tags: { context: "search", reason: timedOut ? "timeout" : "error" } })
     } finally {
-      // Only the *current* (non-aborted) request should clear the loading flag —
-      // an aborted older request must not toggle it off while the newer one runs.
-      if (!controller.signal.aborted) setIsLoading(false)
+      clearTimeout(timeoutId)
+      // Clear the loading flag for the current request OR a timed-out one. An
+      // aborted *older* request (newer search took over) must not toggle it off
+      // while the newer one runs — but a timeout has no successor, so it must.
+      if (!controller.signal.aborted || timedOut) setIsLoading(false)
     }
   }, [filters, sources, radiusKm, t])
 

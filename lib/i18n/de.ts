@@ -35,6 +35,7 @@ const de: Translations = {
     noSearchYetExploreHint: "Oder: barrierefreie Orte in einer Stadt durchsuchen?",
     noSearchYetExploreLink: "→ Erkunden",
     errorGeneric:  "Ein Fehler ist aufgetreten. Bitte erneut versuchen.",
+    errorTimeout:  "Die Suche hat zu lange gedauert. Eine Datenquelle antwortet gerade nicht – bitte erneut versuchen.",
     modeText:      "Erkunden",
     modeNearby:    "In der Nähe",
     modePlace:     "Ort suchen",
