@@ -35,6 +35,7 @@ const en: Translations = {
     noSearchYetExploreHint: "Or: browse accessible places in a city?",
     noSearchYetExploreLink: "→ Explore",
     errorGeneric:  "An error occurred. Please try again.",
+    errorTimeout:  "The search took too long. A data source is not responding right now — please try again.",
     modeText:      "Explore",
     modeNearby:    "Nearby",
     modePlace:     "Find Place",
