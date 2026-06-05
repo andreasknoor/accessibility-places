@@ -92,6 +92,7 @@ export interface Translations {
       low:    string
     }
     rerun:             string
+    retry:             string
     expandRadius:      string
     expandRadiusYes:   string
     conflict:          string

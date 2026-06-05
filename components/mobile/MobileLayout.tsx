@@ -36,6 +36,7 @@ interface Props {
   onSearch:        (query: string, coords?: { lat: number; lon: number }, nameHint?: string) => void
   onPlaceSearch?:  (nameHint: string, coords?: { lat: number; lon: number }) => void
   onRerun?:         () => void
+  hasSourceError?:  boolean
   onExpandRadius?:  () => void
   onRadiusChange?:  (km: number) => void
   hasSearched?:     boolean
@@ -74,7 +75,7 @@ interface Props {
 export default function MobileLayout({
   places, parkingSpots, selectedId, onSelect, isLoading,
   filters, sources, radiusKm, onFilters, onSources, onRadius,
-  sourceStates, searchCenter, onSearch, onPlaceSearch, onRerun, onExpandRadius, onRadiusChange, hasSearched, error,
+  sourceStates, searchCenter, onSearch, onPlaceSearch, onRerun, hasSourceError, onExpandRadius, onRadiusChange, hasSearched, error,
   onReset, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
   showParking, onToggleParking, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
@@ -247,6 +248,7 @@ export default function MobileLayout({
             isLoading={isLoading}
             scrollToId={scrollToId ?? externalScrollToId}
             onRerun={handleRerun}
+            hasSourceError={hasSourceError}
             onExpandRadius={handleExpandRadius}
             onAdjustFilters={() => setActiveTab("filter")}
             radiusKm={radiusKm}

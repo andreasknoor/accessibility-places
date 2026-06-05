@@ -19,6 +19,7 @@ interface Props {
   isLoading:   boolean
 
   onRerun?:         () => void
+  hasSourceError?:  boolean
   onExpandRadius?:  () => void
   radiusKm?:        number
   onRadiusChange?:  (km: number) => void
@@ -37,7 +38,7 @@ interface Props {
   onDismissWelcome?:    () => void
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToPlace, onSwitchToText, isFirstVisit, onDismissWelcome }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToPlace, onSwitchToText, isFirstVisit, onDismissWelcome }: Props) {
   const t = useTranslations()
   const [mapHintSeen, setMapHintSeen] = useState(() =>
     typeof window !== "undefined" && !!localStorage.getItem("ap_map_hint_seen")
@@ -146,12 +147,15 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
                 )}
               </span>
             )}
-            {onRerun && !isLoading && (
+            {/* Retry affordance — only when a source failed/timed out. In the
+                normal (all-OK) case the button is hidden so the count row has the
+                full width (avoids the 2-line wrap on narrow phones). */}
+            {onRerun && !isLoading && hasSourceError && (
               <button
                 onClick={onRerun}
-                title={t.results.rerun}
-                aria-label={t.results.rerun}
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                title={t.results.retry}
+                aria-label={t.results.retry}
+                className="text-amber-600 hover:text-amber-700 transition-colors"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
               </button>
