@@ -40,6 +40,7 @@ export async function getCurrentPosition(opts?: GeoOptions): Promise<GeoPosition
     const pos = await Geolocation.getCurrentPosition({
       enableHighAccuracy: opts?.enableHighAccuracy ?? true,
       timeout:            opts?.timeout ?? 30_000,
+      maximumAge:         opts?.maximumAge ?? 60_000,
     })
     return { lat: pos.coords.latitude, lon: pos.coords.longitude }
   }
