@@ -203,6 +203,7 @@ export interface Translations {
     legend:                 string
     legendDisabled:         string
     legendAccessible:       string
+    parkingDistanceTo:      (dist: string, name: string) => string
   }
   categories: {
     cafe:        string

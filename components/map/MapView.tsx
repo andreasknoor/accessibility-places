@@ -272,12 +272,12 @@ export default function MapView({
       })
 
       // Distance to nearest place in current results (placesRef updated before this effect runs)
-      const nearestDist = placesRef.current.reduce((min, p) => {
+      const nearest = placesRef.current.reduce<{ name: string; dist: number } | null>((best, p) => {
         const d = haversineMetres(spot, p.coordinates)
-        return d < min ? d : min
-      }, Infinity)
-      const distText = Number.isFinite(nearestDist)
-        ? t.results.distanceFromHere(Math.round(nearestDist))
+        return best === null || d < best.dist ? { name: p.name, dist: d } : best
+      }, null)
+      const distText = nearest !== null
+        ? t.map.parkingDistanceTo(t.results.distanceFromHere(Math.round(nearest.dist)), nearest.name)
         : null
 
       // Fee badge: show only when tag is present

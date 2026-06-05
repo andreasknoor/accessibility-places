@@ -229,6 +229,7 @@ const de: Translations = {
     legend:           "Legende",
     legendDisabled:   "Behindertenparkplatz (reservierte Plätze)",
     legendAccessible: "Rollstuhlgerecht (ohne reservierte Plätze)",
+    parkingDistanceTo: (dist: string, name: string) => `${dist} von ${name}`,
   },
   categories: {
     cafe:        "Café",
