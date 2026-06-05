@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useLayoutEffect } from "react"
 import { Send, Loader2, LocateFixed, Compass, X, Building2, Coffee, UtensilsCrossed, Beer, BookOpen, Hotel, Landmark, Film, Library, GalleryHorizontal, Star, IceCream, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTranslations, useLocale } from "@/lib/i18n"
@@ -212,12 +212,17 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
 
   // Keep ref pointing at latest handleLocate to avoid stale closure in the trigger effect
   useEffect(() => { handleLocateRef.current = handleLocate })
-  // Mirror skipAutoLocate in a ref so the deps=[] auto-locate effect reads the
-  // value AFTER useLayoutEffect has corrected isFirstVisit (fixes native GPS
-  // race: without this, the effect captures skipAutoLocate=false from the first
-  // render before the #418-fix useLayoutEffect runs, causing it to fire even
-  // for first-time visitors — the welcome screen then flashes and disappears).
-  useEffect(() => { skipAutoLocateRef.current = !!skipAutoLocate })
+  // Mirror skipAutoLocate in a ref so the deps=[] auto-locate effect (a passive
+  // effect that runs after paint) reads the value AFTER the parent's #418-fix
+  // useLayoutEffect has corrected isFirstVisit. This MUST be useLayoutEffect, not
+  // useEffect: the parent's setIsFirstVisit(true) in useLayoutEffect triggers a
+  // synchronous re-render before paint, and this layout effect re-runs in that
+  // re-render's commit — so the ref holds the corrected value (true) before the
+  // passive auto-locate effect fires. A passive mirror runs too late (after, and
+  // after the auto-locate effect in declaration order), so the welcome screen
+  // would briefly appear and then vanish as the auto-locate search ran. The bug
+  // is invisible on web (slow browser GPS) but obvious on native (fast GPS).
+  useLayoutEffect(() => { skipAutoLocateRef.current = !!skipAutoLocate })
 
   // Keep mirrors of name/locale in refs so the async GPS callbacks read live values.
   useEffect(() => { nameRef.current = name })
