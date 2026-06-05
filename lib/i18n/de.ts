@@ -105,7 +105,7 @@ const de: Translations = {
     wheelmapLink:   "Auf Wheelmap.org prüfen",
     gintoLink:      "Auf Ginto prüfen",
     googleMapsLink: "In Google Maps öffnen",
-    verifiedRecently: "Vor Ort verifiziert (Wheelmap/OSM, ≤ 2 Jahre)",
+    verifiedRecently: "Vor Ort verifiziert",
     verifiedAt: (date: string, sources: string[]) => {
       const src = sources.length > 0 ? ` in ${sources.join(", ")}` : ""
       const d = new Date(date)
