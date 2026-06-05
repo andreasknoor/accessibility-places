@@ -106,19 +106,20 @@ const en: Translations = {
     gintoLink:      "Check on Ginto",
     googleMapsLink: "Open in Google Maps",
     verifiedRecently: "Recently user-verified (Wheelmap/OSM, ≤ 2 years)",
-    verifiedAt: (date: string) => {
+    verifiedAt: (date: string, sources: string[]) => {
+      const src = sources.length > 0 ? ` in ${sources.join(", ")}` : ""
       const d = new Date(date)
-      if (Number.isNaN(d.getTime())) return "Manually verified"
+      if (Number.isNaN(d.getTime())) return `Manually verified${src}`
       const days = Math.max(0, Math.floor((Date.now() - d.getTime()) / 86_400_000))
-      if (days === 0)   return "Manually verified today"
-      if (days === 1)   return "Manually verified 1 day ago"
-      if (days < 30)    return `Manually verified ${days} days ago`
+      if (days === 0)   return `Manually verified today${src}`
+      if (days === 1)   return `Manually verified 1 day ago${src}`
+      if (days < 30)    return `Manually verified ${days} days ago${src}`
       if (days < 365) {
         const months = Math.floor(days / 30)
-        return months === 1 ? "Manually verified 1 month ago" : `Manually verified ${months} months ago`
+        return months === 1 ? `Manually verified 1 month ago${src}` : `Manually verified ${months} months ago${src}`
       }
       const years = Math.floor(days / 365)
-      return years === 1 ? "Manually verified 1 year ago" : `Manually verified ${years} years ago`
+      return years === 1 ? `Manually verified 1 year ago${src}` : `Manually verified ${years} years ago${src}`
     },
     verifiedAge: (date: string) => {
       const d = new Date(date)
@@ -133,7 +134,7 @@ const en: Translations = {
     noDogs: "No dogs",
     vegetarian: "Vegetarian",
     vegan:      "Vegan",
-    showOnMap:  "Show on map",
+    showOnMap:  "To map",
     mapHint:    "Tip: tap an entry to open details",
     scoreCalculation:      "Score calculation",
     scorePrefix:           "Data: ",
