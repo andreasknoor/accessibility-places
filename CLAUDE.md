@@ -217,7 +217,7 @@ The `countrycodes=de,at,ch` constraint in Nominatim calls and the Photon boundin
 
 In production, `raw` adapter response data is stripped from `sourceRecords` before the response is sent (see `stripRaw()`). In development the raw data is preserved for debugging. Adapters must also populate `SourceRecord.metadata` (a plain object mirroring the key fields from `raw`) so the info sheet can display data in production — all five adapters do this. When adding a new adapter, always set both `raw` and `metadata`.
 
-`POST /api/log-error` — client-side error forwarding. `HomeClient` calls this fire-and-forget in its search `catch` block; the route logs via `console.error` (appears as Error in Vercel Function Logs).
+**Error reporting (GlitchTip)** — `instrumentation.ts` (server) and `instrumentation-client.ts` (client) initialize `@sentry/nextjs` pointed at the self-hosted GlitchTip instance at `logs.accessible-places.org`. GlitchTip speaks the Sentry ingest protocol. Enabled only in production when `NEXT_PUBLIC_SENTRY_DSN` is set. Performance tracing is off (`tracesSampleRate: 0`). **Critical invariant:** `withSentryConfig` wrapper is deliberately not used — it is webpack-only and breaks the required Turbopack build. Do not add it.
 
 `GET /api/image/google?photoName=` — proxy for Google Places photo URLs. Validates `photoName` against `places/*/photos/*` pattern (SSRF guard), then calls the Places API with `skipHttpRedirect=true` and returns `{ url }` JSON with a 24 h / 7-day SWR cache header. Requires `GOOGLE_PLACES_API_KEY`.
 
@@ -301,6 +301,7 @@ The EN routes use **localised slugs** distinct from the DE paths (set up in v3.8
 - `KV_REST_API_URL` / `KV_REST_API_TOKEN` — optional; Upstash Redis credentials for adapter call/error stats. If absent, `lib/stats.ts` is a no-op and `GET /api/stats` returns 503.
 - `OVERPASS_ENDPOINTS` — optional; comma-separated list of Overpass API URLs to override the two public mirrors. Multiple URLs retain the parallel-race behaviour. Production value includes the private Hetzner server first, then both public mirrors as fallback: `https://overpass.accessible-places.org/api/interpreter,https://overpass-api.de/api/interpreter,https://overpass.kumi.systems/api/interpreter`.
 - `NOMINATIM_ENDPOINT` — optional; base URL of a private Nominatim instance, e.g. `https://nominatim.example.com`. Trailing slash is stripped automatically. Applies to all three geocode routes and the search pipeline.
+- `NEXT_PUBLIC_SENTRY_DSN` — optional; GlitchTip DSN for error reporting. If absent (or in dev), reporting is silently disabled in both `instrumentation.ts` and `instrumentation-client.ts`.
 
 ## Tests
 
@@ -315,7 +316,7 @@ The EN routes use **localised slugs** distinct from the DE paths (set up in v3.8
 
 ## Private Overpass server (Hetzner)
 
-Self-hosted Overpass API for DACH at `overpass.accessible-places.org` (Caddy → Docker on Hetzner CAX21, Helsinki). Eliminates public-mirror rate limits and reduces latency from 2–15 s to ~50–200 ms.
+Self-hosted Overpass API for DACH at `overpass.accessible-places.org` (Caddy → Docker on Hetzner CX33, x86 Intel Xeon, 8 GB RAM). Eliminates public-mirror rate limits and reduces latency from 2–15 s to ~50–200 ms.
 
 **Server:** `65.109.1.63` — `ssh root@overpass.accessible-places.org`
 
@@ -326,7 +327,7 @@ Self-hosted Overpass API for DACH at `overpass.accessible-places.org` (Caddy →
 | Variable | Production value | Why |
 |---|---|---|
 | `OVERPASS_RATE_LIMIT` | `32` | Default 4–8; "slots occupied" HTML at peak |
-| `OVERPASS_SPACE` | `6442450944` | Default 512 MB; CAX21 has 8 GB |
+| `OVERPASS_SPACE` | `6442450944` | Default 512 MB; CX33 has 8 GB |
 | `OVERPASS_TIME` | `300` | Default 1000 s; queries use `[timeout:12]` anyway |
 | `OVERPASS_ALLOW_DUPLICATE_QUERIES` | `yes` | Default `no` rejects identical concurrent queries immediately with HTML 200 — primary cause of load-test failures |
 | `OVERPASS_HEALTHCHECK` | see below | Default healthcheck query has **no `[timeout:]`** — those queries hang ~15 s and 504 at the gateway, marking the container `(unhealthy)` even while real traffic is fine (the OSM adapter always sends `[timeout:12]`). Override to add `[timeout:5]` so the flag reflects real availability. |
@@ -359,3 +360,11 @@ docker run -d --name overpass --restart always -p 8080:80 \
 **If replication stopped** (data timestamp stops advancing): check `docker logs overpass` for `OVERPASS_DIFF_URL is not set` (wrong env var name) or `replicate_id` missing/wrong permissions. Bootstrap the sequence file with: `docker exec overpass /app/venv/bin/pyosmium-get-changes --server https://download.geofabrik.de/europe/dach-updates/ -D <TIMESTAMP> -f /db/replicate_id` where `<TIMESTAMP>` is the OSM base timestamp from `/api/status`.
 
 **Overpass HTML 200 responses:** when the daemon is overloaded it returns `Content-Type: text/html` with HTTP 200 (not 5xx). The OSM adapter guard (`res.headers?.get("content-type")`) detects this and rejects the endpoint so the parallel race falls through to the public mirrors.
+
+## Capacitor Android app
+
+The app ships as an Android APK (Capacitor shell wrapping the deployed web URL) in addition to the PWA. The native shell lives in `android/` (not checked in to this repo after the TWA cut-over); runbook at `docs/capacitor-android-setup.md`.
+
+**`lib/native/geolocation.ts`** — platform-aware wrapper around `@capacitor/geolocation`. Call `getCurrentPosition()` from this module instead of `navigator.geolocation` directly. On `Capacitor.isNativePlatform() === true` it checks/requests OS permissions and uses the native plugin; in the browser it falls back to `navigator.geolocation`. The plugin is dynamically imported to keep it out of the web bundle's critical path.
+
+**Critical invariant (`isFirstVisit`):** the welcome-screen / auto-locate gate must be initialised from `localStorage` in a layout effect (not from React state derived after mount). A `useState` init that reads `localStorage` races with Capacitor's WebView cache on cold start — the welcome screen flashes or auto-locate fires incorrectly. See commit `2294867` for the fix pattern and `#418` for the original race.

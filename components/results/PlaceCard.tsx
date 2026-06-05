@@ -97,7 +97,7 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
               {CATEGORY_ICONS[place.category] ?? "📍"}
             </span>
             <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-sm leading-snug truncate">
+              <h3 className="font-semibold text-sm leading-snug line-clamp-2 break-words">
                 {place.name}
               </h3>
               {(addr || distanceM !== undefined) && (
