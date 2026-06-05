@@ -106,19 +106,20 @@ const de: Translations = {
     gintoLink:      "Auf Ginto prüfen",
     googleMapsLink: "In Google Maps öffnen",
     verifiedRecently: "Vor Ort verifiziert (Wheelmap/OSM, ≤ 2 Jahre)",
-    verifiedAt: (date: string) => {
+    verifiedAt: (date: string, sources: string[]) => {
+      const src = sources.length > 0 ? ` in ${sources.join(", ")}` : ""
       const d = new Date(date)
-      if (Number.isNaN(d.getTime())) return "Manuell verifiziert"
+      if (Number.isNaN(d.getTime())) return `Manuell verifiziert${src}`
       const days = Math.max(0, Math.floor((Date.now() - d.getTime()) / 86_400_000))
-      if (days === 0)   return "Heute manuell verifiziert"
-      if (days === 1)   return "Manuell verifiziert vor 1 Tag"
-      if (days < 30)    return `Manuell verifiziert vor ${days} Tagen`
+      if (days === 0)   return `Heute manuell verifiziert${src}`
+      if (days === 1)   return `Manuell verifiziert vor 1 Tag${src}`
+      if (days < 30)    return `Manuell verifiziert vor ${days} Tagen${src}`
       if (days < 365) {
         const months = Math.floor(days / 30)
-        return months === 1 ? "Manuell verifiziert vor 1 Monat" : `Manuell verifiziert vor ${months} Monaten`
+        return months === 1 ? `Manuell verifiziert vor 1 Monat${src}` : `Manuell verifiziert vor ${months} Monaten${src}`
       }
       const years = Math.floor(days / 365)
-      return years === 1 ? "Manuell verifiziert vor 1 Jahr" : `Manuell verifiziert vor ${years} Jahren`
+      return years === 1 ? `Manuell verifiziert vor 1 Jahr${src}` : `Manuell verifiziert vor ${years} Jahren${src}`
     },
     verifiedAge: (date: string) => {
       const d = new Date(date)
@@ -133,7 +134,7 @@ const de: Translations = {
     noDogs: "Keine Hunde",
     vegetarian: "Vegetarisch",
     vegan:      "Vegan",
-    showOnMap:  "Auf Karte zeigen",
+    showOnMap:  "Zur Karte",
     mapHint:    "Tipp: Eintrag antippen → Detailinfos öffnen",
     scoreCalculation:      "Score-Berechnung",
     scorePrefix:           "Daten: ",

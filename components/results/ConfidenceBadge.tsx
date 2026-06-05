@@ -11,6 +11,7 @@ import { BottomSheet } from "@/components/ui/bottom-sheet"
 import { useTranslations } from "@/lib/i18n"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { confidenceLabel } from "@/lib/matching/merge"
+import { SOURCE_LABELS } from "@/lib/config"
 import { cn } from "@/lib/utils"
 import type { Place } from "@/lib/types"
 
@@ -94,7 +95,7 @@ function ScoreContent({ place }: { place: Place }) {
   )
 }
 
-function collectVerifiedSources(place: Place) {
+export function collectVerifiedSources(place: Place) {
   return [
     place.accessibility.entrance,
     place.accessibility.toilet,
@@ -111,38 +112,76 @@ function latestVerifiedAt(place: Place): string | undefined {
   return dates.slice().sort().pop()
 }
 
+function uniqueSourceLabels(place: Place): string[] {
+  const seen = new Set<string>()
+  return collectVerifiedSources(place)
+    .map((s) => SOURCE_LABELS[s.sourceId] ?? s.sourceId)
+    .filter((label) => { if (seen.has(label)) return false; seen.add(label); return true })
+}
+
+export function VerifiedBadge({ place }: { place: Place }) {
+  const t        = useTranslations()
+  const isMobile = useIsMobile()
+  const [sheetOpen, setSheetOpen] = useState(false)
+
+  if (collectVerifiedSources(place).length === 0) return null
+
+  const verifiedDate  = latestVerifiedAt(place)
+  const ageLabel      = verifiedDate ? t.results.verifiedAge(verifiedDate) : ""
+  const sourceLabels  = uniqueSourceLabels(place)
+  const detailText    = verifiedDate
+    ? t.results.verifiedAt(verifiedDate, sourceLabels)
+    : t.results.verifiedRecently
+
+  const icon = (
+    <span role="img" aria-label={detailText} className="inline-flex items-center gap-0.5 text-emerald-600">
+      <Check className="w-3 h-3" />
+      <Accessibility className="w-3.5 h-3.5 -ml-0.5" />
+      {ageLabel && (
+        <span className="text-[10px] font-medium tabular-nums">{ageLabel}</span>
+      )}
+    </span>
+  )
+
+  if (isMobile) {
+    return (
+      <>
+        <button
+          onClick={(e) => { e.stopPropagation(); setSheetOpen(true) }}
+          className="p-1 -m-1 leading-none"
+          aria-label={detailText}
+        >
+          {icon}
+        </button>
+        <BottomSheet
+          open={sheetOpen}
+          onClose={() => setSheetOpen(false)}
+          title={t.results.verifiedRecently}
+        >
+          <p className="text-sm">{detailText}</p>
+        </BottomSheet>
+      </>
+    )
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="cursor-default inline-flex">{icon}</span>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="text-xs">
+        {detailText}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
 export default function ConfidenceBadge({ confidence, place, className }: Props) {
   const t        = useTranslations()
   const isMobile = useIsMobile()
   const level    = confidenceLabel(confidence)
   const pct      = Math.round(confidence * 100)
   const [sheetOpen, setSheetOpen] = useState(false)
-
-  const verified     = place ? collectVerifiedSources(place).length > 0 : false
-  const verifiedDate = place && verified ? latestVerifiedAt(place) : undefined
-
-  const ageLabel = verifiedDate ? t.results.verifiedAge(verifiedDate) : ""
-
-  const verifiedIcon = verified && (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span
-          role="img"
-          aria-label={t.results.verifiedRecently}
-          className="inline-flex items-center gap-0.5 text-emerald-600 cursor-default"
-        >
-          <Check className="w-3 h-3" />
-          <Accessibility className="w-3.5 h-3.5 -ml-0.5" />
-          {ageLabel && (
-            <span className="text-[10px] font-medium tabular-nums">{ageLabel}</span>
-          )}
-        </span>
-      </TooltipTrigger>
-      <TooltipContent side="top" className="text-xs">
-        {verifiedDate ? t.results.verifiedAt(verifiedDate) : t.results.verifiedRecently}
-      </TooltipContent>
-    </Tooltip>
-  )
 
   const badge = (
     <span className={cn(
@@ -179,8 +218,7 @@ export default function ConfidenceBadge({ confidence, place, className }: Props)
   ) : badge
 
   return (
-    <span className={cn("inline-flex items-center gap-1.5", className)}>
-      {verifiedIcon}
+    <span className={cn("inline-flex items-center", className)}>
       {badgeWithInteraction}
     </span>
   )

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { render, screen } from "@testing-library/react"
-import ConfidenceBadge from "@/components/results/ConfidenceBadge"
+import ConfidenceBadge, { VerifiedBadge } from "@/components/results/ConfidenceBadge"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { buildAttribute, emptyAttribute } from "@/lib/matching/merge"
 import type { Place } from "@/lib/types"
@@ -59,7 +59,7 @@ describe("ConfidenceBadge", () => {
         parking:  emptyAttribute(),
       },
     })
-    renderWithProvider(<ConfidenceBadge confidence={0.7} place={place} />)
+    renderWithProvider(<VerifiedBadge place={place} />)
     expect(screen.queryByLabelText(/verifiziert|verified/i)).not.toBeInTheDocument()
   })
 
@@ -71,7 +71,7 @@ describe("ConfidenceBadge", () => {
         parking:  emptyAttribute(),
       },
     })
-    renderWithProvider(<ConfidenceBadge confidence={0.7} place={place} />)
+    renderWithProvider(<VerifiedBadge place={place} />)
     expect(screen.getByLabelText(/verifiziert|verified/i)).toBeInTheDocument()
   })
 })

@@ -5,7 +5,7 @@ import { createPortal } from "react-dom"
 import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Accessibility, PawPrint, Salad, Leaf, Map, ShieldCheck } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import ConfidenceBadge  from "./ConfidenceBadge"
+import ConfidenceBadge, { VerifiedBadge } from "./ConfidenceBadge"
 import A11yAttribute    from "./A11yAttribute"
 import PlaceDebugSheet  from "./PlaceDebugSheet"
 import { track } from "@vercel/analytics"
@@ -114,7 +114,7 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
               )}
             </div>
           </div>
-          <ConfidenceBadge confidence={place.overallConfidence} place={place} className="shrink-0" />
+          <ConfidenceBadge confidence={place.overallConfidence} place={place} className="shrink-0 self-start" />
         </div>
 
         {/* ── Source badge ── */}
@@ -235,10 +235,11 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
             >
               <Map className="w-[1.1rem] h-[1.1rem]" />
             </a>
+            <VerifiedBadge place={place} />
             {onClick && (
               <button
                 onClick={(e) => { e.stopPropagation(); onClick() }}
-                className="flex items-center gap-1 text-xs text-primary bg-primary/10 hover:bg-primary/20 transition-colors rounded-full px-2.5 py-1 ml-1"
+                className="flex items-center gap-1 text-xs text-primary bg-primary/10 hover:bg-primary/20 transition-colors rounded-full px-2.5 py-1"
                 aria-label={t.results.showOnMap}
                 title={t.results.showOnMap}
               >

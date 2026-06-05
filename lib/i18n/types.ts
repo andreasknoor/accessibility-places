@@ -102,7 +102,7 @@ export interface Translations {
     gintoLink:         string
     googleMapsLink:    string
     verifiedRecently:  string
-    verifiedAt:        (date: string) => string
+    verifiedAt:        (date: string, sources: string[]) => string
     verifiedAge:       (date: string) => string
     allowsDogs:        string
     noDogs:            string

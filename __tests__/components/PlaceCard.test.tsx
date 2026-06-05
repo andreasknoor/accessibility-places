@@ -69,7 +69,7 @@ describe("PlaceCard", () => {
   it("calls onClick when map button is clicked", () => {
     const onClick = vi.fn()
     renderWithProvider(<PlaceCard place={makePlace()} onClick={onClick} />)
-    fireEvent.click(screen.getByRole("button", { name: /Auf Karte zeigen|Show on map/i }))
+    fireEvent.click(screen.getByRole("button", { name: /Zur Karte|To map/i }))
     expect(onClick).toHaveBeenCalledOnce()
   })
 
