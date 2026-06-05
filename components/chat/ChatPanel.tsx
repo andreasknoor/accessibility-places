@@ -141,6 +141,15 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
 
   const district = typeof nearbyPhase === "object" ? nearbyPhase.district : null
 
+  // Sync mode when HomeClient corrects chatMode post-hydration via useLayoutEffect.
+  // useState(initialMode) only captures the SSR-safe default on first mount; this
+  // effect re-applies the saved preference once the parent has read localStorage.
+  // When the user switches tabs themselves, onModeChange → HomeClient → initialMode
+  // roundtrips back to the same value, so setMode is a React no-op (safe).
+  useEffect(() => {
+    if (initialMode !== undefined) setMode(initialMode)
+  }, [initialMode])
+
   // Restore last search on mount (chip + location, never nearby mode).
   // URL-derived initialLocation takes priority over localStorage.
   useEffect(() => {
