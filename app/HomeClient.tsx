@@ -728,6 +728,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         hasSearched={!!(lastQuery || lastNameHint)}
         error={error}
         onReset={handleReset}
+        onLogoTap={handleLogoTap}
         resetKey={resetKey}
         filterDebug={filterDebug}
         initialLocation={resetKey === 0 ? initialCity : undefined}

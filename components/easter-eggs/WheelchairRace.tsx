@@ -33,16 +33,22 @@ export default function WheelchairRace({ onDone }: Props) {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="fixed inset-0 z-[9997] pointer-events-none overflow-hidden" aria-hidden>
+    // overflow-hidden intentionally omitted: fixed+inset-0 already clips at viewport
+    // edges. With overflow-hidden the browser can clip translateX(-120px) start
+    // positions, making racers invisible until they reach x=0.
+    <div className="fixed inset-0 z-[9997] pointer-events-none" aria-hidden>
       {RACERS.map((racer, i) => (
         <div
           key={i}
-          className="absolute flex flex-col items-center gap-0.5"
+          // wheelchair-race-racer defined in globals.css uses --race-dur custom property.
+          // CSS class survives Tailwind preflight's prefers-reduced-motion override
+          // (which uses !important on animation-duration and would clobber inline styles).
+          className="absolute flex flex-col items-center gap-0.5 wheelchair-race-racer"
           style={{
             top:       `${LANES[i]}%`,
             left:      0,
-            animation: `wheelchair-race ${durations[i]}s linear forwards`,
-          }}
+            "--race-dur": `${durations[i]}s`,
+          } as React.CSSProperties}
         >
           <span className="text-xs leading-none">{racer.dot}</span>
           <div

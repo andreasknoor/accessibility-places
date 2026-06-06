@@ -42,6 +42,7 @@ interface Props {
   hasSearched?:     boolean
   error?:           string
   onReset?:          () => void
+  onLogoTap?:        () => void
   resetKey?:         number
   filterDebug?:      FilterDebug
   initialLocation?:     string
@@ -77,7 +78,7 @@ export default function MobileLayout({
   places, parkingSpots, selectedId, onSelect, isLoading,
   filters, sources, radiusKm, onFilters, onSources, onRadius,
   sourceStates, searchCenter, onSearch, onPlaceSearch, onRerun, hasSourceError, onExpandRadius, onRadiusChange, hasSearched, error,
-  onReset, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
+  onReset, onLogoTap, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
   showParking, onToggleParking, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
   onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, hasGpsCoords, locateTrigger, onSwitchToText, onSwitchToPlace,
@@ -151,7 +152,7 @@ export default function MobileLayout({
       {/* ── Header ── */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card shrink-0">
         <button
-          onClick={onReset}
+          onClick={() => { onLogoTap?.(); onReset?.() }}
           className="flex items-center gap-2.5 hover:opacity-75 transition-opacity"
           title="Reset"
         >

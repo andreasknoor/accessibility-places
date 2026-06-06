@@ -8,10 +8,22 @@
 
 /* ── Easter Egg animations ─────────────────────────────────────────────────── */
 
-/* #2 Rollstuhl-Rennen: racers move from off-screen left to off-screen right */
+/* #2 Rollstuhl-Rennen: racers move from off-screen left to off-screen right.
+   Duration is set per-element via --race-dur CSS custom property.
+   CSS class (not inline style) ensures it is not overridden by Tailwind's
+   prefers-reduced-motion preflight (!important on animation-duration). */
 @keyframes wheelchair-race {
-  from { transform: translateX(-80px) }
-  to   { transform: translateX(calc(100vw + 80px)) }
+  from { transform: translateX(-120px) }
+  to   { transform: translateX(calc(100vw + 120px)) }
+}
+
+.wheelchair-race-racer {
+  animation: wheelchair-race var(--race-dur, 2s) linear forwards;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wheelchair-race-racer { animation: none; }
 }
 
 /* #3 Shake-to-Shuffle: brief wobble on each PlaceCard */
