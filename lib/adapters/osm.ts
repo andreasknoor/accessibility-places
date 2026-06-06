@@ -553,12 +553,12 @@ export async function fetchOsmAccessibleAmenities(
     `node(around:${r},${lat},${lon})[amenity=toilets][wheelchair=yes];`,
     `way(around:${r},${lat},${lon})[amenity=toilets][wheelchair=designated];`,
     `way(around:${r},${lat},${lon})[amenity=toilets][wheelchair=yes];`,
-    `node(around:${r},${lat},${lon})[toilets:wheelchair=designated][access!~"^(private|no)$"];`,
-    `node(around:${r},${lat},${lon})[toilets:wheelchair=yes][access!~"^(private|no)$"];`,
-    `way(around:${r},${lat},${lon})[toilets:wheelchair=designated][access!~"^(private|no)$"];`,
-    `way(around:${r},${lat},${lon})[toilets:wheelchair=yes][access!~"^(private|no)$"];`,
-    `relation(around:${r},${lat},${lon})[toilets:wheelchair=designated][access!~"^(private|no)$"];`,
-    `relation(around:${r},${lat},${lon})[toilets:wheelchair=yes][access!~"^(private|no)$"];`,
+    `node(around:${r},${lat},${lon})["toilets:wheelchair"="designated"]["access"!="private"]["access"!="no"];`,
+    `node(around:${r},${lat},${lon})["toilets:wheelchair"="yes"]["access"!="private"]["access"!="no"];`,
+    `way(around:${r},${lat},${lon})["toilets:wheelchair"="designated"]["access"!="private"]["access"!="no"];`,
+    `way(around:${r},${lat},${lon})["toilets:wheelchair"="yes"]["access"!="private"]["access"!="no"];`,
+    `relation(around:${r},${lat},${lon})["toilets:wheelchair"="designated"]["access"!="private"]["access"!="no"];`,
+    `relation(around:${r},${lat},${lon})["toilets:wheelchair"="yes"]["access"!="private"]["access"!="no"];`,
   ] : []
 
   const allClauses = [...parkingClauses, ...toiletClauses]
