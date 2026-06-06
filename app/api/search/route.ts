@@ -4,7 +4,8 @@ import { startAdapterTasks }            from "@/lib/adapters"
 import { trackCall, trackError, trackDuration } from "@/lib/stats"
 import { findMatch, filterByNameHint }  from "@/lib/matching/match"
 import { mergePlaces, passesFilters, finalisePlaceConfidence, computeFilteredConfidence, countLimited } from "@/lib/matching/merge"
-import { fetchOsmDisabledParking, type NearbyParkingFeature } from "@/lib/adapters/osm"
+import { fetchOsmDisabledParking } from "@/lib/adapters/osm"
+import type { AmenityFeature } from "@/lib/types"
 import { enrichWithNearbyParking, haversineMeters, NEARBY_PARKING_DISPLAY_RADIUS_M } from "@/lib/matching/nearby-parking"
 import { parseQuery } from "@/lib/llm"
 import { NOMINATIM_ENDPOINT, RADIUS_MIN_KM, RADIUS_MAX_KM, PUBLIC_OVERPASS_ENDPOINTS } from "@/lib/config"
@@ -329,7 +330,7 @@ export async function POST(req: NextRequest) {
         // Always include the weak "accessible" tier in the parking fetch. It is
         // display-only (never enriches/filters) and gated client-side by the
         // showWeakParking setting. SEO opts out via the function-arg default.
-        const nearbyParkingPromise: Promise<NearbyParkingFeature[]> = nearbyParkingEnabled
+        const nearbyParkingPromise: Promise<AmenityFeature[]> = nearbyParkingEnabled
           ? fetchOsmDisabledParking({ lat: geo.lat, lon: geo.lon }, radiusKm, signal, true).then(
               ({ features, winnerEndpoint, durationMs }) => {
                 const parkingSrc = PUBLIC_OVERPASS.has(winnerEndpoint) ? "osm_parking_public" : "osm_parking_private"
@@ -369,7 +370,7 @@ export async function POST(req: NextRequest) {
         // when its own parking value is unknown. Done before the category
         // filter (5b) so the upgraded value is in place for confidence and
         // filter steps that follow.
-        let parkingFeatures: NearbyParkingFeature[] = []
+        let parkingFeatures: AmenityFeature[] = []
         if (nearbyParkingEnabled) {
           parkingFeatures = await nearbyParkingPromise
           enrichWithNearbyParking(canonical, parkingFeatures)
@@ -437,12 +438,12 @@ export async function POST(req: NextRequest) {
             locationLabel: geo.label,
             filterDebug,
             // Parking markers sent to the client. Two tiers:
-            //  • "disabled" (strong): only spots within NEARBY_PARKING_DISPLAY_RADIUS_M
+            //  • "strong" (was "disabled"): only spots within NEARBY_PARKING_DISPLAY_RADIUS_M
             //    of a result whose parking was auto-enriched (nearbyOnly: true) —
             //    anchored to displayed venues, as before.
-            //  • "accessible" (weak): ALL fetched accessible-tier lots in the area,
-            //    independent of any anchor (variant 2). Needed so the tier shows in
-            //    Parkplatz-Modus too, where there are no venue anchors.
+            //  • "weak" (was "accessible"): ALL fetched weak-tier lots in the area,
+            //    independent of any anchor. Needed so the tier shows in Parkplatz-Modus
+            //    too, where there are no venue anchors.
             // The client's showWeakParking setting controls visibility of the weak
             // tier; the server always sends the same set (mirrors alwaysShowParking).
             parkingSpots:  (() => {
@@ -450,12 +451,12 @@ export async function POST(req: NextRequest) {
                 const det = p.accessibility.parking.details as { nearbyOnly?: boolean } | undefined
                 return det?.nearbyOnly === true
               })
-              const disabledSpots = parkingFeatures.filter((f) =>
-                f.tier !== "accessible" &&
+              const strongSpots = parkingFeatures.filter((f) =>
+                f.tier !== "weak" &&
                 nearbyOnlyPlaces.some((p) => haversineMeters(p.coordinates, f) <= NEARBY_PARKING_DISPLAY_RADIUS_M)
               )
-              const accessibleSpots = parkingFeatures.filter((f) => f.tier === "accessible")
-              return [...disabledSpots, ...accessibleSpots]
+              const weakSpots = parkingFeatures.filter((f) => f.tier === "weak")
+              return [...strongSpots, ...weakSpots]
                 .map((f) => ({
                   lat:      f.lat,
                   lon:      f.lon,

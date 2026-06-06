@@ -587,7 +587,7 @@ describe("fetchOsmDisabledParking", () => {
     expect(f.lat).toBe(52.530)
   })
 
-  it("tags capacity:disabled features as the strong 'disabled' tier", async () => {
+  it("tags capacity:disabled features as the strong tier", async () => {
     const element = {
       type: "way", id: 10, center: { lat: 52.52, lon: 13.405 },
       tags: { amenity: "parking", "capacity:disabled": "3", wheelchair: "yes" },
@@ -596,10 +596,10 @@ describe("fetchOsmDisabledParking", () => {
       ok: true, json: async () => ({ elements: [element] }),
     }))
     const { features: [f] } = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1, undefined, true)
-    expect(f.tier).toBe("disabled")
+    expect(f.tier).toBe("strong")
   })
 
-  it("tags a wheelchair=yes lot WITHOUT reserved bays as the weak 'accessible' tier", async () => {
+  it("tags a wheelchair=yes lot WITHOUT reserved bays as the weak tier", async () => {
     const element = {
       type: "way", id: 11, center: { lat: 52.52, lon: 13.405 },
       tags: { amenity: "parking", wheelchair: "yes" },
@@ -608,7 +608,7 @@ describe("fetchOsmDisabledParking", () => {
       ok: true, json: async () => ({ elements: [element] }),
     }))
     const { features: [f] } = await fetchOsmDisabledParking({ lat: 52.52, lon: 13.405 }, 1, undefined, true)
-    expect(f.tier).toBe("accessible")
+    expect(f.tier).toBe("weak")
   })
 
   it("only emits the accessible-tier Overpass clause when includeAccessibleTier is true", async () => {

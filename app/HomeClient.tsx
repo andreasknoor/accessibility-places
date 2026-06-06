@@ -612,7 +612,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const baseParkingSpots = parkingFocusMode || filters.alwaysShowParking ? parkingSpots : []
   const visibleParkingSpots = settings.showWeakParking
     ? baseParkingSpots
-    : baseParkingSpots.filter((s) => s.tier !== "accessible")
+    : baseParkingSpots.filter((s) => s.tier !== "weak")
 
   const handleFilters = useCallback((next: SearchFilters) => {
     const activated = (["entrance", "toilet", "parking", "seating", "onlyVerified"] as const)

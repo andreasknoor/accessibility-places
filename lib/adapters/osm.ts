@@ -2,11 +2,13 @@ import type {
   Place,
   SearchParams,
   A11yValue,
+  AmenityType,
+  AmenityTier,
+  AmenityFeature,
   Category,
   EntranceDetails,
   ToiletDetails,
   ParkingDetails,
-  ParkingTier,
 } from "../types"
 import { buildAttribute, emptyAttribute } from "../matching/merge"
 import { OVERPASS_ENDPOINTS, CATEGORY_OSM_TAGS } from "../config"
@@ -361,29 +363,15 @@ export async function fetchOsm(params: SearchParams): Promise<{ places: Place[];
   }
 }
 
-// ─── Disabled-parking-only fetch (for venue enrichment) ────────────────────
+// ─── Nearby accessible amenities fetch ────────────────────────────────────
 //
-// Venues like hotels/restaurants almost never carry capacity:disabled or
-// parking_space=disabled tags themselves — those tags live on dedicated
-// amenity=parking features. To answer "does this venue have wheelchair
-// parking nearby?" we run a separate Overpass query for parking features
-// with disabled spaces in the same radius, then post-match by distance.
+// Fetches POI features (parking spots, wheelchair toilets) within a given
+// radius for map display and optional venue enrichment.
 // Failure of this query is non-fatal for the main search path.
 
-export interface NearbyParkingFeature {
-  lat:        number
-  lon:        number
-  capacity?:  number
-  fee?:       string
-  maxstay?:   string
-  access?:    string
-  // "disabled" = reserved disabled spaces; "accessible" = wheelchair=yes lot
-  // without reserved bays (weak tier, display-only). Inferred from tags.
-  // parseFeatures always sets it; optional only so test/legacy literals omit it
-  // (absent is treated as "disabled" by all consumers).
-  tier?:      ParkingTier
-  osmId?:     string   // e.g. "node/12345678" — used for OSM editor deep-link in reports
-}
+// NearbyParkingFeature kept as a structural alias of AmenityFeature for
+// callers that haven't migrated yet. amenityType defaults to "parking".
+export type NearbyParkingFeature = AmenityFeature
 
 // Parking enrichment is capped at 25 km regardless of the main search radius.
 // Disabled parking beyond 25 km is irrelevant to a venue; the out-2000 cap
@@ -399,7 +387,7 @@ export async function fetchOsmDisabledParking(
   // pure street-side parking). Display-only — never used for venue enrichment.
   // Default false so callers that don't opt in (e.g. SEO pages) stay tier-A only.
   includeAccessibleTier = false,
-): Promise<{ features: NearbyParkingFeature[]; winnerEndpoint: string; durationMs: number }> {
+): Promise<{ features: AmenityFeature[]; winnerEndpoint: string; durationMs: number }> {
   const r = Math.min(radiusKm + 0.5, NEARBY_PARKING_MAX_RADIUS_KM) * 1000
   const { lat, lon } = location
 
@@ -442,7 +430,7 @@ export async function fetchOsmDisabledParking(
   }
   const body = `data=${encodeURIComponent(query)}`
 
-  function parseFeatures(json: { elements?: unknown[] }): NearbyParkingFeature[] {
+  function parseFeatures(json: { elements?: unknown[] }): AmenityFeature[] {
     const out: NearbyParkingFeature[] = []
     for (const el of json.elements ?? []) {
       const e = el as Record<string, unknown>
@@ -467,14 +455,14 @@ export async function fetchOsmDisabledParking(
       // amenity=parking lot tagged wheelchair=yes with NO reserved-space marker.
       // Everything else — capacity:disabled, parking_space=disabled,
       // *=designated — is the strong "disabled" tier.
-      const isAccessibleTier =
+      const isWeakTier =
         tags["amenity"] === "parking" &&
         tags["wheelchair"] === "yes" &&
         !hasCapacityTag &&
         tags["disabled"] !== "designated"
-      const tier: ParkingTier = isAccessibleTier ? "accessible" : "disabled"
+      const tier: AmenityTier = isWeakTier ? "weak" : "strong"
       const osmId = typeof e.id === "number" ? `${e.type ?? "node"}/${e.id}` : undefined
-      out.push({ lat: featLat, lon: featLon, capacity: cap > 0 ? cap : undefined, fee, maxstay, access, tier, osmId })
+      out.push({ amenityType: "parking", lat: featLat, lon: featLon, capacity: cap > 0 ? cap : undefined, fee, maxstay, access, tier, osmId })
     }
     return out
   }
@@ -487,7 +475,7 @@ export async function fetchOsmDisabledParking(
       ? AbortSignal.any([signal, AbortSignal.timeout(20_000)])
       : AbortSignal.timeout(20_000)
 
-    const { features, winner: parkingWinner } = await Promise.any(
+    const { features: rawFeatures, winner: parkingWinner } = await Promise.any(
       OVERPASS_ENDPOINTS.map(async (endpoint) => {
         const res = await fetch(endpoint, { method: "POST", body, headers, signal: sig(endpoint) })
         if (!res.ok) throw new Error(`[parking] ${endpoint} → HTTP ${res.status}`)
@@ -497,12 +485,169 @@ export async function fetchOsmDisabledParking(
       }),
     )
     const durationMs = Date.now() - t0parking
-    return { features, winnerEndpoint: parkingWinner, durationMs }
+    return { features: rawFeatures, winnerEndpoint: parkingWinner, durationMs }
   } catch (err) {
     // AggregateError means both endpoints failed; log so Vercel Function Logs
     // capture the frequency, then re-throw so the caller can record a stat.
     const errors = err instanceof AggregateError ? err.errors : [err]
     for (const e of errors) console.warn("[parking] endpoint failed:", e instanceof Error ? e.message : String(e))
+    throw err
+  }
+}
+
+// ─── Generic accessible-amenities fetch ───────────────────────────────────
+//
+// Fetches one or more amenity types (parking, toilet) in a single Overpass
+// round-trip. Parking clauses are identical to fetchOsmDisabledParking;
+// toilet clauses cover both standalone WCs (amenity=toilets) and any venue
+// that tags its own WC (toilets:wheelchair=yes/designated).
+//
+// WC Clause ①: standalone public toilets
+//   node/way[amenity=toilets][wheelchair=yes|designated]
+// WC Clause ②: venues with their own accessible WC
+//   nwr[toilets:wheelchair=yes|designated][access!=private][access!=no]
+//
+// Both clauses produce AmenityFeature records with amenityType="toilet".
+// Clause ② sets host={kind:"venue", name, access} for popup labelling.
+// Dedup is NOT done here — caller can apply a distance-based dedup if needed.
+
+export async function fetchOsmAccessibleAmenities(
+  location: { lat: number; lon: number },
+  radiusKm: number,
+  types: AmenityType[],
+  opts?: {
+    signal?: AbortSignal
+    includeWeakTier?: boolean  // include weak parking tier (display-only)
+  },
+): Promise<{ features: AmenityFeature[]; winnerEndpoint: string; durationMs: number }> {
+  const r = Math.min(radiusKm + 0.5, NEARBY_PARKING_MAX_RADIUS_KM) * 1000
+  const { lat, lon } = location
+  const { signal, includeWeakTier = false } = opts ?? {}
+
+  const headers = {
+    "Content-Type": "application/x-www-form-urlencoded",
+    "User-Agent":   "AccessibleSpaces/1.0 (accessibility search; mailto:andreas.knoor@gmail.com)",
+  }
+
+  const parkingClauses = types.includes("parking") ? [
+    `way(around:${r},${lat},${lon})[amenity=parking]["capacity:disabled"];`,
+    `way(around:${r},${lat},${lon})[amenity=parking]["capacity:wheelchair"];`,
+    `way(around:${r},${lat},${lon})[amenity=parking][disabled=designated];`,
+    `node(around:${r},${lat},${lon})[amenity=parking_space][parking_space=disabled];`,
+    `node(around:${r},${lat},${lon})[amenity=parking_space][wheelchair=designated];`,
+    `way(around:${r},${lat},${lon})[amenity=parking_space][parking_space=disabled];`,
+    `way(around:${r},${lat},${lon})[amenity=parking_space][wheelchair=designated];`,
+    ...(includeWeakTier ? [
+      `way(around:${r},${lat},${lon})[amenity=parking][wheelchair=yes]` +
+      `[!"capacity:disabled"][!"capacity:wheelchair"]["disabled"!="designated"]` +
+      `["parking"!~"street_side|lane"];`,
+    ] : []),
+  ] : []
+
+  // WC Clause ①: standalone public toilets (node + way)
+  // WC Clause ②: any venue that tags its own WC (nwr = node+way+relation)
+  //   access=private/no excluded — these are personal staff toilets.
+  //   access=customers is intentionally included: user can ask to use it.
+  const toiletClauses = types.includes("toilet") ? [
+    `node(around:${r},${lat},${lon})[amenity=toilets][wheelchair=designated];`,
+    `node(around:${r},${lat},${lon})[amenity=toilets][wheelchair=yes];`,
+    `way(around:${r},${lat},${lon})[amenity=toilets][wheelchair=designated];`,
+    `way(around:${r},${lat},${lon})[amenity=toilets][wheelchair=yes];`,
+    `node(around:${r},${lat},${lon})[toilets:wheelchair=designated][access!~"^(private|no)$"];`,
+    `node(around:${r},${lat},${lon})[toilets:wheelchair=yes][access!~"^(private|no)$"];`,
+    `way(around:${r},${lat},${lon})[toilets:wheelchair=designated][access!~"^(private|no)$"];`,
+    `way(around:${r},${lat},${lon})[toilets:wheelchair=yes][access!~"^(private|no)$"];`,
+    `relation(around:${r},${lat},${lon})[toilets:wheelchair=designated][access!~"^(private|no)$"];`,
+    `relation(around:${r},${lat},${lon})[toilets:wheelchair=yes][access!~"^(private|no)$"];`,
+  ] : []
+
+  const allClauses = [...parkingClauses, ...toiletClauses]
+  if (allClauses.length === 0) return { features: [], winnerEndpoint: "", durationMs: 0 }
+
+  const query = `[out:json][timeout:30];(${allClauses.join("")});out 1000 center tags;`
+  const body  = `data=${encodeURIComponent(query)}`
+
+  function parseAmenityFeatures(json: { elements?: unknown[] }): AmenityFeature[] {
+    const out: AmenityFeature[] = []
+    for (const el of json.elements ?? []) {
+      const e      = el as Record<string, unknown>
+      const center = e.center as Record<string, unknown> | undefined
+      const featLat = typeof e.lat === "number" ? e.lat : typeof center?.lat === "number" ? center.lat : undefined
+      const featLon = typeof e.lon === "number" ? e.lon : typeof center?.lon === "number" ? center.lon : undefined
+      if (featLat === undefined || featLon === undefined) continue
+      const tags   = (e.tags ?? {}) as Record<string, string>
+      const osmId  = typeof e.id === "number" ? `${e.type ?? "node"}/${e.id}` : undefined
+
+      // ── Determine amenity type from tags ──
+      const isStandaloneToilet = tags["amenity"] === "toilets"
+      const hasVenueToilet     = "toilets:wheelchair" in tags
+      const isParking          = tags["amenity"] === "parking" || tags["amenity"] === "parking_space"
+
+      if (isStandaloneToilet || hasVenueToilet) {
+        // Toilet feature
+        const twcVal   = tags["toilets:wheelchair"] ?? tags["wheelchair"] ?? ""
+        const isStrong = twcVal === "designated" || twcVal === "yes"
+        if (!isStrong) continue  // only yes/designated pass
+        const access = tags["access"] || undefined
+        if (access === "private" || access === "no") continue
+
+        const tier: AmenityTier       = twcVal === "designated" ? "strong" : "weak"
+        const euroKey                 = tags["centralkey"] === "eurokey" ? true : undefined
+        const changingTable           = tags["changing_table"] === "yes" ? true : undefined
+        const host: AmenityFeature["host"] = hasVenueToilet && !isStandaloneToilet
+          ? { kind: "venue", name: tags["name"] || undefined, access }
+          : { kind: "standalone" }
+
+        out.push({ amenityType: "toilet", lat: featLat, lon: featLon, tier, access, osmId,
+          ...(euroKey       ? { euroKey }       : {}),
+          ...(changingTable ? { changingTable } : {}),
+          host,
+        })
+      } else if (isParking) {
+        // Parking feature (same logic as fetchOsmDisabledParking)
+        const cap = parseInt(tags["capacity:disabled"] ?? tags["capacity:wheelchair"] ?? "", 10)
+        const hasCapacityTag = "capacity:disabled" in tags || "capacity:wheelchair" in tags
+        if (hasCapacityTag && Number.isFinite(cap) && cap <= 0) continue
+        const isWeakTier =
+          tags["amenity"] === "parking" &&
+          tags["wheelchair"] === "yes" &&
+          !hasCapacityTag &&
+          tags["disabled"] !== "designated"
+        const tier: AmenityTier = isWeakTier ? "weak" : "strong"
+        const fee     = tags["fee"]     || undefined
+        const maxstay = tags["maxstay"] || undefined
+        const access  = tags["access"]  || undefined
+        out.push({ amenityType: "parking", lat: featLat, lon: featLon, tier,
+          ...(cap > 0   ? { capacity: cap } : {}),
+          ...(fee       ? { fee }           : {}),
+          ...(maxstay   ? { maxstay }       : {}),
+          ...(access    ? { access }        : {}),
+          ...(osmId     ? { osmId }         : {}),
+        })
+      }
+    }
+    return out
+  }
+
+  const t0 = Date.now()
+  try {
+    const sig = () => signal
+      ? AbortSignal.any([signal, AbortSignal.timeout(20_000)])
+      : AbortSignal.timeout(20_000)
+
+    const { features, winner } = await Promise.any(
+      OVERPASS_ENDPOINTS.map(async (endpoint) => {
+        const res = await fetch(endpoint, { method: "POST", body, headers, signal: sig() })
+        if (!res.ok) throw new Error(`[amenities] ${endpoint} → HTTP ${res.status}`)
+        const ct = res.headers?.get("content-type") ?? ""
+        if (ct && !ct.includes("json")) throw new Error(`[amenities] ${endpoint} returned non-JSON: ${ct}`)
+        return { features: parseAmenityFeatures(await res.json()), winner: endpoint }
+      }),
+    )
+    return { features, winnerEndpoint: winner, durationMs: Date.now() - t0 }
+  } catch (err) {
+    const errors = err instanceof AggregateError ? err.errors : [err]
+    for (const e of errors) console.warn("[amenities] endpoint failed:", e instanceof Error ? e.message : String(e))
     throw err
   }
 }

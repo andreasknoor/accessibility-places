@@ -240,25 +240,54 @@ export interface FilterDebug {
   toiletValueCounts: Record<A11yValue, number>
 }
 
-// Quality tier of a parking marker shown on the map.
-// "disabled"   = dedicated/reserved disabled spaces (capacity:disabled>0,
-//                parking_space=disabled, …) — the strong, verified signal.
-// "accessible" = amenity=parking tagged wheelchair=yes WITHOUT any reserved-space
-//                tag — a weak signal: the lot is wheelchair-accessible but has no
-//                reserved bays. Display-only; never enriches a venue's parking value.
-export type ParkingTier = "disabled" | "accessible"
+// ─── Accessible Amenities (nearby map features) ───────────────────────────
 
+// Type of a nearby accessible amenity shown on the map.
+export type AmenityType = "parking" | "toilet"
+
+// Quality tier for any amenity marker.
+// "strong" = reserved/designated access (capacity:disabled>0, wheelchair=designated …)
+// "weak"   = wheelchair=yes without reserved/designated tag — a weaker signal.
+//            Display-only for parking; never enriches a venue.
+export type AmenityTier = "strong" | "weak"
+
+// Unified nearby-amenity feature (server-side and API response).
+// amenityType discriminates parking-specific vs toilet-specific fields.
+export interface AmenityFeature {
+  amenityType: AmenityType
+  lat:         number
+  lon:         number
+  tier:        AmenityTier
+  capacity?:   number   // parking: number of reserved disabled spaces
+  fee?:        string   // "yes" | "no" | raw charge string
+  maxstay?:    string   // e.g. "2 hours" (parking only)
+  access?:     string   // "private" | "customers" | …
+  osmId?:      string   // e.g. "node/12345678" — for OSM editor deep-link
+  // Toilet-specific
+  euroKey?:      boolean  // centralkey=eurokey — EURO key required
+  changingTable?: boolean  // changing_table=yes
+  // WC host: standalone public toilet vs. toilet inside a venue
+  host?: { kind: "standalone" | "venue"; name?: string; access?: string }
+}
+
+// ParkingSpot — kept as a structural alias for AmenityFeature in API responses
+// so that existing consumers continue to work while the renaming lands.
+// Callers may safely cast AmenityFeature to ParkingSpot when amenityType="parking".
 export interface ParkingSpot {
   lat:       number
   lon:       number
   capacity?: number
-  fee?:      string   // "yes" | "no" | raw charge string
-  maxstay?:  string   // e.g. "2 hours"
-  access?:   string   // "private" | "customers" | …
-  // Absent on legacy payloads → treated as "disabled" by consumers.
-  tier?:     ParkingTier
-  osmId?:    string   // e.g. "node/12345678" — used for OSM editor deep-link in reports
+  fee?:      string
+  maxstay?:  string
+  access?:   string
+  // "strong" (was "disabled") = reserved disabled bays; "weak" (was "accessible") = wheelchair=yes lot
+  tier?:     AmenityTier
+  osmId?:    string
 }
+
+// Deprecated — use AmenityTier instead.
+// "disabled" → "strong"; "accessible" → "weak"
+export type ParkingTier = "disabled" | "accessible"
 
 export interface SearchResult {
   places: Place[]
@@ -268,5 +297,6 @@ export interface SearchResult {
   locationLabel: string
   filterDebug?: FilterDebug
   nameHint?: string
+  // Legacy parking-only spots (Phase 1). Will be replaced by amenitySpots in Phase 2.
   parkingSpots?: ParkingSpot[]
 }

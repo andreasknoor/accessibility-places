@@ -17,8 +17,7 @@
 // The value equals the OSM reliability weight: the data quality of a parking
 // spot is the same regardless of how far away it sits from the venue.
 
-import type { Place } from "../types"
-import type { NearbyParkingFeature } from "../adapters/osm"
+import type { Place, AmenityFeature } from "../types"
 
 export const DEFAULT_MAX_NEARBY_PARKING_M = 250
 
@@ -49,15 +48,14 @@ export function haversineMeters(
 
 export function enrichWithNearbyParking(
   places: Place[],
-  features: NearbyParkingFeature[],
+  features: AmenityFeature[],
   maxDistanceM: number = DEFAULT_MAX_NEARBY_PARKING_M,
 ): void {
-  // Only the strong "disabled" tier may upgrade a venue's parking value. The
-  // weak "accessible" tier (wheelchair=yes lot without reserved bays) is
-  // display-only and must never enrich — a feature with tier "accessible"
-  // says nothing about reserved disabled parking for the venue.
-  // tier may be undefined on legacy/test features → treat as "disabled".
-  const features_ = features.filter((f) => f.tier !== "accessible")
+  // Only the strong tier may upgrade a venue's parking value. The weak tier
+  // (wheelchair=yes lot without reserved bays) is display-only and must never
+  // enrich — it says nothing about reserved disabled parking for the venue.
+  // tier may be undefined on legacy/test features → treat as "strong".
+  const features_ = features.filter((f) => f.tier !== "weak")
   if (features_.length === 0) return
   for (const place of places) {
     if (place.accessibility.parking.value !== "unknown") continue

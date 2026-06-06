@@ -7,7 +7,7 @@ import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS } from "@/lib/config"
 import { confidenceLabel } from "@/lib/matching/merge"
 import { haversineMetres } from "@/lib/matching/match"
-import type { Place, ParkingSpot, ParkingTier } from "@/lib/types"
+import type { Place, ParkingSpot, AmenityTier } from "@/lib/types"
 
 // Leaflet is ESM-only — loaded dynamically to avoid SSR issues
 let L: typeof import("leaflet") | null = null
@@ -49,14 +49,15 @@ function markerColor(confidence: number): string {
   return CONFIDENCE_COLORS[confidenceLabel(confidence)]
 }
 
-// Parking marker colours per tier. The weak "accessible" tier uses amber with a
-// DARK "P" — white-on-amber fails contrast, and this is an accessibility app.
-const PARKING_TIER_STYLE: Record<ParkingTier, { fill: string; text: string }> = {
-  disabled:   { fill: "#1d4ed8", text: "white"   }, // blue-700, white P (as before)
-  accessible: { fill: "#eab308", text: "#1f2937" }, // yellow-500, dark P
+// Parking marker colours per tier.
+// "strong" (reserved disabled bays) = blue "P"; "weak" (wheelchair=yes lot) = amber with dark "P"
+// (white-on-amber fails contrast — this is an accessibility app).
+const PARKING_TIER_STYLE: Record<AmenityTier, { fill: string; text: string }> = {
+  strong: { fill: "#1d4ed8", text: "white"   }, // blue-700, white P
+  weak:   { fill: "#eab308", text: "#1f2937" }, // yellow-500, dark P
 }
 
-function svgParkingMarker(tier: ParkingTier = "disabled") {
+function svgParkingMarker(tier: AmenityTier = "strong") {
   const { fill, text } = PARKING_TIER_STYLE[tier]
   return `<svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 26 26">
     <rect x="1" y="1" width="24" height="24" rx="5" fill="${fill}" stroke="white" stroke-width="1.5"/>
@@ -266,7 +267,7 @@ export default function MapView({
     parkingMarkersRef.current = []
 
     for (const spot of parkingSpots ?? []) {
-      const tier: ParkingTier = spot.tier === "accessible" ? "accessible" : "disabled"
+      const tier: AmenityTier = spot.tier === "weak" ? "weak" : "strong"
       const icon = L.divIcon({
         html:        svgParkingMarker(tier),
         className:   "",
@@ -298,10 +299,10 @@ export default function MapView({
       const maxstayText = spot.maxstay ?? null
 
       // Word-label per tier — colour alone must never carry the meaning (a11y).
-      const title = tier === "accessible"
+      const title = tier === "weak"
         ? t.map.parkingAccessible
         : spot.capacity != null ? t.map.parkingSpots(spot.capacity) : t.map.parkingSpot
-      const subtitle = tier === "accessible" ? t.map.parkingAccessibleHint : null
+      const subtitle = tier === "weak" ? t.map.parkingAccessibleHint : null
       const mapsUrl = `https://www.google.com/maps?q=${spot.lat},${spot.lon}`
 
       const div = document.createElement("div")
@@ -319,7 +320,7 @@ export default function MapView({
           <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           ${t.results.googleMapsLink}
         </span>
-        ${tier === "accessible" ? `
+        ${tier === "weak" ? `
         <span data-report style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#92400e;cursor:pointer;text-decoration:underline;margin-top:5px">
           <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
           ${t.map.parkingReportButton}
