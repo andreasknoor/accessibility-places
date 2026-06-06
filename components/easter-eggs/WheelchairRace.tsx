@@ -30,10 +30,10 @@ export default function WheelchairRace({ onDone }: Props) {
   // Countdown: 3 → 2 → 1 → "GO!" (400 ms) → racing
   useEffect(() => {
     const t: ReturnType<typeof setTimeout>[] = []
-    t.push(setTimeout(() => setCountdownNum(2),    900))
-    t.push(setTimeout(() => setCountdownNum(1),   1800))
-    t.push(setTimeout(() => setCountdownNum(0),   2700))
-    t.push(setTimeout(() => setPhase("racing"),   3100))
+    t.push(setTimeout(() => setCountdownNum(2),   900))
+    t.push(setTimeout(() => setCountdownNum(1),  1800))
+    t.push(setTimeout(() => setCountdownNum(0),  2700))
+    t.push(setTimeout(() => setPhase("racing"), 3100))
     return () => t.forEach(clearTimeout)
   }, [])
 
@@ -47,7 +47,7 @@ export default function WheelchairRace({ onDone }: Props) {
 
   return (
     // overflow-hidden intentionally omitted: fixed+inset-0 already clips at viewport
-    // edges. With overflow-hidden the browser can clip translateX(-120px) start positions.
+    // edges. With overflow-hidden the browser clips the translateX(-120px) start position.
     <div className="fixed inset-0 z-[9997] pointer-events-none" aria-hidden>
 
       {/* Countdown: 3 / 2 / 1 / GO! */}
@@ -62,15 +62,18 @@ export default function WheelchairRace({ onDone }: Props) {
         </div>
       )}
 
-      {/* Racers — mounted only when racing starts so CSS animation fires at t=0.
-          White background with colored border ensures emoji is visible on any bg. */}
-      {phase === "racing" && RACERS.map((racer, i) => (
+      {/* Racers — always rendered so they stand at the start line during the countdown.
+          CSS class switches from --waiting (fixed at start) to active (animating) when
+          racing begins. Both classes live in globals.css so they survive Tailwind's
+          prefers-reduced-motion preflight !important override on inline styles. */}
+      {RACERS.map((racer, i) => (
         <div
           key={i}
-          // wheelchair-race-racer in globals.css uses --race-dur custom property.
-          // CSS class survives Tailwind preflight's prefers-reduced-motion
-          // !important override that would clobber inline animation styles.
-          className="absolute flex flex-col items-center gap-0.5 wheelchair-race-racer"
+          className={`absolute flex flex-col items-center gap-0.5 ${
+            phase === "racing"
+              ? "wheelchair-race-racer"
+              : "wheelchair-race-racer--waiting"
+          }`}
           style={{
             top:          `${LANES[i]}%`,
             left:         0,
@@ -79,10 +82,10 @@ export default function WheelchairRace({ onDone }: Props) {
         >
           <span className="text-xs leading-none">{racer.dot}</span>
           <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-2xl bg-white border-[3px]"
-            style={{ borderColor: racer.bg }}
+            className="w-11 h-11 rounded-xl flex items-center justify-center p-1"
+            style={{ backgroundColor: racer.bg }}
           >
-            🦽
+            <img src="/icons/icon-preview.svg" className="w-9 h-9 rounded-lg" alt="" />
           </div>
         </div>
       ))}
