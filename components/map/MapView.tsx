@@ -66,11 +66,10 @@ function svgParkingMarker(tier: AmenityTier = "strong") {
   </svg>`
 }
 
-// WC marker colours: strong (designated) = violet, weak (yes) = light violet
-// Violet has high contrast against OSM tile backgrounds (beige, grey, green).
+// WC marker colours: strong (designated) = dark green, weak (yes) = light green
 const TOILET_TIER_STYLE: Record<AmenityTier, { fill: string; icon: string }> = {
-  strong: { fill: "#7c3aed", icon: "white"   }, // violet-700
-  weak:   { fill: "#ede9fe", icon: "#4c1d95" }, // violet-100 / violet-900
+  strong: { fill: "#166534", icon: "white"   }, // green-800
+  weak:   { fill: "#dcfce7", icon: "#14532d" }, // green-100 / green-900
 }
 
 function svgToiletMarker(tier: AmenityTier = "strong") {
