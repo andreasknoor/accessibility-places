@@ -74,13 +74,10 @@ const TOILET_TIER_STYLE: Record<AmenityTier, { fill: string; icon: string }> = {
 }
 
 function svgToiletMarker(tier: AmenityTier = "strong") {
-  const { fill, icon } = TOILET_TIER_STYLE[tier]
-  // Toilet silhouette: rectangular tank (top) + rounded seat (middle) + bowl opening (oval cutout).
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="21" viewBox="0 0 30 26">
-    <rect x="1" y="1" width="28" height="24" rx="5" fill="${fill}" stroke="white" stroke-width="2"/>
-    <rect x="10" y="4" width="10" height="5" rx="2" fill="${icon}"/>
-    <rect x="7" y="9" width="16" height="12" rx="7" fill="${icon}"/>
-    <ellipse cx="15" cy="16" rx="4.5" ry="3.5" fill="${fill}"/>
+  const { fill } = TOILET_TIER_STYLE[tier]
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 30 30">
+    <rect x="1" y="1" width="28" height="28" rx="6" fill="${fill}" stroke="white" stroke-width="2"/>
+    <text x="15" y="22" text-anchor="middle" font-size="16">🚻</text>
   </svg>`
 }
 
