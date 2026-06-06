@@ -9,8 +9,9 @@ const RACERS = [
   { bg: "#9333ea", dot: "🟣", name: "Lila"  },
 ]
 
-// vertical lane positions as % of overlay height (4 lanes)
-const LANES = [15, 33, 53, 72]
+// vertical lane positions as % of overlay height (4 lanes).
+// Start at 30% so the top racer clears the mobile header + ChatPanel + chips row.
+const LANES = [30, 46, 62, 78]
 
 interface Props { onDone: () => void }
 
