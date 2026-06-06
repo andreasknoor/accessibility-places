@@ -27,7 +27,7 @@ export default function DevConsole({ onClose }: Props) {
           ✦ ACCESSIBLE PLACES ✦
         </p>
         <p className="text-center text-green-500 mb-4 text-xs tracking-widest">
-          ★ EASTER EGG #5 GEFUNDEN ★
+          ★ DU HAST EIN EASTER EGG GEFUNDEN ★
         </p>
 
         <pre className="text-green-400 text-xs leading-tight mb-4 text-center whitespace-pre">
