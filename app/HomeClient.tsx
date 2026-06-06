@@ -7,6 +7,7 @@ import { SlidersHorizontal, ChevronRight, ChevronLeft } from "lucide-react"
 import dynamic from "next/dynamic"
 import Script from "next/script"
 import Link from "next/link"
+import SplashOverlay from "@/components/SplashOverlay"
 import ChatPanel    from "@/components/chat/ChatPanel"
 import FilterPanel  from "@/components/filters/FilterPanel"
 import ResultsList  from "@/components/results/ResultsList"
@@ -704,6 +705,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // ResultsList are hidden via `display: none` so their internal state survives.
   return (
     <>
+    <SplashOverlay />
     <Script src="https://tally.so/widgets/embed.js" strategy="lazyOnload" />
     <div className="flex flex-col h-screen overflow-hidden bg-background text-foreground">
       {/* ── Top bar ── */}

@@ -6,6 +6,45 @@
   to   { width: 100% }
 }
 
+/* Welcome-screen wheelchair icon: tilt left, back, then roll off to the right
+   and re-enter from the left. Loops with a pause at the end of each cycle. */
+@keyframes wheelchair-roll {
+  0%   { transform: rotate(0deg)    translateX(0); opacity: 1 }
+  10%  { transform: rotate(-20deg)  translateX(0); opacity: 1 }   /* tilt left  */
+  22%  { transform: rotate(0deg)    translateX(0); opacity: 1 }   /* back       */
+  38%  { transform: rotate(0deg)    translateX(240%); opacity: 0 }/* roll right */
+  39%  { transform: rotate(0deg)    translateX(-140%); opacity: 0 }/* jump left */
+  52%  { transform: rotate(0deg)    translateX(0); opacity: 1 }   /* roll in    */
+  100% { transform: rotate(0deg)    translateX(0); opacity: 1 }   /* hold/pause */
+}
+
+.animate-wheelchair-roll {
+  animation: wheelchair-roll 4.5s ease-in-out infinite;
+  transform-origin: center bottom;
+  will-change: transform;
+}
+
+/* App-start splash overlay icon: tilt left, back, then roll off right — plays once. */
+@keyframes wheelchair-splash {
+  0%   { transform: rotate(0deg)   translateX(0);    opacity: 1 }
+  18%  { transform: rotate(-20deg) translateX(0);    opacity: 1 } /* tilt left  */
+  35%  { transform: rotate(0deg)   translateX(0);    opacity: 1 } /* back       */
+  75%  { transform: rotate(0deg)   translateX(260%); opacity: 0 } /* roll right */
+  100% { transform: rotate(0deg)   translateX(260%); opacity: 0 } /* hold gone  */
+}
+
+.animate-wheelchair-splash {
+  animation: wheelchair-splash 1.4s ease-in-out forwards;
+  transform-origin: center bottom;
+  will-change: transform;
+}
+
+/* Accessibility: honour reduced-motion — no movement for users who opt out. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-wheelchair-roll   { animation: none; }
+  .animate-wheelchair-splash { animation: none; }
+}
+
 /* shadcn/ui CSS variables */
 :root {
   color-scheme: light;
