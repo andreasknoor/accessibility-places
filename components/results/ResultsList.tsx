@@ -36,10 +36,9 @@ interface Props {
   onSwitchToText?:      () => void
   isFirstVisit?:        boolean
   onDismissWelcome?:    () => void
-  shuffleKey?:          number
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToPlace, onSwitchToText, isFirstVisit, onDismissWelcome, shuffleKey }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToPlace, onSwitchToText, isFirstVisit, onDismissWelcome }: Props) {
   const t = useTranslations()
   const [mapHintSeen, setMapHintSeen] = useState(() =>
     typeof window !== "undefined" && !!localStorage.getItem("ap_map_hint_seen")
@@ -53,16 +52,6 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
   useEffect(() => {
     if (isLoading) scrollContainerRef.current?.scrollTo({ top: 0 })
   }, [isLoading])
-
-  // Easter Egg #3: wobble animation when shuffleKey changes
-  useEffect(() => {
-    if (!shuffleKey) return
-    const el = scrollContainerRef.current
-    if (!el) return
-    el.classList.add("easter-shuffle-active")
-    const t = setTimeout(() => el.classList.remove("easter-shuffle-active"), 500)
-    return () => clearTimeout(t)
-  }, [shuffleKey])
 
   function handleSortToggle() {
     const next = sortBy === "confidence" ? "distance" : "confidence"

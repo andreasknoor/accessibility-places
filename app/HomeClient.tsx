@@ -10,7 +10,6 @@ import Link from "next/link"
 import SplashOverlay   from "@/components/SplashOverlay"
 import WheelchairRace  from "@/components/easter-eggs/WheelchairRace"
 import ChatPanel       from "@/components/chat/ChatPanel"
-import { useShakeDetector } from "@/hooks/useShakeDetector"
 import FilterPanel  from "@/components/filters/FilterPanel"
 import ResultsList  from "@/components/results/ResultsList"
 import LanguageSwitcher from "@/components/LanguageSwitcher"
@@ -131,8 +130,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [locateTriggerKey,    setLocateTriggerKey]    = useState(0)
   // ── Easter Eggs ────────────────────────────────────────────────────────────
   const [showRace,         setShowRace]         = useState(false)
-  const [shuffleKey,       setShuffleKey]       = useState(0)
-  const [showMotionToast,  setShowMotionToast]  = useState(false)
   const logoTapCount  = useRef(0)
   const logoTapTimer  = useRef<ReturnType<typeof setTimeout>>(undefined)
   const [hasGpsCoords,        setHasGpsCoords]        = useState(false)
@@ -170,24 +167,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       logoTapTimer.current = setTimeout(() => { logoTapCount.current = 0 }, 1500)
     }
   }
-
-  // ── Easter Egg #3: shuffle ──────────────────────────────────────────────────
-  function handleShuffle() {
-    if (places.length === 0) return
-    setPlaces((prev) => [...prev].sort(() => Math.random() - 0.5))
-    setShuffleKey((k) => k + 1)
-  }
-
-  const { needsIOSPermission, requestPermission } = useShakeDetector(handleShuffle, !showRace)
-
-  // Show iOS permission toast once when the app has results and permission not yet requested
-  useEffect(() => {
-    if (!needsIOSPermission || places.length === 0) return
-    try {
-      if (localStorage.getItem("ap_motion_perm")) return
-    } catch { /* ignore */ }
-    setShowMotionToast(true)
-  }, [needsIOSPermission, places.length > 0]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function markVisited() {
     try { localStorage.setItem("ap_visited", "1") } catch { /* ignore */ }
@@ -689,22 +668,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           Otherwise it unmounts mid-animation and never plays on mobile. */}
       <SplashOverlay />
       {showRace && <WheelchairRace onDone={() => setShowRace(false)} />}
-      {showMotionToast && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[9996] flex items-center gap-3 bg-card border border-border rounded-2xl px-4 py-3 shadow-xl text-sm pointer-events-auto">
-          <span>🌀 Schütteln zum Mischen?</span>
-          <button
-            className="text-primary font-semibold"
-            onClick={async () => {
-              const granted = await requestPermission()
-              setShowMotionToast(false)
-              if (granted) window.location.reload()
-            }}
-          >
-            Aktivieren
-          </button>
-          <button className="text-muted-foreground" onClick={() => setShowMotionToast(false)}>✕</button>
-        </div>
-      )}
       <MobileLayout
         places={places}
         parkingSpots={visibleParkingSpots}
@@ -757,7 +720,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onToggleParkingFocus={canEnterParkingFocus ? handleToggleParkingFocus : undefined}
         isParkingFocusLoading={isParkingLoading}
         parkingFocusHint={parkingFocusHint}
-        shuffleKey={shuffleKey}
       />
       </>
     )
@@ -771,22 +733,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     <>
     <SplashOverlay />
     {showRace && <WheelchairRace onDone={() => setShowRace(false)} />}
-    {showMotionToast && (
-      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[9996] flex items-center gap-3 bg-card border border-border rounded-2xl px-4 py-3 shadow-xl text-sm pointer-events-auto">
-        <span>🌀 Schütteln zum Mischen?</span>
-        <button
-          className="text-primary font-semibold"
-          onClick={async () => {
-            const granted = await requestPermission()
-            setShowMotionToast(false)
-            if (granted) window.location.reload()
-          }}
-        >
-          Aktivieren
-        </button>
-        <button className="text-muted-foreground" onClick={() => setShowMotionToast(false)}>✕</button>
-      </div>
-    )}
     <Script src="https://tally.so/widgets/embed.js" strategy="lazyOnload" />
     <div className="flex flex-col h-screen overflow-hidden bg-background text-foreground">
       {/* ── Top bar ── */}
@@ -912,7 +858,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             onSwitchToText={chatMode !== "text" ? () => handleSwitchMode("text") : undefined}
             isFirstVisit={isFirstVisit}
             onDismissWelcome={handleDismissWelcome}
-            shuffleKey={shuffleKey}
           />
           <div className="shrink-0 border-t border-border px-4 py-2 flex justify-end gap-4">
             <Link href={locale === "en" ? "/en/faq" : "/faq"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">

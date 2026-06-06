@@ -17,27 +17,20 @@
   to   { transform: translateX(calc(100vw + 120px)) }
 }
 
+/* Waiting at start line: offset to left edge, no animation yet */
+.wheelchair-race-racer--waiting {
+  transform: translateX(-120px);
+}
+
+/* Racing: full animation across the viewport */
 .wheelchair-race-racer {
   animation: wheelchair-race var(--race-dur, 2s) linear forwards;
   will-change: transform;
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .wheelchair-race-racer--waiting { transform: none; }
   .wheelchair-race-racer { animation: none; }
-}
-
-/* #3 Shake-to-Shuffle: brief wobble on each PlaceCard */
-@keyframes card-wobble {
-  0%   { transform: translateX(0)    rotate(0deg)    }
-  20%  { transform: translateX(-7px) rotate(-1.5deg) }
-  40%  { transform: translateX(7px)  rotate(1.5deg)  }
-  65%  { transform: translateX(-3px) rotate(-0.5deg) }
-  85%  { transform: translateX(3px)  rotate(0.5deg)  }
-  100% { transform: translateX(0)    rotate(0deg)    }
-}
-
-.easter-shuffle-active > * {
-  animation: card-wobble 0.45s ease-in-out;
 }
 
 /* ── Wheelchair icon (SplashOverlay) ───────────────────────────────────────── */
