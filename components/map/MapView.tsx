@@ -7,7 +7,7 @@ import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS } from "@/lib/config"
 import { confidenceLabel } from "@/lib/matching/merge"
 import { haversineMetres } from "@/lib/matching/match"
-import type { Place, ParkingSpot, AmenityTier } from "@/lib/types"
+import type { Place, ParkingSpot, AmenityFeature, AmenityTier } from "@/lib/types"
 
 // Leaflet is ESM-only — loaded dynamically to avoid SSR issues
 let L: typeof import("leaflet") | null = null
@@ -18,6 +18,7 @@ const PLACE_CLUSTER_DISABLE_AT_ZOOM = 17       // street-level: always show ever
 interface Props {
   places:        Place[]
   parkingSpots?: ParkingSpot[]
+  toiletSpots?:  AmenityFeature[]
   center?:       { lat: number; lon: number }
   userLocation?: { lat: number; lon: number }
   selectedId?:   string
@@ -65,6 +66,20 @@ function svgParkingMarker(tier: AmenityTier = "strong") {
   </svg>`
 }
 
+// WC marker colours: strong (designated) = teal, weak (yes) = light-teal
+const TOILET_TIER_STYLE: Record<AmenityTier, { fill: string; text: string }> = {
+  strong: { fill: "#0d9488", text: "white"   }, // teal-600, white WC
+  weak:   { fill: "#99f6e4", text: "#134e4a" }, // teal-200, dark WC
+}
+
+function svgToiletMarker(tier: AmenityTier = "strong") {
+  const { fill, text } = TOILET_TIER_STYLE[tier]
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="21" viewBox="0 0 30 26">
+    <rect x="1" y="1" width="28" height="24" rx="5" fill="${fill}" stroke="white" stroke-width="1.5"/>
+    <text x="15" y="19" text-anchor="middle" font-size="12" font-weight="bold" fill="${text}" font-family="sans-serif">WC</text>
+  </svg>`
+}
+
 function svgMarker(color: string, selected: boolean) {
   const size   = selected ? 46 : 36
   const stroke = selected ? "#1d4ed8" : "#fff"
@@ -78,6 +93,7 @@ function svgMarker(color: string, selected: boolean) {
 export default function MapView({
   places,
   parkingSpots,
+  toiletSpots,
   center,
   userLocation,
   selectedId,
@@ -104,6 +120,8 @@ export default function MapView({
   const markers  = useRef<Map<string, any>>(new Map())
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const parkingMarkersRef = useRef<any[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const toiletMarkersRef  = useRef<any[]>([])
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userMarker = useRef<any>(null)
   const [mapReady, setMapReady] = useState(false)
@@ -371,6 +389,60 @@ export default function MapView({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parkingSpots, mapReady, t])
 
+  // Toilet (WC) spot markers — shown when toiletSpots is non-empty.
+  useEffect(() => {
+    if (!mapInst.current || !L) return
+    for (const m of toiletMarkersRef.current) m.remove()
+    toiletMarkersRef.current = []
+
+    for (const spot of toiletSpots ?? []) {
+      const tier: AmenityTier = spot.tier === "weak" ? "weak" : "strong"
+      const icon = L.divIcon({
+        html:        svgToiletMarker(tier),
+        className:   "",
+        iconSize:    [24, 21],
+        iconAnchor:  [12, 10],
+        popupAnchor: [0, -11],
+      })
+
+      const isEuroKey      = spot.euroKey      ? `<span>🔑 ${t.map.toiletEuroKey ?? "Euroschlüssel"}</span>` : ""
+      const isChangingTable = spot.changingTable ? `<span>🍼 ${t.map.toiletChangingTable ?? "Wickeltisch"}</span>` : ""
+      const hostLine = spot.host?.kind === "venue" && spot.host.name
+        ? `<div style="color:#555;font-size:11px">${esc(spot.host.name)}</div>` : ""
+      const accessText = spot.host?.access === "customers" ? (t.map.toiletCustomers ?? "Nur für Gäste") :
+                         spot.access === "customers"       ? (t.map.toiletCustomers ?? "Nur für Gäste") : null
+
+      const title    = tier === "strong" ? (t.map.toiletDesignated ?? "Rollstuhl-WC") : (t.map.toiletAccessible ?? "Barrierefreies WC")
+      const mapsUrl  = `https://www.google.com/maps?q=${spot.lat},${spot.lon}`
+
+      const div = document.createElement("div")
+      div.style.cssText = "font-family:sans-serif;font-size:12px;line-height:1.6;min-width:140px"
+      div.innerHTML = `
+        <div style="font-weight:600;margin-bottom:3px">${title}</div>
+        ${hostLine}
+        <div style="display:flex;flex-direction:column;gap:2px;font-size:11px;margin:4px 0">
+          ${isEuroKey}
+          ${isChangingTable}
+          ${accessText ? `<span style="color:#b45309">🔒 ${accessText}</span>` : ""}
+        </div>
+        <span data-gmaps style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#2563eb;cursor:pointer;text-decoration:underline">
+          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          ${t.results.googleMapsLink}
+        </span>
+      `
+      const gmapsBtn = div.querySelector<HTMLElement>("[data-gmaps]")
+      if (gmapsBtn) {
+        L.DomEvent.on(gmapsBtn, "click", () => window.open(mapsUrl, "_blank", "noopener"))
+      }
+
+      const marker = L.marker([spot.lat, spot.lon], { icon })
+        .bindPopup(div, { maxWidth: 220 })
+        .addTo(mapInst.current)
+      toiletMarkersRef.current.push(marker)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toiletSpots, mapReady, t])
+
   // Update markers when places change. In Parkplatz-Modus the cluster is
   // cleared so only parking spots and the user dot remain visible.
   useEffect(() => {
@@ -507,9 +579,9 @@ export default function MapView({
   useEffect(() => {
     if (!mapInst.current) return
     if (!parkingFocusMode && places.length > 0) return
-    const spots = parkingSpots ?? []
-    if (spots.length > 0) {
-      const latlngs: [number, number][] = spots.map((s) => [s.lat, s.lon])
+    const amenities = [...(parkingSpots ?? []), ...(toiletSpots ?? [])]
+    if (amenities.length > 0) {
+      const latlngs: [number, number][] = amenities.map((s) => [s.lat, s.lon])
       const ul = userLocationRef.current
       if (ul) latlngs.push([ul.lat, ul.lon])
       mapInst.current.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 16 })
@@ -518,7 +590,7 @@ export default function MapView({
     if (!center) return
     mapInst.current.setView([center.lat, center.lon], 13)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [center, parkingSpots, mapReady, parkingFocusMode])
+  }, [center, parkingSpots, toiletSpots, mapReady, parkingFocusMode])
 
   // ESC exits fullscreen. Parkplatz-Modus has its own explicit toggle in the
   // ChatPanel, so no keyboard shortcut is needed for it.
@@ -561,7 +633,7 @@ export default function MapView({
         if (ul) latlngs.push([ul.lat, ul.lon])
         mapInst.current?.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 15 })
       } else {
-        const spots = parkingSpots ?? []
+        const spots = [...(parkingSpots ?? []), ...(toiletSpots ?? [])]
         if (spots.length > 0) {
           const latlngs: [number, number][] = spots.map((s) => [s.lat, s.lon])
           const ul = userLocationRef.current
@@ -616,10 +688,8 @@ export default function MapView({
         </button>
       )}
 
-      {/* ── Parking legend (collapsible) ── */}
-      {/* Shown only when parking markers are on the map. Explains the blue vs
-          yellow "P" so colour is never the sole information carrier. */}
-      {(parkingSpots?.length ?? 0) > 0 && (
+      {/* ── Marker legend (collapsible) — shown when parking or WC markers are present ── */}
+      {((parkingSpots?.length ?? 0) > 0 || (toiletSpots?.length ?? 0) > 0) && (
         <div className="absolute bottom-3 right-3 z-[1000]">
           {legendOpen ? (
             <div className="rounded-lg bg-background/95 backdrop-blur-sm shadow-md border border-border p-2.5 text-xs">
@@ -631,14 +701,22 @@ export default function MapView({
                   aria-label={t.common.close}
                 >✕</button>
               </div>
-              <div className="flex items-center gap-2 py-0.5">
-                <span dangerouslySetInnerHTML={{ __html: svgParkingMarker("disabled") }} />
-                <span>{t.map.legendDisabled}</span>
-              </div>
-              {showWeakParking && (
+              {(parkingSpots?.length ?? 0) > 0 && (<>
                 <div className="flex items-center gap-2 py-0.5">
-                  <span dangerouslySetInnerHTML={{ __html: svgParkingMarker("accessible") }} />
-                  <span>{t.map.legendAccessible}</span>
+                  <span dangerouslySetInnerHTML={{ __html: svgParkingMarker("strong") }} />
+                  <span>{t.map.legendDisabled}</span>
+                </div>
+                {showWeakParking && (
+                  <div className="flex items-center gap-2 py-0.5">
+                    <span dangerouslySetInnerHTML={{ __html: svgParkingMarker("weak") }} />
+                    <span>{t.map.legendAccessible}</span>
+                  </div>
+                )}
+              </>)}
+              {(toiletSpots?.length ?? 0) > 0 && (
+                <div className="flex items-center gap-2 py-0.5">
+                  <span dangerouslySetInnerHTML={{ __html: svgToiletMarker("strong") }} />
+                  <span>{t.map.legendToilet ?? "Rollstuhl-WC"}</span>
                 </div>
               )}
             </div>
@@ -649,7 +727,7 @@ export default function MapView({
               aria-label={t.map.legend}
               className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium shadow-md border border-border bg-background/95 backdrop-blur-sm hover:bg-muted transition-colors"
             >
-              <span dangerouslySetInnerHTML={{ __html: svgParkingMarker("disabled") }} />
+              <span dangerouslySetInnerHTML={{ __html: (parkingSpots?.length ?? 0) > 0 ? svgParkingMarker("strong") : svgToiletMarker("strong") }} />
               <span className="hidden sm:inline">{t.map.legend}</span>
             </button>
           )}

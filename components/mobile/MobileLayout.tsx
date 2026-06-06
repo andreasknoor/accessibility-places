@@ -12,7 +12,7 @@ import FilterPanel     from "@/components/filters/FilterPanel"
 import ResultsList     from "@/components/results/ResultsList"
 import LanguageSwitcher from "@/components/LanguageSwitcher"
 import SettingsSheet   from "@/components/settings/SettingsSheet"
-import type { Place, SearchFilters, ActiveSources, SourceId, SourceState, FilterDebug, ParkingSpot } from "@/lib/types"
+import type { Place, SearchFilters, ActiveSources, SourceId, SourceState, FilterDebug, ParkingSpot, AmenityFeature } from "@/lib/types"
 import type { AppSettings } from "@/lib/settings"
 
 const MapView = dynamic(() => import("@/components/map/MapView"), { ssr: false })
@@ -22,6 +22,7 @@ type Tab = "results" | "map" | "filter"
 interface Props {
   places:        Place[]
   parkingSpots?: ParkingSpot[]
+  toiletSpots?:  AmenityFeature[]
   selectedId?:   string
   onSelect:      (place: Place) => void
   isLoading:     boolean
@@ -74,7 +75,7 @@ interface Props {
 }
 
 export default function MobileLayout({
-  places, parkingSpots, selectedId, onSelect, isLoading,
+  places, parkingSpots, toiletSpots, selectedId, onSelect, isLoading,
   filters, sources, radiusKm, onFilters, onSources, onRadius,
   sourceStates, searchCenter, onSearch, onPlaceSearch, onRerun, hasSourceError, onExpandRadius, onRadiusChange, hasSearched, error,
   onReset, onLogoTap, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
@@ -273,6 +274,7 @@ export default function MobileLayout({
             <MapView
               places={places}
               parkingSpots={parkingSpots}
+              toiletSpots={toiletSpots}
               center={searchCenter}
               userLocation={chatMode === "nearby" ? searchCenter : undefined}
               selectedId={selectedId}

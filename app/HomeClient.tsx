@@ -25,7 +25,7 @@ import { useSettings, loadSettings, DEFAULT_APP_SETTINGS } from "@/lib/settings"
 import { getCurrentPosition, isGeolocationAvailable } from "@/lib/native/geolocation"
 import { cn } from "@/lib/utils"
 import type { AppSettings } from "@/lib/settings"
-import type { Place, ParkingSpot, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug } from "@/lib/types"
+import type { Place, ParkingSpot, AmenityFeature, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug } from "@/lib/types"
 
 // Leaflet must not run on server
 const MapView = dynamic(() => import("@/components/map/MapView"), { ssr: false })
@@ -99,6 +99,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [radiusKm,      setRadiusKm]     = useState<number>(DEFAULT_RADIUS_KM)
   const [places,        setPlaces]       = useState<Place[]>([])
   const [parkingSpots,  setParkingSpots]  = useState<ParkingSpot[]>([])
+  const [toiletSpots,   setToiletSpots]   = useState<AmenityFeature[]>([])
   const [selectedId,    setSelectedId]   = useState<string | undefined>()
   const [isLoading,     setIsLoading]    = useState(false)
   const [searchCenter,  setSearchCenter] = useState<{ lat: number; lon: number } | undefined>()
@@ -233,6 +234,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setError(undefined)
     setPlaces([])
     setParkingSpots([])
+    setToiletSpots([])
     setSelectedId(undefined)
     setFilterDebug(undefined)
     setParkingFocusMode(false)
@@ -292,6 +294,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             placesReceived = data.places.length > 0
             setPlaces(data.places)
             setParkingSpots(data.parkingSpots ?? [])
+            setToiletSpots(data.amenitySpots ?? [])
             setSearchCenter(data.location)
             setFilterDebug(data.filterDebug)
             track("search", { mode: chatMode, result_count: data.places.length })
@@ -389,6 +392,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const clearSearchState = useCallback(() => {
     setPlaces([])
     setParkingSpots([])
+    setToiletSpots([])
     setSelectedId(undefined)
     setScrollToId(undefined)
     setLastQuery(undefined)
@@ -417,6 +421,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setRadiusKm(DEFAULT_RADIUS_KM)
     setPlaces([])
     setParkingSpots([])
+    setToiletSpots([])
     setSelectedId(undefined)
     setLastQuery(undefined)
     setLastCoords(undefined)
@@ -671,6 +676,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       <MobileLayout
         places={places}
         parkingSpots={visibleParkingSpots}
+        toiletSpots={toiletSpots.length > 0 ? toiletSpots : undefined}
         selectedId={selectedId}
         onSelect={(p) => setSelectedId(p.id)}
         isLoading={isLoading}
@@ -896,6 +902,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           <MapView
             places={places}
             parkingSpots={visibleParkingSpots}
+            toiletSpots={toiletSpots.length > 0 ? toiletSpots : undefined}
             center={searchCenter}
             userLocation={chatMode === "nearby" ? searchCenter : undefined}
             selectedId={selectedId}

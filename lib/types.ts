@@ -297,6 +297,9 @@ export interface SearchResult {
   locationLabel: string
   filterDebug?: FilterDebug
   nameHint?: string
-  // Legacy parking-only spots (Phase 1). Will be replaced by amenitySpots in Phase 2.
+  // Parking spots for map display (strong + weak tier).
   parkingSpots?: ParkingSpot[]
+  // Wheelchair-accessible WC features (standalone + venue WCs) — Phase 2+.
+  // Populated only when ENABLE_NEARBY_TOILETS=1.
+  amenitySpots?: AmenityFeature[]
 }
