@@ -30,7 +30,11 @@ interface Props {
   showFullscreenToggle?: boolean
   visible?:            boolean
   showParking?:        boolean
-  onToggleParking?:    () => void
+  showToilets?:        boolean
+  // Called when the user picks a segment in the map-layer control.
+  // Replaces the old onToggleParking single-toggle.
+  onSetMapLayers?:     (parking: boolean, toilets: boolean) => void
+  hasToiletData?:      boolean   // controls whether WC segments are shown
   autoZoom?:           boolean
   // Parkplatz-Modus: when true, hides place markers and shows GPS-radius
   // parking spots only. Triggered from the ChatPanel toggle in nearby mode.
@@ -105,7 +109,9 @@ export default function MapView({
   showFullscreenToggle = true,
   visible,
   showParking,
-  onToggleParking,
+  showToilets,
+  onSetMapLayers,
+  hasToiletData = false,
   autoZoom = true,
   parkingFocusMode = false,
   showWeakParking = false,
@@ -667,25 +673,35 @@ export default function MapView({
         </Button>
       )}
 
-      {/* ── Toggle C: result-nearby parking visibility ── */}
-      {/* Disabled while Parkplatz-Modus is active because that mode overrides
-          map content with its own GPS-radius spot set. */}
-      {onToggleParking && (
-        <button
-          onClick={parkingFocusMode ? undefined : onToggleParking}
-          role="switch"
-          aria-checked={showParking}
+      {/* ── Map-layer segmented control (bottom-left) ── */}
+      {/* 4-way: Keine | 🅿 | 🚻 | 🅿+🚻  — reduced to 2-way when no toilet data.
+          Disabled in Parkplatz-Modus (that mode controls its own spot display). */}
+      {onSetMapLayers && (
+        <div
           aria-disabled={parkingFocusMode}
-          disabled={parkingFocusMode}
-          title={t.map.toggleParking}
-          className="absolute bottom-3 left-3 z-[1000] flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium shadow-md border border-border bg-background/95 backdrop-blur-sm transition-colors hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-background/95"
+          className={`absolute bottom-3 left-3 z-[1000] flex items-center rounded-full shadow-md border border-border bg-background/95 backdrop-blur-sm overflow-hidden text-sm font-medium ${parkingFocusMode ? "opacity-50 pointer-events-none" : ""}`}
         >
-          <span aria-hidden>🅿</span>
-          <span className="hidden sm:inline">{t.map.nearbyParking}</span>
-          <span className={`relative inline-flex h-4 w-7 shrink-0 rounded-full transition-colors ${showParking || parkingFocusMode ? "bg-blue-600" : "bg-muted-foreground/40"}`}>
-            <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${showParking || parkingFocusMode ? "translate-x-3" : "translate-x-0.5"}`} />
-          </span>
-        </button>
+          {([
+            { label: t.map.layerNone, p: false, wc: false },
+            { label: "🅿",            p: true,  wc: false },
+            ...(hasToiletData ? [
+              { label: "🚻",           p: false, wc: true  },
+              { label: t.map.layerBoth,p: true,  wc: true  },
+            ] : []),
+          ] as { label: string; p: boolean; wc: boolean }[]).map(({ label, p, wc }) => {
+            const active = p === (showParking ?? false) && wc === (showToilets ?? false)
+            return (
+              <button
+                key={label}
+                onClick={() => onSetMapLayers(p, wc)}
+                className={`px-3 py-1.5 transition-colors ${active ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground"}`}
+                aria-pressed={active}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
       )}
 
       {/* ── Marker legend (collapsible) — shown when parking or WC markers are present ── */}

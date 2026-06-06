@@ -222,6 +222,8 @@ const en: Translations = {
     parkingAccessibleHint: "No reserved disabled spaces marked",
     toggleParking:  "Show wheelchair parking on map",
     nearbyParking:  "Nearby parking",
+    layerNone:      "None",
+    layerBoth:      "Both",
     parkingFree:      "Free",
     parkingPaid:      "Paid",
     parkingMaxstay:   "Max. stay",

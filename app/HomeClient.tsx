@@ -43,6 +43,7 @@ const DEFAULT_FILTERS: SearchFilters = {
   onlyVerified:     false,
   acceptUnknown:    false,
   alwaysShowParking: false,
+  alwaysShowToilets: false,
 }
 
 const DEFAULT_SOURCES: ActiveSources = {
@@ -64,13 +65,15 @@ const SEARCH_TIMEOUT_MS = 45_000
 function loadSavedPrefs(): { filters: SearchFilters; sources: ActiveSources; radiusKm: number } {
   try {
     const raw = localStorage.getItem(PREFS_KEY)
-    const initialParking = loadSettings().alwaysShowParking
-    if (!raw) return { filters: { ...DEFAULT_FILTERS, alwaysShowParking: initialParking }, sources: DEFAULT_SOURCES, radiusKm: DEFAULT_RADIUS_KM }
+    const s = loadSettings()
+    const initialParking = s.alwaysShowParking
+    const initialToilets = s.alwaysShowToilets
+    if (!raw) return { filters: { ...DEFAULT_FILTERS, alwaysShowParking: initialParking, alwaysShowToilets: initialToilets }, sources: DEFAULT_SOURCES, radiusKm: DEFAULT_RADIUS_KM }
     const saved = JSON.parse(raw)
     return {
       // Spread saved values onto defaults so new keys added in future always
-      // have a fallback. alwaysShowParking comes from app settings, not prefs.
-      filters:  { ...DEFAULT_FILTERS,  ...(saved.filters  ?? {}), alwaysShowParking: initialParking },
+      // have a fallback. alwaysShowParking/alwaysShowToilets come from app settings, not prefs.
+      filters:  { ...DEFAULT_FILTERS,  ...(saved.filters  ?? {}), alwaysShowParking: initialParking, alwaysShowToilets: initialToilets },
       sources:  { ...DEFAULT_SOURCES,  ...(saved.sources  ?? {}) },
       radiusKm: typeof saved.radiusKm === "number" ? saved.radiusKm : DEFAULT_RADIUS_KM,
     }
@@ -100,7 +103,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [places,        setPlaces]       = useState<Place[]>([])
   const [parkingSpots,  setParkingSpots]  = useState<ParkingSpot[]>([])
   const [toiletSpots,   setToiletSpots]   = useState<AmenityFeature[]>([])
-  const [showToilets,   setShowToilets]   = useState(false)
   const [selectedId,    setSelectedId]   = useState<string | undefined>()
   const [isLoading,     setIsLoading]    = useState(false)
   const [searchCenter,  setSearchCenter] = useState<{ lat: number; lon: number } | undefined>()
@@ -191,13 +193,13 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // Persist filter/source/radius preferences across sessions.
-  // alwaysShowParking is intentionally excluded — it's a per-session display toggle.
+  // alwaysShowParking + alwaysShowToilets are intentionally excluded — persisted via AppSettings.
   // Guard: skip until the load effect below has fired so we don't overwrite
   // the user's saved prefs with defaults on the first render.
   useEffect(() => {
     if (!prefsLoadedRef.current) return
     try {
-      const { alwaysShowParking: _ap, ...persistableFilters } = filters
+      const { alwaysShowParking: _ap, alwaysShowToilets: _at, ...persistableFilters } = filters
       localStorage.setItem(PREFS_KEY, JSON.stringify({ filters: persistableFilters, sources, radiusKm }))
     } catch { /* ignore — localStorage unavailable (private mode, quota) */ }
   }, [filters, sources, radiusKm])
@@ -236,7 +238,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setPlaces([])
     setParkingSpots([])
     setToiletSpots([])
-    setShowToilets(false)
     setSelectedId(undefined)
     setFilterDebug(undefined)
     setParkingFocusMode(false)
@@ -395,7 +396,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setPlaces([])
     setParkingSpots([])
     setToiletSpots([])
-    setShowToilets(false)
     setSelectedId(undefined)
     setScrollToId(undefined)
     setLastQuery(undefined)
@@ -419,13 +419,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   }, [clearSearchState])
 
   const handleReset = useCallback(() => {
-    setFilters({ ...DEFAULT_FILTERS, alwaysShowParking: settings.alwaysShowParking })
+    setFilters({ ...DEFAULT_FILTERS, alwaysShowParking: settings.alwaysShowParking, alwaysShowToilets: settings.alwaysShowToilets })
     setSources(DEFAULT_SOURCES)
     setRadiusKm(DEFAULT_RADIUS_KM)
     setPlaces([])
     setParkingSpots([])
     setToiletSpots([])
-    setShowToilets(false)
     setSelectedId(undefined)
     setLastQuery(undefined)
     setLastCoords(undefined)
@@ -623,10 +622,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     ? baseParkingSpots
     : baseParkingSpots.filter((s) => s.tier !== "weak")
 
-  // WC layer: shown only when the user has toggled the WC chip on.
-  const visibleToiletSpots = showToilets ? toiletSpots : []
-
-  const hasToiletToggle = toiletSpots.length > 0
+  // WC layer: only standalone amenity=toilets nodes (not venue WCs) to avoid
+  // overlapping with the place marker at the same coordinates.
+  const visibleToiletSpots = filters.alwaysShowToilets
+    ? toiletSpots.filter((s) => s.host?.kind !== "venue")
+    : []
 
   const handleFilters = useCallback((next: SearchFilters) => {
     const activated = (["entrance", "toilet", "parking", "seating", "onlyVerified"] as const)
@@ -644,10 +644,20 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     })
   }, [updateSettings])
 
+  // Segmented map-layer control: sets parking + toilet display together.
+  const handleSetMapLayers = useCallback((parking: boolean, toilets: boolean) => {
+    if (parking) track("parking_shown")
+    updateSettings({ alwaysShowParking: parking, alwaysShowToilets: toilets })
+    setFilters((f) => ({ ...f, alwaysShowParking: parking, alwaysShowToilets: toilets }))
+  }, [updateSettings])
+
   const handleUpdateSettings = useCallback((patch: Partial<AppSettings>) => {
     updateSettings(patch)
     if (patch.alwaysShowParking !== undefined) {
       setFilters((f) => ({ ...f, alwaysShowParking: patch.alwaysShowParking! }))
+    }
+    if (patch.alwaysShowToilets !== undefined) {
+      setFilters((f) => ({ ...f, alwaysShowToilets: patch.alwaysShowToilets! }))
     }
     if (patch.sortOrder !== undefined) {
       setSortBy(patch.sortOrder)
@@ -735,8 +745,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onToggleParkingFocus={canEnterParkingFocus ? handleToggleParkingFocus : undefined}
         isParkingFocusLoading={isParkingLoading}
         parkingFocusHint={parkingFocusHint}
-        showToiletLayer={showToilets}
-        onToggleToiletLayer={hasToiletToggle && chatMode === "nearby" ? () => setShowToilets((v) => !v) : undefined}
+        showToilets={filters.alwaysShowToilets}
+        onSetMapLayers={hasParkingToggle || toiletSpots.length > 0 ? handleSetMapLayers : undefined}
+        hasToiletData={toiletSpots.length > 0}
       />
       </>
     )
@@ -794,8 +805,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           onToggleParkingFocus={canEnterParkingFocus ? handleToggleParkingFocus : undefined}
           isParkingFocusLoading={isParkingLoading}
           parkingFocusHint={parkingFocusHint}
-          showToiletLayer={showToilets}
-          onToggleToiletLayer={hasToiletToggle && chatMode === "nearby" ? () => setShowToilets((v) => !v) : undefined}
         />
       </div>
 
@@ -923,7 +932,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             isFullscreen={isFullscreen}
             onToggleFullscreen={() => setIsFullscreen((v) => !v)}
             showParking={filters.alwaysShowParking}
-            onToggleParking={hasParkingToggle ? handleToggleParking : undefined}
+            showToilets={filters.alwaysShowToilets}
+            onSetMapLayers={hasParkingToggle || toiletSpots.length > 0 ? handleSetMapLayers : undefined}
+            hasToiletData={toiletSpots.length > 0}
             autoZoom={settings.autoZoom}
             parkingFocusMode={parkingFocusMode}
             showWeakParking={settings.showWeakParking}

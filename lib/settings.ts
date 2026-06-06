@@ -9,6 +9,7 @@ export interface AppSettings {
   sortOrder:          "confidence" | "distance"
   autoZoom:           boolean
   alwaysShowParking:  boolean
+  alwaysShowToilets:  boolean
   // Show the weak "accessible" parking tier (wheelchair=yes lots without reserved
   // bays) as yellow markers on the map — including in Parkplatz-Modus. Default off.
   showWeakParking:    boolean
@@ -22,6 +23,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   sortOrder:          "confidence",
   autoZoom:           true,
   alwaysShowParking:  false,
+  alwaysShowToilets:  false,
   showWeakParking:    false,
   parkingRadiusKm:    2.0,
 }

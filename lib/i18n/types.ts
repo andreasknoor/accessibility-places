@@ -196,6 +196,8 @@ export interface Translations {
     parkingAccessibleHint:  string
     toggleParking:          string
     nearbyParking:          string
+    layerNone:              string
+    layerBoth:              string
     parkingFree:            string
     parkingPaid:            string
     parkingMaxstay:         string

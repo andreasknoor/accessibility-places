@@ -60,6 +60,7 @@ describe("loadSettings", () => {
       sortOrder:         "distance",
       autoZoom:          false,
       alwaysShowParking: true,
+      alwaysShowToilets: false,
       showWeakParking:   true,
       parkingRadiusKm:   1,
     }

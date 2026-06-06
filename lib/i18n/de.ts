@@ -222,6 +222,8 @@ const de: Translations = {
     parkingAccessibleHint: "Keine reservierten Plätze ausgewiesen",
     toggleParking:  "Rollstuhlparkplätze in Karte anzeigen",
     nearbyParking:  "Parkplätze in der Nähe",
+    layerNone:      "Keine",
+    layerBoth:      "Beides",
     parkingFree:      "Kostenlos",
     parkingPaid:      "Kostenpflichtig",
     parkingMaxstay:   "Max. Parkzeit",

@@ -50,6 +50,9 @@ interface Props {
   initialChipIdx?:      number
   scrollToId?:          string
   showParking?:         boolean
+  showToilets?:         boolean
+  onSetMapLayers?:      (parking: boolean, toilets: boolean) => void
+  hasToiletData?:       boolean
   onToggleParking?:     () => void
   parkingSpotCount?:    number
   settings:             AppSettings
@@ -62,8 +65,6 @@ interface Props {
   onToggleParkingFocus?: () => void
   isParkingFocusLoading?: boolean
   parkingFocusHint?:    string | null
-  showToiletLayer?:     boolean
-  onToggleToiletLayer?: () => void
   isFirstVisit?:        boolean
   onResetOnboarding?:   () => void
   onDismissWelcome?:    () => void
@@ -81,12 +82,11 @@ export default function MobileLayout({
   filters, sources, radiusKm, onFilters, onSources, onRadius,
   sourceStates, searchCenter, onSearch, onPlaceSearch, onRerun, hasSourceError, onExpandRadius, onRadiusChange, hasSearched, error,
   onReset, onLogoTap, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
-  showParking, onToggleParking, parkingSpotCount,
+  showParking, showToilets, onSetMapLayers, hasToiletData, onToggleParking, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
   onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, hasGpsCoords, locateTrigger, onSwitchToText, onSwitchToPlace,
   chatMode, onChatModeChange, biasCoords,
   parkingFocusMode, onToggleParkingFocus, isParkingFocusLoading, parkingFocusHint,
-  showToiletLayer, onToggleToiletLayer,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -289,7 +289,9 @@ export default function MobileLayout({
               showFullscreenToggle={false}
               visible={activeTab === "map"}
               showParking={showParking}
-              onToggleParking={onToggleParking}
+              showToilets={showToilets}
+              onSetMapLayers={onSetMapLayers}
+              hasToiletData={hasToiletData}
               autoZoom={settings.autoZoom}
               parkingFocusMode={parkingFocusMode}
               showWeakParking={settings.showWeakParking}

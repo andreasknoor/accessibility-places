@@ -176,9 +176,12 @@ export interface SearchFilters {
   // marked `verifiedRecently` (= a check_date:wheelchair tag within 2 years).
   onlyVerified: boolean
   acceptUnknown: boolean
-  // Display option: show all disabled-parking OSM nodes in the search area on
-  // the map, capped at 10 km radius. Does not affect filtering or enrichment.
+  // Display option: show disabled-parking OSM nodes on the map. Does not affect filtering.
   alwaysShowParking: boolean
+  // Display option: show standalone wheelchair-accessible toilets on the map.
+  // Only standalone amenity=toilets nodes are shown; venue WCs are omitted to
+  // avoid overlapping with the place marker at the same coordinates.
+  alwaysShowToilets: boolean
 }
 
 export interface ActiveSources {
