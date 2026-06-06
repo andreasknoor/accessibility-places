@@ -378,6 +378,11 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     suggestAbortRef.current?.abort()
     clearTimeout(nameDebounceRef.current)
     nameAbortRef.current?.abort()
+    if (location.trim().toLowerCase() === "accessible places") {
+      setShowDevConsole(true)
+      setLocation("")
+      return
+    }
     if (mode === "place") {
       setNameSuggestions([])
       setShowNameSuggestions(false)
