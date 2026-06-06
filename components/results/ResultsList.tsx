@@ -214,7 +214,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
           to avoid iOS WebKit's pointer-event dead zone in nested overflow containers */}
       {showWelcome && (
         <div className="flex-1 px-5 py-4 flex flex-col items-center gap-3 text-center">
-          <img src="/icons/icon-preview.svg" className="w-12 h-12 rounded-xl" alt="" aria-hidden />
+          <img src="/icons/icon-preview.svg" className="w-12 h-12 rounded-xl animate-wheelchair-once" alt="" aria-hidden />
           <div className="flex flex-col gap-1">
             <p className="font-semibold text-foreground">{t.chat.welcomeTitle}</p>
             <p className="text-sm text-muted-foreground">{t.chat.welcomeSubtitle}</p>

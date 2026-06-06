@@ -6,43 +6,28 @@
   to   { width: 100% }
 }
 
-/* Welcome-screen wheelchair icon: tilt left, back, then roll off to the right
-   and re-enter from the left. Loops with a pause at the end of each cycle. */
-@keyframes wheelchair-roll {
-  0%   { transform: rotate(0deg)    translateX(0); opacity: 1 }
-  10%  { transform: rotate(-20deg)  translateX(0); opacity: 1 }   /* tilt left  */
-  22%  { transform: rotate(0deg)    translateX(0); opacity: 1 }   /* back       */
-  38%  { transform: rotate(0deg)    translateX(240%); opacity: 0 }/* roll right */
-  39%  { transform: rotate(0deg)    translateX(-140%); opacity: 0 }/* jump left */
-  52%  { transform: rotate(0deg)    translateX(0); opacity: 1 }   /* roll in    */
-  100% { transform: rotate(0deg)    translateX(0); opacity: 1 }   /* hold/pause */
+/* Wheelchair icon: rolls in from the left, stops, tilts -20 deg, returns upright,
+   rolls out to the right. Plays once. Used on both the welcome screen and the
+   app-start splash overlay. */
+@keyframes wheelchair-once {
+  0%   { transform: translateX(-180%) rotate(0deg);   opacity: 0 } /* offscreen left  */
+  8%   { transform: translateX(-180%) rotate(0deg);   opacity: 1 } /* fade in quickly */
+  32%  { transform: translateX(0)     rotate(0deg);   opacity: 1 } /* arrives center  */
+  50%  { transform: translateX(0)     rotate(-20deg); opacity: 1 } /* tilt            */
+  65%  { transform: translateX(0)     rotate(0deg);   opacity: 1 } /* back upright    */
+  88%  { transform: translateX(180%)  rotate(0deg);   opacity: 1 } /* exiting right   */
+  100% { transform: translateX(180%)  rotate(0deg);   opacity: 0 } /* offscreen right */
 }
 
-.animate-wheelchair-roll {
-  animation: wheelchair-roll 4.5s ease-in-out infinite;
-  transform-origin: center bottom;
-  will-change: transform;
-}
-
-/* App-start splash overlay icon: tilt left, back, then roll off right — plays once. */
-@keyframes wheelchair-splash {
-  0%   { transform: rotate(0deg)   translateX(0);    opacity: 1 }
-  18%  { transform: rotate(-20deg) translateX(0);    opacity: 1 } /* tilt left  */
-  35%  { transform: rotate(0deg)   translateX(0);    opacity: 1 } /* back       */
-  75%  { transform: rotate(0deg)   translateX(260%); opacity: 0 } /* roll right */
-  100% { transform: rotate(0deg)   translateX(260%); opacity: 0 } /* hold gone  */
-}
-
-.animate-wheelchair-splash {
-  animation: wheelchair-splash 1.4s ease-in-out forwards;
+.animate-wheelchair-once {
+  animation: wheelchair-once 2.2s ease-in-out forwards;
   transform-origin: center bottom;
   will-change: transform;
 }
 
 /* Accessibility: honour reduced-motion — no movement for users who opt out. */
 @media (prefers-reduced-motion: reduce) {
-  .animate-wheelchair-roll   { animation: none; }
-  .animate-wheelchair-splash { animation: none; }
+  .animate-wheelchair-once { animation: none; }
 }
 
 /* shadcn/ui CSS variables */

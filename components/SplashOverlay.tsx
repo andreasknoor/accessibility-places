@@ -11,8 +11,8 @@ export default function SplashOverlay() {
   const [phase, setPhase] = useState<"visible" | "fading" | "gone">("visible")
 
   useEffect(() => {
-    const fadeTimer = setTimeout(() => setPhase("fading"), 1400)
-    const doneTimer = setTimeout(() => setPhase("gone"),   1900)
+    const fadeTimer = setTimeout(() => setPhase("fading"), 1600) // icon exiting at this point
+    const doneTimer = setTimeout(() => setPhase("gone"),   2300) // animation fully done
     return () => {
       clearTimeout(fadeTimer)
       clearTimeout(doneTimer)
@@ -30,7 +30,7 @@ export default function SplashOverlay() {
     >
       <img
         src="/icons/icon-preview.svg"
-        className="w-20 h-20 rounded-2xl animate-wheelchair-splash"
+        className="w-20 h-20 rounded-2xl animate-wheelchair-once"
         alt=""
       />
     </div>
