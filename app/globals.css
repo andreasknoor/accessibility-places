@@ -13,13 +13,14 @@
    CSS class (not inline style) ensures it is not overridden by Tailwind's
    prefers-reduced-motion preflight (!important on animation-duration). */
 @keyframes wheelchair-race {
-  from { transform: translateX(-120px) }
-  to   { transform: translateX(calc(100vw + 120px)) }
+  from { transform: translateX(0) }
+  to   { transform: translateX(calc(100vw + 80px)) }
 }
 
-/* Waiting at start line: offset to left edge, no animation yet */
+/* Waiting at start line: visible at left edge of viewport (translateX(0) = left: 0).
+   Must match the animation `from` value so there is no position jump on race start. */
 .wheelchair-race-racer--waiting {
-  transform: translateX(-120px);
+  transform: translateX(0);
 }
 
 /* Racing: full animation across the viewport */
