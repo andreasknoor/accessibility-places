@@ -70,6 +70,7 @@ interface Props {
   chatMode:             "text" | "nearby" | "place"
   onChatModeChange:     (mode: "text" | "nearby" | "place") => void
   biasCoords?:          { lat: number; lon: number }
+  shuffleKey?:          number
 }
 
 export default function MobileLayout({
@@ -82,6 +83,7 @@ export default function MobileLayout({
   onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, hasGpsCoords, locateTrigger, onSwitchToText, onSwitchToPlace,
   chatMode, onChatModeChange, biasCoords,
   parkingFocusMode, onToggleParkingFocus, isParkingFocusLoading, parkingFocusHint,
+  shuffleKey,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -263,6 +265,7 @@ export default function MobileLayout({
             onSwitchToPlace={onSwitchToPlace}
             onSwitchToText={onSwitchToText}
             isFirstVisit={isFirstVisit}
+            shuffleKey={shuffleKey}
           />
         </div>
 

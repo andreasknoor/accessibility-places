@@ -7,6 +7,7 @@ import { useTranslations, useLocale } from "@/lib/i18n"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { cn } from "@/lib/utils"
 import { getCurrentPosition, isGeolocationAvailable } from "@/lib/native/geolocation"
+import DevConsole from "@/components/easter-eggs/DevConsole"
 
 type Coords = { lat: number; lon: number }
 
@@ -112,6 +113,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const [nameSuggestions,    setNameSuggestions]    = useState<PlaceSuggestion[]>([])
   const [showNameSuggestions, setShowNameSuggestions] = useState(false)
   const [nameHighlightedIdx,  setNameHighlightedIdx]  = useState(-1)
+  const [showDevConsole,      setShowDevConsole]      = useState(false)
   const selectedIdxRef       = useRef(0)
   const debounceRef          = useRef<ReturnType<typeof setTimeout>>(undefined)
   const suggestAbortRef      = useRef<AbortController>(undefined)
@@ -243,6 +245,14 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     handleLocateRef.current()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locateTrigger])
+
+  // Easter Egg #5: secret keyword in location field
+  useEffect(() => {
+    if (location.trim().toLowerCase() !== "rollstuhlrennen") return
+    setShowDevConsole(true)
+    const t = setTimeout(() => setLocation(""), 200)
+    return () => clearTimeout(t)
+  }, [location])
 
   // Fetch location autocomplete suggestions (Photon via backend proxy)
   useEffect(() => {
@@ -483,6 +493,8 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   }
 
   return (
+    <>
+    {showDevConsole && <DevConsole onClose={() => setShowDevConsole(false)} />}
     <div className="flex flex-col gap-3 p-4 border-b border-border bg-card relative z-20">
 
       {/* ── Mode selector ── */}
@@ -914,5 +926,6 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       )}
 
     </div>
+    </>
   )
 }
