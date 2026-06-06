@@ -229,7 +229,10 @@ const de: Translations = {
     legend:           "Legende",
     legendDisabled:   "Behindertenparkplatz (reservierte Plätze)",
     legendAccessible: "Rollstuhlgerecht (ohne reservierte Plätze)",
-    parkingDistanceTo: (dist: string, name: string) => `${dist} von ${name}`,
+    parkingDistanceTo:   (dist: string, name: string) => `${dist} von ${name}`,
+    parkingReportButton: "Als Rollstuhlparkplatz melden",
+    parkingReportDone:   "Gemeldet – danke!",
+    parkingReportError:  "Fehler – bitte erneut versuchen",
   },
   categories: {
     cafe:        "Café",

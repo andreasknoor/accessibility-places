@@ -319,6 +319,11 @@ export default function MapView({
           <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           ${t.results.googleMapsLink}
         </span>
+        ${tier === "accessible" ? `
+        <span data-report style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#92400e;cursor:pointer;text-decoration:underline;margin-top:5px">
+          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+          ${t.map.parkingReportButton}
+        </span>` : ""}
       `
       // Use L.DomEvent.on (not addEventListener) — plain addEventListener and
       // inline onclick fail on mobile because Leaflet intercepts touchstart.
@@ -327,6 +332,33 @@ export default function MapView({
         L!.DomEvent.on(gmapsBtn, "click", (ev: Event) => {
           L!.DomEvent.stopPropagation(ev)
           window.open(mapsUrl, "_blank", "noopener,noreferrer")
+        })
+      }
+
+      const reportBtn = div.querySelector<HTMLElement>("[data-report]")
+      if (reportBtn) {
+        L!.DomEvent.on(reportBtn, "click", (ev: Event) => {
+          L!.DomEvent.stopPropagation(ev)
+          reportBtn.style.opacity = "0.5"
+          reportBtn.style.pointerEvents = "none"
+          fetch("/api/report-parking", {
+            method:  "POST",
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({
+              lat:              spot.lat,
+              lon:              spot.lon,
+              osmId:            spot.osmId,
+              nearestPlaceName: nearest?.name,
+            }),
+          })
+            .then((r) => {
+              reportBtn.textContent = r.ok ? t.map.parkingReportDone : t.map.parkingReportError
+              reportBtn.style.opacity = "1"
+            })
+            .catch(() => {
+              reportBtn.textContent = t.map.parkingReportError
+              reportBtn.style.opacity = "1"
+            })
         })
       }
 

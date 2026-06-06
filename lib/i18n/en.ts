@@ -229,7 +229,10 @@ const en: Translations = {
     legend:           "Legend",
     legendDisabled:   "Disabled parking (reserved spaces)",
     legendAccessible: "Wheelchair-accessible (no reserved spaces)",
-    parkingDistanceTo: (dist: string, name: string) => `${dist} from ${name}`,
+    parkingDistanceTo:   (dist: string, name: string) => `${dist} from ${name}`,
+    parkingReportButton: "Report as wheelchair parking",
+    parkingReportDone:   "Reported – thanks!",
+    parkingReportError:  "Error – please try again",
   },
   categories: {
     cafe:        "Café",
