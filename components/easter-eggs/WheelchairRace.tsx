@@ -80,9 +80,9 @@ export default function WheelchairRace({ onDone }: Props) {
             "--race-dur": `${durations[i]}s`,
           } as React.CSSProperties}
         >
-          <span className="text-xs leading-none">{racer.dot}</span>
+          <span className="text-lg leading-none">{racer.dot}</span>
           <div
-            className="w-11 h-11 rounded-xl flex items-center justify-center p-1"
+            className="w-12 h-12 rounded-xl flex items-center justify-center p-1.5"
             style={{ backgroundColor: racer.bg }}
           >
             <img src="/icons/icon-preview.svg" className="w-9 h-9 rounded-lg" alt="" />

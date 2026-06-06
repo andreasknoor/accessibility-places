@@ -246,13 +246,6 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locateTrigger])
 
-  // Easter Egg #5: secret keyword in location field
-  useEffect(() => {
-    if (location.trim().toLowerCase() !== "accessible places") return
-    setShowDevConsole(true)
-    const t = setTimeout(() => setLocation(""), 200)
-    return () => clearTimeout(t)
-  }, [location])
 
   // Fetch location autocomplete suggestions (Photon via backend proxy)
   useEffect(() => {
@@ -446,7 +439,16 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
         return
       }
     }
-    if (e.key === "Enter") submit()
+    if (e.key === "Enter") {
+      // Easter Egg #5: trigger DevConsole on Enter, not on every keystroke —
+      // on mobile the keyboard is still open when typing, so we wait for Enter.
+      if (location.trim().toLowerCase() === "accessible places") {
+        setShowDevConsole(true)
+        setLocation("")
+        return
+      }
+      submit()
+    }
   }
 
   function handleLocate() {

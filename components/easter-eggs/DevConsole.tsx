@@ -5,10 +5,11 @@ import { APP_VERSION } from "@/lib/config"
 interface Props { onClose: () => void }
 
 const ASCII_WHEELCHAIR = `
-    ○
-   /|\\
-   [ ]──────────
-   / \\   ( )( )
+    o
+   ─┤
+   ─┤──╮
+    │  │
+   ◯  ◯╯
 `
 
 export default function DevConsole({ onClose }: Props) {
