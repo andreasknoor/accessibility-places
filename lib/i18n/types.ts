@@ -43,6 +43,7 @@ export interface Translations {
     nearbyIn:        (district: string) => string
     parkingModeToggle:    string
     parkingNoneFound:     string
+    toiletModeToggle:     string
     namePlaceholder:      string
     nameToggleShow:       string
     nameToggleHide:       string

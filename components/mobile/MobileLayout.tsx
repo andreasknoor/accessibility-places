@@ -62,6 +62,8 @@ interface Props {
   onToggleParkingFocus?: () => void
   isParkingFocusLoading?: boolean
   parkingFocusHint?:    string | null
+  showToiletLayer?:     boolean
+  onToggleToiletLayer?: () => void
   isFirstVisit?:        boolean
   onResetOnboarding?:   () => void
   onDismissWelcome?:    () => void
@@ -84,6 +86,7 @@ export default function MobileLayout({
   onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, hasGpsCoords, locateTrigger, onSwitchToText, onSwitchToPlace,
   chatMode, onChatModeChange, biasCoords,
   parkingFocusMode, onToggleParkingFocus, isParkingFocusLoading, parkingFocusHint,
+  showToiletLayer, onToggleToiletLayer,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -170,7 +173,7 @@ export default function MobileLayout({
       <h1 className="sr-only">{t.app.srHeading}</h1>
 
       {/* ── Search bar (always visible) ── */}
-      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} locateTrigger={locateTrigger} biasCoords={biasCoords} parkingFocusMode={parkingFocusMode} onToggleParkingFocus={handleToggleParkingFocus} isParkingFocusLoading={isParkingFocusLoading} parkingFocusHint={parkingFocusHint} />
+      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} locateTrigger={locateTrigger} biasCoords={biasCoords} parkingFocusMode={parkingFocusMode} onToggleParkingFocus={handleToggleParkingFocus} isParkingFocusLoading={isParkingFocusLoading} parkingFocusHint={parkingFocusHint} showToiletLayer={showToiletLayer} onToggleToiletLayer={onToggleToiletLayer} />
 
       {/* ── Error banner ── */}
       {error && (

@@ -100,6 +100,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [places,        setPlaces]       = useState<Place[]>([])
   const [parkingSpots,  setParkingSpots]  = useState<ParkingSpot[]>([])
   const [toiletSpots,   setToiletSpots]   = useState<AmenityFeature[]>([])
+  const [showToilets,   setShowToilets]   = useState(false)
   const [selectedId,    setSelectedId]   = useState<string | undefined>()
   const [isLoading,     setIsLoading]    = useState(false)
   const [searchCenter,  setSearchCenter] = useState<{ lat: number; lon: number } | undefined>()
@@ -235,6 +236,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setPlaces([])
     setParkingSpots([])
     setToiletSpots([])
+    setShowToilets(false)
     setSelectedId(undefined)
     setFilterDebug(undefined)
     setParkingFocusMode(false)
@@ -393,6 +395,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setPlaces([])
     setParkingSpots([])
     setToiletSpots([])
+    setShowToilets(false)
     setSelectedId(undefined)
     setScrollToId(undefined)
     setLastQuery(undefined)
@@ -422,6 +425,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setPlaces([])
     setParkingSpots([])
     setToiletSpots([])
+    setShowToilets(false)
     setSelectedId(undefined)
     setLastQuery(undefined)
     setLastCoords(undefined)
@@ -619,6 +623,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     ? baseParkingSpots
     : baseParkingSpots.filter((s) => s.tier !== "weak")
 
+  // WC layer: shown only when the user has toggled the WC chip on.
+  const visibleToiletSpots = showToilets ? toiletSpots : []
+
+  const hasToiletToggle = toiletSpots.length > 0
+
   const handleFilters = useCallback((next: SearchFilters) => {
     const activated = (["entrance", "toilet", "parking", "seating", "onlyVerified"] as const)
       .filter((k) => next[k] && !filters[k])
@@ -676,7 +685,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       <MobileLayout
         places={places}
         parkingSpots={visibleParkingSpots}
-        toiletSpots={toiletSpots.length > 0 ? toiletSpots : undefined}
+        toiletSpots={visibleToiletSpots.length > 0 ? visibleToiletSpots : undefined}
         selectedId={selectedId}
         onSelect={(p) => setSelectedId(p.id)}
         isLoading={isLoading}
@@ -726,6 +735,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onToggleParkingFocus={canEnterParkingFocus ? handleToggleParkingFocus : undefined}
         isParkingFocusLoading={isParkingLoading}
         parkingFocusHint={parkingFocusHint}
+        showToiletLayer={showToilets}
+        onToggleToiletLayer={hasToiletToggle && chatMode === "nearby" ? () => setShowToilets((v) => !v) : undefined}
       />
       </>
     )
@@ -783,6 +794,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           onToggleParkingFocus={canEnterParkingFocus ? handleToggleParkingFocus : undefined}
           isParkingFocusLoading={isParkingLoading}
           parkingFocusHint={parkingFocusHint}
+          showToiletLayer={showToilets}
+          onToggleToiletLayer={hasToiletToggle && chatMode === "nearby" ? () => setShowToilets((v) => !v) : undefined}
         />
       </div>
 
@@ -902,7 +915,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           <MapView
             places={places}
             parkingSpots={visibleParkingSpots}
-            toiletSpots={toiletSpots.length > 0 ? toiletSpots : undefined}
+            toiletSpots={visibleToiletSpots.length > 0 ? visibleToiletSpots : undefined}
             center={searchCenter}
             userLocation={chatMode === "nearby" ? searchCenter : undefined}
             selectedId={selectedId}

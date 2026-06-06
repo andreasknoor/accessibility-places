@@ -47,6 +47,7 @@ const en: Translations = {
     nearbyIn:        (d: string) => `Near ${d}`,
     parkingModeToggle:    "Wheelchair parking nearby",
     parkingNoneFound:     "No parking spots found nearby",
+    toiletModeToggle:     "Wheelchair toilets nearby",
     namePlaceholder:      "e.g. \"The Crown\" or \"Hilton\"",
     nameToggleShow:       "+ Filter results by name",
     nameToggleHide:       "Remove name filter",
