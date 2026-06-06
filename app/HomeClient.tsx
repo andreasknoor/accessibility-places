@@ -644,6 +644,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // Mobile layout
   if (isMobile) {
     return (
+      <>
+      {/* SplashOverlay must be the first child in BOTH return paths so React
+          reconciles it by position and keeps the SAME instance across the
+          isMobile flip (useIsMobile starts false, flips true pre-paint).
+          Otherwise it unmounts mid-animation and never plays on mobile. */}
+      <SplashOverlay />
       <MobileLayout
         places={places}
         parkingSpots={visibleParkingSpots}
@@ -696,6 +702,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         isParkingFocusLoading={isParkingLoading}
         parkingFocusHint={parkingFocusHint}
       />
+      </>
     )
   }
 
