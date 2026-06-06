@@ -11,8 +11,8 @@ export default function SplashOverlay() {
   const [phase, setPhase] = useState<"visible" | "fading" | "gone">("visible")
 
   useEffect(() => {
-    const fadeTimer = setTimeout(() => setPhase("fading"), 1600) // icon exiting at this point
-    const doneTimer = setTimeout(() => setPhase("gone"),   2300) // animation fully done
+    const fadeTimer = setTimeout(() => setPhase("fading"), 2200) // animation fully done (2.2 s)
+    const doneTimer = setTimeout(() => setPhase("gone"),   2700) // after 500 ms fade-out
     return () => {
       clearTimeout(fadeTimer)
       clearTimeout(doneTimer)
