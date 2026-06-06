@@ -248,7 +248,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
 
   // Easter Egg #5: secret keyword in location field
   useEffect(() => {
-    if (location.trim().toLowerCase() !== "rollstuhlrennen") return
+    if (location.trim().toLowerCase() !== "accessible places") return
     setShowDevConsole(true)
     const t = setTimeout(() => setLocation(""), 200)
     return () => clearTimeout(t)
