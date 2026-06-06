@@ -66,17 +66,21 @@ function svgParkingMarker(tier: AmenityTier = "strong") {
   </svg>`
 }
 
-// WC marker colours: strong (designated) = teal, weak (yes) = light-teal
-const TOILET_TIER_STYLE: Record<AmenityTier, { fill: string; text: string }> = {
-  strong: { fill: "#0d9488", text: "white"   }, // teal-600, white WC
-  weak:   { fill: "#99f6e4", text: "#134e4a" }, // teal-200, dark WC
+// WC marker colours: strong (designated) = violet, weak (yes) = light violet
+// Violet has high contrast against OSM tile backgrounds (beige, grey, green).
+const TOILET_TIER_STYLE: Record<AmenityTier, { fill: string; icon: string }> = {
+  strong: { fill: "#7c3aed", icon: "white"   }, // violet-700
+  weak:   { fill: "#ede9fe", icon: "#4c1d95" }, // violet-100 / violet-900
 }
 
 function svgToiletMarker(tier: AmenityTier = "strong") {
-  const { fill, text } = TOILET_TIER_STYLE[tier]
+  const { fill, icon } = TOILET_TIER_STYLE[tier]
+  // Toilet silhouette: rectangular tank (top) + rounded seat (middle) + bowl opening (oval cutout).
   return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="21" viewBox="0 0 30 26">
-    <rect x="1" y="1" width="28" height="24" rx="5" fill="${fill}" stroke="white" stroke-width="1.5"/>
-    <text x="15" y="19" text-anchor="middle" font-size="12" font-weight="bold" fill="${text}" font-family="sans-serif">WC</text>
+    <rect x="1" y="1" width="28" height="24" rx="5" fill="${fill}" stroke="white" stroke-width="2"/>
+    <rect x="10" y="4" width="10" height="5" rx="2" fill="${icon}"/>
+    <rect x="7" y="9" width="16" height="12" rx="7" fill="${icon}"/>
+    <ellipse cx="15" cy="16" rx="4.5" ry="3.5" fill="${fill}"/>
   </svg>`
 }
 
