@@ -257,6 +257,7 @@ export interface ParkingSpot {
   access?:   string   // "private" | "customers" | …
   // Absent on legacy payloads → treated as "disabled" by consumers.
   tier?:     ParkingTier
+  osmId?:    string   // e.g. "node/12345678" — used for OSM editor deep-link in reports
 }
 
 export interface SearchResult {

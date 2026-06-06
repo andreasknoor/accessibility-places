@@ -464,6 +464,7 @@ export async function POST(req: NextRequest) {
                   ...(f.fee      != null ? { fee:      f.fee }      : {}),
                   ...(f.maxstay  != null ? { maxstay:  f.maxstay }  : {}),
                   ...(f.access   != null ? { access:   f.access }   : {}),
+                  ...(f.osmId    != null ? { osmId:    f.osmId }    : {}),
                 }))
             })(),
           },

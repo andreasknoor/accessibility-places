@@ -107,6 +107,10 @@ export default function MapView({
   const userMarker = useRef<any>(null)
   const [mapReady, setMapReady] = useState(false)
   const [legendOpen, setLegendOpen] = useState(false)
+  function esc(s: string) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+  }
+
   const onShowInResultsRef  = useRef(onShowInResults)
   const placesRef           = useRef(places)
   const userLocationRef     = useRef(userLocation)
@@ -272,12 +276,12 @@ export default function MapView({
       })
 
       // Distance to nearest place in current results (placesRef updated before this effect runs)
-      const nearestDist = placesRef.current.reduce((min, p) => {
+      const nearest = placesRef.current.reduce<{ name: string; dist: number } | null>((best, p) => {
         const d = haversineMetres(spot, p.coordinates)
-        return d < min ? d : min
-      }, Infinity)
-      const distText = Number.isFinite(nearestDist)
-        ? t.results.distanceFromHere(Math.round(nearestDist))
+        return best === null || d < best.dist ? { name: p.name, dist: d } : best
+      }, null)
+      const distText = nearest !== null
+        ? t.map.parkingDistanceTo(t.results.distanceFromHere(Math.round(nearest.dist)), esc(nearest.name))
         : null
 
       // Fee badge: show only when tag is present
@@ -315,6 +319,11 @@ export default function MapView({
           <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           ${t.results.googleMapsLink}
         </span>
+        ${tier === "accessible" ? `
+        <span data-report style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#92400e;cursor:pointer;text-decoration:underline;margin-top:5px">
+          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+          ${t.map.parkingReportButton}
+        </span>` : ""}
       `
       // Use L.DomEvent.on (not addEventListener) — plain addEventListener and
       // inline onclick fail on mobile because Leaflet intercepts touchstart.
@@ -326,13 +335,40 @@ export default function MapView({
         })
       }
 
+      const reportBtn = div.querySelector<HTMLElement>("[data-report]")
+      if (reportBtn) {
+        L!.DomEvent.on(reportBtn, "click", (ev: Event) => {
+          L!.DomEvent.stopPropagation(ev)
+          reportBtn.style.opacity = "0.5"
+          reportBtn.style.pointerEvents = "none"
+          fetch("/api/report-parking", {
+            method:  "POST",
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({
+              lat:              spot.lat,
+              lon:              spot.lon,
+              osmId:            spot.osmId,
+              nearestPlaceName: nearest?.name,
+            }),
+          })
+            .then((r) => {
+              reportBtn.textContent = r.ok ? t.map.parkingReportDone : t.map.parkingReportError
+              reportBtn.style.opacity = "1"
+            })
+            .catch(() => {
+              reportBtn.textContent = t.map.parkingReportError
+              reportBtn.style.opacity = "1"
+            })
+        })
+      }
+
       const marker = L.marker([spot.lat, spot.lon], { icon, zIndexOffset: -200 })
         .bindPopup(div, { maxWidth: 240 })
         .addTo(mapInst.current)
       parkingMarkersRef.current.push(marker)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parkingSpots, mapReady])
+  }, [parkingSpots, mapReady, t])
 
   // Update markers when places change. In Parkplatz-Modus the cluster is
   // cleared so only parking spots and the user dot remain visible.

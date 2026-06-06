@@ -382,6 +382,7 @@ export interface NearbyParkingFeature {
   // parseFeatures always sets it; optional only so test/legacy literals omit it
   // (absent is treated as "disabled" by all consumers).
   tier?:      ParkingTier
+  osmId?:     string   // e.g. "node/12345678" — used for OSM editor deep-link in reports
 }
 
 // Parking enrichment is capped at 25 km regardless of the main search radius.
@@ -472,7 +473,8 @@ export async function fetchOsmDisabledParking(
         !hasCapacityTag &&
         tags["disabled"] !== "designated"
       const tier: ParkingTier = isAccessibleTier ? "accessible" : "disabled"
-      out.push({ lat: featLat, lon: featLon, capacity: cap > 0 ? cap : undefined, fee, maxstay, access, tier })
+      const osmId = typeof e.id === "number" ? `${e.type ?? "node"}/${e.id}` : undefined
+      out.push({ lat: featLat, lon: featLon, capacity: cap > 0 ? cap : undefined, fee, maxstay, access, tier, osmId })
     }
     return out
   }
