@@ -7,10 +7,7 @@
 }
 
 /* Wheelchair icon: rolls in from the left, stops, tilts -20 deg, returns upright,
-   rolls out to the right. Plays once.
-   Two variants:
-   - wheelchair-once:        rolls out and stays gone  (SplashOverlay — overlay disappears anyway)
-   - wheelchair-once-return: rolls out, then snaps back to static center position (welcome screen) */
+   rolls out to the right. Plays once. Used in SplashOverlay only. */
 @keyframes wheelchair-once {
   0%   { transform: translateX(-180%) rotate(0deg);   opacity: 0 }
   8%   { transform: translateX(-180%) rotate(0deg);   opacity: 1 }
@@ -21,33 +18,15 @@
   100% { transform: translateX(180%)  rotate(0deg);   opacity: 0 }
 }
 
-@keyframes wheelchair-once-return {
-  0%   { transform: translateX(-180%) rotate(0deg);   opacity: 0 }
-  8%   { transform: translateX(-180%) rotate(0deg);   opacity: 1 }
-  32%  { transform: translateX(0)     rotate(0deg);   opacity: 1 }
-  50%  { transform: translateX(0)     rotate(-20deg); opacity: 1 }
-  65%  { transform: translateX(0)     rotate(0deg);   opacity: 1 }
-  88%  { transform: translateX(180%)  rotate(0deg);   opacity: 1 }
-  99%  { transform: translateX(180%)  rotate(0deg);   opacity: 0 }
-  100% { transform: translateX(0)     rotate(0deg);   opacity: 1 } /* snap back static */
-}
-
 .animate-wheelchair-once {
   animation: wheelchair-once 2.2s ease-in-out forwards;
   transform-origin: center bottom;
   will-change: transform;
 }
 
-.animate-wheelchair-once-return {
-  animation: wheelchair-once-return 2.2s ease-in-out forwards;
-  transform-origin: center bottom;
-  will-change: transform;
-}
-
 /* Accessibility: honour reduced-motion — no movement for users who opt out. */
 @media (prefers-reduced-motion: reduce) {
-  .animate-wheelchair-once,
-  .animate-wheelchair-once-return { animation: none; }
+  .animate-wheelchair-once { animation: none; }
 }
 
 /* shadcn/ui CSS variables */
