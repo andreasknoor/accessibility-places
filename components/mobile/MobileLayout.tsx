@@ -12,7 +12,7 @@ import FilterPanel     from "@/components/filters/FilterPanel"
 import ResultsList     from "@/components/results/ResultsList"
 import LanguageSwitcher from "@/components/LanguageSwitcher"
 import SettingsSheet   from "@/components/settings/SettingsSheet"
-import type { Place, SearchFilters, ActiveSources, SourceId, SourceState, FilterDebug, ParkingSpot, AmenityFeature } from "@/lib/types"
+import type { Place, SearchFilters, ActiveSources, SourceId, SourceState, FilterDebug, ParkingSpot, AmenityFeature, AmenityType } from "@/lib/types"
 import type { AppSettings } from "@/lib/settings"
 
 const MapView = dynamic(() => import("@/components/map/MapView"), { ssr: false })
@@ -61,10 +61,10 @@ interface Props {
   onSortChange:         (s: "confidence" | "distance") => void
   defaultMobileView:    "results" | "map"
   onGpsResolved?:       (coords: { lat: number; lon: number }) => void
-  parkingFocusMode?:    boolean
-  onToggleParkingFocus?: () => void
-  isParkingFocusLoading?: boolean
-  parkingFocusHint?:    string | null
+  focusLayers?:         Set<AmenityType>
+  onToggleFocusLayer?:  (type: AmenityType) => void
+  focusLoadingLayer?:   AmenityType | null
+  focusHints?:          Partial<Record<AmenityType, string>>
   isFirstVisit?:        boolean
   onResetOnboarding?:   () => void
   onDismissWelcome?:    () => void
@@ -86,7 +86,7 @@ export default function MobileLayout({
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
   onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, hasGpsCoords, locateTrigger, onSwitchToText, onSwitchToPlace,
   chatMode, onChatModeChange, biasCoords,
-  parkingFocusMode, onToggleParkingFocus, isParkingFocusLoading, parkingFocusHint,
+  focusLayers, onToggleFocusLayer, focusLoadingLayer, focusHints,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -103,12 +103,14 @@ export default function MobileLayout({
   const handleSearch = (query: string, coords?: { lat: number; lon: number }, nameHint?: string) => { setActiveTab(defaultMobileView ?? "results"); onSearch(query, coords, nameHint) }
   const handleRerun = onRerun ? () => { setActiveTab(defaultMobileView ?? "results"); onRerun() } : undefined
   const handleExpandRadius = onExpandRadius ? () => { setActiveTab(defaultMobileView ?? "results"); onExpandRadius() } : undefined
-  // When the user activates Parkplatz-Modus on mobile, jump to the map tab so
-  // the effect is visible immediately. Toggling off stays on the current tab.
-  const handleToggleParkingFocus = onToggleParkingFocus
-    ? () => {
-        if (!parkingFocusMode) setActiveTab("map")
-        onToggleParkingFocus()
+  const focusActive = (focusLayers?.size ?? 0) > 0
+  // When the user activates an amenity focus layer on mobile, jump to the map tab
+  // so the effect is visible immediately. Turning a layer off stays on the tab.
+  const handleToggleFocusLayer = onToggleFocusLayer
+    ? (type: AmenityType) => {
+        const wasActive = focusLayers?.has(type) ?? false
+        if (!wasActive) setActiveTab("map")
+        onToggleFocusLayer(type)
       }
     : undefined
   const t = useTranslations()
@@ -173,7 +175,7 @@ export default function MobileLayout({
       <h1 className="sr-only">{t.app.srHeading}</h1>
 
       {/* ── Search bar (always visible) ── */}
-      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} locateTrigger={locateTrigger} biasCoords={biasCoords} parkingFocusMode={parkingFocusMode} onToggleParkingFocus={handleToggleParkingFocus} isParkingFocusLoading={isParkingFocusLoading} parkingFocusHint={parkingFocusHint} showToiletLayer={showToiletLayer} onToggleToiletLayer={onToggleToiletLayer} />
+      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} locateTrigger={locateTrigger} biasCoords={biasCoords} focusLayers={focusLayers} onToggleFocusLayer={handleToggleFocusLayer} focusLoadingLayer={focusLoadingLayer} focusHints={focusHints} />
 
       {/* ── Error banner ── */}
       {error && (
@@ -293,7 +295,7 @@ export default function MobileLayout({
               onSetMapLayers={onSetMapLayers}
               hasToiletData={hasToiletData}
               autoZoom={settings.autoZoom}
-              parkingFocusMode={parkingFocusMode}
+              focusMode={focusActive}
               showWeakParking={settings.showWeakParking}
             />
           )}

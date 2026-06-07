@@ -25,7 +25,7 @@ import { useSettings, loadSettings, DEFAULT_APP_SETTINGS } from "@/lib/settings"
 import { getCurrentPosition, isGeolocationAvailable } from "@/lib/native/geolocation"
 import { cn } from "@/lib/utils"
 import type { AppSettings } from "@/lib/settings"
-import type { Place, ParkingSpot, AmenityFeature, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug } from "@/lib/types"
+import type { Place, ParkingSpot, AmenityFeature, AmenityType, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug } from "@/lib/types"
 
 // Leaflet must not run on server
 const MapView = dynamic(() => import("@/components/map/MapView"), { ssr: false })
@@ -125,11 +125,15 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [sortBy,        setSortBy]       = useState<"confidence" | "distance">(() => loadSettings().sortOrder)
   const [resetKey,            setResetKey]            = useState(0)
   const [scrollToId,          setScrollToId]          = useState<string | undefined>()
-  const [isParkingLoading,    setIsParkingLoading]    = useState(false)
-  // Parkplatz-Modus (proposal #6): focus the map on disabled-parking spots
-  // within parkingRadiusKm of the user's GPS coords. Per-session only.
-  const [parkingFocusMode,    setParkingFocusMode]    = useState(false)
-  const [parkingFocusHint,    setParkingFocusHint]    = useState<string | null>(null)
+  // Amenity focus mode: focus the map on GPS-radius amenity spots (parking
+  // and/or WCs) within parkingRadiusKm of the user's GPS coords. Per-session.
+  // `focusLayers` is the set of active layers — empty Set = not in focus mode.
+  // `focusSpots` holds the GPS-radius fetch result, kept separate from the
+  // result-nearby parkingSpots/toiletSpots so no backup/restore dance is needed.
+  const [focusLayers,         setFocusLayers]         = useState<Set<AmenityType>>(new Set())
+  const [focusSpots,          setFocusSpots]          = useState<AmenityFeature[]>([])
+  const [focusHints,          setFocusHints]          = useState<Partial<Record<AmenityType, string>>>({})
+  const [focusLoadingLayer,   setFocusLoadingLayer]   = useState<AmenityType | null>(null)
   const [isFirstVisit,        setIsFirstVisit]        = useState(false)  // SSR-safe; real value read post-hydration (React #418)
   const [locateTriggerKey,    setLocateTriggerKey]    = useState(0)
   // ── Easter Eggs ────────────────────────────────────────────────────────────
@@ -139,11 +143,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [hasGpsCoords,        setHasGpsCoords]        = useState(false)
   const [gpsCoords,           setGpsCoords]           = useState<{ lat: number; lon: number } | null>(null)
   const gpsCoordRef  = useRef<{ lat: number; lon: number } | null>(null)
-  // Snapshot of the result-nearby parkingSpots (500m server-derived) taken right
-  // before entering Parkplatz-Modus. Restored on exit so the toggle returns to
-  // its pre-focus content — focus mode loads GPS-radius spots that would
-  // otherwise overwrite the originals.
-  const parkingSpotsBackupRef = useRef<ParkingSpot[] | null>(null)
   // Tracks whether the initial localStorage prefs have been loaded into state.
   // The persist effect must skip until the load effect has fired (otherwise
   // it would overwrite the user's saved prefs with defaults on first render).
@@ -240,8 +239,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setToiletSpots([])
     setSelectedId(undefined)
     setFilterDebug(undefined)
-    setParkingFocusMode(false)
-    parkingSpotsBackupRef.current = null
+    setFocusLayers(new Set())
+    setFocusSpots([])
+    setFocusHints({})
+    setFocusLoadingLayer(null)
     // Initialise per-source loading state for each active source so the
     // FilterPanel renders spinners immediately.
     const initial: Partial<Record<SourceId, SourceState>> = {}
@@ -403,8 +404,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setFilterDebug(undefined)
     setError(undefined)
     setSourceStates({})
-    setParkingFocusMode(false)
-    parkingSpotsBackupRef.current = null
+    setFocusLayers(new Set())
+    setFocusSpots([])
+    setFocusHints({})
+    setFocusLoadingLayer(null)
   }, [])
 
   const handleSwitchMode = useCallback((mode: "text" | "nearby" | "place") => {
@@ -434,8 +437,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setError(undefined)
     setSourceStates({})
     setIsLoading(false)
-    setParkingFocusMode(false)
-    parkingSpotsBackupRef.current = null
+    setFocusLayers(new Set())
+    setFocusSpots([])
+    setFocusHints({})
+    setFocusLoadingLayer(null)
     const dismissed = (() => { try { return !!localStorage.getItem("ap_welcome_dismissed") } catch { return false } })()
     if (!dismissed) setIsFirstVisit(true)
     setChatMode(settings.defaultSearchMode ?? "nearby")
@@ -550,46 +555,55 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       .catch(() => { /* silently ignored — place search has other fallbacks */ })
   }, [chatMode])
 
-  // Parkplatz-Modus enter: fetch spots for the user's GPS location, then activate
-  // the mode. Doesn't toggle alwaysShowParking (focus mode overrides display so
-  // the toggle state stays preserved for after-exit).
-  const handleEnterParkingFocus = useCallback(async () => {
+  // Amenity focus mode: toggle a layer (parking / WC) on or off. Adding the
+  // first layer enters focus mode; removing the last exits it. Each toggle
+  // re-fetches the GPS-radius amenities for the resulting layer set so a
+  // combined "parking + WCs" view stays in sync. The fetch result lives in
+  // `focusSpots` — result-nearby parkingSpots/toiletSpots are never touched, so
+  // exiting focus mode restores the original view with no backup bookkeeping.
+  const noneFoundFor = useCallback(
+    (type: AmenityType) => type === "parking" ? t.chat.parkingNoneFound : t.chat.toiletsNoneFound,
+    [t.chat.parkingNoneFound, t.chat.toiletsNoneFound],
+  )
+
+  const handleToggleFocusLayer = useCallback(async (type: AmenityType) => {
     const coords = gpsCoordRef.current ?? gpsCoords
     if (!coords) return
-    track("parking_focus_enter")
-    parkingSpotsBackupRef.current = parkingSpots
-    setParkingFocusHint(null)
-    setIsParkingLoading(true)
+
+    const next = new Set(focusLayers)
+    if (next.has(type)) next.delete(type)
+    else next.add(type)
+    setFocusLayers(next)
+
+    // Removing the last layer exits focus mode — clear the focus state.
+    if (next.size === 0) {
+      setFocusSpots([])
+      setFocusHints({})
+      return
+    }
+
+    const layers = [...next]
+    track("amenity_focus_enter", { layers: layers.join(",") })
+    setFocusLoadingLayer(type)
     try {
-      const res = await fetch(`/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=${settings.parkingRadiusKm}`)
-      if (res.ok) {
-        const spots = await res.json()
-        setParkingSpots(spots)
-        if (spots.length === 0) setParkingFocusHint(t.chat.parkingNoneFound)
-      } else {
-        setParkingFocusHint(t.chat.parkingNoneFound)
+      const res = await fetch(
+        `/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=${settings.parkingRadiusKm}&types=${layers.join(",")}`,
+      )
+      const spots: AmenityFeature[] = res.ok ? await res.json() : []
+      setFocusSpots(spots)
+      const hints: Partial<Record<AmenityType, string>> = {}
+      for (const layer of layers) {
+        if (!spots.some((s) => s.amenityType === layer)) hints[layer] = noneFoundFor(layer)
       }
+      setFocusHints(hints)
     } catch {
-      setParkingFocusHint(t.chat.parkingNoneFound)
+      const hints: Partial<Record<AmenityType, string>> = {}
+      for (const layer of layers) hints[layer] = noneFoundFor(layer)
+      setFocusHints(hints)
     } finally {
-      setIsParkingLoading(false)
-      setParkingFocusMode(true)
+      setFocusLoadingLayer(null)
     }
-  }, [gpsCoords, parkingSpots, settings.parkingRadiusKm, t.chat.parkingNoneFound])
-
-  const handleExitParkingFocus = useCallback(() => {
-    if (parkingSpotsBackupRef.current !== null) {
-      setParkingSpots(parkingSpotsBackupRef.current)
-      parkingSpotsBackupRef.current = null
-    }
-    setParkingFocusMode(false)
-    setParkingFocusHint(null)
-  }, [])
-
-  const handleToggleParkingFocus = useCallback(() => {
-    if (parkingFocusMode) handleExitParkingFocus()
-    else handleEnterParkingFocus()
-  }, [parkingFocusMode, handleEnterParkingFocus, handleExitParkingFocus])
+  }, [focusLayers, gpsCoords, settings.parkingRadiusKm, noneFoundFor])
 
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     isDragging.current = true
@@ -613,20 +627,30 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
   }, [])
 
-  // In Parkplatz-Modus we always show all loaded spots regardless of the display
-  // toggle. The weak "accessible" tier (yellow markers) is additionally gated by
-  // the showWeakParking setting — applies in both normal display and focus mode,
-  // so a "find disabled parking now" view never shows unreserved lots unasked.
-  const baseParkingSpots = parkingFocusMode || filters.alwaysShowParking ? parkingSpots : []
-  const visibleParkingSpots = settings.showWeakParking
-    ? baseParkingSpots
-    : baseParkingSpots.filter((s) => s.tier !== "weak")
+  const focusActive = focusLayers.size > 0
 
-  // WC layer: only standalone amenity=toilets nodes (not venue WCs) to avoid
-  // overlapping with the place marker at the same coordinates.
-  const visibleToiletSpots = filters.alwaysShowToilets
-    ? toiletSpots.filter((s) => s.host?.kind !== "venue")
-    : []
+  // Parking markers. In focus mode: the GPS-radius focusSpots, only if the
+  // parking layer is active. Passively: the result-nearby parkingSpots, gated by
+  // the alwaysShowParking display toggle. The weak "accessible" tier (yellow
+  // markers) is additionally gated by showWeakParking in both modes, so a "find
+  // disabled parking now" view never shows unreserved lots unasked.
+  const parkingSource: ParkingSpot[] = focusActive
+    ? (focusLayers.has("parking") ? focusSpots.filter((s) => s.amenityType === "parking") : [])
+    : (filters.alwaysShowParking ? parkingSpots : [])
+  const visibleParkingSpots = settings.showWeakParking
+    ? parkingSource
+    : parkingSource.filter((s) => s.tier !== "weak")
+
+  // WC markers. Focus mode shows ALL WCs (standalone + venue) — place markers
+  // are hidden there, so there is no overlap to avoid; the publicToiletsOnly
+  // setting can still restrict to standalone. Passive mode shows only standalone
+  // WCs, because place markers are visible and venue WCs would overlap them.
+  const toiletSource: AmenityFeature[] = focusActive
+    ? (focusLayers.has("toilet") ? focusSpots.filter((s) => s.amenityType === "toilet") : [])
+    : (filters.alwaysShowToilets ? toiletSpots.filter((s) => s.host?.kind !== "venue") : [])
+  const visibleToiletSpots = focusActive && settings.publicToiletsOnly
+    ? toiletSource.filter((s) => s.host?.kind === "standalone")
+    : toiletSource
 
   const handleFilters = useCallback((next: SearchFilters) => {
     const activated = (["entrance", "toilet", "parking", "seating", "onlyVerified"] as const)
@@ -674,8 +698,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     (p) => (p.accessibility.parking.details as { nearbyOnly?: boolean } | undefined)?.nearbyOnly === true,
   )
 
-  // Parkplatz-Modus is only meaningful in Nearby mode with resolved GPS coords.
-  const canEnterParkingFocus = chatMode === "nearby" && (hasGpsCoords || gpsCoords !== null)
+  // Amenity focus mode is only meaningful in Nearby mode with resolved GPS coords.
+  const canEnterFocus = chatMode === "nearby" && (hasGpsCoords || gpsCoords !== null)
 
   // True when at least one source errored/timed out — gates the results-header
   // retry button so it only appears when retrying is actually useful (frees the
@@ -741,10 +765,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onSwitchToPlace={() => handleSwitchMode("place")}
         chatMode={chatMode}
         onChatModeChange={handleModeChange}
-        parkingFocusMode={parkingFocusMode}
-        onToggleParkingFocus={canEnterParkingFocus ? handleToggleParkingFocus : undefined}
-        isParkingFocusLoading={isParkingLoading}
-        parkingFocusHint={parkingFocusHint}
+        focusLayers={focusLayers}
+        onToggleFocusLayer={canEnterFocus ? handleToggleFocusLayer : undefined}
+        focusLoadingLayer={focusLoadingLayer}
+        focusHints={focusHints}
         showToilets={filters.alwaysShowToilets}
         onSetMapLayers={hasParkingToggle || toiletSpots.length > 0 ? handleSetMapLayers : undefined}
         hasToiletData={toiletSpots.length > 0}
@@ -755,7 +779,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
   // Desktop layout. Fullscreen is implemented via CSS class swap on the MapView
   // container — NOT a separate render path — so MapView stays mounted across
-  // toggles and parkingFocusMode survives. Header / ChatPanel / FilterPanel /
+  // toggles and amenity focus mode survives. Header / ChatPanel / FilterPanel /
   // ResultsList are hidden via `display: none` so their internal state survives.
   return (
     <>
@@ -801,10 +825,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           hasGpsCoords={hasGpsCoords}
           locateTrigger={locateTriggerKey}
           biasCoords={searchCenter ?? gpsCoords ?? undefined}
-          parkingFocusMode={parkingFocusMode}
-          onToggleParkingFocus={canEnterParkingFocus ? handleToggleParkingFocus : undefined}
-          isParkingFocusLoading={isParkingLoading}
-          parkingFocusHint={parkingFocusHint}
+          focusLayers={focusLayers}
+          onToggleFocusLayer={canEnterFocus ? handleToggleFocusLayer : undefined}
+          focusLoadingLayer={focusLoadingLayer}
+          focusHints={focusHints}
         />
       </div>
 
@@ -936,7 +960,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             onSetMapLayers={hasParkingToggle || toiletSpots.length > 0 ? handleSetMapLayers : undefined}
             hasToiletData={toiletSpots.length > 0}
             autoZoom={settings.autoZoom}
-            parkingFocusMode={parkingFocusMode}
+            focusMode={focusActive}
             showWeakParking={settings.showWeakParking}
           />
         </div>

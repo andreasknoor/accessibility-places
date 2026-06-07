@@ -44,6 +44,9 @@ export interface Translations {
     parkingModeToggle:    string
     parkingNoneFound:     string
     toiletModeToggle:     string
+    toiletsNoneFound:     string
+    focusChipParking:     string
+    focusChipToilet:      string
     namePlaceholder:      string
     nameToggleShow:       string
     nameToggleHide:       string
@@ -313,6 +316,8 @@ export interface Translations {
     alwaysShowParking: string
     showWeakParking:     string
     showWeakParkingHint: string
+    publicToiletsOnly:     string
+    publicToiletsOnlyHint: string
     mobileView:        string
     mobileViewList:    string
     mobileViewMap:     string

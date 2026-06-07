@@ -206,6 +206,7 @@ export async function POST(req: NextRequest) {
     onlyVerified:      Boolean(rawF.onlyVerified),
     acceptUnknown:     Boolean(rawF.acceptUnknown),
     alwaysShowParking: false,
+    alwaysShowToilets: false,
   }
 
   const req_s = rawSources && typeof rawSources === "object" ? rawSources as Record<string, unknown> : {}

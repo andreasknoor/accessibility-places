@@ -4,6 +4,7 @@ import {
   haversineMeters,
   NEARBY_PARKING_CONFIDENCE,
   DEFAULT_MAX_NEARBY_PARKING_M,
+  dedupeToiletFeatures,
 } from "@/lib/matching/nearby-parking"
 import type { Place, ParkingDetails, AmenityFeature } from "@/lib/types"
 
@@ -31,6 +32,57 @@ function makePlace(overrides: Partial<Place> = {}): Place {
     ...overrides,
   }
 }
+
+describe("dedupeToiletFeatures", () => {
+  const toilet = (over: Partial<AmenityFeature> = {}): AmenityFeature => ({
+    amenityType: "toilet", lat: 50.8021, lon: 8.7666, tier: "strong",
+    host: { kind: "standalone" }, ...over,
+  })
+
+  it("keeps a single toilet untouched", () => {
+    const fs = [toilet()]
+    expect(dedupeToiletFeatures(fs)).toHaveLength(1)
+  })
+
+  it("collapses two toilets at the same coordinates", () => {
+    const fs = [
+      toilet({ host: { kind: "standalone" } }),
+      toilet({ host: { kind: "venue", name: "Café" } }),
+    ]
+    const out = dedupeToiletFeatures(fs)
+    expect(out).toHaveLength(1)
+    // Standalone is preferred over venue at equal tier.
+    expect(out[0].host?.kind).toBe("standalone")
+  })
+
+  it("prefers the strong tier when collapsing a duplicate", () => {
+    const fs = [
+      toilet({ tier: "weak",   host: { kind: "venue", name: "Café" } }),
+      toilet({ tier: "strong", host: { kind: "venue", name: "Café" } }),
+    ]
+    const out = dedupeToiletFeatures(fs)
+    expect(out).toHaveLength(1)
+    expect(out[0].tier).toBe("strong")
+  })
+
+  it("keeps toilets that are far apart", () => {
+    const fs = [
+      toilet({ lat: 50.8021, lon: 8.7666 }),
+      toilet({ lat: 50.8061, lon: 8.7666 }), // ~440 m north
+    ]
+    expect(dedupeToiletFeatures(fs)).toHaveLength(2)
+  })
+
+  it("passes non-toilet features through untouched", () => {
+    const fs: AmenityFeature[] = [
+      { amenityType: "parking", lat: 50.8021, lon: 8.7666, tier: "strong" },
+      toilet(),
+    ]
+    const out = dedupeToiletFeatures(fs)
+    expect(out.filter((f) => f.amenityType === "parking")).toHaveLength(1)
+    expect(out.filter((f) => f.amenityType === "toilet")).toHaveLength(1)
+  })
+})
 
 describe("haversineMeters", () => {
   it("returns 0 for identical points", () => {

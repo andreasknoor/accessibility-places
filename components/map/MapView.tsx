@@ -36,9 +36,11 @@ interface Props {
   onSetMapLayers?:     (parking: boolean, toilets: boolean) => void
   hasToiletData?:      boolean   // controls whether WC segments are shown
   autoZoom?:           boolean
-  // Parkplatz-Modus: when true, hides place markers and shows GPS-radius
-  // parking spots only. Triggered from the ChatPanel toggle in nearby mode.
-  parkingFocusMode?:       boolean
+  // Amenity focus mode: when true, hides place markers and shows only the
+  // GPS-radius amenity spots (parking and/or WCs). Triggered from the ChatPanel
+  // layer chips in nearby mode. The caller decides which layers are active and
+  // passes the already-filtered spots — MapView only needs the boolean.
+  focusMode?:              boolean
   // Whether the weak "accessible" parking tier is enabled — drives the legend
   // (the yellow entry is only relevant when those markers can appear).
   showWeakParking?:        boolean
@@ -113,7 +115,7 @@ export default function MapView({
   onSetMapLayers,
   hasToiletData = false,
   autoZoom = true,
-  parkingFocusMode = false,
+  focusMode = false,
   showWeakParking = false,
 }: Props) {
   const t        = useTranslations()
@@ -449,12 +451,12 @@ export default function MapView({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toiletSpots, mapReady, t])
 
-  // Update markers when places change. In Parkplatz-Modus the cluster is
-  // cleared so only parking spots and the user dot remain visible.
+  // Update markers when places change. In amenity focus mode the cluster is
+  // cleared so only amenity spots and the user dot remain visible.
   useEffect(() => {
     if (!mapInst.current || !L || !placeClusterRef.current) return
 
-    if (parkingFocusMode) {
+    if (focusMode) {
       placeClusterRef.current.clearLayers()
       markers.current.clear()
       return
@@ -550,7 +552,7 @@ export default function MapView({
     }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [places, selectedId, mapReady, parkingFocusMode])
+  }, [places, selectedId, mapReady, focusMode])
 
   // Fit bounds to show all results — runs only when places changes, not on marker click.
   // Separating this from the selectedId effect prevents fitBounds from firing when the
@@ -558,13 +560,13 @@ export default function MapView({
   // Skipped entirely when autoZoom is disabled.
   useEffect(() => {
     if (!mapInst.current || !L || places.length === 0 || !autoZoom) return
-    if (parkingFocusMode) return  // focus-mode fit handled below
+    if (focusMode) return  // focus-mode fit handled below
     const latlngs: [number, number][] = places.map((p) => [p.coordinates.lat, p.coordinates.lon])
     const ul = userLocationRef.current
     if (ul) latlngs.push([ul.lat, ul.lon])
     mapInst.current.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 15 })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [places, mapReady, autoZoom, parkingFocusMode])
+  }, [places, mapReady, autoZoom, focusMode])
 
   // Pan/zoom to selected — also re-fires when panTrigger increments so that
   // clicking the same result after manually panning the map still re-centers.
@@ -584,7 +586,7 @@ export default function MapView({
   // In focus mode we always fit to spots regardless of how many places exist.
   useEffect(() => {
     if (!mapInst.current) return
-    if (!parkingFocusMode && places.length > 0) return
+    if (!focusMode && places.length > 0) return
     const amenities = [...(parkingSpots ?? []), ...(toiletSpots ?? [])]
     if (amenities.length > 0) {
       const latlngs: [number, number][] = amenities.map((s) => [s.lat, s.lon])
@@ -596,7 +598,7 @@ export default function MapView({
     if (!center) return
     mapInst.current.setView([center.lat, center.lon], 13)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [center, parkingSpots, toiletSpots, mapReady, parkingFocusMode])
+  }, [center, parkingSpots, toiletSpots, mapReady, focusMode])
 
   // ESC exits fullscreen. Parkplatz-Modus has its own explicit toggle in the
   // ChatPanel, so no keyboard shortcut is needed for it.
@@ -675,11 +677,11 @@ export default function MapView({
 
       {/* ── Map-layer segmented control (bottom-left) ── */}
       {/* 4-way: Keine | 🅿 | 🚻 | 🅿+🚻  — reduced to 2-way when no toilet data.
-          Disabled in Parkplatz-Modus (that mode controls its own spot display). */}
+          Disabled in amenity focus mode (that mode controls its own spot display). */}
       {onSetMapLayers && (
         <div
-          aria-disabled={parkingFocusMode}
-          className={`absolute bottom-3 left-3 z-[1000] flex items-center rounded-full shadow-md border border-border bg-background/95 backdrop-blur-sm overflow-hidden text-sm font-medium ${parkingFocusMode ? "opacity-50 pointer-events-none" : ""}`}
+          aria-disabled={focusMode}
+          className={`absolute bottom-3 left-3 z-[1000] flex items-center rounded-full shadow-md border border-border bg-background/95 backdrop-blur-sm overflow-hidden text-sm font-medium ${focusMode ? "opacity-50 pointer-events-none" : ""}`}
         >
           {([
             { label: t.map.layerNone, p: false, wc: false },

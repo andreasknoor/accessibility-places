@@ -8,6 +8,7 @@ import { useIsMobile } from "@/hooks/useIsMobile"
 import { cn } from "@/lib/utils"
 import { getCurrentPosition, isGeolocationAvailable } from "@/lib/native/geolocation"
 import DevConsole from "@/components/easter-eggs/DevConsole"
+import type { AmenityType } from "@/lib/types"
 
 type Coords = { lat: number; lon: number }
 
@@ -25,11 +26,11 @@ interface Props {
   hasGpsCoords?:     boolean
   locateTrigger?:    number
   biasCoords?:       Coords
-  // Parkplatz-Modus toggle in the nearby-info row.
-  parkingFocusMode?:        boolean
-  onToggleParkingFocus?:    () => void
-  isParkingFocusLoading?:   boolean
-  parkingFocusHint?:        string | null
+  // Amenity focus layer chips in the nearby-info row (parking / WC).
+  focusLayers?:        Set<AmenityType>
+  onToggleFocusLayer?: (type: AmenityType) => void
+  focusLoadingLayer?:  AmenityType | null
+  focusHints?:         Partial<Record<AmenityType, string>>
 }
 
 const CHIPS = [
@@ -96,7 +97,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
   return data.district ?? ""
 }
 
-export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onGpsResolved, skipAutoLocate, hasGpsCoords, locateTrigger, biasCoords, parkingFocusMode, onToggleParkingFocus, isParkingFocusLoading, parkingFocusHint }: Props) {
+export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onGpsResolved, skipAutoLocate, hasGpsCoords, locateTrigger, biasCoords, focusLayers, onToggleFocusLayer, focusLoadingLayer, focusHints }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
   const isMobile = useIsMobile()
@@ -895,7 +896,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             </div>
           )}
 
-          {(district !== null || (onToggleParkingFocus && typeof nearbyPhase === "object")) && (
+          {(district !== null || (onToggleFocusLayer && typeof nearbyPhase === "object")) && (
             <div className="flex items-center gap-2 min-w-0">
               {district !== null && (
                 <p className="text-xs text-muted-foreground flex items-center gap-1 min-w-0">
@@ -903,29 +904,39 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                   <span className="text-primary font-medium truncate">{t.chat.nearbyIn(district)}</span>
                 </p>
               )}
-              {typeof nearbyPhase === "object" && onToggleParkingFocus && (
-                <div className="ml-auto flex items-center gap-2 shrink-0">
-                  <div className="flex flex-col items-end gap-0.5">
-                    <button
-                      onClick={onToggleParkingFocus}
-                      disabled={isParkingFocusLoading}
-                      role="switch"
-                      aria-checked={parkingFocusMode}
-                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-60 disabled:cursor-wait"
-                    >
-                      {isParkingFocusLoading
-                        ? <Loader2 className="w-3 h-3 animate-spin" aria-hidden />
-                        : <span aria-hidden>🅿</span>
-                      }
-                      <span>{t.chat.parkingModeToggle}</span>
-                      <span className={`relative inline-flex h-4 w-7 shrink-0 rounded-full transition-colors ${parkingFocusMode ? "bg-blue-600" : "bg-muted-foreground/40"}`}>
-                        <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${parkingFocusMode ? "translate-x-3" : "translate-x-0.5"}`} />
-                      </span>
-                    </button>
-                    {parkingFocusHint && (
-                      <p className="text-[11px] text-amber-600">{parkingFocusHint}</p>
-                    )}
+              {typeof nearbyPhase === "object" && onToggleFocusLayer && (
+                <div className="ml-auto flex flex-col items-end gap-1 shrink-0">
+                  <div className="flex items-center gap-1.5">
+                    {([
+                      { type: "parking" as const, icon: "🅿", label: t.chat.focusChipParking, activeCls: "bg-blue-600  text-white border-blue-600"  },
+                      { type: "toilet"  as const, icon: "🚻", label: t.chat.focusChipToilet,  activeCls: "bg-green-700 text-white border-green-700" },
+                    ]).map(({ type, icon, label, activeCls }) => {
+                      const active  = focusLayers?.has(type) ?? false
+                      const loading = focusLoadingLayer === type
+                      return (
+                        <button
+                          key={type}
+                          onClick={() => onToggleFocusLayer(type)}
+                          disabled={loading}
+                          role="switch"
+                          aria-checked={active}
+                          className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-60 disabled:cursor-wait ${active ? activeCls : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+                        >
+                          {loading
+                            ? <Loader2 className="w-3 h-3 animate-spin" aria-hidden />
+                            : <span aria-hidden>{icon}</span>
+                          }
+                          <span>{label}</span>
+                        </button>
+                      )
+                    })}
                   </div>
+                  {(focusHints?.parking || focusHints?.toilet) && (
+                    <div className="flex flex-col items-end">
+                      {focusHints?.parking && <p className="text-[11px] text-amber-600">{focusHints.parking}</p>}
+                      {focusHints?.toilet  && <p className="text-[11px] text-amber-600">{focusHints.toilet}</p>}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

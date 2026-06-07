@@ -75,3 +75,33 @@ export function enrichWithNearbyParking(
     }
   }
 }
+
+// Radius within which two toilet features are considered the same physical WC.
+// The standalone (amenity=toilets) and venue (toilets:wheelchair) clauses can
+// return the same toilet twice; a node + its containing way/relation likewise.
+export const TOILET_DEDUP_RADIUS_M = 25
+
+// Collapse duplicate WC features that point at the same physical toilet.
+// Preference order when two features collide: strong tier over weak, then
+// standalone over venue (a standalone public toilet is the clearer signal).
+// Non-toilet features pass through untouched.
+export function dedupeToiletFeatures(
+  features: AmenityFeature[],
+  radiusM: number = TOILET_DEDUP_RADIUS_M,
+): AmenityFeature[] {
+  const toilets = features.filter((f) => f.amenityType === "toilet")
+  const others  = features.filter((f) => f.amenityType !== "toilet")
+  if (toilets.length <= 1) return features
+
+  const rank = (f: AmenityFeature) =>
+    (f.tier === "strong" ? 2 : 0) + (f.host?.kind === "standalone" ? 1 : 0)
+  // Sort preferred-first so the kept feature is always the better one.
+  const sorted = [...toilets].sort((a, b) => rank(b) - rank(a))
+
+  const kept: AmenityFeature[] = []
+  for (const t of sorted) {
+    const dup = kept.some((k) => haversineMeters(k, t) <= radiusM)
+    if (!dup) kept.push(t)
+  }
+  return [...others, ...kept]
+}
