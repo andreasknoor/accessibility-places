@@ -641,14 +641,14 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     ? parkingSource
     : parkingSource.filter((s) => s.tier !== "weak")
 
-  // WC markers. Focus mode shows ALL WCs (standalone + venue) — place markers
-  // are hidden there, so there is no overlap to avoid; the publicToiletsOnly
-  // setting can still restrict to standalone. Passive mode shows only standalone
-  // WCs, because place markers are visible and venue WCs would overlap them.
+  // WC markers. Both the focus search and the passive map layer show ALL WCs
+  // (standalone + venue) so a venue WC that appears as part of a found place
+  // doesn't vanish when the WC layer is toggled. The publicToiletsOnly setting
+  // is the single switch that restricts either view to standalone public WCs.
   const toiletSource: AmenityFeature[] = focusActive
     ? (focusLayers.has("toilet") ? focusSpots.filter((s) => s.amenityType === "toilet") : [])
-    : (filters.alwaysShowToilets ? toiletSpots.filter((s) => s.host?.kind !== "venue") : [])
-  const visibleToiletSpots = focusActive && settings.publicToiletsOnly
+    : (filters.alwaysShowToilets ? toiletSpots : [])
+  const visibleToiletSpots = settings.publicToiletsOnly
     ? toiletSource.filter((s) => s.host?.kind === "standalone")
     : toiletSource
 
