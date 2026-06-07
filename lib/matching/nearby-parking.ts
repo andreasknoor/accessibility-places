@@ -81,6 +81,13 @@ export function enrichWithNearbyParking(
 // return the same toilet twice; a node + its containing way/relation likewise.
 export const TOILET_DEDUP_RADIUS_M = 25
 
+// Upper bound on WC features shipped in the /api/search payload. The fetch is
+// capped at `out 1000` server-side; in dense cities that is far more than can be
+// rendered and bloats every response (markers are display-only). We dedup, sort
+// by distance to the search centre, and keep the nearest N so the payload stays
+// bounded while the closest WCs — the ones a user actually needs — survive.
+export const TOILET_DISPLAY_CAP = 300
+
 // Collapse duplicate WC features that point at the same physical toilet.
 // Preference order when two features collide: strong tier over weak, then
 // standalone over venue (a standalone public toilet is the clearer signal).

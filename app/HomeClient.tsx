@@ -158,6 +158,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // Tracks the in-flight /api/search request so rapid re-fires (filter toggle, source
   // toggle, radius change) abort the previous stream instead of racing it to setState.
   const searchAbortRef  = useRef<AbortController | null>(null)
+  // Tracks the in-flight amenity-focus fetch so rapid chip toggling aborts the
+  // previous request instead of letting a stale response win setFocusSpots.
+  const focusAbortRef   = useRef<AbortController | null>(null)
 
   // ── Easter Egg #2: logo tap counter ────────────────────────────────────────
   function handleLogoTap() {
@@ -570,6 +573,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     const coords = gpsCoordRef.current ?? gpsCoords
     if (!coords) return
 
+    // Abort any in-flight focus fetch so a stale response can't win setFocusSpots
+    // when the user rapidly switches between the parking and toilet chips.
+    focusAbortRef.current?.abort()
+
     // Single-select: clicking an active layer deactivates; clicking the other switches.
     const next = new Set<AmenityType>()
     if (!focusLayers.has(type)) next.add(type)
@@ -579,15 +586,19 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     if (next.size === 0) {
       setFocusSpots([])
       setFocusHints({})
+      setFocusLoadingLayer(null)
       return
     }
 
+    const controller = new AbortController()
+    focusAbortRef.current = controller
     const layers = [...next]
     track("amenity_focus_enter", { layers: layers.join(",") })
     setFocusLoadingLayer(type)
     try {
       const res = await fetch(
         `/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=${settings.parkingRadiusKm}&types=${layers.join(",")}`,
+        { signal: controller.signal },
       )
       const spots: AmenityFeature[] = res.ok ? await res.json() : []
       setFocusSpots(spots)
@@ -596,12 +607,15 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         if (!spots.some((s) => s.amenityType === layer)) hints[layer] = noneFoundFor(layer)
       }
       setFocusHints(hints)
-    } catch {
+    } catch (err) {
+      // Aborted fetch: a newer toggle superseded this one — leave its state alone.
+      if (err instanceof DOMException && err.name === "AbortError") return
       const hints: Partial<Record<AmenityType, string>> = {}
       for (const layer of layers) hints[layer] = noneFoundFor(layer)
       setFocusHints(hints)
     } finally {
-      setFocusLoadingLayer(null)
+      // Only the latest request clears the spinner; a superseded one must not.
+      if (focusAbortRef.current === controller) setFocusLoadingLayer(null)
     }
   }, [focusLayers, gpsCoords, settings.parkingRadiusKm, noneFoundFor])
 

@@ -226,8 +226,6 @@ const de: Translations = {
     parkingAccessibleHint: "Keine reservierten Plätze ausgewiesen",
     toggleParking:  "Rollstuhlparkplätze in Karte anzeigen",
     nearbyParking:  "Parkplätze in der Nähe",
-    layerNone:      "Aus",
-    layerBoth:      "Beides",
     parkingFree:      "Kostenlos",
     parkingPaid:      "Kostenpflichtig",
     parkingMaxstay:   "Max. Parkzeit",
@@ -253,7 +251,6 @@ const de: Translations = {
     toiletWheelchairLabel:  "Rollstuhlgerecht",
     toiletDesignatedValue:  "Designiert",
     toiletAccessLabel:      "Zugang",
-    toiletNotSpecified:     "k. A.",
   },
   categories: {
     cafe:        "Café",

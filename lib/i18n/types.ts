@@ -200,8 +200,6 @@ export interface Translations {
     parkingAccessibleHint:  string
     toggleParking:          string
     nearbyParking:          string
-    layerNone:              string
-    layerBoth:              string
     parkingFree:            string
     parkingPaid:            string
     parkingMaxstay:         string
@@ -227,7 +225,6 @@ export interface Translations {
     toiletWheelchairLabel:  string
     toiletDesignatedValue:  string
     toiletAccessLabel:      string
-    toiletNotSpecified:     string
   }
   categories: {
     cafe:        string

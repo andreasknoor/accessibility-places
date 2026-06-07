@@ -6,7 +6,7 @@ import { findMatch, filterByNameHint }  from "@/lib/matching/match"
 import { mergePlaces, passesFilters, finalisePlaceConfidence, computeFilteredConfidence, countLimited } from "@/lib/matching/merge"
 import { fetchOsmDisabledParking, fetchOsmAccessibleAmenities } from "@/lib/adapters/osm"
 import type { AmenityFeature } from "@/lib/types"
-import { enrichWithNearbyParking, haversineMeters, NEARBY_PARKING_DISPLAY_RADIUS_M } from "@/lib/matching/nearby-parking"
+import { enrichWithNearbyParking, haversineMeters, NEARBY_PARKING_DISPLAY_RADIUS_M, dedupeToiletFeatures, TOILET_DISPLAY_CAP } from "@/lib/matching/nearby-parking"
 import { parseQuery } from "@/lib/llm"
 import { NOMINATIM_ENDPOINT, RADIUS_MIN_KM, RADIUS_MAX_KM, PUBLIC_OVERPASS_ENDPOINTS } from "@/lib/config"
 import * as Sentry from "@sentry/nextjs"
@@ -385,10 +385,19 @@ export async function POST(req: NextRequest) {
           parkingFeatures = await nearbyParkingPromise
           enrichWithNearbyParking(canonical, parkingFeatures)
         }
-        // WC features — not enriched, display-only.
+        // WC features — not enriched, display-only. Dedup the standalone+venue
+        // clause overlap, then keep only the nearest TOILET_DISPLAY_CAP to the
+        // search centre so a dense city doesn't ship ~1000 markers per response.
         let toiletFeatures: AmenityFeature[] = []
         if (nearbyToiletsEnabled) {
-          toiletFeatures = await nearbyToiletsPromise
+          const raw = dedupeToiletFeatures(await nearbyToiletsPromise)
+          toiletFeatures = raw.length > TOILET_DISPLAY_CAP
+            ? raw
+                .map((f) => ({ f, d: haversineMeters({ lat: geo.lat, lon: geo.lon }, f) }))
+                .sort((a, b) => a.d - b.d)
+                .slice(0, TOILET_DISPLAY_CAP)
+                .map((x) => x.f)
+            : raw
         }
 
         const wheelchairCanonical = canonical.filter((p) => !p.dogPolicyOnly)

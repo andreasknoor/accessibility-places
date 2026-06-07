@@ -342,8 +342,8 @@ export default function MapView({
         ${subtitle ? `<div style="color:#b45309;font-size:11px;margin-bottom:5px">${subtitle}</div>` : ""}
         <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:11px;margin-bottom:6px">
           ${distText     ? `<span style="color:#888">↔</span><span>${distText}</span>` : ""}
-          ${feeText      ? `<span style="color:#888">€</span><span>${feeText}</span>` : ""}
-          ${maxstayText  ? `<span style="color:#888">${t.map.parkingMaxstay}</span><span>${maxstayText}</span>` : ""}
+          ${feeText      ? `<span style="color:#888">€</span><span>${esc(feeText)}</span>` : ""}
+          ${maxstayText  ? `<span style="color:#888">${t.map.parkingMaxstay}</span><span>${esc(maxstayText)}</span>` : ""}
           ${accessText   ? `<span style="color:#888">🔒</span><span style="color:#b45309">${accessText}</span>` : ""}
         </div>
         <span data-gmaps style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#2563eb;cursor:pointer;text-decoration:underline">
@@ -540,8 +540,8 @@ export default function MapView({
         })()
 
         div.innerHTML = `
-          <strong style="display:block;margin-bottom:4px">${place.name} <span style="color:${markerColor(place.overallConfidence)};font-weight:normal">(${Math.round(place.overallConfidence * 100)}%)</span></strong>
-          ${addr ? `<div style="color:#666;font-size:11px;margin-bottom:6px">${addr}</div>` : ""}
+          <strong style="display:block;margin-bottom:4px">${esc(place.name)} <span style="color:${markerColor(place.overallConfidence)};font-weight:normal">(${Math.round(place.overallConfidence * 100)}%)</span></strong>
+          ${addr ? `<div style="color:#666;font-size:11px;margin-bottom:6px">${esc(addr)}</div>` : ""}
           <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:11px">
             <span style="color:#888">${t.criteria.entrance}</span>
             <span style="color:${markerColor(place.accessibility.entrance.confidence)}">${t.a11y[place.accessibility.entrance.value] ?? place.accessibility.entrance.value}</span>
