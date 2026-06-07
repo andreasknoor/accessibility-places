@@ -210,6 +210,8 @@ export interface Translations {
     legendDisabled:         string
     legendAccessible:       string
     legendToilet:           string
+    legendToiletStandalone: string
+    legendToiletVenue:      string
     parkingDistanceTo:      (dist: string, name: string) => string
     parkingReportButton:    string
     parkingReportDone:      string
@@ -219,6 +221,12 @@ export interface Translations {
     toiletEuroKey:          string
     toiletChangingTable:    string
     toiletCustomers:        string
+    toiletAssociatedPlace:  string
+    toiletVenueGeneric:     string
+    toiletWheelchairLabel:  string
+    toiletDesignatedValue:  string
+    toiletAccessLabel:      string
+    toiletNotSpecified:     string
   }
   categories: {
     cafe:        string

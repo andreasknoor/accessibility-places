@@ -72,16 +72,18 @@ function svgParkingMarker(tier: AmenityTier = "strong") {
   </svg>`
 }
 
-// WC marker colours: strong (designated) = dark green, weak (yes) = light green.
-// The border is dark green (not white like the parking markers) so it reads as a
-// green badge on the colored map tiles, matching the legend swatch.
-const TOILET_TIER_STYLE: Record<AmenityTier, { fill: string; icon: string; stroke: string }> = {
-  strong: { fill: "#166534", icon: "white",   stroke: "#14532d" }, // green-800 / green-900 border
-  weak:   { fill: "#dcfce7", icon: "#14532d", stroke: "#166534" }, // green-100 / green-800 border
+// WC marker colours encode the HOST type (not the tier): standalone public WCs
+// = green, WCs inside a venue = violet — analogous to the parking blue/yellow
+// split. The tier (designated vs. yes) is shown in the popup instead. Each has a
+// darker border of its own hue so it reads as a solid badge on the map tiles.
+type ToiletHost = "standalone" | "venue"
+const TOILET_HOST_STYLE: Record<ToiletHost, { fill: string; stroke: string }> = {
+  standalone: { fill: "#166534", stroke: "#14532d" }, // green-800 / green-900 border
+  venue:      { fill: "#7c3aed", stroke: "#5b21b6" }, // violet-600 / violet-800 border
 }
 
-function svgToiletMarker(tier: AmenityTier = "strong") {
-  const { fill, stroke } = TOILET_TIER_STYLE[tier]
+function svgToiletMarker(host: ToiletHost = "standalone") {
+  const { fill, stroke } = TOILET_HOST_STYLE[host]
   return `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 30 30">
     <rect x="1.5" y="1.5" width="27" height="27" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="3"/>
     <text x="15" y="22" text-anchor="middle" font-size="16">🚻</text>
@@ -407,33 +409,50 @@ export default function MapView({
 
     for (const spot of toiletSpots ?? []) {
       const tier: AmenityTier = spot.tier === "weak" ? "weak" : "strong"
+      const host: ToiletHost  = spot.host?.kind === "venue" ? "venue" : "standalone"
+      const accent = TOILET_HOST_STYLE[host].fill
       const icon = L.divIcon({
-        html:        svgToiletMarker(tier),
+        html:        svgToiletMarker(host),
         className:   "",
         iconSize:    [24, 21],
         iconAnchor:  [12, 10],
         popupAnchor: [0, -11],
       })
 
-      const isEuroKey      = spot.euroKey      ? `<span>🔑 ${t.map.toiletEuroKey ?? "Euroschlüssel"}</span>` : ""
-      const isChangingTable = spot.changingTable ? `<span>🍼 ${t.map.toiletChangingTable ?? "Wickeltisch"}</span>` : ""
-      const hostLine = spot.host?.kind === "venue" && spot.host.name
-        ? `<div style="color:#555;font-size:11px">${esc(spot.host.name)}</div>` : ""
-      const accessText = spot.host?.access === "customers" ? (t.map.toiletCustomers ?? "Nur für Gäste") :
-                         spot.access === "customers"       ? (t.map.toiletCustomers ?? "Nur für Gäste") : null
-
+      const na       = t.map.toiletNotSpecified ?? "k. A."
+      const yes      = t.a11y.yes
       const title    = tier === "strong" ? (t.map.toiletDesignated ?? "Rollstuhl-WC") : (t.map.toiletAccessible ?? "Barrierefreies WC")
+      const isCustomers = spot.host?.access === "customers" || spot.access === "customers"
       const mapsUrl  = `https://www.google.com/maps?q=${spot.lat},${spot.lon}`
 
+      // One property row: muted label left, value right (optional accent colour).
+      const row = (label: string, value: string, color?: string) =>
+        `<div style="display:flex;justify-content:space-between;gap:14px;padding:3px 0">
+          <span style="color:#6b7280">${label}</span>
+          <span style="font-weight:500;text-align:right${color ? `;color:${color}` : ""}">${value}</span>
+        </div>`
+
+      const rows: string[] = []
+      if (host === "venue") {
+        const placeName = spot.host?.name ? esc(spot.host.name) : (t.map.toiletVenueGeneric ?? "Lokalität")
+        rows.push(row(t.map.toiletAssociatedPlace ?? "Zugehöriger Ort", placeName))
+      }
+      rows.push(row(t.map.toiletWheelchairLabel ?? "Rollstuhlgerecht",
+        tier === "strong" ? (t.map.toiletDesignatedValue ?? "Designiert") : yes))
+      rows.push(row(t.map.toiletEuroKey ?? "Euroschlüssel",       spot.euroKey       ? yes : na))
+      rows.push(row(t.map.toiletChangingTable ?? "Wickeltisch",   spot.changingTable ? yes : na))
+      rows.push(row(t.map.toiletAccessLabel ?? "Zugang",
+        isCustomers ? (t.map.toiletCustomers ?? "Nur für Gäste") : na, isCustomers ? "#b45309" : undefined))
+
       const div = document.createElement("div")
-      div.style.cssText = "font-family:sans-serif;font-size:12px;line-height:1.6;min-width:140px"
+      div.style.cssText = "font-family:sans-serif;font-size:12px;line-height:1.5;min-width:184px"
       div.innerHTML = `
-        <div style="font-weight:600;margin-bottom:3px">${title}</div>
-        ${hostLine}
-        <div style="display:flex;flex-direction:column;gap:2px;font-size:11px;margin:4px 0">
-          ${isEuroKey}
-          ${isChangingTable}
-          ${accessText ? `<span style="color:#b45309">🔒 ${accessText}</span>` : ""}
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:7px">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:${accent};font-size:14px;flex-shrink:0">🚻</span>
+          <span style="font-weight:600;font-size:13px">${title}</span>
+        </div>
+        <div style="font-size:11px;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:2px 0;margin-bottom:7px">
+          ${rows.join("")}
         </div>
         <span data-gmaps style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#2563eb;cursor:pointer;text-decoration:underline">
           <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -733,10 +752,16 @@ export default function MapView({
                   </div>
                 )}
               </>)}
-              {(toiletSpots?.length ?? 0) > 0 && (
+              {(toiletSpots ?? []).some((s) => s.host?.kind !== "venue") && (
                 <div className="flex items-center gap-2 py-0.5">
-                  <span dangerouslySetInnerHTML={{ __html: svgToiletMarker("strong") }} />
-                  <span>{t.map.legendToilet ?? "Rollstuhl-WC"}</span>
+                  <span dangerouslySetInnerHTML={{ __html: svgToiletMarker("standalone") }} />
+                  <span>{t.map.legendToiletStandalone ?? "Eigenständiges WC"}</span>
+                </div>
+              )}
+              {(toiletSpots ?? []).some((s) => s.host?.kind === "venue") && (
+                <div className="flex items-center gap-2 py-0.5">
+                  <span dangerouslySetInnerHTML={{ __html: svgToiletMarker("venue") }} />
+                  <span>{t.map.legendToiletVenue ?? "WC in Lokalität"}</span>
                 </div>
               )}
             </div>
@@ -747,7 +772,7 @@ export default function MapView({
               aria-label={t.map.legend}
               className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium shadow-md border border-border bg-background/95 backdrop-blur-sm hover:bg-muted transition-colors"
             >
-              <span dangerouslySetInnerHTML={{ __html: (parkingSpots?.length ?? 0) > 0 ? svgParkingMarker("strong") : svgToiletMarker("strong") }} />
+              <span dangerouslySetInnerHTML={{ __html: (parkingSpots?.length ?? 0) > 0 ? svgParkingMarker("strong") : svgToiletMarker("standalone") }} />
               <span className="hidden sm:inline">{t.map.legend}</span>
             </button>
           )}
