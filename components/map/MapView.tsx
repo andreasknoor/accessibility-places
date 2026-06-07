@@ -7,7 +7,7 @@ import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS } from "@/lib/config"
 import { confidenceLabel } from "@/lib/matching/merge"
 import { haversineMetres } from "@/lib/matching/match"
-import type { Place, ParkingSpot, ParkingTier } from "@/lib/types"
+import type { Place, ParkingSpot, AmenityFeature, AmenityTier } from "@/lib/types"
 
 // Leaflet is ESM-only — loaded dynamically to avoid SSR issues
 let L: typeof import("leaflet") | null = null
@@ -18,6 +18,7 @@ const PLACE_CLUSTER_DISABLE_AT_ZOOM = 17       // street-level: always show ever
 interface Props {
   places:        Place[]
   parkingSpots?: ParkingSpot[]
+  toiletSpots?:  AmenityFeature[]
   center?:       { lat: number; lon: number }
   userLocation?: { lat: number; lon: number }
   selectedId?:   string
@@ -29,11 +30,17 @@ interface Props {
   showFullscreenToggle?: boolean
   visible?:            boolean
   showParking?:        boolean
-  onToggleParking?:    () => void
+  showToilets?:        boolean
+  // Called when the user picks a segment in the map-layer control.
+  // Replaces the old onToggleParking single-toggle.
+  onSetMapLayers?:     (parking: boolean, toilets: boolean) => void
+  hasToiletData?:      boolean   // controls whether WC segments are shown
   autoZoom?:           boolean
-  // Parkplatz-Modus: when true, hides place markers and shows GPS-radius
-  // parking spots only. Triggered from the ChatPanel toggle in nearby mode.
-  parkingFocusMode?:       boolean
+  // Amenity focus mode: when true, hides place markers and shows only the
+  // GPS-radius amenity spots (parking and/or WCs). Triggered from the ChatPanel
+  // layer chips in nearby mode. The caller decides which layers are active and
+  // passes the already-filtered spots — MapView only needs the boolean.
+  focusMode?:              boolean
   // Whether the weak "accessible" parking tier is enabled — drives the legend
   // (the yellow entry is only relevant when those markers can appear).
   showWeakParking?:        boolean
@@ -49,18 +56,37 @@ function markerColor(confidence: number): string {
   return CONFIDENCE_COLORS[confidenceLabel(confidence)]
 }
 
-// Parking marker colours per tier. The weak "accessible" tier uses amber with a
-// DARK "P" — white-on-amber fails contrast, and this is an accessibility app.
-const PARKING_TIER_STYLE: Record<ParkingTier, { fill: string; text: string }> = {
-  disabled:   { fill: "#1d4ed8", text: "white"   }, // blue-700, white P (as before)
-  accessible: { fill: "#eab308", text: "#1f2937" }, // yellow-500, dark P
+// Parking marker colours per tier.
+// "strong" (reserved disabled bays) = blue "P"; "weak" (wheelchair=yes lot) = amber with dark "P"
+// (white-on-amber fails contrast — this is an accessibility app).
+const PARKING_TIER_STYLE: Record<AmenityTier, { fill: string; text: string }> = {
+  strong: { fill: "#1d4ed8", text: "white"   }, // blue-700, white P
+  weak:   { fill: "#eab308", text: "#1f2937" }, // yellow-500, dark P
 }
 
-function svgParkingMarker(tier: ParkingTier = "disabled") {
+function svgParkingMarker(tier: AmenityTier = "strong") {
   const { fill, text } = PARKING_TIER_STYLE[tier]
   return `<svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 26 26">
     <rect x="1" y="1" width="24" height="24" rx="5" fill="${fill}" stroke="white" stroke-width="1.5"/>
     <text x="13" y="19" text-anchor="middle" font-size="15" font-weight="bold" fill="${text}" font-family="sans-serif">P</text>
+  </svg>`
+}
+
+// WC marker colours encode the HOST type (not the tier): standalone public WCs
+// = green, WCs inside a venue = violet — analogous to the parking blue/yellow
+// split. The tier (designated vs. yes) is shown in the popup instead. Each has a
+// darker border of its own hue so it reads as a solid badge on the map tiles.
+type ToiletHost = "standalone" | "venue"
+const TOILET_HOST_STYLE: Record<ToiletHost, { fill: string; stroke: string }> = {
+  standalone: { fill: "#166534", stroke: "#14532d" }, // green-800 / green-900 border
+  venue:      { fill: "#7c3aed", stroke: "#5b21b6" }, // violet-600 / violet-800 border
+}
+
+function svgToiletMarker(host: ToiletHost = "standalone") {
+  const { fill, stroke } = TOILET_HOST_STYLE[host]
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 30 30">
+    <rect x="1.5" y="1.5" width="27" height="27" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="3"/>
+    <text x="15" y="22" text-anchor="middle" font-size="16">🚻</text>
   </svg>`
 }
 
@@ -77,6 +103,7 @@ function svgMarker(color: string, selected: boolean) {
 export default function MapView({
   places,
   parkingSpots,
+  toiletSpots,
   center,
   userLocation,
   selectedId,
@@ -88,9 +115,11 @@ export default function MapView({
   showFullscreenToggle = true,
   visible,
   showParking,
-  onToggleParking,
+  showToilets,
+  onSetMapLayers,
+  hasToiletData = false,
   autoZoom = true,
-  parkingFocusMode = false,
+  focusMode = false,
   showWeakParking = false,
 }: Props) {
   const t        = useTranslations()
@@ -103,6 +132,8 @@ export default function MapView({
   const markers  = useRef<Map<string, any>>(new Map())
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const parkingMarkersRef = useRef<any[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const toiletMarkersRef  = useRef<any[]>([])
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userMarker = useRef<any>(null)
   const [mapReady, setMapReady] = useState(false)
@@ -266,7 +297,7 @@ export default function MapView({
     parkingMarkersRef.current = []
 
     for (const spot of parkingSpots ?? []) {
-      const tier: ParkingTier = spot.tier === "accessible" ? "accessible" : "disabled"
+      const tier: AmenityTier = spot.tier === "weak" ? "weak" : "strong"
       const icon = L.divIcon({
         html:        svgParkingMarker(tier),
         className:   "",
@@ -298,10 +329,10 @@ export default function MapView({
       const maxstayText = spot.maxstay ?? null
 
       // Word-label per tier — colour alone must never carry the meaning (a11y).
-      const title = tier === "accessible"
+      const title = tier === "weak"
         ? t.map.parkingAccessible
         : spot.capacity != null ? t.map.parkingSpots(spot.capacity) : t.map.parkingSpot
-      const subtitle = tier === "accessible" ? t.map.parkingAccessibleHint : null
+      const subtitle = tier === "weak" ? t.map.parkingAccessibleHint : null
       const mapsUrl = `https://www.google.com/maps?q=${spot.lat},${spot.lon}`
 
       const div = document.createElement("div")
@@ -319,7 +350,7 @@ export default function MapView({
           <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           ${t.results.googleMapsLink}
         </span>
-        ${tier === "accessible" ? `
+        ${tier === "weak" ? `
         <span data-report style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#92400e;cursor:pointer;text-decoration:underline;margin-top:5px">
           <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
           ${t.map.parkingReportButton}
@@ -370,12 +401,94 @@ export default function MapView({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parkingSpots, mapReady, t])
 
-  // Update markers when places change. In Parkplatz-Modus the cluster is
-  // cleared so only parking spots and the user dot remain visible.
+  // Toilet (WC) spot markers — shown when toiletSpots is non-empty.
+  useEffect(() => {
+    if (!mapInst.current || !L) return
+    for (const m of toiletMarkersRef.current) m.remove()
+    toiletMarkersRef.current = []
+
+    for (const spot of toiletSpots ?? []) {
+      const tier: AmenityTier = spot.tier === "weak" ? "weak" : "strong"
+      const host: ToiletHost  = spot.host?.kind === "venue" ? "venue" : "standalone"
+      const accent = TOILET_HOST_STYLE[host].fill
+      const icon = L.divIcon({
+        html:        svgToiletMarker(host),
+        className:   "",
+        iconSize:    [24, 21],
+        iconAnchor:  [12, 10],
+        popupAnchor: [0, -11],
+      })
+
+      const yes      = t.a11y.yes
+      const title    = tier === "strong" ? (t.map.toiletDesignated ?? "Rollstuhl-WC") : (t.map.toiletAccessible ?? "Barrierefreies WC")
+      const isCustomers = spot.host?.access === "customers" || spot.access === "customers"
+      const mapsUrl  = `https://www.google.com/maps?q=${spot.lat},${spot.lon}`
+
+      // One property row: icon + muted label left, value right (optional accent colour).
+      // Only called when we have a real value — no "k. A." rows are shown.
+      const row = (icon: string, label: string, value: string, color?: string) =>
+        `<div style="display:flex;justify-content:space-between;gap:14px;padding:3px 0">
+          <span style="color:#6b7280">${icon}&thinsp;${label}</span>
+          <span style="font-weight:500;text-align:right${color ? `;color:${color}` : ""}">${value}</span>
+        </div>`
+
+      const rows: string[] = []
+      if (host === "venue") {
+        const placeName = spot.host?.name ? esc(spot.host.name) : (t.map.toiletVenueGeneric ?? "Lokalität")
+        rows.push(row("🏢", t.map.toiletAssociatedPlace ?? "Ort", placeName))
+      }
+      rows.push(row("♿", t.map.toiletWheelchairLabel ?? "Rollstuhlgerecht",
+        tier === "strong" ? (t.map.toiletDesignatedValue ?? "Designiert") : yes))
+      if (spot.euroKey)       rows.push(row("🔑", t.map.toiletEuroKey      ?? "Euroschlüssel", yes))
+      if (spot.changingTable) rows.push(row("👶", t.map.toiletChangingTable ?? "Wickeltisch",   yes))
+      if (isCustomers)        rows.push(row("🚪", t.map.toiletAccessLabel   ?? "Zugang",
+        t.map.toiletCustomers ?? "Nur für Gäste", "#b45309"))
+
+      const extLinkSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`
+      const linkStyle = `display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#2563eb;cursor:pointer;text-decoration:underline`
+
+      // Wheelmap only indexes OSM nodes, not ways or relations
+      const osmNodeId = spot.osmId?.startsWith("node/") ? spot.osmId.slice(5) : undefined
+      const wheelmapUrl = osmNodeId ? `https://wheelmap.org/nodes/${osmNodeId}` : undefined
+
+      const div = document.createElement("div")
+      div.style.cssText = "font-family:sans-serif;font-size:12px;line-height:1.5;min-width:184px"
+      div.innerHTML = `
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:7px">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:${accent};font-size:14px;flex-shrink:0">🚻</span>
+          <span style="font-weight:600;font-size:13px">${title}</span>
+        </div>
+        <div style="font-size:11px;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:2px 0;margin-bottom:7px">
+          ${rows.join("")}
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <span data-gmaps style="${linkStyle}">${extLinkSvg}${t.results.googleMapsLink}</span>
+          ${wheelmapUrl ? `<span data-wheelmap style="${linkStyle}">${extLinkSvg}Wheelmap</span>` : ""}
+        </div>
+      `
+      const gmapsBtn = div.querySelector<HTMLElement>("[data-gmaps]")
+      if (gmapsBtn) {
+        L.DomEvent.on(gmapsBtn, "click", () => window.open(mapsUrl, "_blank", "noopener"))
+      }
+      const wheelmapBtn = div.querySelector<HTMLElement>("[data-wheelmap]")
+      if (wheelmapBtn && wheelmapUrl) {
+        L.DomEvent.on(wheelmapBtn, "click", () => window.open(wheelmapUrl, "_blank", "noopener"))
+      }
+
+      const marker = L.marker([spot.lat, spot.lon], { icon })
+        .bindPopup(div, { maxWidth: 220 })
+        .addTo(mapInst.current)
+      toiletMarkersRef.current.push(marker)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toiletSpots, mapReady, t])
+
+  // Update markers when places change. In amenity focus mode the cluster is
+  // cleared so only amenity spots and the user dot remain visible.
   useEffect(() => {
     if (!mapInst.current || !L || !placeClusterRef.current) return
 
-    if (parkingFocusMode) {
+    if (focusMode) {
       placeClusterRef.current.clearLayers()
       markers.current.clear()
       return
@@ -471,7 +584,7 @@ export default function MapView({
     }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [places, selectedId, mapReady, parkingFocusMode])
+  }, [places, selectedId, mapReady, focusMode])
 
   // Fit bounds to show all results — runs only when places changes, not on marker click.
   // Separating this from the selectedId effect prevents fitBounds from firing when the
@@ -479,13 +592,13 @@ export default function MapView({
   // Skipped entirely when autoZoom is disabled.
   useEffect(() => {
     if (!mapInst.current || !L || places.length === 0 || !autoZoom) return
-    if (parkingFocusMode) return  // focus-mode fit handled below
+    if (focusMode) return  // focus-mode fit handled below
     const latlngs: [number, number][] = places.map((p) => [p.coordinates.lat, p.coordinates.lon])
     const ul = userLocationRef.current
     if (ul) latlngs.push([ul.lat, ul.lon])
     mapInst.current.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 15 })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [places, mapReady, autoZoom, parkingFocusMode])
+  }, [places, mapReady, autoZoom, focusMode])
 
   // Pan/zoom to selected — also re-fires when panTrigger increments so that
   // clicking the same result after manually panning the map still re-centers.
@@ -504,20 +617,20 @@ export default function MapView({
   // When parking spots are visible without venue results, fit the view to all spots + GPS location.
   // In focus mode we always fit to spots regardless of how many places exist.
   useEffect(() => {
-    if (!mapInst.current) return
-    if (!parkingFocusMode && places.length > 0) return
-    const spots = parkingSpots ?? []
-    if (spots.length > 0) {
-      const latlngs: [number, number][] = spots.map((s) => [s.lat, s.lon])
+    if (!mapInst.current || !L) return
+    if (!focusMode && places.length > 0) return
+    const amenities = [...(parkingSpots ?? []), ...(toiletSpots ?? [])]
+    if (amenities.length > 0) {
+      const latlngs: [number, number][] = amenities.map((s) => [s.lat, s.lon])
       const ul = userLocationRef.current
       if (ul) latlngs.push([ul.lat, ul.lon])
-      mapInst.current.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 16 })
+      mapInst.current.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 16 })
       return
     }
     if (!center) return
     mapInst.current.setView([center.lat, center.lon], 13)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [center, parkingSpots, mapReady, parkingFocusMode])
+  }, [center, parkingSpots, toiletSpots, mapReady, focusMode])
 
   // ESC exits fullscreen. Parkplatz-Modus has its own explicit toggle in the
   // ChatPanel, so no keyboard shortcut is needed for it.
@@ -560,7 +673,7 @@ export default function MapView({
         if (ul) latlngs.push([ul.lat, ul.lon])
         mapInst.current?.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 15 })
       } else {
-        const spots = parkingSpots ?? []
+        const spots = [...(parkingSpots ?? []), ...(toiletSpots ?? [])]
         if (spots.length > 0) {
           const latlngs: [number, number][] = spots.map((s) => [s.lat, s.lon])
           const ul = userLocationRef.current
@@ -594,31 +707,38 @@ export default function MapView({
         </Button>
       )}
 
-      {/* ── Toggle C: result-nearby parking visibility ── */}
-      {/* Disabled while Parkplatz-Modus is active because that mode overrides
-          map content with its own GPS-radius spot set. */}
-      {onToggleParking && (
-        <button
-          onClick={parkingFocusMode ? undefined : onToggleParking}
-          role="switch"
-          aria-checked={showParking}
-          aria-disabled={parkingFocusMode}
-          disabled={parkingFocusMode}
-          title={t.map.toggleParking}
-          className="absolute bottom-3 left-3 z-[1000] flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium shadow-md border border-border bg-background/95 backdrop-blur-sm transition-colors hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-background/95"
+      {/* ── Map-layer toggle pills (bottom-left) ── */}
+      {/* Two independent toggles — parking and WC. Disabled in amenity focus mode. */}
+      {onSetMapLayers && (
+        <div
+          aria-disabled={focusMode}
+          className={`absolute bottom-3 left-3 z-[1000] flex items-center gap-1.5 ${focusMode ? "opacity-50 pointer-events-none" : ""}`}
         >
-          <span aria-hidden>🅿</span>
-          <span className="hidden sm:inline">{t.map.nearbyParking}</span>
-          <span className={`relative inline-flex h-4 w-7 shrink-0 rounded-full transition-colors ${showParking || parkingFocusMode ? "bg-blue-600" : "bg-muted-foreground/40"}`}>
-            <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${showParking || parkingFocusMode ? "translate-x-3" : "translate-x-0.5"}`} />
-          </span>
-        </button>
+          <button
+            onClick={() => onSetMapLayers(!(showParking ?? false), showToilets ?? false)}
+            aria-pressed={showParking ?? false}
+            className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium shadow-md backdrop-blur-sm transition-colors
+              ${showParking ? "bg-blue-600 text-white border-blue-600" : "bg-background/95 border-border text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+          >
+            <span aria-hidden>🅿</span>
+            <span>Parkplätze</span>
+          </button>
+          {hasToiletData && (
+            <button
+              onClick={() => onSetMapLayers(showParking ?? false, !(showToilets ?? false))}
+              aria-pressed={showToilets ?? false}
+              className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium shadow-md backdrop-blur-sm transition-colors
+                ${showToilets ? "bg-green-700 text-white border-green-700" : "bg-background/95 border-border text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+            >
+              <span aria-hidden>🚻</span>
+              <span>WCs</span>
+            </button>
+          )}
+        </div>
       )}
 
-      {/* ── Parking legend (collapsible) ── */}
-      {/* Shown only when parking markers are on the map. Explains the blue vs
-          yellow "P" so colour is never the sole information carrier. */}
-      {(parkingSpots?.length ?? 0) > 0 && (
+      {/* ── Marker legend (collapsible) — shown when parking or WC markers are present ── */}
+      {((parkingSpots?.length ?? 0) > 0 || (toiletSpots?.length ?? 0) > 0) && (
         <div className="absolute bottom-3 right-3 z-[1000]">
           {legendOpen ? (
             <div className="rounded-lg bg-background/95 backdrop-blur-sm shadow-md border border-border p-2.5 text-xs">
@@ -630,14 +750,28 @@ export default function MapView({
                   aria-label={t.common.close}
                 >✕</button>
               </div>
-              <div className="flex items-center gap-2 py-0.5">
-                <span dangerouslySetInnerHTML={{ __html: svgParkingMarker("disabled") }} />
-                <span>{t.map.legendDisabled}</span>
-              </div>
-              {showWeakParking && (
+              {(parkingSpots?.length ?? 0) > 0 && (<>
                 <div className="flex items-center gap-2 py-0.5">
-                  <span dangerouslySetInnerHTML={{ __html: svgParkingMarker("accessible") }} />
-                  <span>{t.map.legendAccessible}</span>
+                  <span dangerouslySetInnerHTML={{ __html: svgParkingMarker("strong") }} />
+                  <span>{t.map.legendDisabled}</span>
+                </div>
+                {showWeakParking && (
+                  <div className="flex items-center gap-2 py-0.5">
+                    <span dangerouslySetInnerHTML={{ __html: svgParkingMarker("weak") }} />
+                    <span>{t.map.legendAccessible}</span>
+                  </div>
+                )}
+              </>)}
+              {(toiletSpots ?? []).some((s) => s.host?.kind !== "venue") && (
+                <div className="flex items-center gap-2 py-0.5">
+                  <span dangerouslySetInnerHTML={{ __html: svgToiletMarker("standalone") }} />
+                  <span>{t.map.legendToiletStandalone ?? "Eigenständiges WC"}</span>
+                </div>
+              )}
+              {(toiletSpots ?? []).some((s) => s.host?.kind === "venue") && (
+                <div className="flex items-center gap-2 py-0.5">
+                  <span dangerouslySetInnerHTML={{ __html: svgToiletMarker("venue") }} />
+                  <span>{t.map.legendToiletVenue ?? "WC in Lokalität"}</span>
                 </div>
               )}
             </div>
@@ -646,10 +780,10 @@ export default function MapView({
               onClick={() => setLegendOpen(true)}
               title={t.map.legend}
               aria-label={t.map.legend}
-              className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium shadow-md border border-border bg-background/95 backdrop-blur-sm hover:bg-muted transition-colors"
+              className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium shadow-md border border-border bg-background/95 backdrop-blur-sm hover:bg-muted transition-colors"
             >
-              <span dangerouslySetInnerHTML={{ __html: svgParkingMarker("disabled") }} />
-              <span className="hidden sm:inline">{t.map.legend}</span>
+              <span dangerouslySetInnerHTML={{ __html: (parkingSpots?.length ?? 0) > 0 ? svgParkingMarker("strong") : svgToiletMarker("standalone") }} />
+              <span>{t.map.legend}</span>
             </button>
           )}
         </div>

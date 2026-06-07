@@ -43,6 +43,11 @@ export interface Translations {
     nearbyIn:        (district: string) => string
     parkingModeToggle:    string
     parkingNoneFound:     string
+    toiletModeToggle:     string
+    toiletsNoneFound:     string
+    focusLabel:           string
+    focusChipParking:     string
+    focusChipToilet:      string
     namePlaceholder:      string
     nameToggleShow:       string
     nameToggleHide:       string
@@ -195,6 +200,8 @@ export interface Translations {
     parkingAccessibleHint:  string
     toggleParking:          string
     nearbyParking:          string
+    layerNone:              string
+    layerBoth:              string
     parkingFree:            string
     parkingPaid:            string
     parkingMaxstay:         string
@@ -203,10 +210,24 @@ export interface Translations {
     legend:                 string
     legendDisabled:         string
     legendAccessible:       string
+    legendToilet:           string
+    legendToiletStandalone: string
+    legendToiletVenue:      string
     parkingDistanceTo:      (dist: string, name: string) => string
     parkingReportButton:    string
     parkingReportDone:      string
     parkingReportError:     string
+    toiletDesignated:       string
+    toiletAccessible:       string
+    toiletEuroKey:          string
+    toiletChangingTable:    string
+    toiletCustomers:        string
+    toiletAssociatedPlace:  string
+    toiletVenueGeneric:     string
+    toiletWheelchairLabel:  string
+    toiletDesignatedValue:  string
+    toiletAccessLabel:      string
+    toiletNotSpecified:     string
   }
   categories: {
     cafe:        string
@@ -304,6 +325,8 @@ export interface Translations {
     alwaysShowParking: string
     showWeakParking:     string
     showWeakParkingHint: string
+    publicToiletsOnly:     string
+    publicToiletsOnlyHint: string
     mobileView:        string
     mobileViewList:    string
     mobileViewMap:     string

@@ -4,8 +4,9 @@ import {
   haversineMeters,
   NEARBY_PARKING_CONFIDENCE,
   DEFAULT_MAX_NEARBY_PARKING_M,
+  dedupeToiletFeatures,
 } from "@/lib/matching/nearby-parking"
-import type { Place, ParkingDetails } from "@/lib/types"
+import type { Place, ParkingDetails, AmenityFeature } from "@/lib/types"
 
 // `attr.details` is typed as a union of all four detail types — narrow it for
 // tests that read parking-only fields.
@@ -32,6 +33,57 @@ function makePlace(overrides: Partial<Place> = {}): Place {
   }
 }
 
+describe("dedupeToiletFeatures", () => {
+  const toilet = (over: Partial<AmenityFeature> = {}): AmenityFeature => ({
+    amenityType: "toilet", lat: 50.8021, lon: 8.7666, tier: "strong",
+    host: { kind: "standalone" }, ...over,
+  })
+
+  it("keeps a single toilet untouched", () => {
+    const fs = [toilet()]
+    expect(dedupeToiletFeatures(fs)).toHaveLength(1)
+  })
+
+  it("collapses two toilets at the same coordinates", () => {
+    const fs = [
+      toilet({ host: { kind: "standalone" } }),
+      toilet({ host: { kind: "venue", name: "Café" } }),
+    ]
+    const out = dedupeToiletFeatures(fs)
+    expect(out).toHaveLength(1)
+    // Standalone is preferred over venue at equal tier.
+    expect(out[0].host?.kind).toBe("standalone")
+  })
+
+  it("prefers the strong tier when collapsing a duplicate", () => {
+    const fs = [
+      toilet({ tier: "weak",   host: { kind: "venue", name: "Café" } }),
+      toilet({ tier: "strong", host: { kind: "venue", name: "Café" } }),
+    ]
+    const out = dedupeToiletFeatures(fs)
+    expect(out).toHaveLength(1)
+    expect(out[0].tier).toBe("strong")
+  })
+
+  it("keeps toilets that are far apart", () => {
+    const fs = [
+      toilet({ lat: 50.8021, lon: 8.7666 }),
+      toilet({ lat: 50.8061, lon: 8.7666 }), // ~440 m north
+    ]
+    expect(dedupeToiletFeatures(fs)).toHaveLength(2)
+  })
+
+  it("passes non-toilet features through untouched", () => {
+    const fs: AmenityFeature[] = [
+      { amenityType: "parking", lat: 50.8021, lon: 8.7666, tier: "strong" },
+      toilet(),
+    ]
+    const out = dedupeToiletFeatures(fs)
+    expect(out.filter((f) => f.amenityType === "parking")).toHaveLength(1)
+    expect(out.filter((f) => f.amenityType === "toilet")).toHaveLength(1)
+  })
+})
+
 describe("haversineMeters", () => {
   it("returns 0 for identical points", () => {
     expect(haversineMeters({ lat: 50, lon: 8 }, { lat: 50, lon: 8 })).toBe(0)
@@ -57,20 +109,20 @@ describe("enrichWithNearbyParking", () => {
     expect(parkingDetails(place).nearbyParkingDistanceM).toBeLessThan(70)
   })
 
-  it("ignores weak 'accessible' tier features — they never enrich a venue", () => {
+  it("ignores weak tier features — they never enrich a venue", () => {
     const place   = makePlace()
-    // Within range, but tier "accessible" (wheelchair=yes lot, no reserved bays).
-    const feature = { lat: place.coordinates.lat + 0.0005, lon: place.coordinates.lon, tier: "accessible" as const }
+    // Within range, but tier "weak" (wheelchair=yes lot, no reserved bays).
+    const feature: AmenityFeature = { amenityType: "parking", lat: place.coordinates.lat + 0.0005, lon: place.coordinates.lon, tier: "weak" }
     enrichWithNearbyParking([place], [feature])
 
     expect(place.accessibility.parking.value).toBe("unknown")
     expect(parkingDetails(place).nearbyOnly).toBeUndefined()
   })
 
-  it("still enriches from a 'disabled' tier feature when a weak one is also nearby", () => {
+  it("still enriches from a strong tier feature when a weak one is also nearby", () => {
     const place    = makePlace()
-    const weak     = { lat: place.coordinates.lat + 0.0003, lon: place.coordinates.lon, tier: "accessible" as const }
-    const reserved = { lat: place.coordinates.lat + 0.0006, lon: place.coordinates.lon, tier: "disabled" as const }
+    const weak:     AmenityFeature = { amenityType: "parking", lat: place.coordinates.lat + 0.0003, lon: place.coordinates.lon, tier: "weak" }
+    const reserved: AmenityFeature = { amenityType: "parking", lat: place.coordinates.lat + 0.0006, lon: place.coordinates.lon, tier: "strong" }
     enrichWithNearbyParking([place], [weak, reserved])
 
     expect(place.accessibility.parking.value).toBe("yes")
@@ -232,12 +284,14 @@ describe("nearbyOnly vs on-site parking distinction", () => {
   })
 })
 
-describe("NearbyParkingFeature extra fields (fee, maxstay, access)", () => {
+describe("AmenityFeature extra fields (fee, maxstay, access)", () => {
   it("enrichment is not affected by presence of fee/maxstay/access on the feature", () => {
     const place = makePlace()
-    const feature = {
+    const feature: AmenityFeature = {
+      amenityType: "parking",
       lat: place.coordinates.lat,
       lon: place.coordinates.lon,
+      tier: "strong",
       fee: "no",
       maxstay: "2 hours",
       access: "customers",
@@ -248,7 +302,8 @@ describe("NearbyParkingFeature extra fields (fee, maxstay, access)", () => {
 
   it("enrichment still upgrades parking when only fee is present (no capacity)", () => {
     const place = makePlace()
-    enrichWithNearbyParking([place], [{ lat: place.coordinates.lat, lon: place.coordinates.lon, fee: "yes" }])
+    const feature: AmenityFeature = { amenityType: "parking", lat: place.coordinates.lat, lon: place.coordinates.lon, tier: "strong", fee: "yes" }
+    enrichWithNearbyParking([place], [feature])
     expect(place.accessibility.parking.value).toBe("yes")
     expect(parkingDetails(place).nearbyOnly).toBe(true)
   })

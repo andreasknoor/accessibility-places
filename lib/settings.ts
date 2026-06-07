@@ -9,10 +9,14 @@ export interface AppSettings {
   sortOrder:          "confidence" | "distance"
   autoZoom:           boolean
   alwaysShowParking:  boolean
+  alwaysShowToilets:  boolean
   // Show the weak "accessible" parking tier (wheelchair=yes lots without reserved
   // bays) as yellow markers on the map — including in Parkplatz-Modus. Default off.
   showWeakParking:    boolean
-  parkingRadiusKm:    number          // radius for the "show parking" pre-check and fetch (0.05–3.0)
+  // WC focus mode: when true, restricts the WC layer to standalone public toilets
+  // (amenity=toilets) and hides WCs that are part of a venue. Default off (show all).
+  publicToiletsOnly:  boolean
+  parkingRadiusKm:    number          // radius for the amenity focus fetch (parking + WC), 0.05–5.0
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -22,7 +26,9 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   sortOrder:          "confidence",
   autoZoom:           true,
   alwaysShowParking:  false,
+  alwaysShowToilets:  false,
   showWeakParking:    false,
+  publicToiletsOnly:  false,
   parkingRadiusKm:    2.0,
 }
 

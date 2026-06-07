@@ -60,7 +60,9 @@ describe("loadSettings", () => {
       sortOrder:         "distance",
       autoZoom:          false,
       alwaysShowParking: true,
+      alwaysShowToilets: false,
       showWeakParking:   true,
+      publicToiletsOnly: false,
       parkingRadiusKm:   1,
     }
     localStorageMock.setItem(KEY, JSON.stringify(custom))

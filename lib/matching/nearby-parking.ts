@@ -17,8 +17,7 @@
 // The value equals the OSM reliability weight: the data quality of a parking
 // spot is the same regardless of how far away it sits from the venue.
 
-import type { Place } from "../types"
-import type { NearbyParkingFeature } from "../adapters/osm"
+import type { Place, AmenityFeature } from "../types"
 
 export const DEFAULT_MAX_NEARBY_PARKING_M = 250
 
@@ -49,15 +48,14 @@ export function haversineMeters(
 
 export function enrichWithNearbyParking(
   places: Place[],
-  features: NearbyParkingFeature[],
+  features: AmenityFeature[],
   maxDistanceM: number = DEFAULT_MAX_NEARBY_PARKING_M,
 ): void {
-  // Only the strong "disabled" tier may upgrade a venue's parking value. The
-  // weak "accessible" tier (wheelchair=yes lot without reserved bays) is
-  // display-only and must never enrich — a feature with tier "accessible"
-  // says nothing about reserved disabled parking for the venue.
-  // tier may be undefined on legacy/test features → treat as "disabled".
-  const features_ = features.filter((f) => f.tier !== "accessible")
+  // Only the strong tier may upgrade a venue's parking value. The weak tier
+  // (wheelchair=yes lot without reserved bays) is display-only and must never
+  // enrich — it says nothing about reserved disabled parking for the venue.
+  // tier may be undefined on legacy/test features → treat as "strong".
+  const features_ = features.filter((f) => f.tier !== "weak")
   if (features_.length === 0) return
   for (const place of places) {
     if (place.accessibility.parking.value !== "unknown") continue
@@ -76,4 +74,34 @@ export function enrichWithNearbyParking(
       nearbyParkingDistanceM: Math.round(bestDist),
     }
   }
+}
+
+// Radius within which two toilet features are considered the same physical WC.
+// The standalone (amenity=toilets) and venue (toilets:wheelchair) clauses can
+// return the same toilet twice; a node + its containing way/relation likewise.
+export const TOILET_DEDUP_RADIUS_M = 25
+
+// Collapse duplicate WC features that point at the same physical toilet.
+// Preference order when two features collide: strong tier over weak, then
+// standalone over venue (a standalone public toilet is the clearer signal).
+// Non-toilet features pass through untouched.
+export function dedupeToiletFeatures(
+  features: AmenityFeature[],
+  radiusM: number = TOILET_DEDUP_RADIUS_M,
+): AmenityFeature[] {
+  const toilets = features.filter((f) => f.amenityType === "toilet")
+  const others  = features.filter((f) => f.amenityType !== "toilet")
+  if (toilets.length <= 1) return features
+
+  const rank = (f: AmenityFeature) =>
+    (f.tier === "strong" ? 2 : 0) + (f.host?.kind === "standalone" ? 1 : 0)
+  // Sort preferred-first so the kept feature is always the better one.
+  const sorted = [...toilets].sort((a, b) => rank(b) - rank(a))
+
+  const kept: AmenityFeature[] = []
+  for (const t of sorted) {
+    const dup = kept.some((k) => haversineMeters(k, t) <= radiusM)
+    if (!dup) kept.push(t)
+  }
+  return [...others, ...kept]
 }

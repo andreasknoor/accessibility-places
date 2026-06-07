@@ -4,7 +4,8 @@ import { startAdapterTasks }            from "@/lib/adapters"
 import { trackCall, trackError, trackDuration } from "@/lib/stats"
 import { findMatch, filterByNameHint }  from "@/lib/matching/match"
 import { mergePlaces, passesFilters, finalisePlaceConfidence, computeFilteredConfidence, countLimited } from "@/lib/matching/merge"
-import { fetchOsmDisabledParking, type NearbyParkingFeature } from "@/lib/adapters/osm"
+import { fetchOsmDisabledParking, fetchOsmAccessibleAmenities } from "@/lib/adapters/osm"
+import type { AmenityFeature } from "@/lib/types"
 import { enrichWithNearbyParking, haversineMeters, NEARBY_PARKING_DISPLAY_RADIUS_M } from "@/lib/matching/nearby-parking"
 import { parseQuery } from "@/lib/llm"
 import { NOMINATIM_ENDPOINT, RADIUS_MIN_KM, RADIUS_MAX_KM, PUBLIC_OVERPASS_ENDPOINTS } from "@/lib/config"
@@ -205,6 +206,7 @@ export async function POST(req: NextRequest) {
     onlyVerified:      Boolean(rawF.onlyVerified),
     acceptUnknown:     Boolean(rawF.acceptUnknown),
     alwaysShowParking: false,
+    alwaysShowToilets: false,
   }
 
   const req_s = rawSources && typeof rawSources === "object" ? rawSources as Record<string, unknown> : {}
@@ -320,16 +322,17 @@ export async function POST(req: NextRequest) {
           }),
         )
 
-        // 4a. Kick off the disabled-parking fetch in parallel with the venue
-        // adapters so it doesn't add to the visible latency.
-        // ENABLE_NEARBY_PARKING defaults to OFF: only the literal string "1"
-        // turns it on. Failure of this fetch is non-fatal — main search
-        // proceeds and parking values stay as the adapters reported them.
+        // 4a. Kick off the disabled-parking and WC fetches in parallel with the
+        // venue adapters so they don't add to the visible latency.
+        // Each flag defaults to OFF: only the literal string "1" turns it on.
+        // Failure of either fetch is non-fatal — main search proceeds and
+        // parking/toilet values stay as the adapters reported them.
         const nearbyParkingEnabled = process.env.ENABLE_NEARBY_PARKING === "1"
-        // Always include the weak "accessible" tier in the parking fetch. It is
+        const nearbyToiletsEnabled = process.env.ENABLE_NEARBY_TOILETS  === "1"
+        // Always include the weak parking tier in the parking fetch. It is
         // display-only (never enriches/filters) and gated client-side by the
         // showWeakParking setting. SEO opts out via the function-arg default.
-        const nearbyParkingPromise: Promise<NearbyParkingFeature[]> = nearbyParkingEnabled
+        const nearbyParkingPromise: Promise<AmenityFeature[]> = nearbyParkingEnabled
           ? fetchOsmDisabledParking({ lat: geo.lat, lon: geo.lon }, radiusKm, signal, true).then(
               ({ features, winnerEndpoint, durationMs }) => {
                 const parkingSrc = PUBLIC_OVERPASS.has(winnerEndpoint) ? "osm_parking_public" : "osm_parking_private"
@@ -338,6 +341,14 @@ export async function POST(req: NextRequest) {
                 return features
               },
               () => { trackError("osm_parking"); return [] },
+            )
+          : Promise.resolve([])
+        // WC fetch: standalone amenity=toilets + any venue with toilets:wheelchair tag.
+        // Not enriched into venue data (toilet.value stays as-is); only for map display.
+        const nearbyToiletsPromise: Promise<AmenityFeature[]> = nearbyToiletsEnabled
+          ? fetchOsmAccessibleAmenities({ lat: geo.lat, lon: geo.lon }, radiusKm, ["toilet"], { signal }).then(
+              ({ features }) => features,
+              () => [],
             )
           : Promise.resolve([])
 
@@ -369,10 +380,15 @@ export async function POST(req: NextRequest) {
         // when its own parking value is unknown. Done before the category
         // filter (5b) so the upgraded value is in place for confidence and
         // filter steps that follow.
-        let parkingFeatures: NearbyParkingFeature[] = []
+        let parkingFeatures: AmenityFeature[] = []
         if (nearbyParkingEnabled) {
           parkingFeatures = await nearbyParkingPromise
           enrichWithNearbyParking(canonical, parkingFeatures)
+        }
+        // WC features — not enriched, display-only.
+        let toiletFeatures: AmenityFeature[] = []
+        if (nearbyToiletsEnabled) {
+          toiletFeatures = await nearbyToiletsPromise
         }
 
         const wheelchairCanonical = canonical.filter((p) => !p.dogPolicyOnly)
@@ -437,12 +453,12 @@ export async function POST(req: NextRequest) {
             locationLabel: geo.label,
             filterDebug,
             // Parking markers sent to the client. Two tiers:
-            //  • "disabled" (strong): only spots within NEARBY_PARKING_DISPLAY_RADIUS_M
+            //  • "strong" (was "disabled"): only spots within NEARBY_PARKING_DISPLAY_RADIUS_M
             //    of a result whose parking was auto-enriched (nearbyOnly: true) —
             //    anchored to displayed venues, as before.
-            //  • "accessible" (weak): ALL fetched accessible-tier lots in the area,
-            //    independent of any anchor (variant 2). Needed so the tier shows in
-            //    Parkplatz-Modus too, where there are no venue anchors.
+            //  • "weak" (was "accessible"): ALL fetched weak-tier lots in the area,
+            //    independent of any anchor. Needed so the tier shows in Parkplatz-Modus
+            //    too, where there are no venue anchors.
             // The client's showWeakParking setting controls visibility of the weak
             // tier; the server always sends the same set (mirrors alwaysShowParking).
             parkingSpots:  (() => {
@@ -450,12 +466,12 @@ export async function POST(req: NextRequest) {
                 const det = p.accessibility.parking.details as { nearbyOnly?: boolean } | undefined
                 return det?.nearbyOnly === true
               })
-              const disabledSpots = parkingFeatures.filter((f) =>
-                f.tier !== "accessible" &&
+              const strongSpots = parkingFeatures.filter((f) =>
+                f.tier !== "weak" &&
                 nearbyOnlyPlaces.some((p) => haversineMeters(p.coordinates, f) <= NEARBY_PARKING_DISPLAY_RADIUS_M)
               )
-              const accessibleSpots = parkingFeatures.filter((f) => f.tier === "accessible")
-              return [...disabledSpots, ...accessibleSpots]
+              const weakSpots = parkingFeatures.filter((f) => f.tier === "weak")
+              return [...strongSpots, ...weakSpots]
                 .map((f) => ({
                   lat:      f.lat,
                   lon:      f.lon,
@@ -467,6 +483,9 @@ export async function POST(req: NextRequest) {
                   ...(f.osmId    != null ? { osmId:    f.osmId }    : {}),
                 }))
             })(),
+            // WC markers — all fetched toilet features, display-only.
+            // Client gates visibility via ENABLE_NEARBY_TOILETS and future layer toggle.
+            amenitySpots: toiletFeatures.length > 0 ? toiletFeatures : undefined,
           },
         })
         // Flush before close: #2/#3 captures may have fired during this run.
