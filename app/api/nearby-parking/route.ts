@@ -5,7 +5,7 @@ import { ipFromRequest, isRateLimited, rateLimitResponse } from "@/lib/rate-limi
 import type { AmenityType } from "@/lib/types"
 
 const RADIUS_MIN_KM = 0.05
-const RADIUS_MAX_KM = 3.0
+const RADIUS_MAX_KM = 5.0
 
 // Generic nearby-amenity endpoint. Despite the legacy path name, it serves both
 // parking and toilet features via ?types=parking,toilet (default: parking).

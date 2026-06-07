@@ -205,7 +205,7 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
             <Row label={ts.parkingRadius}>
               <SliderInput
                 min={0.05}
-                max={3.0}
+                max={5.0}
                 step={0.05}
                 value={settings.parkingRadiusKm}
                 onChange={(v) => onUpdate({ parkingRadiusKm: v })}

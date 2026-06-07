@@ -349,7 +349,7 @@ const en: Translations = {
     mobileViewMap:     "Map",
     resetToDefaults:   "Reset to defaults",
     resetDone:         "Reset",
-    parkingRadius:     "\"Wheelchair parking nearby\": radius",
+    parkingRadius:     "\"Nearby\" search radius (parking & toilets)",
   },
 } as const
 

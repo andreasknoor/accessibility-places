@@ -16,7 +16,7 @@ export interface AppSettings {
   // WC focus mode: when true, restricts the WC layer to standalone public toilets
   // (amenity=toilets) and hides WCs that are part of a venue. Default off (show all).
   publicToiletsOnly:  boolean
-  parkingRadiusKm:    number          // radius for the "show parking" pre-check and fetch (0.05–3.0)
+  parkingRadiusKm:    number          // radius for the amenity focus fetch (parking + WC), 0.05–5.0
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
