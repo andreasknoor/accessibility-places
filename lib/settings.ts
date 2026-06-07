@@ -29,7 +29,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   alwaysShowToilets:  false,
   showWeakParking:    false,
   publicToiletsOnly:  false,
-  parkingRadiusKm:    2.0,
+  parkingRadiusKm:    4.0,
 }
 
 // Mirrors CHIPS in ChatPanel.tsx — same order and indices must stay in sync
