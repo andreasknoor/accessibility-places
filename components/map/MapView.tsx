@@ -72,16 +72,18 @@ function svgParkingMarker(tier: AmenityTier = "strong") {
   </svg>`
 }
 
-// WC marker colours: strong (designated) = dark green, weak (yes) = light green
-const TOILET_TIER_STYLE: Record<AmenityTier, { fill: string; icon: string }> = {
-  strong: { fill: "#166534", icon: "white"   }, // green-800
-  weak:   { fill: "#dcfce7", icon: "#14532d" }, // green-100 / green-900
+// WC marker colours: strong (designated) = dark green, weak (yes) = light green.
+// The border is dark green (not white like the parking markers) so it reads as a
+// green badge on the colored map tiles, matching the legend swatch.
+const TOILET_TIER_STYLE: Record<AmenityTier, { fill: string; icon: string; stroke: string }> = {
+  strong: { fill: "#166534", icon: "white",   stroke: "#14532d" }, // green-800 / green-900 border
+  weak:   { fill: "#dcfce7", icon: "#14532d", stroke: "#166534" }, // green-100 / green-800 border
 }
 
 function svgToiletMarker(tier: AmenityTier = "strong") {
-  const { fill } = TOILET_TIER_STYLE[tier]
+  const { fill, stroke } = TOILET_TIER_STYLE[tier]
   return `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 30 30">
-    <rect x="1" y="1" width="28" height="28" rx="6" fill="${fill}" stroke="white" stroke-width="2"/>
+    <rect x="1.5" y="1.5" width="27" height="27" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="3"/>
     <text x="15" y="22" text-anchor="middle" font-size="16">🚻</text>
   </svg>`
 }
