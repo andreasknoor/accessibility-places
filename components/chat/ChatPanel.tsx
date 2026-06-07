@@ -907,6 +907,8 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
               {typeof nearbyPhase === "object" && onToggleFocusLayer && (
                 <div className="ml-auto flex flex-col items-end gap-1 shrink-0">
                   <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] text-muted-foreground mr-0.5">{t.chat.focusLabel}</span>
+                    <div className="flex items-center gap-1" role="radiogroup">
                     {([
                       { type: "parking" as const, icon: "🅿", label: t.chat.focusChipParking, activeCls: "bg-blue-600  text-white border-blue-600"  },
                       { type: "toilet"  as const, icon: "🚻", label: t.chat.focusChipToilet,  activeCls: "bg-green-700 text-white border-green-700" },
@@ -918,7 +920,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                           key={type}
                           onClick={() => onToggleFocusLayer(type)}
                           disabled={loading}
-                          role="switch"
+                          role="radio"
                           aria-checked={active}
                           className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-60 disabled:cursor-wait ${active ? activeCls : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"}`}
                         >
@@ -930,6 +932,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                         </button>
                       )
                     })}
+                    </div>
                   </div>
                   {(focusHints?.parking || focusHints?.toilet) && (
                     <div className="flex flex-col items-end">

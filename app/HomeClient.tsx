@@ -570,9 +570,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     const coords = gpsCoordRef.current ?? gpsCoords
     if (!coords) return
 
-    const next = new Set(focusLayers)
-    if (next.has(type)) next.delete(type)
-    else next.add(type)
+    // Single-select: clicking an active layer deactivates; clicking the other switches.
+    const next = new Set<AmenityType>()
+    if (!focusLayers.has(type)) next.add(type)
     setFocusLayers(next)
 
     // Removing the last layer exits focus mode — clear the focus state.

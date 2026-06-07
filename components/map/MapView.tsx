@@ -419,30 +419,37 @@ export default function MapView({
         popupAnchor: [0, -11],
       })
 
-      const na       = t.map.toiletNotSpecified ?? "k. A."
       const yes      = t.a11y.yes
       const title    = tier === "strong" ? (t.map.toiletDesignated ?? "Rollstuhl-WC") : (t.map.toiletAccessible ?? "Barrierefreies WC")
       const isCustomers = spot.host?.access === "customers" || spot.access === "customers"
       const mapsUrl  = `https://www.google.com/maps?q=${spot.lat},${spot.lon}`
 
-      // One property row: muted label left, value right (optional accent colour).
-      const row = (label: string, value: string, color?: string) =>
+      // One property row: icon + muted label left, value right (optional accent colour).
+      // Only called when we have a real value — no "k. A." rows are shown.
+      const row = (icon: string, label: string, value: string, color?: string) =>
         `<div style="display:flex;justify-content:space-between;gap:14px;padding:3px 0">
-          <span style="color:#6b7280">${label}</span>
+          <span style="color:#6b7280">${icon}&thinsp;${label}</span>
           <span style="font-weight:500;text-align:right${color ? `;color:${color}` : ""}">${value}</span>
         </div>`
 
       const rows: string[] = []
       if (host === "venue") {
         const placeName = spot.host?.name ? esc(spot.host.name) : (t.map.toiletVenueGeneric ?? "Lokalität")
-        rows.push(row(t.map.toiletAssociatedPlace ?? "Zugehöriger Ort", placeName))
+        rows.push(row("🏢", t.map.toiletAssociatedPlace ?? "Ort", placeName))
       }
-      rows.push(row(t.map.toiletWheelchairLabel ?? "Rollstuhlgerecht",
+      rows.push(row("♿", t.map.toiletWheelchairLabel ?? "Rollstuhlgerecht",
         tier === "strong" ? (t.map.toiletDesignatedValue ?? "Designiert") : yes))
-      rows.push(row(t.map.toiletEuroKey ?? "Euroschlüssel",       spot.euroKey       ? yes : na))
-      rows.push(row(t.map.toiletChangingTable ?? "Wickeltisch",   spot.changingTable ? yes : na))
-      rows.push(row(t.map.toiletAccessLabel ?? "Zugang",
-        isCustomers ? (t.map.toiletCustomers ?? "Nur für Gäste") : na, isCustomers ? "#b45309" : undefined))
+      if (spot.euroKey)       rows.push(row("🔑", t.map.toiletEuroKey      ?? "Euroschlüssel", yes))
+      if (spot.changingTable) rows.push(row("👶", t.map.toiletChangingTable ?? "Wickeltisch",   yes))
+      if (isCustomers)        rows.push(row("🚪", t.map.toiletAccessLabel   ?? "Zugang",
+        t.map.toiletCustomers ?? "Nur für Gäste", "#b45309"))
+
+      const extLinkSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`
+      const linkStyle = `display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#2563eb;cursor:pointer;text-decoration:underline`
+
+      // Wheelmap only indexes OSM nodes, not ways or relations
+      const osmNodeId = spot.osmId?.startsWith("node/") ? spot.osmId.slice(5) : undefined
+      const wheelmapUrl = osmNodeId ? `https://wheelmap.org/nodes/${osmNodeId}` : undefined
 
       const div = document.createElement("div")
       div.style.cssText = "font-family:sans-serif;font-size:12px;line-height:1.5;min-width:184px"
@@ -454,14 +461,18 @@ export default function MapView({
         <div style="font-size:11px;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:2px 0;margin-bottom:7px">
           ${rows.join("")}
         </div>
-        <span data-gmaps style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#2563eb;cursor:pointer;text-decoration:underline">
-          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          ${t.results.googleMapsLink}
-        </span>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <span data-gmaps style="${linkStyle}">${extLinkSvg}${t.results.googleMapsLink}</span>
+          ${wheelmapUrl ? `<span data-wheelmap style="${linkStyle}">${extLinkSvg}Wheelmap</span>` : ""}
+        </div>
       `
       const gmapsBtn = div.querySelector<HTMLElement>("[data-gmaps]")
       if (gmapsBtn) {
         L.DomEvent.on(gmapsBtn, "click", () => window.open(mapsUrl, "_blank", "noopener"))
+      }
+      const wheelmapBtn = div.querySelector<HTMLElement>("[data-wheelmap]")
+      if (wheelmapBtn && wheelmapUrl) {
+        L.DomEvent.on(wheelmapBtn, "click", () => window.open(wheelmapUrl, "_blank", "noopener"))
       }
 
       const marker = L.marker([spot.lat, spot.lon], { icon })
@@ -606,14 +617,14 @@ export default function MapView({
   // When parking spots are visible without venue results, fit the view to all spots + GPS location.
   // In focus mode we always fit to spots regardless of how many places exist.
   useEffect(() => {
-    if (!mapInst.current) return
+    if (!mapInst.current || !L) return
     if (!focusMode && places.length > 0) return
     const amenities = [...(parkingSpots ?? []), ...(toiletSpots ?? [])]
     if (amenities.length > 0) {
       const latlngs: [number, number][] = amenities.map((s) => [s.lat, s.lon])
       const ul = userLocationRef.current
       if (ul) latlngs.push([ul.lat, ul.lon])
-      mapInst.current.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 16 })
+      mapInst.current.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 16 })
       return
     }
     if (!center) return
@@ -696,34 +707,33 @@ export default function MapView({
         </Button>
       )}
 
-      {/* ── Map-layer segmented control (bottom-left) ── */}
-      {/* 4-way: Keine | 🅿 | 🚻 | 🅿+🚻  — reduced to 2-way when no toilet data.
-          Disabled in amenity focus mode (that mode controls its own spot display). */}
+      {/* ── Map-layer toggle pills (bottom-left) ── */}
+      {/* Two independent toggles — parking and WC. Disabled in amenity focus mode. */}
       {onSetMapLayers && (
         <div
           aria-disabled={focusMode}
-          className={`absolute bottom-3 left-3 z-[1000] flex items-center rounded-full shadow-md border border-border bg-background/95 backdrop-blur-sm overflow-hidden text-sm font-medium ${focusMode ? "opacity-50 pointer-events-none" : ""}`}
+          className={`absolute bottom-3 left-3 z-[1000] flex items-center gap-1.5 ${focusMode ? "opacity-50 pointer-events-none" : ""}`}
         >
-          {([
-            { label: t.map.layerNone, p: false, wc: false },
-            { label: "🅿",            p: true,  wc: false },
-            ...(hasToiletData ? [
-              { label: "🚻",           p: false, wc: true  },
-              { label: t.map.layerBoth,p: true,  wc: true  },
-            ] : []),
-          ] as { label: string; p: boolean; wc: boolean }[]).map(({ label, p, wc }) => {
-            const active = p === (showParking ?? false) && wc === (showToilets ?? false)
-            return (
-              <button
-                key={label}
-                onClick={() => onSetMapLayers(p, wc)}
-                className={`px-3 py-1.5 transition-colors ${active ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground"}`}
-                aria-pressed={active}
-              >
-                {label}
-              </button>
-            )
-          })}
+          <button
+            onClick={() => onSetMapLayers(!(showParking ?? false), showToilets ?? false)}
+            aria-pressed={showParking ?? false}
+            className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium shadow-md backdrop-blur-sm transition-colors
+              ${showParking ? "bg-blue-600 text-white border-blue-600" : "bg-background/95 border-border text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+          >
+            <span aria-hidden>🅿</span>
+            <span>Parkplätze</span>
+          </button>
+          {hasToiletData && (
+            <button
+              onClick={() => onSetMapLayers(showParking ?? false, !(showToilets ?? false))}
+              aria-pressed={showToilets ?? false}
+              className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium shadow-md backdrop-blur-sm transition-colors
+                ${showToilets ? "bg-green-700 text-white border-green-700" : "bg-background/95 border-border text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+            >
+              <span aria-hidden>🚻</span>
+              <span>WCs</span>
+            </button>
+          )}
         </div>
       )}
 
@@ -770,10 +780,10 @@ export default function MapView({
               onClick={() => setLegendOpen(true)}
               title={t.map.legend}
               aria-label={t.map.legend}
-              className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium shadow-md border border-border bg-background/95 backdrop-blur-sm hover:bg-muted transition-colors"
+              className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium shadow-md border border-border bg-background/95 backdrop-blur-sm hover:bg-muted transition-colors"
             >
               <span dangerouslySetInnerHTML={{ __html: (parkingSpots?.length ?? 0) > 0 ? svgParkingMarker("strong") : svgToiletMarker("standalone") }} />
-              <span className="hidden sm:inline">{t.map.legend}</span>
+              <span>{t.map.legend}</span>
             </button>
           )}
         </div>

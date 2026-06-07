@@ -45,6 +45,7 @@ export interface Translations {
     parkingNoneFound:     string
     toiletModeToggle:     string
     toiletsNoneFound:     string
+    focusLabel:           string
     focusChipParking:     string
     focusChipToilet:      string
     namePlaceholder:      string
