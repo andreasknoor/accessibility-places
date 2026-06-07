@@ -226,8 +226,6 @@ const en: Translations = {
     parkingAccessibleHint: "No reserved disabled spaces marked",
     toggleParking:  "Show wheelchair parking on map",
     nearbyParking:  "Nearby parking",
-    layerNone:      "Off",
-    layerBoth:      "Both",
     parkingFree:      "Free",
     parkingPaid:      "Paid",
     parkingMaxstay:   "Max. stay",
@@ -253,7 +251,6 @@ const en: Translations = {
     toiletWheelchairLabel:  "Wheelchair-accessible",
     toiletDesignatedValue:  "Designated",
     toiletAccessLabel:      "Access",
-    toiletNotSpecified:     "n/a",
   },
   categories: {
     cafe:        "Café",
