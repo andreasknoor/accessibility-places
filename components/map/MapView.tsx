@@ -5,6 +5,7 @@ import { Maximize2, Minimize2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS } from "@/lib/config"
+import { openExternalUrl } from "@/lib/native/browser"
 import { confidenceLabel } from "@/lib/matching/merge"
 import { haversineMetres } from "@/lib/matching/match"
 import type { Place, ParkingSpot, AmenityFeature, AmenityTier } from "@/lib/types"
@@ -362,7 +363,7 @@ export default function MapView({
       if (gmapsBtn) {
         L!.DomEvent.on(gmapsBtn, "click", (ev: Event) => {
           L!.DomEvent.stopPropagation(ev)
-          window.open(mapsUrl, "_blank", "noopener,noreferrer")
+          void openExternalUrl(mapsUrl)
         })
       }
 
@@ -468,11 +469,11 @@ export default function MapView({
       `
       const gmapsBtn = div.querySelector<HTMLElement>("[data-gmaps]")
       if (gmapsBtn) {
-        L.DomEvent.on(gmapsBtn, "click", () => window.open(mapsUrl, "_blank", "noopener"))
+        L.DomEvent.on(gmapsBtn, "click", () => void openExternalUrl(mapsUrl))
       }
       const wheelmapBtn = div.querySelector<HTMLElement>("[data-wheelmap]")
       if (wheelmapBtn && wheelmapUrl) {
-        L.DomEvent.on(wheelmapBtn, "click", () => window.open(wheelmapUrl, "_blank", "noopener"))
+        L.DomEvent.on(wheelmapBtn, "click", () => void openExternalUrl(wheelmapUrl))
       }
 
       const marker = L.marker([spot.lat, spot.lon], { icon })

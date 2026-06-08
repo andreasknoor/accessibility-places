@@ -4,6 +4,7 @@ import { useState } from "react"
 import { createPortal } from "react-dom"
 import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Accessibility, PawPrint, Salad, Leaf, Map, ShieldCheck } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
+import { NativeLink } from "@/components/ui/native-link"
 import { Badge } from "@/components/ui/badge"
 import ConfidenceBadge, { VerifiedBadge } from "./ConfidenceBadge"
 import A11yAttribute    from "./A11yAttribute"
@@ -177,30 +178,26 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
         <div className="flex items-center justify-between mt-0.5">
           <div className="flex items-center gap-3">
             {place.gintoUrl && (
-              <a
+              <NativeLink
                 href={place.gintoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
                 aria-label={t.results.gintoLink}
                 title={t.results.gintoLink}
                 onClick={(e) => e.stopPropagation()}
                 className="p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
               >
                 <ShieldCheck className="w-[1.1rem] h-[1.1rem]" />
-              </a>
+              </NativeLink>
             )}
             {place.website && (
-              <a
+              <NativeLink
                 href={place.website}
-                target="_blank"
-                rel="noopener noreferrer"
                 aria-label={t.results.websiteLink}
                 title={t.results.websiteLink}
                 onClick={(e) => e.stopPropagation()}
                 className="p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Globe className="w-[1.1rem] h-[1.1rem]" />
-              </a>
+              </NativeLink>
             )}
             {place.phone && (
               <a
@@ -213,28 +210,24 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
                 <Phone className="w-[1.1rem] h-[1.1rem]" />
               </a>
             )}
-            <a
+            <NativeLink
               href={wheelmapHref}
-              target="_blank"
-              rel="noopener noreferrer"
               aria-label={t.results.wheelmapLink}
               title={t.results.wheelmapLink}
               onClick={(e) => e.stopPropagation()}
               className="p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
             >
               <Accessibility className="w-[1.1rem] h-[1.1rem]" />
-            </a>
-            <a
+            </NativeLink>
+            <NativeLink
               href={googleMapsHref}
-              target="_blank"
-              rel="noopener noreferrer"
               aria-label={t.results.googleMapsLink}
               title={t.results.googleMapsLink}
               onClick={(e) => e.stopPropagation()}
               className="p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
             >
               <Map className="w-[1.1rem] h-[1.1rem]" />
-            </a>
+            </NativeLink>
             <VerifiedBadge place={place} />
           </div>
 

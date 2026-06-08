@@ -9,6 +9,7 @@ import {
   Truck, ShoppingBag, Link2, Car, Hash, Navigation, Copy,
 } from "lucide-react"
 import { SOURCE_LABELS } from "@/lib/config"
+import { NativeLink } from "@/components/ui/native-link"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import type { Place, SourceId, ParkingDetails } from "@/lib/types"
@@ -410,14 +411,12 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
             )}
             {place.website && (
               <InfoRow icon={Globe} label={ti.website}>
-                <a
+                <NativeLink
                   href={place.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="text-blue-600 hover:underline break-all"
                 >
                   {place.website.replace(/^https?:\/\//, "")}
-                </a>
+                </NativeLink>
               </InfoRow>
             )}
             <InfoRow icon={Tag} label={ti.category}>
@@ -470,14 +469,14 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
             {osmLink && (
               <InfoRow icon={ExternalLink} label="OpenStreetMap">
                 <span className="flex items-center gap-1.5 flex-wrap">
-                  <a href={osmLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                  <NativeLink href={osmLink} className="text-blue-600 hover:underline">
                     {osmRecord?.externalId}
-                  </a>
+                  </NativeLink>
                   {copiedField === "osm" ? (
                     <span className="text-green-600 text-[11px] shrink-0">{t.common.copied}</span>
                   ) : (
                     <button
-                      onClick={() => handleCopyField(osmRecord?.externalId ?? "", "osm")}
+                      onClick={() => handleCopyField(osmRecord?.externalId?.replace(/^\w+\//, "") ?? "", "osm")}
                       className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
                       aria-label={t.common.copied}
                       title={t.common.copied}
@@ -489,15 +488,15 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
               </InfoRow>
             )}
             <InfoRow icon={Accessibility} label="Wheelmap">
-              <a href={wheelmapLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+              <NativeLink href={wheelmapLink} className="text-blue-600 hover:underline">
                 Wheelmap.org
-              </a>
+              </NativeLink>
             </InfoRow>
             {place.gintoUrl && (
               <InfoRow icon={ShieldCheck} label="Ginto">
-                <a href={place.gintoUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                <NativeLink href={place.gintoUrl} className="text-blue-600 hover:underline">
                   Ginto.guide
-                </a>
+                </NativeLink>
               </InfoRow>
             )}
             {place.sourceRecords.some((r) => r.sourceId === "reisen_fuer_alle") && (
@@ -506,9 +505,9 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
               </InfoRow>
             )}
             <InfoRow icon={ExternalLink} label="Google Maps">
-              <a href={googleMapsLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+              <NativeLink href={googleMapsLink} className="text-blue-600 hover:underline">
                 Google Maps
-              </a>
+              </NativeLink>
             </InfoRow>
           </Section>
 
