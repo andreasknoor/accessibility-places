@@ -44,7 +44,7 @@ const FAQ_EN: { id: string; q: string; a: ReactNode; schemaText?: string }[] = [
     a: (
       <>
         <p>
-          Switch to <strong className="font-semibold text-foreground">&ldquo;Nearby&rdquo;</strong> mode (middle tab). Once your location is detected, two buttons appear:{" "}
+          Switch to <strong className="font-semibold text-foreground">&ldquo;Nearby&rdquo;</strong> mode (left tab). Once your location is detected, two buttons appear:{" "}
           <strong className="font-semibold text-foreground">&ldquo;Search only: 🅿 Parking&rdquo;</strong> and{" "}
           <strong className="font-semibold text-foreground">&ldquo;Search only: 🚻 Toilets&rdquo;</strong>. Tapping one hides all other search results and shows only wheelchair-accessible parking or accessible toilets within your set radius (default: 4 km, adjustable in Settings).
         </p>
@@ -57,7 +57,7 @@ const FAQ_EN: { id: string; q: string; a: ReactNode; schemaText?: string }[] = [
       </>
     ),
     schemaText:
-      "Switch to \"Nearby\" mode (middle tab). Once your location is detected, two buttons appear: \"Search only: Parking\" and \"Search only: Toilets\". Tapping one hides all other search results and shows only wheelchair-accessible parking or accessible toilets within your set radius (default: 4 km, adjustable in Settings). Toilet markers appear in green for standalone public toilets and in violet for toilets inside venues. Tap a marker for details such as Euro key requirement or changing table. Alternatively, use the layer buttons at the bottom-left of the map to show parking or toilet markers alongside your regular search results.",
+      "Switch to \"Nearby\" mode (left tab). Once your location is detected, two buttons appear: \"Search only: Parking\" and \"Search only: Toilets\". Tapping one hides all other search results and shows only wheelchair-accessible parking or accessible toilets within your set radius (default: 4 km, adjustable in Settings). Toilet markers appear in green for standalone public toilets and in violet for toilets inside venues. Tap a marker for details such as Euro key requirement or changing table. Alternatively, use the layer buttons at the bottom-left of the map to show parking or toilet markers alongside your regular search results.",
   },
   {
     id: "vs-google-maps",
