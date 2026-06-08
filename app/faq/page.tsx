@@ -57,7 +57,7 @@ const FAQ_DE: { id: string; q: string; a: ReactNode; schemaText?: string }[] = [
       </>
     ),
     schemaText:
-      "Wechsle in den Modus „In der Nähe" (mittlerer Tab). Sobald dein Standort erkannt wurde, erscheint eine Zeile mit zwei Buttons: „Suche nur: Parkplätze" und „Suche nur: WCs". Ein Tippen auf einen Button blendet alle anderen Suchergebnisse aus und zeigt auf der Karte rollstuhlgerechte Parkplätze bzw. barrierefreie WCs im eingestellten Suchradius (Standard: 4 km, anpassbar unter Einstellungen). WC-Marker erscheinen in Grün für eigenständige öffentliche WCs und in Violett für WCs in Lokalen. Tippe auf einen Marker für Details wie Euroschlüssel-Pflicht oder Wickeltisch. Alternativ kannst du über die Marker-Buttons links unten in der Karte Parkplatz- oder WC-Marker zusätzlich zu deinen normalen Suchergebnissen einblenden.",
+      "Wechsle in den Modus \"In der Nähe\" (mittlerer Tab). Sobald dein Standort erkannt wurde, erscheint eine Zeile mit zwei Buttons: \"Suche nur: Parkplätze\" und \"Suche nur: WCs\". Ein Tippen auf einen Button blendet alle anderen Suchergebnisse aus und zeigt auf der Karte rollstuhlgerechte Parkplätze bzw. barrierefreie WCs im eingestellten Suchradius (Standard: 4 km, anpassbar unter Einstellungen). WC-Marker erscheinen in Grün für eigenständige öffentliche WCs und in Violett für WCs in Lokalen. Tippe auf einen Marker für Details wie Euroschlüssel-Pflicht oder Wickeltisch. Alternativ kannst du über die Marker-Buttons links unten in der Karte Parkplatz- oder WC-Marker zusätzlich zu deinen normalen Suchergebnissen einblenden.",
   },
   {
     id: "vs-google-maps",
