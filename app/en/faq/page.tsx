@@ -39,6 +39,27 @@ const FAQ_EN: { id: string; q: string; a: ReactNode; schemaText?: string }[] = [
     a: "Tap \"Nearby\" and allow location access. Accessible Places automatically detects your position and searches for accessible restaurants, cafés or other venues in your immediate vicinity — no need to type a location.",
   },
   {
+    id: "find-parking-toilet",
+    q: "How do I find a wheelchair toilet or accessible parking space nearby?",
+    a: (
+      <>
+        <p>
+          Switch to <strong className="font-semibold text-foreground">&ldquo;Nearby&rdquo;</strong> mode (middle tab). Once your location is detected, two buttons appear:{" "}
+          <strong className="font-semibold text-foreground">&ldquo;Search only: 🅿 Parking&rdquo;</strong> and{" "}
+          <strong className="font-semibold text-foreground">&ldquo;Search only: 🚻 Toilets&rdquo;</strong>. Tapping one hides all other search results and shows only wheelchair-accessible parking or accessible toilets within your set radius (default: 4 km, adjustable in Settings).
+        </p>
+        <p className="mt-2">
+          Toilet markers appear in <strong className="font-semibold text-foreground">green</strong> for standalone public toilets (e.g. in squares or parks) and in <strong className="font-semibold text-foreground">violet</strong> for toilets inside venues. Tap a marker for details such as Euro key requirement or changing table.
+        </p>
+        <p className="mt-2">
+          Alternatively, use the <strong className="font-semibold text-foreground">layer buttons</strong> at the bottom-left of the map (🅿 and 🚻) to show parking or toilet markers alongside your regular search results.
+        </p>
+      </>
+    ),
+    schemaText:
+      "Switch to \"Nearby\" mode (middle tab). Once your location is detected, two buttons appear: \"Search only: Parking\" and \"Search only: Toilets\". Tapping one hides all other search results and shows only wheelchair-accessible parking or accessible toilets within your set radius (default: 4 km, adjustable in Settings). Toilet markers appear in green for standalone public toilets and in violet for toilets inside venues. Tap a marker for details such as Euro key requirement or changing table. Alternatively, use the layer buttons at the bottom-left of the map to show parking or toilet markers alongside your regular search results.",
+  },
+  {
     id: "vs-google-maps",
     q: "What is the difference from Google Maps when searching for accessible places?",
     a: "Google Maps contains little structured accessibility information and offers no dedicated filter for it. Accessible Places is built specifically for this search: it combines multiple specialised data sources, rates each piece of information by reliability, and shows at a glance how suitable a venue is for wheelchair users.",

@@ -39,6 +39,27 @@ const FAQ_DE: { id: string; q: string; a: ReactNode; schemaText?: string }[] = [
     a: 'Tippe auf "In der Nähe" und erteile der App die Standortfreigabe. Accessible Places ermittelt automatisch deinen Standort und sucht barrierefreie Restaurants, Cafés oder andere Orte in deiner direkten Umgebung — ohne dass du einen Ort eingeben musst.',
   },
   {
+    id: "find-parking-toilet",
+    q: "Wie finde ich ein Rollstuhl-WC oder einen Rollstuhlparkplatz in der Nähe?",
+    a: (
+      <>
+        <p>
+          Wechsle in den Modus <strong className="font-semibold text-foreground">&bdquo;In der Nähe&ldquo;</strong> (mittlerer Tab). Sobald dein Standort erkannt wurde, erscheint eine Zeile mit zwei Buttons:{" "}
+          <strong className="font-semibold text-foreground">&bdquo;Suche nur: 🅿 Parkplätze&ldquo;</strong> und{" "}
+          <strong className="font-semibold text-foreground">&bdquo;Suche nur: 🚻 WCs&ldquo;</strong>. Ein Tippen auf einen Button blendet alle anderen Suchergebnisse aus und zeigt auf der Karte rollstuhlgerechte Parkplätze bzw. barrierefreie WCs im eingestellten Suchradius (Standard: 4 km, anpassbar unter Einstellungen).
+        </p>
+        <p className="mt-2">
+          WC-Marker erscheinen in <strong className="font-semibold text-foreground">Grün</strong> für eigenständige öffentliche WCs (z.&nbsp;B. auf Plätzen oder in Parks) und in <strong className="font-semibold text-foreground">Violett</strong> für WCs in Lokalen oder anderen Orten. Tippe auf einen Marker für Details wie Euroschlüssel-Pflicht oder Wickeltisch.
+        </p>
+        <p className="mt-2">
+          Alternativ kannst du über die <strong className="font-semibold text-foreground">Marker-Buttons</strong> links unten in der Karte (🅿 und 🚻) Parkplatz- oder WC-Marker zusätzlich zu deinen normalen Suchergebnissen einblenden.
+        </p>
+      </>
+    ),
+    schemaText:
+      "Wechsle in den Modus „In der Nähe" (mittlerer Tab). Sobald dein Standort erkannt wurde, erscheint eine Zeile mit zwei Buttons: „Suche nur: Parkplätze" und „Suche nur: WCs". Ein Tippen auf einen Button blendet alle anderen Suchergebnisse aus und zeigt auf der Karte rollstuhlgerechte Parkplätze bzw. barrierefreie WCs im eingestellten Suchradius (Standard: 4 km, anpassbar unter Einstellungen). WC-Marker erscheinen in Grün für eigenständige öffentliche WCs und in Violett für WCs in Lokalen. Tippe auf einen Marker für Details wie Euroschlüssel-Pflicht oder Wickeltisch. Alternativ kannst du über die Marker-Buttons links unten in der Karte Parkplatz- oder WC-Marker zusätzlich zu deinen normalen Suchergebnissen einblenden.",
+  },
+  {
     id: "vs-google-maps",
     q: "Was ist der Unterschied zu Google Maps bei der Suche nach barrierefreien Orten?",
     a: "Google Maps enthält kaum strukturierte Barrierefreiheitsinformationen und bietet keine gezielte Filterfunktion dafür. Accessible Places ist speziell auf diese Suche ausgerichtet: Die App kombiniert mehrere spezialisierte Datenquellen, bewertet jede Information nach ihrer Verlässlichkeit und zeigt auf einen Blick, wie gut ein Ort für Rollstuhlfahrer geeignet ist.",
