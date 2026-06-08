@@ -300,23 +300,23 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
             <p className="font-semibold text-sm truncate">{place.name}</p>
             {addrStr && <p className="text-xs text-muted-foreground mt-0.5 truncate">{addrStr}</p>}
           </div>
-          <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+          <div className="flex items-center gap-3 shrink-0 mt-0.5">
             {linkCopied ? (
               <span className="text-xs text-green-600 px-1">{t.results.linkCopied}</span>
             ) : (
               <button
                 onClick={handleCopyLink}
-                className="text-muted-foreground hover:text-foreground transition-colors p-0.5"
+                className="text-muted-foreground hover:text-foreground transition-colors p-1.5 -m-1.5"
                 aria-label={t.results.copyLink}
                 title={t.results.copyLink}
               >
-                <Link2 className="w-3.5 h-3.5" />
+                <Link2 className="w-4 h-4" />
               </button>
             )}
             <button
               onClick={onClose}
               onTouchEnd={(e) => { e.preventDefault(); onClose() }}
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors p-1.5 -m-1.5"
               aria-label={t.common.close}
             >
               <X className="w-4 h-4" />
