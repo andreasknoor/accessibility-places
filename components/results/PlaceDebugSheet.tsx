@@ -328,7 +328,7 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
 
           {/* ── Barrierefreiheit + Parkplatz ── */}
           <Section
-            title={`${ti.accessibility} · ${Math.round(place.overallConfidence * 100)}%`}
+            title={`${ti.reliability} · ${Math.round(place.overallConfidence * 100)}%`}
             icon={Accessibility}
             chipClass="bg-green-50 text-green-700 border-green-200"
           >
