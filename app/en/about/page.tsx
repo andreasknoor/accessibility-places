@@ -28,7 +28,7 @@ export default function AboutPage() {
         </Link>
 
         <h1 className="text-2xl font-bold mb-3 leading-snug">
-          Accessible Places: The New Real-Time Platform for Reliable Accessibility in the DACH Region
+          Accessible Places: The New Platform for Reliable Accessibility Information for Places in the DACH Region
         </h1>
         <p className="text-sm text-muted-foreground mb-8">An overview of the project, the idea behind it, and how the app works.</p>
 
@@ -38,8 +38,8 @@ export default function AboutPage() {
           <dl className="grid gap-2.5 text-sm">
             {[
               ["Name",           "Accessible Places"],
-              ["Website",        "accessible-places.org"],
-              ["Concept",        "Real-time aggregation and reliability scoring of accessibility data from multiple sources"],
+              ["Website",        "https://accessible-places.org"],
+              ["Concept",        "Fast and easy discovery of accessible places through aggregation from multiple sources"],
               ["Regions",        "Germany, Austria and Switzerland (DACH)"],
               ["Data sources",   "OpenStreetMap (OSM), accessibility.cloud (incl. Wheelmap.org), Ginto (Switzerland), Google Places"],
               ["Business model", "100% free · ad-free · no registration · private non-profit project"],

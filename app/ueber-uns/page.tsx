@@ -28,7 +28,7 @@ export default function UeberUnsPage() {
         </Link>
 
         <h1 className="text-2xl font-bold mb-3 leading-snug">
-          Accessible Places: Die neue Echtzeit-Plattform für verlässliche Barrierefreiheit in der DACH-Region
+          Accessible Places: Die neue Plattform für verlässliche Informationen zur Barrierefreiheit von Orten in der DACH-Region
         </h1>
         <p className="text-sm text-muted-foreground mb-8">Ein Überblick über das Projekt, die Idee dahinter und wie die App funktioniert.</p>
 
@@ -38,8 +38,8 @@ export default function UeberUnsPage() {
           <dl className="grid gap-2.5 text-sm">
             {[
               ["Name",                "Accessible Places"],
-              ["Website",             "accessible-places.org"],
-              ["Konzept",             "Aggregation und Echtzeit-Bewertung von Barrierefreiheitsdaten aus mehreren Quellen"],
+              ["Website",             "https://accessible-places.org"],
+              ["Konzept",             "Schnelles und einfaches Finden von barrierefreien Orten durch Aggregation aus mehreren Quellen"],
               ["Region",              "Deutschland, Österreich und die Schweiz (DACH)"],
               ["Datenquellen",        "OpenStreetMap (OSM), accessibility.cloud (u. a. Wheelmap.org), Ginto (Schweiz), Google Places"],
               ["Geschäftsmodell",     "100 % kostenlos · werbefrei · ohne Registrierung · privates Non-Profit-Projekt"],
