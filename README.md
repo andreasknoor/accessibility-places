@@ -44,7 +44,7 @@ Built with **Next.js 16 (Turbopack)**, **React 19**, **Tailwind v4**, and **Leaf
 - **Streaming search.** The `/api/search` endpoint emits NDJSON events as each source responds, so the UI shows per-source loaders → counts → warning icons live.
 - **Containment-aware deduplication.** OSM duplicates like `Meierei` (node) and `Meierei – Brauerei Potsdam` (way) at the same coordinates merge into a single canonical place.
 - **Verified-recently badge.** OSM `check_date:wheelchair` (written by Wheelmap surveys) within 2 years boosts the source weight ×1.2 and renders a verified mark next to the score.
-- **Nearby disabled-parking.** Optionally upgrades a venue's parking value when a dedicated disabled-parking node sits within 300 m, and renders parking markers on the map with a dedicated "Parkplatz-Modus".
+- **Nearby amenities.** Optionally upgrades a venue's parking value when a dedicated disabled-parking node sits within 250 m, and renders disabled-parking and wheelchair-WC markers on the map — as passive layers or via a single-select focus mode (🅿 / 🚻 chips).
 - **Three search modes.** Text search ("Cafés in Berlin"), "In der Nähe" GPS search, and place-search by name.
 - **Bilingual UI.** German and English, with a runtime language switcher and dedicated `/en/*` routes.
 - **Responsive layout.** Full desktop layout (filter sidebar | resizable results column | map) and a mobile layout with a tab bar (results / map / filter). Installable as a PWA.
@@ -61,6 +61,8 @@ Built with **Next.js 16 (Turbopack)**, **React 19**, **Tailwind v4**, and **Leaf
 | Maps | Leaflet 1.9 + react-leaflet 5 + leaflet.markercluster (dynamically imported, no SSR) |
 | PWA | `@serwist/next` service worker (disabled in development) |
 | Analytics | Vercel Analytics + Vercel Speed Insights |
+| Error reporting | Self-hosted GlitchTip via `@sentry/nextjs` (production only) |
+| Android app | Capacitor shell (`android/`) wrapping the deployed web URL |
 | Stats store | Upstash Redis (optional; adapter usage metrics) |
 | Tests | Vitest + Testing Library + jsdom |
 | Build & deploy | Vercel streaming with `Cache-Control: no-store` and `X-Accel-Buffering: no` |
@@ -113,9 +115,13 @@ Create a `.env.local` in the project root. None of these are exposed to the brow
 | `ACCESSIBILITY_CLOUD_API_KEY` | optional | accessibility.cloud / Wheelmap data |
 | `REISEN_FUER_ALLE_API_KEY` | optional | Reisen für Alle certified-survey data (request access from DSFT/Natko) |
 | `REISEN_FUER_ALLE_API_BASE` | with key | Base URL for the RfA API (required alongside the key) |
-| `GINTO_API_KEY` | optional | Ginto GraphQL API (Swiss accessibility data, CH only) |
+| `GINTO_API_KEY` | optional | Ginto GraphQL API (Swiss-focused accessibility data, queried DACH-wide) |
+| `GINTO_GEOFENCE` | optional | Set to `1` to restrict Ginto calls to searches that can reach the CH bounding box (emergency brake against rate limits) |
 | `GOOGLE_PLACES_API_KEY` | optional | Google Places (New) data; also enables the photo proxy |
 | `ENABLE_NEARBY_PARKING` | optional | Set to `1` to enable disabled-parking enrichment and parking markers |
+| `ENABLE_NEARBY_TOILETS` | optional | Set to `1` to enable the wheelchair-WC map layer (display-only, never enriches a venue) |
+| `GITHUB_REPORT_TOKEN` | optional | Enables `POST /api/report-parking` (user parking reports → GitHub issues) |
+| `NEXT_PUBLIC_SENTRY_DSN` | optional | GlitchTip (Sentry-protocol) error reporting; production only |
 | `OVERPASS_ENDPOINTS` | optional | Comma-separated Overpass URLs (defaults to two public mirrors; production prepends a private server) |
 | `NOMINATIM_ENDPOINT` | optional | Base URL of a private Nominatim instance |
 | `HEALTH_CHECK_SECRET` | optional | Activates `GET /api/health` and `GET /api/stats` (401 without a matching `?token=`) |
@@ -135,16 +141,16 @@ app/
   en/                       English locale: nested LocaleProvider, layout, pages
   [city]/[category]/        ISR SEO landing pages (DE)
   en/[city]/[category]/     ISR SEO landing pages (EN)
-  faq/ impressum/ ueber-uns/   Static bilingual pages
+  faq/ impressum/ datenschutz/ ueber-uns/   Static pages (EN twins under localised slugs: /en/faq, /en/legal-notice, /en/privacy, /en/about)
   manifest.ts sitemap.ts robots.ts icon.svg sw.ts
   api/
     search/route.ts             NDJSON streaming search pipeline
-    nearby-parking/route.ts     Standalone disabled-parking fetch
+    nearby-parking/route.ts     Amenity fetch: disabled parking + wheelchair WCs (?types=)
     geocode/                    route + suggest + place-suggest + reverse (Nominatim / Photon proxies)
     image/google/route.ts       Google Places photo proxy (SSRF-guarded)
     health/route.ts             Token-protected E2E health check (live + mock modes)
     stats/route.ts              Token-protected adapter usage stats
-    log-error/route.ts          Client-side error forwarding
+    report-parking/route.ts     User reports a parking marker → GitHub issue
 components/
   chat/ChatPanel.tsx              Search input, mode tabs, example chips, nearby + parking info row
   filters/FilterPanel.tsx         Source toggles, criteria, radius, predictive per-source counts
@@ -158,7 +164,9 @@ lib/
   types.ts config.ts utils.ts llm.ts settings.ts stats.ts
   cities.ts seo-search.ts seo-validity.ts generated/seo-validity.json
   adapters/                       osm, accessibility-cloud, reisen-fuer-alle, ginto, google-places, index
+  amenities/                      registry.ts (per-amenity-type properties)
   matching/                       match.ts, merge.ts, nearby-parking.ts
+  native/                         geolocation.ts, browser.ts (Capacitor-aware wrappers)
   i18n/                           index.tsx, de.ts, en.ts, types.ts
 public/                           llms.txt, llms-full.txt, icons
 __tests__/                        components / lib / api / integration
@@ -214,7 +222,7 @@ This powers the per-source loader / count / warning icon in the filter panel. Th
 | Source | Weight | What it brings |
 |---|---|---|
 | Reisen für Alle | 1.00 | Certified on-site surveys; highest trust. Always active when the key is set (hidden from the source toggles) |
-| Ginto | 0.90 | GraphQL API, Switzerland only. LEVEL_2 entries → 0.95, LEVEL_3 → 0.97 |
+| Ginto | 0.90 | GraphQL API, Swiss-focused (queried DACH-wide). SELF_DECLARED entries → 0.94, AUDITED → 1.0 (via `qualityInfo.approvalLevels`) |
 | OpenStreetMap (Overpass) | 0.75 | Primary source; broadest coverage, live data, direct wheelchair tags |
 | accessibility.cloud | 0.70 | A11yJSON records; largely a Wheelmap mirror of OSM for DACH, plus supplementary datasets (dog policies etc.) |
 | Google Places (New) | 0.35 | Broad but sparse/heuristic accessibility data. **Disabled by default** |
@@ -245,7 +253,9 @@ When an OSM record carries `check_date:wheelchair` (or `check_date:toilets:wheel
 
 ### Nearby disabled-parking enrichment
 
-Gated behind `ENABLE_NEARBY_PARKING`. `enrichWithNearbyParking()` upgrades a venue's `parking.value` from `"unknown"` to `"yes"` (with `details.nearbyOnly = true`, confidence `0.5`) when a dedicated disabled-parking OSM node sits within 300 m. It deliberately adds no source attribution, so per-source filter counts and confidence are unaffected. Parking markers use a wider 500 m display radius. Two tiers exist: a strong **`"disabled"`** tier (reserved spaces — the only one that may enrich) and a weak, display-only **`"accessible"`** tier (`amenity=parking` merely tagged `wheelchair=yes`), gated client-side by the `showWeakParking` setting.
+Gated behind `ENABLE_NEARBY_PARKING`. `enrichWithNearbyParking()` upgrades a venue's `parking.value` from `"unknown"` to `"yes"` (with `details.nearbyOnly = true`, confidence `0.75`) when a dedicated disabled-parking OSM node sits within 250 m. It deliberately adds no source attribution, so per-source filter counts and confidence are unaffected. Parking markers use a wider 500 m display radius. Two tiers exist: a **strong** tier (reserved disabled spaces — the only one that may enrich) and a weak, display-only tier (`amenity=parking` merely tagged `wheelchair=yes`), gated client-side by the `showWeakParking` setting.
+
+Wheelchair WCs (`ENABLE_NEARBY_TOILETS`) are a second amenity type sharing the same machinery — but **display-only**: a nearby WC never changes a venue's `toilet.value`. WC markers encode the host (standalone public toilet vs. WC inside a venue); duplicates within 25 m are collapsed and responses are capped at 300 markers.
 
 ---
 
@@ -254,7 +264,7 @@ Gated behind `ENABLE_NEARBY_PARKING`. `enrichWithNearbyParking()` upgrades a ven
 `chatMode` is a three-way union:
 
 - **Text** — "Cafés in Berlin"; geocoded via Nominatim.
-- **In der Nähe (nearby)** — one tap locates the user via the browser Geolocation API and searches around the current position, with a pulsing marker on the map and inline distances on result cards. A per-session **Parkplatz-Modus** can switch the map to show only disabled-parking spots within the configured radius.
+- **In der Nähe (nearby)** — one tap locates the user (native plugin in the Capacitor app, browser Geolocation API otherwise) and searches around the current position, with a pulsing marker on the map and inline distances on result cards. A per-session **amenity focus mode** (single-select 🅿 / 🚻 chips) can switch the map to show only disabled-parking spots or wheelchair WCs within the configured radius.
 - **Ort suchen (place)** — look up a specific venue by name without a city/category. The OSM adapter switches to a name-regex Overpass query within 500 m; other adapters use the `nameHint` post-filter.
 
 A name field (separate from the query string) lets users restrict any search to a quoted name; it is passed as `nameHint` and applied after the merge, so accessibility filters apply independently of name searches.
@@ -284,7 +294,7 @@ attraction    tourism=attraction | theme_park
 ice_cream     amenity=ice_cream
 ```
 
-The split (e.g. `bar` / `pub` / `biergarten`, `theater` / `cinema`) keeps queries precise. Only 10 of these have SEO landing pages; `hostel`, `apartment`, `biergarten`, `pub`, `bar` and `ice_cream` are search-only.
+The split (e.g. `bar` / `pub` / `biergarten`, `theater` / `cinema`) keeps queries precise. Only 10 of these have SEO landing pages; `fast_food`, `hostel`, `apartment`, `library`, `gallery` and `ice_cream` are search-only.
 
 ---
 
@@ -292,13 +302,13 @@ The split (e.g. `bar` / `pub` / `biergarten`, `theater` / `cinema`) keeps querie
 
 The `FilterPanel` is the left-hand sidebar (desktop) or the third tab (mobile):
 
-- **Sources** — toggle OSM / accessibility.cloud / Google Places, each with a live status indicator and a predictive per-source result count. (Reisen für Alle and Ginto are hidden but active when keyed.)
+- **Sources** — toggle OSM / accessibility.cloud / Ginto / Google Places, each with a live status indicator and a predictive per-source result count. (Reisen für Alle is hidden but always active when keyed.)
 - **Criteria** — wheelchair entrance, toilet, parking (with a `parkingNearby` sub-toggle), seating. Each active criterion contributes to `passesFilters` and `computeFilteredConfidence`.
 - **Radius** — default 5 km.
 - **"Show places with unclear information"** (`acceptUnknown`) — when off, places with `value === "unknown"` are dropped for any active criterion.
 - **"Only recently verified"** (`onlyVerified`) — requires a `verifiedRecently` attribution.
 
-Active filters, source toggles and radius are persisted to `localStorage`. Separately, **user settings** (`lib/settings.ts`, key `ap_settings`) configure defaults via the `SettingsSheet` (gear icon): default search mode, default mobile view, pre-selected chip, sort order, auto-zoom, always-show-parking, show-weak-parking, and the Parkplatz-Modus radius. First-time visitors see a welcome/onboarding screen.
+Active filters, source toggles and radius are persisted to `localStorage`. Separately, **user settings** (`lib/settings.ts`, key `ap_settings`) configure defaults via the `SettingsSheet` (gear icon): default search mode, default mobile view, pre-selected chip, sort order, auto-zoom, always-show-parking / always-show-toilets, show-weak-parking, public-toilets-only, and the amenity focus radius. First-time visitors see a welcome/onboarding screen.
 
 > **Invariant:** `SETTING_CHIPS` (in `lib/settings.ts`) and `CHIPS` (in `ChatPanel.tsx`) must stay in the same order — `defaultChipIdx` indexes both.
 
@@ -331,7 +341,7 @@ In production the search pipeline races a **self-hosted Overpass server** (DACH-
 | Route | Purpose |
 |---|---|
 | `POST /api/search` | NDJSON streaming search pipeline |
-| `GET /api/nearby-parking` | Disabled-parking OSM nodes within a radius |
+| `GET /api/nearby-parking` | Disabled-parking and wheelchair-WC OSM nodes within a radius (`?types=parking,toilet`) |
 | `GET /api/geocode` | Nominatim forward geocode (DACH) |
 | `GET /api/geocode/suggest` | Photon city/district autocomplete |
 | `GET /api/geocode/place-suggest` | Photon POI autocomplete (name field) |
@@ -339,7 +349,7 @@ In production the search pipeline races a **self-hosted Overpass server** (DACH-
 | `GET /api/image/google` | Google Places photo proxy (SSRF-guarded) |
 | `GET /api/health` | Token-protected E2E health check (live + `?mock=1`) |
 | `GET /api/stats` | Token-protected adapter usage stats |
-| `POST /api/log-error` | Client-side error forwarding |
+| `POST /api/report-parking` | User reports a weak-tier parking marker as a likely disabled spot → GitHub issue |
 
 ---
 
@@ -372,4 +382,4 @@ npm run test:watch       # watch mode
 
 ## Versioning
 
-The user-visible app version lives in `lib/config.ts` as `APP_VERSION` and is shown in the Impressum alongside `BUILD_DATE` (auto-injected at build time). Bump `APP_VERSION` on every meaningful release; versions are also tagged in commit messages (`v3.76`, `v3.77`, …).
+The user-visible app version lives in `lib/config.ts` as `APP_VERSION` and is shown in the Impressum alongside `BUILD_DATE` (auto-injected at build time). `APP_VERSION` is bumped on **every commit**, and the version is carried in the commit message as a `(vX.Y)` suffix.
