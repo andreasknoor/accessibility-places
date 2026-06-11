@@ -25,7 +25,7 @@ npm run warm:seo
 node scripts/compare-overpass-parking.mjs
 ```
 
-`check:seo` runs automatically via GitHub Actions daily at 03:00 UTC (`.github/workflows/check-seo-validity.yml`); `warm:seo` runs at 03:30 UTC (`.github/workflows/warm-seo-cache.yml`). Both support `workflow_dispatch` for manual runs. `warm:seo` appends failed URLs to `warm-failures.txt` in the repo root — this file is tracked by git and should not be deleted.
+`check:seo` runs automatically via GitHub Actions daily at 03:00 UTC (`.github/workflows/check-seo-validity.yml`); `warm:seo` runs at 03:30 UTC (`.github/workflows/warm-seo-cache.yml`). Both support `workflow_dispatch` for manual runs. `warm:seo` appends failed URLs to `warm-failures.txt` in the repo root — this file is in `.gitignore` (local only, not tracked).
 
 A pre-commit hook (`.githooks/pre-commit`, installed via `npm run prepare`) runs `npm test` automatically on every commit — expect commits to take ~10–20 s while tests execute.
 
@@ -88,7 +88,7 @@ attraction    tourism=attraction | theme_park
 ice_cream     amenity=ice_cream
 ```
 
-Only 10 of these have SEO landing pages (`SEO_CATEGORY_SLUGS` in `lib/cities.ts`); `hostel`, `apartment`, `biergarten`, `pub`, `bar`, and `ice_cream` are search-only.
+Only 10 of these have SEO landing pages (`SEO_CATEGORY_SLUGS` in `lib/cities.ts`): cafe, restaurant, bar, pub, biergarten, hotel, museum, theater, cinema, attraction. The other six — `fast_food`, `hostel`, `apartment`, `library`, `gallery`, and `ice_cream` — are search-only (the first five had SEO pages until they were removed as chip-less categories in `67a2622`; old URLs now 404).
 
 ### Matching & merging (`lib/matching/`)
 
@@ -178,7 +178,7 @@ nominatim:           0     // stats-only
 
 `AppSettings` is a user-configurable set of defaults persisted to `localStorage` under key `ap_settings`. `useSettings()` returns `[settings, updateSettings]`; `loadSettings()` is called in lazy `useState` initialisers in `HomeClient` for settings that must be available before React mounts.
 
-Fields: `defaultSearchMode` (`"text"` | `"nearby"` | `"place"`), `defaultMobileView` (`"results"` | `"map"`), `defaultChipIdx` (which chip is pre-selected, `null` = Restaurants), `sortOrder` (`"confidence"` | `"distance"`), `autoZoom` (MapView auto-fits after search), `alwaysShowParking` / `alwaysShowToilets` (passive map-layer display toggles, default `false`; persisted here, **not** in the filter-prefs key, and excluded from it in `HomeClient`), `showWeakParking` (show the weak parking tier as amber markers, incl. in focus mode; default `false`), `publicToiletsOnly` (restrict the WC layer to standalone public toilets, hiding venue WCs; default `false`), `parkingRadiusKm` (radius for the amenity focus fetch — parking **and** WC — 0.05–5.0, default 4.0).
+Fields: `defaultSearchMode` (`"text"` | `"nearby"` | `"place"` | `null` = no preference), `defaultMobileView` (`"results"` | `"map"`), `defaultChipIdx` (which chip is pre-selected, `null` = Restaurants), `sortOrder` (`"confidence"` | `"distance"`), `autoZoom` (MapView auto-fits after search), `alwaysShowParking` / `alwaysShowToilets` (passive map-layer display toggles, default `false`; persisted here, **not** in the filter-prefs key, and excluded from it in `HomeClient`), `showWeakParking` (show the weak parking tier as amber markers, incl. in focus mode; default `false`), `publicToiletsOnly` (restrict the WC layer to standalone public toilets, hiding venue WCs; default `false`), `parkingRadiusKm` (radius for the amenity focus fetch — parking **and** WC — 0.05–5.0, default 4.0).
 
 **Critical invariant:** `SETTING_CHIPS` in `lib/settings.ts` and `CHIPS` in `ChatPanel.tsx` must stay in the **same order** — `defaultChipIdx` is an index into both simultaneously. Reordering chips in either file requires updating the other.
 
@@ -241,6 +241,8 @@ In production, `raw` adapter response data is stripped from `sourceRecords` befo
 
 `GET /api/nearby-parking?lat=&lon=&radius=&types=` — despite the legacy path, serves **both** amenity types via `?types=parking,toilet` (default `parking`). Radius 0.05–5.0 km (default 0.3). Toilets are dropped unless `ENABLE_NEARBY_TOILETS=1`. Validates coordinates, rate-limits (20/min), dedups WCs, and sets `Cache-Control: no-store` on Overpass failure (a blip must not poison the 5-min CDN window). Used by the amenity **focus mode**; the passive map layer's spots arrive via the `result` event of `/api/search`, not this route.
 
+`POST /api/report-parking` — user reports a weak-tier (amber) parking marker as a likely dedicated disabled spot (button in the MapView popup). Creates a GitHub issue in this repo via `GITHUB_REPORT_TOKEN` with OSM/iD-editor links for manual tag review. Rate-limited 5/min per IP; returns 503 when the token is not configured.
+
 `GET /api/health?token=SECRET` — token-protected E2E health check. Live mode runs a real OSM search (Cafés, Berlin Mitte, entrance + toilet filter). Mock mode (`?mock=1`) runs fixture data through the real pipeline without external calls — suitable for load testing. Google Places is hardcoded off. Ginto is hardcoded off (CH-only, separate concern). Returns 200/503 with structured JSON.
 
 ### Local SEO pages (`app/[city]/[category]/` and `app/en/[city]/[category]/`)
@@ -249,7 +251,7 @@ ISR landing pages for 32 DACH cities × 10 categories × 2 locales = **640 poten
 
 **City/category configuration — `lib/cities.ts`:**
 - `CITIES` — 32 cities with slug, nameDe, nameEn, country, lat, lon. `CitySlug` union type must be kept in sync with this array.
-- `SEO_CATEGORY_SLUGS` — URL slug → `Category` type (e.g. `"fast-food"` → `"fast_food"`). `SEO_CATEGORY_TO_SLUG` is the reverse.
+- `SEO_CATEGORY_SLUGS` — URL slug → `Category` type (all 10 current slugs are identical to their `Category` value). `SEO_CATEGORY_TO_SLUG` is the reverse.
 - `SEO_CATEGORY_TO_CHIP_IDX` — slug → CHIPS array index in ChatPanel (all 10 SEO categories have a chip equivalent). The "Related categories" section on SEO pages **only shows chip-backed categories** — both for UX consistency and because those categories have a pre-select chip when the user lands on the main app.
 - `SEO_CATEGORY_QUERY_TERM` — slug → `{ de, en }` query string recognisable by `parseQuery()`. Used for the auto-search trigger on the home page.
 - `SEO_CATEGORY_LABEL` — plural display labels used in page headings and navigation chips.
@@ -285,7 +287,7 @@ No `q=` (no city name). On mount, `HomeClient` detects `selectLat`/`selectLon` w
 
 ### Static pages
 
-`app/faq/page.tsx` — FAQ page, rendered statically. Contains bilingual content (DE/EN inline, not via the i18n system). `app/impressum/page.tsx` — Legal notice; includes obfuscated contact email to avoid scraping. `app/datenschutz/page.tsx` — Privacy policy (Datenschutzerklärung). `app/ueber-uns/page.tsx` and `app/en/ueber-uns/page.tsx` — "Über die App" / "About" marketing page; bilingual pair using the same inline-content pattern as FAQ (no `LocaleProvider` i18n).
+`app/faq/page.tsx` — FAQ page, rendered statically. Contains bilingual content (DE/EN inline, not via the i18n system). `app/impressum/page.tsx` — Legal notice; includes obfuscated contact email to avoid scraping. `app/datenschutz/page.tsx` — Privacy policy (Datenschutzerklärung). `app/ueber-uns/page.tsx` and `app/en/about/page.tsx` — "Über die App" / "About" marketing page; bilingual pair using the same inline-content pattern as FAQ (no `LocaleProvider` i18n).
 
 The EN routes use **localised slugs** distinct from the DE paths (set up in v3.85): `app/en/legal-notice` (↔ `/impressum`), `app/en/about` (↔ `/ueber-uns`), `app/en/privacy` (↔ `/datenschutz`), plus `app/en/faq`. When adding or renaming a static page, update both the DE and EN slug and the hreflang/canonical metadata on each.
 
@@ -314,6 +316,7 @@ The EN routes use **localised slugs** distinct from the DE paths (set up in v3.8
 - `KV_REST_API_URL` / `KV_REST_API_TOKEN` — optional; Upstash Redis credentials for adapter call/error stats. If absent, `lib/stats.ts` is a no-op and `GET /api/stats` returns 503.
 - `OVERPASS_ENDPOINTS` — optional; comma-separated list of Overpass API URLs to override the two public mirrors. Multiple URLs retain the parallel-race behaviour. Production value includes the private Hetzner server first, then both public mirrors as fallback: `https://overpass.accessible-places.org/api/interpreter,https://overpass-api.de/api/interpreter,https://overpass.kumi.systems/api/interpreter`.
 - `NOMINATIM_ENDPOINT` — optional; base URL of a private Nominatim instance, e.g. `https://nominatim.example.com`. Trailing slash is stripped automatically. Applies to all three geocode routes and the search pipeline.
+- `GITHUB_REPORT_TOKEN` — optional; GitHub token used by `POST /api/report-parking` to file parking-report issues. If absent the endpoint returns 503.
 - `NEXT_PUBLIC_SENTRY_DSN` — optional; GlitchTip DSN for error reporting. If absent (or in dev), reporting is silently disabled in both `instrumentation.ts` and `instrumentation-client.ts`.
 
 ## Tests
@@ -329,55 +332,16 @@ The EN routes use **localised slugs** distinct from the DE paths (set up in v3.8
 
 ## Private Overpass server (Hetzner)
 
-Self-hosted Overpass API for DACH at `overpass.accessible-places.org` (Caddy → Docker on Hetzner CX33, x86 Intel Xeon, 8 GB RAM). Eliminates public-mirror rate limits and reduces latency from 2–15 s to ~50–200 ms.
+Self-hosted Overpass API for DACH at `overpass.accessible-places.org` (Hetzner CX33, `ssh root@overpass.accessible-places.org`). Full ops runbook — Docker env vars, restart command, replication troubleshooting — in `docs/overpass-server.md`. **Read it before any server-side change**; several defaults of the `wiktorn/overpass-api` image cause production failures.
 
-**Server:** `65.109.1.63` — `ssh root@overpass.accessible-places.org`
-
-**Docker container:** `overpass` — image `wiktorn/overpass-api`, data at `/overpass-data:/db`, port 8080 → Caddy → HTTPS.
-
-**Critical Docker env vars** (wrong defaults cause failures under load):
-
-| Variable | Production value | Why |
-|---|---|---|
-| `OVERPASS_RATE_LIMIT` | `32` | Default 4–8; "slots occupied" HTML at peak |
-| `OVERPASS_SPACE` | `6442450944` | Default 512 MB; CX33 has 8 GB |
-| `OVERPASS_TIME` | `300` | Default 1000 s; queries use `[timeout:12]` anyway |
-| `OVERPASS_ALLOW_DUPLICATE_QUERIES` | `yes` | Default `no` rejects identical concurrent queries immediately with HTML 200 — primary cause of load-test failures |
-| `OVERPASS_HEALTHCHECK` | see below | Default healthcheck query has **no `[timeout:]`** — those queries hang ~15 s and 504 at the gateway, marking the container `(unhealthy)` even while real traffic is fine (the OSM adapter always sends `[timeout:12]`). Override to add `[timeout:5]` so the flag reflects real availability. |
-
-**Restart command** (e.g. after config change):
-```bash
-docker stop overpass && docker rm overpass
-docker run -d --name overpass --restart always -p 8080:80 \
-  -v /overpass-data:/db \
-  -e OVERPASS_META=yes \
-  -e OVERPASS_MODE=clone \
-  -e OVERPASS_REPLICATION_URL=https://download.geofabrik.de/europe/dach-updates/ \
-  -e OVERPASS_DIFF_URL=https://download.geofabrik.de/europe/dach-updates/ \
-  -e OVERPASS_REPLICATION_DELAY=3600 \
-  -e OVERPASS_USE_AREAS=true \
-  -e OVERPASS_RULES_LOAD=1 \
-  -e OVERPASS_ALLOW_DUPLICATE_QUERIES=yes \
-  -e OVERPASS_RATE_LIMIT=32 \
-  -e OVERPASS_SPACE=6442450944 \
-  -e OVERPASS_TIME=300 \
-  -e 'OVERPASS_HEALTHCHECK=curl --noproxy "*" -qf "http://localhost/api/interpreter?data=\[out:json\]\[timeout:5\];node(${NODE_ID});out;" | jq ".generator" | grep -q Overpass || exit 1' \
-  wiktorn/overpass-api
-```
-(`${NODE_ID}` stays literal — the in-container healthcheck script sets it; single-quote the `-e` arg so the host shell doesn't expand it. A ready-to-run copy of this exact command lives at `/root/restart-overpass.sh` on the server.)
-
-**Healthcheck note:** the bare default query `node(1);out;` (no `[timeout:]`) deterministically 504s on this server — a query-shape quirk, not load. The override above clears the `(unhealthy)` false alarm. Don't infer load from the health flag alone; check `uptime`, `docker stats`, and `/api/status` slot count instead.
-
-**Critical after any fresh container start:** the `update_overpass` supervisor process runs as `user=overpass` (uid=1000 inside the container). The host volume `/overpass-data` must be owned by uid=1000; otherwise the replication script cannot create `/db/replicate_id.backup` and loops with `Permission denied`. Fix: `chown 1000:1000 /overpass-data` on the host. Also, `OVERPASS_DIFF_URL` is what the `update_overpass` script reads for ongoing diff updates — `OVERPASS_REPLICATION_URL` is used only for the initial clone. Both must point to the same URL.
-
-**If replication stopped** (data timestamp stops advancing): check `docker logs overpass` for `OVERPASS_DIFF_URL is not set` (wrong env var name) or `replicate_id` missing/wrong permissions. Bootstrap the sequence file with: `docker exec overpass /app/venv/bin/pyosmium-get-changes --server https://download.geofabrik.de/europe/dach-updates/ -D <TIMESTAMP> -f /db/replicate_id` where `<TIMESTAMP>` is the OSM base timestamp from `/api/status`.
-
-**Overpass HTML 200 responses:** when the daemon is overloaded it returns `Content-Type: text/html` with HTTP 200 (not 5xx). The OSM adapter guard (`res.headers?.get("content-type")`) detects this and rejects the endpoint so the parallel race falls through to the public mirrors.
+One detail that matters app-side: an overloaded Overpass daemon returns HTML with HTTP **200** (not 5xx). The OSM adapter's content-type guard detects this and rejects the endpoint so the parallel race falls through to the public mirrors.
 
 ## Capacitor Android app
 
-The app ships as an Android APK (Capacitor shell wrapping the deployed web URL) in addition to the PWA. The native shell lives in `android/` (not checked in to this repo after the TWA cut-over); runbook at `docs/capacitor-android-setup.md`.
+The app ships as an Android APK (Capacitor shell wrapping the deployed web URL) in addition to the PWA. The native shell lives in `android/` (checked in to this repo); runbook at `docs/capacitor-android-setup.md`.
 
 **`lib/native/geolocation.ts`** — platform-aware wrapper around `@capacitor/geolocation`. Call `getCurrentPosition()` from this module instead of `navigator.geolocation` directly. On `Capacitor.isNativePlatform() === true` it checks/requests OS permissions and uses the native plugin; in the browser it falls back to `navigator.geolocation`. The plugin is dynamically imported to keep it out of the web bundle's critical path.
+
+**`lib/native/browser.ts`** — `openExternalUrl(url)` opens external links via `@capacitor/browser` (Chrome Custom Tabs / SFSafariViewController) on native, `window.open` in the browser. Falls back to `window.open` gracefully if the plugin is missing (old APK). Use this instead of `window.open` for external links.
 
 **Critical invariant (`isFirstVisit`):** the welcome-screen / auto-locate gate must be initialised from `localStorage` in a layout effect (not from React state derived after mount). A `useState` init that reads `localStorage` races with Capacitor's WebView cache on cold start — the welcome screen flashes or auto-locate fires incorrectly. See commit `2294867` for the fix pattern and `#418` for the original race.
