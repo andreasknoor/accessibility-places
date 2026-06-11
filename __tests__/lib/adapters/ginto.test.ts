@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { fetchGinto } from "@/lib/adapters/ginto"
+import { fetchGinto, intersectsSwitzerland } from "@/lib/adapters/ginto"
 import { RELIABILITY_WEIGHTS, GINTO_LEVEL2_WEIGHT, GINTO_LEVEL3_WEIGHT } from "@/lib/config"
 import type { SearchParams } from "@/lib/types"
 
@@ -113,6 +113,49 @@ describe("Ginto rating key → A11yValue mapping", () => {
     mockFetch({ ...BASE_NODE, accessibilityInfo: { defaultRatings: [{ key: "not_wheelchair_accessible" }] } })
     const places = await fetchGinto(BASE_PARAMS)
     expect(places[0].accessibility.entrance.value).toBe("no")
+  })
+})
+
+// ─── geo-fence ────────────────────────────────────────────────────────────────
+
+describe("Ginto CH geo-fence", () => {
+  it("skips the API call entirely for searches far from Switzerland (Berlin)", async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+    const places = await fetchGinto({ ...BASE_PARAMS, location: { lat: 52.52, lon: 13.405 }, radiusKm: 5 })
+    expect(places).toEqual([])
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("skips Munich even with 50 km radius (circle does not reach CH)", async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+    const places = await fetchGinto({ ...BASE_PARAMS, location: { lat: 48.1372, lon: 11.5755 }, radiusKm: 50 })
+    expect(places).toEqual([])
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("calls the API for searches inside Switzerland (Zurich)", async () => {
+    mockFetch(BASE_NODE)
+    const places = await fetchGinto(BASE_PARAMS)
+    expect(places).toHaveLength(1)
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it("calls the API for border cities whose radius reaches CH (Konstanz)", async () => {
+    mockFetch(BASE_NODE)
+    await fetchGinto({ ...BASE_PARAMS, location: { lat: 47.66, lon: 9.175 }, radiusKm: 5 })
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  describe("intersectsSwitzerland", () => {
+    it("is true inside CH",  () => expect(intersectsSwitzerland(46.948, 7.447, 1)).toBe(true))   // Bern
+    it("is false in Vienna", () => expect(intersectsSwitzerland(48.208, 16.373, 50)).toBe(false))
+    it("is false in Hamburg",() => expect(intersectsSwitzerland(53.55, 10.0, 50)).toBe(false))
+    it("respects the radius buffer just north of the bbox", () => {
+      expect(intersectsSwitzerland(48.2, 8.5, 5)).toBe(false)   // ~33 km north, small radius
+      expect(intersectsSwitzerland(48.2, 8.5, 50)).toBe(true)   // large radius reaches the bbox
+    })
   })
 })
 

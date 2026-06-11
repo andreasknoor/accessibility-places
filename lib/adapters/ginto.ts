@@ -12,6 +12,24 @@ import { nanoid } from "../utils"
 const ENDPOINT   = "https://api.ginto.guide/graphql"
 const MAX_PAGES  = 2   // cap at 100 results to limit API calls
 
+// ─── Geo-fence ─────────────────────────────────────────────────────────────
+// Ginto covers Switzerland only. Skip the API call entirely when the search
+// circle cannot intersect the CH bounding box (incl. Liechtenstein) — every
+// search outside it is a guaranteed-empty round-trip against Ginto's quota.
+const CH_BBOX = { south: 45.7, north: 47.9, west: 5.8, east: 10.6 }
+
+/** True when a circle of `radiusKm` around (lat, lon) intersects the CH bbox. */
+export function intersectsSwitzerland(lat: number, lon: number, radiusKm: number): boolean {
+  const latBufferDeg = radiusKm / 111
+  const lonBufferDeg = radiusKm / (111 * Math.cos((lat * Math.PI) / 180))
+  return (
+    lat + latBufferDeg >= CH_BBOX.south &&
+    lat - latBufferDeg <= CH_BBOX.north &&
+    lon + lonBufferDeg >= CH_BBOX.west &&
+    lon - lonBufferDeg <= CH_BBOX.east
+  )
+}
+
 // ─── Category mapping ─────────────────────────────────────────────────────
 
 // Our Category → Ginto category key (multiple of ours may share one Ginto key)
@@ -149,6 +167,11 @@ export async function fetchGinto(params: SearchParams): Promise<Place[]> {
   const apiKey = process.env.GINTO_API_KEY
   if (!apiKey) {
     console.warn("[adapter:ginto] No API key — skipping")
+    return []
+  }
+
+  // Geo-fence: search circle cannot reach Switzerland → no API call needed
+  if (!intersectsSwitzerland(params.location.lat, params.location.lon, params.radiusKm)) {
     return []
   }
 
