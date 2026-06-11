@@ -6,7 +6,7 @@
  */
 import type { Place, SearchParams, A11yValue, Category } from "../types"
 import { buildAttribute } from "../matching/merge"
-import { RELIABILITY_WEIGHTS, GINTO_LEVEL2_WEIGHT, GINTO_LEVEL3_WEIGHT } from "../config"
+import { RELIABILITY_WEIGHTS, GINTO_SELF_DECLARED_WEIGHT, GINTO_AUDITED_WEIGHT } from "../config"
 import { nanoid } from "../utils"
 
 const ENDPOINT   = "https://api.ginto.guide/graphql"
@@ -112,7 +112,7 @@ const GQL_QUERY = `
         accessibilityInfo { defaultRatings { key } }
         publication { linkUrl }
         updatedAt
-        qualityInfo { detailLevels }
+        qualityInfo { detailLevels approvalLevels }
       }
     }
   }
@@ -126,7 +126,7 @@ interface GintoNode {
   accessibilityInfo: { defaultRatings: { key: string }[] }
   publication:     { linkUrl?: string }
   updatedAt:       string
-  qualityInfo:     { detailLevels: string[] }
+  qualityInfo:     { detailLevels: string[]; approvalLevels: string[] }
 }
 
 async function fetchPage(
@@ -213,12 +213,16 @@ function nodeToPlace(node: GintoNode): Place {
   const gintoCategory = node.categories[0]?.key ?? ""
   const category: Category = FROM_GINTO[gintoCategory] ?? "attraction"
 
-  // Weight scales with the highest documented detail level.
+  // Weight scales with the strongest approval level (who vouches for the data:
+  // AUDITED = external authority, SELF_DECLARED = operator). detailLevels measures
+  // data completeness, not trustworthiness — kept in metadata only.
   // updatedAt is a system bulk-republish timestamp, not a human verification
   // date, so it is stored in metadata only and not used for verifiedRecently.
-  const levels          = node.qualityInfo.detailLevels
-  const baseWeight      = levels.includes("LEVEL_3") ? GINTO_LEVEL3_WEIGHT
-                        : levels.includes("LEVEL_2") ? GINTO_LEVEL2_WEIGHT
+  // AUDITED entries deliberately do NOT set verifiedRecently either: the API
+  // exposes no audit date, so "recently" would be unverifiable.
+  const approvals       = node.qualityInfo.approvalLevels
+  const baseWeight      = approvals.includes("AUDITED")        ? GINTO_AUDITED_WEIGHT
+                        : approvals.includes("SELF_DECLARED")  ? GINTO_SELF_DECLARED_WEIGHT
                         : RELIABILITY_WEIGHTS.ginto
   const weightMultiplier = baseWeight / RELIABILITY_WEIGHTS.ginto
 
@@ -256,8 +260,9 @@ function nodeToPlace(node: GintoNode): Place {
         city:        node.position.city,
         countryCode: node.position.countryCode,
         linkUrl:     node.publication.linkUrl,
-        detailLevels: node.qualityInfo.detailLevels,
-        updatedAt:   node.updatedAt,
+        detailLevels:   node.qualityInfo.detailLevels,
+        approvalLevels: node.qualityInfo.approvalLevels,
+        updatedAt:      node.updatedAt,
       },
       raw: node,
     }],

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { fetchGinto, intersectsSwitzerland } from "@/lib/adapters/ginto"
-import { RELIABILITY_WEIGHTS, GINTO_LEVEL2_WEIGHT, GINTO_LEVEL3_WEIGHT } from "@/lib/config"
+import { RELIABILITY_WEIGHTS, GINTO_SELF_DECLARED_WEIGHT, GINTO_AUDITED_WEIGHT } from "@/lib/config"
 import type { SearchParams } from "@/lib/types"
 
 const BASE_PARAMS: SearchParams = {
@@ -21,7 +21,7 @@ const BASE_NODE = {
   accessibilityInfo: { defaultRatings: [{ key: "completely_wheelchair_accessible" }, { key: "toilet_completely_wheelchair_accessible" }] },
   publication: { linkUrl: "https://www.ginto.guide/entries/abc-123" },
   updatedAt: new Date(Date.now() - 3 * 365 * 24 * 60 * 60 * 1000).toISOString(), // 3 years ago → NOT recently verified
-  qualityInfo: { detailLevels: [] as string[] },
+  qualityInfo: { detailLevels: [] as string[], approvalLevels: [] as string[] },
 }
 
 function mockFetch(node: typeof BASE_NODE) {
@@ -45,42 +45,48 @@ beforeEach(() => {
 
 // ─── weight logic ─────────────────────────────────────────────────────────────
 
-describe("Ginto weight by detail level", () => {
-  it("no level info → base weight 0.90, no badge", async () => {
-    mockFetch({ ...BASE_NODE, qualityInfo: { detailLevels: [] } })
+describe("Ginto weight by approval level", () => {
+  it("no approval info → base weight 0.90, no badge", async () => {
+    mockFetch({ ...BASE_NODE, qualityInfo: { detailLevels: [], approvalLevels: [] } })
     const places = await fetchGinto(BASE_PARAMS)
     const src = places[0].accessibility.entrance.sources[0]
     expect(src.reliabilityWeight).toBeCloseTo(RELIABILITY_WEIGHTS.ginto)
     expect(src.verifiedRecently).toBeUndefined()
   })
 
-  it("LEVEL_1 only → base weight 0.90, no badge", async () => {
-    mockFetch({ ...BASE_NODE, qualityInfo: { detailLevels: ["LEVEL_1"] } })
+  it("SELF_DECLARED → weight 0.94, no badge", async () => {
+    mockFetch({ ...BASE_NODE, qualityInfo: { detailLevels: [], approvalLevels: ["SELF_DECLARED"] } })
+    const places = await fetchGinto(BASE_PARAMS)
+    const src = places[0].accessibility.entrance.sources[0]
+    expect(src.reliabilityWeight).toBeCloseTo(GINTO_SELF_DECLARED_WEIGHT)
+    expect(src.verifiedRecently).toBeUndefined()
+  })
+
+  it("AUDITED → weight 1.0, no badge (no audit date available)", async () => {
+    mockFetch({ ...BASE_NODE, qualityInfo: { detailLevels: [], approvalLevels: ["AUDITED"] } })
+    const places = await fetchGinto(BASE_PARAMS)
+    const src = places[0].accessibility.entrance.sources[0]
+    expect(src.reliabilityWeight).toBeCloseTo(GINTO_AUDITED_WEIGHT)
+    expect(src.verifiedRecently).toBeUndefined()
+  })
+
+  it("AUDITED wins over SELF_DECLARED when both present", async () => {
+    mockFetch({ ...BASE_NODE, qualityInfo: { detailLevels: [], approvalLevels: ["SELF_DECLARED", "AUDITED"] } })
+    const places = await fetchGinto(BASE_PARAMS)
+    const src = places[0].accessibility.entrance.sources[0]
+    expect(src.reliabilityWeight).toBeCloseTo(GINTO_AUDITED_WEIGHT)
+  })
+
+  it("detail levels alone do NOT boost the weight (regression: old detailLevels mapping)", async () => {
+    mockFetch({ ...BASE_NODE, qualityInfo: { detailLevels: ["LEVEL_3", "LEVEL_2", "LEVEL_1"], approvalLevels: [] } })
     const places = await fetchGinto(BASE_PARAMS)
     const src = places[0].accessibility.entrance.sources[0]
     expect(src.reliabilityWeight).toBeCloseTo(RELIABILITY_WEIGHTS.ginto)
-    expect(src.verifiedRecently).toBeUndefined()
-  })
-
-  it("LEVEL_2 → weight 0.95, no badge", async () => {
-    mockFetch({ ...BASE_NODE, qualityInfo: { detailLevels: ["LEVEL_2", "LEVEL_1"] } })
-    const places = await fetchGinto(BASE_PARAMS)
-    const src = places[0].accessibility.entrance.sources[0]
-    expect(src.reliabilityWeight).toBeCloseTo(GINTO_LEVEL2_WEIGHT)
-    expect(src.verifiedRecently).toBeUndefined()
-  })
-
-  it("LEVEL_3 → weight 0.97, no badge", async () => {
-    mockFetch({ ...BASE_NODE, qualityInfo: { detailLevels: ["LEVEL_3", "LEVEL_2", "LEVEL_1"] } })
-    const places = await fetchGinto(BASE_PARAMS)
-    const src = places[0].accessibility.entrance.sources[0]
-    expect(src.reliabilityWeight).toBeCloseTo(GINTO_LEVEL3_WEIGHT)
-    expect(src.verifiedRecently).toBeUndefined()
   })
 
   it("updatedAt does not set verifiedRecently regardless of recency", async () => {
     const recentDate = new Date(Date.now() - 1000).toISOString() // 1 second ago
-    mockFetch({ ...BASE_NODE, updatedAt: recentDate, qualityInfo: { detailLevels: ["LEVEL_1"] } })
+    mockFetch({ ...BASE_NODE, updatedAt: recentDate, qualityInfo: { detailLevels: ["LEVEL_1"], approvalLevels: ["AUDITED"] } })
     const places = await fetchGinto(BASE_PARAMS)
     const src = places[0].accessibility.entrance.sources[0]
     expect(src.verifiedRecently).toBeUndefined()
@@ -162,12 +168,13 @@ describe("Ginto CH geo-fence", () => {
 // ─── metadata ─────────────────────────────────────────────────────────────────
 
 describe("Ginto sourceRecord metadata", () => {
-  it("includes updatedAt and detailLevels in metadata", async () => {
-    mockFetch({ ...BASE_NODE, qualityInfo: { detailLevels: ["LEVEL_2"] } })
+  it("includes updatedAt, detailLevels and approvalLevels in metadata", async () => {
+    mockFetch({ ...BASE_NODE, qualityInfo: { detailLevels: ["LEVEL_2"], approvalLevels: ["SELF_DECLARED"] } })
     const places = await fetchGinto(BASE_PARAMS)
     const meta = places[0].sourceRecords[0].metadata as Record<string, unknown>
     expect(meta.updatedAt).toBe(BASE_NODE.updatedAt)
     expect(meta.detailLevels).toEqual(["LEVEL_2"])
+    expect(meta.approvalLevels).toEqual(["SELF_DECLARED"])
   })
 
   it("sets gintoUrl from publication.linkUrl", async () => {

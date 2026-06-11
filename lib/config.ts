@@ -2,7 +2,7 @@ import type { SourceId, Category } from "./types"
 
 // User-visible app version, shown in the header next to the subtitle.
 // Bump on every meaningful release.
-export const APP_VERSION = "4.8"
+export const APP_VERSION = "4.9"
 
 export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
   reisen_fuer_alle:    1.00,
@@ -18,9 +18,10 @@ export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
   nominatim:           0,  // stats-only
 }
 
-// Ginto entries get higher weights for more thoroughly documented detail levels
-export const GINTO_LEVEL2_WEIGHT = 0.95
-export const GINTO_LEVEL3_WEIGHT = 0.97
+// Ginto entries get higher weights for stronger approval levels
+// (qualityInfo.approvalLevels: who vouches for the data — operator vs. external audit)
+export const GINTO_SELF_DECLARED_WEIGHT = 0.94
+export const GINTO_AUDITED_WEIGHT       = 1.0
 
 // OSM wheelchair= main tag is a whole-place proxy, not entrance-specific
 // → reduce its effective weight for entrance criterion
