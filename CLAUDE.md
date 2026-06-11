@@ -264,7 +264,7 @@ ISR landing pages for 32 DACH cities × 10 categories × 2 locales = **640 poten
 Server component shared by DE and EN routes. Includes Schema.org `ItemList` + `BreadcrumbList` JSON-LD, hreflang language switcher, related categories (chip-backed only — `SEO_CATEGORY_TO_CHIP_IDX !== undefined` — and filtered by `hasData`), and related cities (filtered by `hasData`). The confidence badge format matches the main app exactly: `"X% · Verlässlich/Mittel/Unsicher"` via `confidenceLabel()` from `merge.ts`. Source attribution names the active adapters (`"OpenStreetMap, accessibility.cloud, Ginto (CH)"`) — exclude adapters that require keys absent in the deployment. Place cards show entrance, toilet, and parking attributes (parking is only shown when its value is not `"unknown"`); the `nearbyOnly` parking case renders as `"Ja, in der Nähe (Xm)"`. External links (Wheelmap, Google Maps, website) are icon-only (`Accessibility`, `Map`, `Globe` from lucide-react).
 
 **Validity data — `lib/generated/seo-validity.json` + `lib/seo-validity.ts`:**
-A 320-entry JSON file (`citySlug/categorySlug → boolean`) that records which combinations actually have accessible places. Updated by `npm run check:seo` (or the daily GitHub Actions cron `.github/workflows/check-seo-validity.yml`). Safety rules: failed checks never overwrite an existing `true` (Overpass downtime cannot remove confirmed pages); the file is not written if < 50% of checks succeed. `hasData(citySlug, categorySlug)` defaults to `true` for unknown combos (conservative). `VALID_SEO_PATHS` is a `Set<string>` used by both the sitemap and `SeoPageContent`.
+A JSON file with 320 `citySlug/categorySlug → boolean` entries (plus a `_generatedAt` metadata key) that records which combinations actually have accessible places. Updated by `npm run check:seo` (or the daily GitHub Actions cron `.github/workflows/check-seo-validity.yml`). Safety rules: failed checks never overwrite an existing `true` (Overpass downtime cannot remove confirmed pages); the file is not written if < 50% of checks succeed. `hasData(citySlug, categorySlug)` defaults to `true` for unknown combos (conservative). `VALID_SEO_PATHS` is a `Set<string>` used by both the sitemap and `SeoPageContent`.
 
 **Sitemap — `app/sitemap.ts`:**
 Filters SEO pages through `VALID_SEO_PATHS` — only confirmed combos appear in the sitemap. Adding a city to `CITIES` (and `CitySlug`) automatically includes it once the validity cron runs.
@@ -301,7 +301,7 @@ The EN routes use **localised slugs** distinct from the DE paths (set up in v3.8
 
 ## Versioning
 
-`APP_VERSION` in `lib/config.ts` — bump on every meaningful release. Shown in the Impressum alongside `BUILD_DATE`, which is auto-injected by `next.config.ts` at build time (`new Date().toISOString().split("T")[0]` → `"YYYY-MM-DD"`). `BUILD_DATE` is a build-time env var — it is set automatically, never manually configured.
+`APP_VERSION` in `lib/config.ts` — bump on **every commit** (established convention; the commit message carries the version as a `(vX.Y)` suffix). Shown in the Impressum alongside `BUILD_DATE`, which is auto-injected by `next.config.ts` at build time (`new Date().toISOString().split("T")[0]` → `"YYYY-MM-DD"`). `BUILD_DATE` is a build-time env var — it is set automatically, never manually configured.
 
 ## Environment variables (server-side only)
 
