@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { fetchGinto, intersectsSwitzerland } from "@/lib/adapters/ginto"
+import { fetchGinto, intersectsSwitzerland, normalizeCountryCode } from "@/lib/adapters/ginto"
 import { RELIABILITY_WEIGHTS, GINTO_SELF_DECLARED_WEIGHT, GINTO_AUDITED_WEIGHT } from "@/lib/config"
 import type { SearchParams } from "@/lib/types"
 
@@ -41,6 +41,7 @@ function mockFetch(node: typeof BASE_NODE) {
 beforeEach(() => {
   vi.unstubAllGlobals()
   process.env.GINTO_API_KEY = "test-key"
+  delete process.env.GINTO_GEOFENCE
 })
 
 // ─── weight logic ─────────────────────────────────────────────────────────────
@@ -124,8 +125,16 @@ describe("Ginto rating key → A11yValue mapping", () => {
 
 // ─── geo-fence ────────────────────────────────────────────────────────────────
 
-describe("Ginto CH geo-fence", () => {
-  it("skips the API call entirely for searches far from Switzerland (Berlin)", async () => {
+describe("Ginto CH geo-fence (opt-in via GINTO_GEOFENCE=1)", () => {
+  it("default (flag unset): calls the API even for searches far from Switzerland (Berlin)", async () => {
+    mockFetch(BASE_NODE)
+    const places = await fetchGinto({ ...BASE_PARAMS, location: { lat: 52.52, lon: 13.405 }, radiusKm: 5 })
+    expect(places).toHaveLength(1)
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it("flag set: skips the API call entirely for searches far from Switzerland (Berlin)", async () => {
+    process.env.GINTO_GEOFENCE = "1"
     const fetchMock = vi.fn()
     vi.stubGlobal("fetch", fetchMock)
     const places = await fetchGinto({ ...BASE_PARAMS, location: { lat: 52.52, lon: 13.405 }, radiusKm: 5 })
@@ -133,7 +142,8 @@ describe("Ginto CH geo-fence", () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it("skips Munich even with 50 km radius (circle does not reach CH)", async () => {
+  it("flag set: skips Munich even with 50 km radius (circle does not reach CH)", async () => {
+    process.env.GINTO_GEOFENCE = "1"
     const fetchMock = vi.fn()
     vi.stubGlobal("fetch", fetchMock)
     const places = await fetchGinto({ ...BASE_PARAMS, location: { lat: 48.1372, lon: 11.5755 }, radiusKm: 50 })
@@ -141,14 +151,16 @@ describe("Ginto CH geo-fence", () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it("calls the API for searches inside Switzerland (Zurich)", async () => {
+  it("flag set: calls the API for searches inside Switzerland (Zurich)", async () => {
+    process.env.GINTO_GEOFENCE = "1"
     mockFetch(BASE_NODE)
     const places = await fetchGinto(BASE_PARAMS)
     expect(places).toHaveLength(1)
     expect(fetch).toHaveBeenCalledTimes(1)
   })
 
-  it("calls the API for border cities whose radius reaches CH (Konstanz)", async () => {
+  it("flag set: calls the API for border cities whose radius reaches CH (Konstanz)", async () => {
+    process.env.GINTO_GEOFENCE = "1"
     mockFetch(BASE_NODE)
     await fetchGinto({ ...BASE_PARAMS, location: { lat: 47.66, lon: 9.175 }, radiusKm: 5 })
     expect(fetch).toHaveBeenCalledTimes(1)
@@ -162,6 +174,75 @@ describe("Ginto CH geo-fence", () => {
       expect(intersectsSwitzerland(48.2, 8.5, 5)).toBe(false)   // ~33 km north, small radius
       expect(intersectsSwitzerland(48.2, 8.5, 50)).toBe(true)   // large radius reaches the bbox
     })
+  })
+})
+
+// ─── country code normalisation ──────────────────────────────────────────────
+
+describe("Ginto country code normalisation", () => {
+  it("maps ISO-3 to ISO-2 (all codes seen in live data)", () => {
+    expect(normalizeCountryCode("AUT")).toBe("AT")
+    expect(normalizeCountryCode("CHE")).toBe("CH")
+    expect(normalizeCountryCode("DEU")).toBe("DE")
+    expect(normalizeCountryCode("LIE")).toBe("LI")
+  })
+
+  it("passes ISO-2 through unchanged", () => {
+    expect(normalizeCountryCode("AT")).toBe("AT")
+    expect(normalizeCountryCode("CH")).toBe("CH")
+    expect(normalizeCountryCode("DE")).toBe("DE")
+    expect(normalizeCountryCode("LI")).toBe("LI")
+  })
+
+  it("is case-insensitive", () => {
+    expect(normalizeCountryCode("che")).toBe("CH")
+    expect(normalizeCountryCode("aut")).toBe("AT")
+    expect(normalizeCountryCode("at")).toBe("AT")
+    expect(normalizeCountryCode("De")).toBe("DE")
+  })
+
+  it("trims surrounding whitespace", () => {
+    expect(normalizeCountryCode(" CH ")).toBe("CH")
+    expect(normalizeCountryCode("\tAUT\n")).toBe("AT")
+  })
+
+  it("falls back to CH for empty / missing / whitespace-only codes", () => {
+    expect(normalizeCountryCode("")).toBe("CH")
+    expect(normalizeCountryCode("   ")).toBe("CH")
+    expect(normalizeCountryCode(undefined)).toBe("CH")
+    expect(normalizeCountryCode(null)).toBe("CH")
+  })
+
+  it("passes unknown codes through uppercased instead of guessing", () => {
+    expect(normalizeCountryCode("FR")).toBe("FR")
+    expect(normalizeCountryCode("FRA")).toBe("FRA")  // not in the DACH map — kept as-is
+    expect(normalizeCountryCode("xx")).toBe("XX")
+  })
+
+  it("normalises the place address country from an AUT node", async () => {
+    mockFetch({ ...BASE_NODE, position: { ...BASE_NODE.position, countryCode: "AUT" } })
+    const places = await fetchGinto(BASE_PARAMS)
+    expect(places[0].address.country).toBe("AT")
+  })
+
+  it("normalises a CHE node to CH", async () => {
+    mockFetch({ ...BASE_NODE, position: { ...BASE_NODE.position, countryCode: "CHE" } })
+    const places = await fetchGinto(BASE_PARAMS)
+    expect(places[0].address.country).toBe("CH")
+  })
+
+  it("defaults the address country to CH when the node has no countryCode", async () => {
+    const { countryCode: _omitted, ...positionWithoutCC } = BASE_NODE.position
+    mockFetch({ ...BASE_NODE, position: positionWithoutCC as typeof BASE_NODE.position })
+    const places = await fetchGinto(BASE_PARAMS)
+    expect(places[0].address.country).toBe("CH")
+  })
+
+  it("keeps the raw (un-normalised) countryCode in sourceRecord metadata", async () => {
+    mockFetch({ ...BASE_NODE, position: { ...BASE_NODE.position, countryCode: "AUT" } })
+    const places = await fetchGinto(BASE_PARAMS)
+    const meta = places[0].sourceRecords[0].metadata as Record<string, unknown>
+    expect(meta.countryCode).toBe("AUT")
   })
 })
 

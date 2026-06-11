@@ -2,7 +2,8 @@
  * Ginto adapter — https://api.ginto.guide/graphql
  * GraphQL API, Bearer-Token auth.
  * Set GINTO_API_KEY in .env.local (contact support@ginto.guide).
- * Coverage: Switzerland (CH) only.
+ * Coverage: focused on Switzerland, but with scattered entries across DACH
+ * (per Ginto, 2026-06: API volume is uncritical — query everywhere).
  */
 import type { Place, SearchParams, A11yValue, Category } from "../types"
 import { buildAttribute } from "../matching/merge"
@@ -12,10 +13,12 @@ import { nanoid } from "../utils"
 const ENDPOINT   = "https://api.ginto.guide/graphql"
 const MAX_PAGES  = 2   // cap at 100 results to limit API calls
 
-// ─── Geo-fence ─────────────────────────────────────────────────────────────
-// Ginto covers Switzerland only. Skip the API call entirely when the search
-// circle cannot intersect the CH bounding box (incl. Liechtenstein) — every
-// search outside it is a guaranteed-empty round-trip against Ginto's quota.
+// ─── Geo-fence (optional, default OFF) ─────────────────────────────────────
+// Set GINTO_GEOFENCE=1 to skip the API call when the search circle cannot
+// intersect the CH bounding box (incl. Liechtenstein). Kept as an emergency
+// brake against Ginto rate limits: most Ginto data is Swiss, so the fence
+// eliminates the bulk of the call volume at the cost of losing the scattered
+// non-CH entries (e.g. Vienna ~7, Berlin ~12 as of 2026-06).
 const CH_BBOX = { south: 45.7, north: 47.9, west: 5.8, east: 10.6 }
 
 /** True when a circle of `radiusKm` around (lat, lon) intersects the CH bbox. */
@@ -65,6 +68,23 @@ const FROM_GINTO: Record<string, Category> = {
   landmark:     "attraction",
   zoo:          "attraction",
   park:         "attraction",
+}
+
+// ─── Country code normalisation ────────────────────────────────────────────
+// Ginto's position.countryCode is inconsistent: live data mixes ISO-2 and
+// ISO-3 ("AT"/"AUT", "CH"/"CHE", "DE"/"DEU") and is sometimes empty.
+// Normalise to ISO-2; empty falls back to "CH" (Ginto's home market).
+const COUNTRY_ISO2: Record<string, string> = {
+  AUT: "AT",
+  CHE: "CH",
+  DEU: "DE",
+  LIE: "LI",
+}
+
+export function normalizeCountryCode(raw: string | undefined | null): string {
+  const code = raw?.trim().toUpperCase()
+  if (!code) return "CH"
+  return COUNTRY_ISO2[code] ?? code
 }
 
 // ─── defaultRatings key → A11yValue ──────────────────────────────────────
@@ -170,8 +190,11 @@ export async function fetchGinto(params: SearchParams): Promise<Place[]> {
     return []
   }
 
-  // Geo-fence: search circle cannot reach Switzerland → no API call needed
-  if (!intersectsSwitzerland(params.location.lat, params.location.lon, params.radiusKm)) {
+  // Optional geo-fence: search circle cannot reach Switzerland → skip the call
+  if (
+    process.env.GINTO_GEOFENCE === "1" &&
+    !intersectsSwitzerland(params.location.lat, params.location.lon, params.radiusKm)
+  ) {
     return []
   }
 
@@ -238,7 +261,7 @@ function nodeToPlace(node: GintoNode): Place {
       houseNumber: node.position.housenumber ?? "",
       postalCode:  node.position.postcode    ?? "",
       city:        node.position.city        ?? "",
-      country:     (node.position.countryCode ?? "CH") as "CH",
+      country:     normalizeCountryCode(node.position.countryCode),
     },
     coordinates:   { lat: node.position.lat, lon: node.position.lng },
     gintoUrl:      node.publication.linkUrl,
