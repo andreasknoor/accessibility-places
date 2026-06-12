@@ -546,24 +546,26 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
         </div>
       )}
 
-      {/* ── Category chip strip ── */}
-      <div className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none] -mx-4 px-4">
-        {CHIPS.map((chip, idx) => (
-          <button
-            key={chip.de}
-            onClick={() => selectChip(idx)}
-            disabled={isLoading}
-            className={cn(
-              "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
-              idx === selectedIdx
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
-            )}
-          >
-            {chip.icon} {locale === "de" ? chip.de : chip.en}
-          </button>
-        ))}
-      </div>
+      {/* ── Category chip strip — hidden during amenity focus ── */}
+      {!(focusLayers?.size) && (
+        <div className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none] -mx-4 px-4">
+          {CHIPS.map((chip, idx) => (
+            <button
+              key={chip.de}
+              onClick={() => selectChip(idx)}
+              disabled={isLoading}
+              className={cn(
+                "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
+                idx === selectedIdx
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+              )}
+            >
+              {chip.icon} {locale === "de" ? chip.de : chip.en}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── Text search mode ── */}
       {mode === "text" && (
@@ -886,6 +888,18 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                       )
                     })}
                     </div>
+                    {focusLayers?.size ? (
+                      <button
+                        onClick={() => {
+                          const active = focusLayers.values().next().value as AmenityType
+                          onToggleFocusLayer(active)
+                        }}
+                        className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-foreground bg-background hover:bg-muted transition-colors"
+                      >
+                        <X className="w-3 h-3" aria-hidden />
+                        <span>{t.chat.focusExit}</span>
+                      </button>
+                    ) : null}
                   </div>
                   {(focusHints?.parking || focusHints?.toilet) && (
                     <div className="flex flex-col items-end">

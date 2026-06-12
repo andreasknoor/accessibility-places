@@ -43,6 +43,7 @@ const de: Translations = {
     focusLabel:           "Suche nur:",
     focusChipParking:     "Parkplätze",
     focusChipToilet:      "WCs",
+    focusExit:            "Alle Orte",
     namePlaceholder:      'z. B. „Zur Linde" oder „Hilton"',
     placeModePlaceholder: 'z. B. „Hotel Adlon Berlin" oder „Café Central Wien"',
     placeNotFound:     "Diesen Ort konnten wir nicht finden. Versuche einen präziseren Namen oder füge die Stadt hinzu.",
