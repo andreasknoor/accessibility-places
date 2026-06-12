@@ -48,6 +48,7 @@ export interface Translations {
     focusLabel:           string
     focusChipParking:     string
     focusChipToilet:      string
+    focusExit:            string
     namePlaceholder:      string
     nameToggleShow:       string
     nameToggleHide:       string

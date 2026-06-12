@@ -933,6 +933,18 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                       )
                     })}
                     </div>
+                    {focusLayers?.size ? (
+                      <button
+                        onClick={() => {
+                          const active = focusLayers.values().next().value as AmenityType
+                          onToggleFocusLayer(active)
+                        }}
+                        className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-foreground bg-background hover:bg-muted transition-colors"
+                      >
+                        <X className="w-3 h-3" aria-hidden />
+                        <span>{t.chat.focusExit}</span>
+                      </button>
+                    ) : null}
                   </div>
                   {(focusHints?.parking || focusHints?.toilet) && (
                     <div className="flex flex-col items-end">

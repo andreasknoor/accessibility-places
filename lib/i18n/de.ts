@@ -52,6 +52,7 @@ const de: Translations = {
     focusLabel:           "Suche nur:",
     focusChipParking:     "Parkplätze",
     focusChipToilet:      "WCs",
+    focusExit:            "Alle Orte",
     namePlaceholder:      'z. B. „Zur Linde" oder „Hilton"',
     nameToggleShow:       "+ Ergebnisse nach Name eingrenzen",
     nameToggleHide:       "Namensfilter entfernen",

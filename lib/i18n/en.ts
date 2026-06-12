@@ -52,6 +52,7 @@ const en: Translations = {
     focusLabel:           "Search only:",
     focusChipParking:     "Parking",
     focusChipToilet:      "Toilets",
+    focusExit:            "All places",
     namePlaceholder:      "e.g. \"The Crown\" or \"Hilton\"",
     nameToggleShow:       "+ Filter results by name",
     nameToggleHide:       "Remove name filter",
