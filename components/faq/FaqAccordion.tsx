@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useLayoutEffect } from "react"
 import { ChevronDown, Link2, Check } from "lucide-react"
 import type { ReactNode } from "react"
 
@@ -22,9 +22,28 @@ export function FaqAccordion({ categories }: { categories: FaqCategory[] }) {
   const [openId,   setOpenId]   = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
-  useEffect(() => {
+  // useLayoutEffect runs synchronously before the browser paints, so the item
+  // is already open when Next.js scrolls to the hash element — avoids the
+  // race where the browser scrolls to a still-collapsed accordion.
+  useLayoutEffect(() => {
     const hash = window.location.hash.slice(1)
     if (hash) setOpenId(hash)
+  }, [])
+
+  // Handle hash changes that happen while the component is already mounted:
+  // - hashchange: clicking an <a href="#id"> link on the same page
+  // - popstate:   browser back/forward restoring a hash from history
+  useEffect(() => {
+    function syncHash() {
+      const hash = window.location.hash.slice(1)
+      if (hash) setOpenId(hash)
+    }
+    window.addEventListener("hashchange", syncHash)
+    window.addEventListener("popstate",   syncHash)
+    return () => {
+      window.removeEventListener("hashchange", syncHash)
+      window.removeEventListener("popstate",   syncHash)
+    }
   }, [])
 
   function toggleItem(id: string) {
