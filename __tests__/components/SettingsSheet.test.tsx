@@ -100,17 +100,17 @@ describe("SettingsSheet", () => {
     expect(onUpdate).toHaveBeenCalledWith({ defaultSearchMode: "nearby" })
   })
 
-  it("search mode select includes 'place' option", () => {
+  it("search mode select contains text and nearby but not place (removed in v4.13)", () => {
     renderSheet()
     fireEvent.click(screen.getByRole("button", { name: /Einstellungen/i }))
     const selects = screen.getAllByRole("combobox") as HTMLSelectElement[]
     const modeSelect = selects.find(
-      (s) => Array.from(s.options).some((o) => o.value === "place"),
+      (s) => Array.from(s.options).some((o) => o.value === "text" || o.value === "nearby"),
     )
     expect(modeSelect).toBeDefined()
     const options = Array.from(modeSelect!.options).map((o) => o.value)
     expect(options).toContain("text")
     expect(options).toContain("nearby")
-    expect(options).toContain("place")
+    expect(options).not.toContain("place")
   })
 })

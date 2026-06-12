@@ -138,12 +138,11 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
             <Row label={ts.searchMode}>
               <SelectInput
                 value={settings.defaultSearchMode ?? ""}
-                onChange={(v) => onUpdate({ defaultSearchMode: v === "" ? null : v as "text" | "nearby" | "place" })}
+                onChange={(v) => onUpdate({ defaultSearchMode: v === "" ? null : v as "text" | "nearby" })}
               >
                 <option value="">{ts.searchModeDefault}</option>
                 <option value="nearby">{ts.searchModeNearby}</option>
                 <option value="text">{ts.searchModeText}</option>
-                <option value="place">{ts.searchModePlace}</option>
               </SelectInput>
             </Row>
             <Row label={ts.defaultCategory}>

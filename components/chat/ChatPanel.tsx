@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Send, Loader2, LocateFixed, Compass, X, Building2, Coffee, UtensilsCrossed, Beer, BookOpen, Hotel, Landmark, Film, Library, GalleryHorizontal, Star, IceCream, MapPin } from "lucide-react"
+import { Send, Loader2, LocateFixed, Compass, X, Coffee, UtensilsCrossed, Beer, BookOpen, Hotel, Landmark, Film, Library, GalleryHorizontal, Star, IceCream, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { useIsMobile } from "@/hooks/useIsMobile"
@@ -16,11 +16,11 @@ interface Props {
   onSearch:          (query: string, coords?: Coords, nameHint?: string) => void
   onPlaceSearch?:    (nameHint: string, coords?: Coords) => void
   isLoading:         boolean
-  onModeChange?:     (mode: "text" | "nearby" | "place") => void
+  onModeChange?:     (mode: "text" | "nearby") => void
   autoFocus?:        boolean
   initialLocation?:  string
   initialChipIdx?:   number
-  initialMode?:      "text" | "nearby" | "place"
+  initialMode?:      "text" | "nearby" | "place"  // "place" is treated as "text" (legacy)
   onGpsResolved?:    (coords: Coords) => void
   skipAutoLocate?:   boolean
   hasGpsCoords?:     boolean
@@ -47,7 +47,7 @@ const CHIPS = [
   { icon: "🗺",  de: "Sehenswürdigkeiten", en: "Attractions" },
 ]
 
-type Mode        = "text" | "nearby" | "place"
+type Mode        = "text" | "nearby"
 type NearbyPhase = "idle" | "locating" | { district: string; lat: number; lon: number } | "error"
 
 type Suggestion = { display: string; name: string }
@@ -101,11 +101,10 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const t = useTranslations()
   const { locale } = useLocale()
   const isMobile = useIsMobile()
-  const [mode,           setMode]           = useState<Mode>(initialMode ?? "nearby")
+  const [mode,           setMode]           = useState<Mode>(initialMode === "place" ? "text" : (initialMode ?? "nearby"))
   const [nearbyPhase,    setNearbyPhase]    = useState<NearbyPhase>("idle")
   const [location,       setLocation]       = useState("")
   const [name,           setName]           = useState("")
-  const [showNameField,  setShowNameField]  = useState(false)
   const [selectedIdx,    setSelectedIdx]    = useState(0)
   const [suggestions,    setSuggestions]    = useState<Suggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -145,12 +144,9 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const district = typeof nearbyPhase === "object" ? nearbyPhase.district : null
 
   // Sync mode when HomeClient corrects chatMode post-hydration via useLayoutEffect.
-  // useState(initialMode) only captures the SSR-safe default on first mount; this
-  // effect re-applies the saved preference once the parent has read localStorage.
-  // When the user switches tabs themselves, onModeChange → HomeClient → initialMode
-  // roundtrips back to the same value, so setMode is a React no-op (safe).
+  // Maps legacy "place" initialMode to "text" (place mode was removed in v4.13).
   useEffect(() => {
-    if (initialMode !== undefined) setMode(initialMode)
+    if (initialMode !== undefined) setMode(initialMode === "place" ? "text" : initialMode)
   }, [initialMode])
 
   // Restore last search on mount (chip + location, never nearby mode).
@@ -289,8 +285,9 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     }
   }, [location, locale])
 
-  // Fetch place-name suggestions — only active in "place" mode; in text mode the
-  // name field is a filter and Photon autocomplete would be confusing/redundant.
+  // Fetch place-name suggestions — active in text mode when the location field is
+  // empty (place-search intent). When location is filled the name field acts as a
+  // filter and Photon autocomplete would be confusing/redundant.
   useEffect(() => {
     // Suppress while name matches a just-selected suggestion — survives the
     // biasCoords re-render fired by setSearchCenter after the search completes.
@@ -299,7 +296,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       setShowNameSuggestions(false)
       return
     }
-    if (mode !== "place" || location.trim() || name.length < 2) {
+    if (mode !== "text" || location.trim() || name.length < 2) {
       setNameSuggestions([])
       setShowNameSuggestions(false)
       return
@@ -328,7 +325,6 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   function switchMode(next: Mode) {
     setMode(next)
     onModeChange?.(next)
-    setShowNameField(false)
     setName("")
     selectedNameRef.current = ""
     setNameSuggestions([])
@@ -338,15 +334,8 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
         navigator.geolocation.clearWatch(watchIdRef.current)
         watchIdRef.current = null
       }
-    }
-    if (next === "place") {
-      // Clear location so name-suggest fires unconditionally in place mode
-      setLocation("")
-      setSuggestions([])
-      setShowSuggestions(false)
       return
     }
-    if (next !== "nearby") return
     if (nearbyPhase === "idle") {
       handleLocate()
     } else if (typeof nearbyPhase === "object") {
@@ -384,14 +373,12 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       setLocation("")
       return
     }
-    if (mode === "place") {
-      setNameSuggestions([])
-      setShowNameSuggestions(false)
-      if (name.trim()) onPlaceSearch?.(name.trim())
-      return
-    }
     if (!location.trim()) {
-      if (name.trim()) onPlaceSearch?.(name.trim())
+      if (name.trim()) {
+        setNameSuggestions([])
+        setShowNameSuggestions(false)
+        onPlaceSearch?.(name.trim())
+      }
       return
     }
     setSuggestions([])
@@ -508,7 +495,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       {/* ── Mode selector ── */}
       {isMobile ? (
         <div className="flex rounded-md overflow-hidden border border-border">
-          {(["nearby", "text", "place"] as Mode[]).map((m) => (
+          {(["nearby", "text"] as Mode[]).map((m) => (
             <button
               key={m}
               onClick={() => switchMode(m)}
@@ -521,11 +508,9 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             >
               {m === "nearby" && <LocateFixed className="w-[1.125rem] h-[1.125rem]" />}
               {m === "text"   && <Compass     className="w-[1.125rem] h-[1.125rem]" />}
-              {m === "place"  && <Building2   className="w-[1.125rem] h-[1.125rem]" />}
               <span className="text-xs font-medium leading-none flex items-center gap-1">
                 {m === "text"   && t.chat.modeText}
                 {m === "nearby" && t.chat.modeNearby}
-                {m === "place"  && t.chat.modePlace}
                 {m === "nearby" && (
                   <span className={cn("inline-block w-1.5 h-1.5 rounded-full", hasGpsCoords ? "bg-green-500" : "bg-muted-foreground/30")} />
                 )}
@@ -535,8 +520,8 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-1.5">
-          {(["nearby", "text", "place"] as Mode[]).map((m) => (
+        <div className="grid grid-cols-2 gap-1.5">
+          {(["nearby", "text"] as Mode[]).map((m) => (
             <button
               key={m}
               onClick={() => switchMode(m)}
@@ -549,11 +534,9 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             >
               {m === "nearby" && <LocateFixed className="w-5 h-5" />}
               {m === "text"   && <Compass     className="w-5 h-5" />}
-              {m === "place"  && <Building2   className="w-5 h-5" />}
               <span className="text-sm font-semibold leading-tight flex items-center gap-1">
                 {m === "text"   && t.chat.modeText}
                 {m === "nearby" && t.chat.modeNearby}
-                {m === "place"  && t.chat.modePlace}
                 {m === "nearby" && (
                   <span className={cn("inline-block w-1.5 h-1.5 rounded-full", hasGpsCoords ? "bg-green-400" : "bg-white/30")} />
                 )}
@@ -563,26 +546,24 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
         </div>
       )}
 
-      {/* ── Category chip strip — hidden in place mode ── */}
-      {mode !== "place" && (
-        <div className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none] -mx-4 px-4">
-          {CHIPS.map((chip, idx) => (
-            <button
-              key={chip.de}
-              onClick={() => selectChip(idx)}
-              disabled={isLoading}
-              className={cn(
-                "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
-                idx === selectedIdx
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
-              )}
-            >
-              {chip.icon} {locale === "de" ? chip.de : chip.en}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* ── Category chip strip ── */}
+      <div className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none] -mx-4 px-4">
+        {CHIPS.map((chip, idx) => (
+          <button
+            key={chip.de}
+            onClick={() => selectChip(idx)}
+            disabled={isLoading}
+            className={cn(
+              "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
+              idx === selectedIdx
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+            )}
+          >
+            {chip.icon} {locale === "de" ? chip.de : chip.en}
+          </button>
+        ))}
+      </div>
 
       {/* ── Text search mode ── */}
       {mode === "text" && (
@@ -634,7 +615,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
               </button>
             )}
 
-            {/* Autocomplete dropdown */}
+            {/* Location autocomplete dropdown */}
             {showSuggestions && suggestions.length > 0 && (
               <ul
                 role="listbox"
@@ -666,114 +647,8 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             )}
           </div>
 
-          {/* Name input — desktop: inline flex-1 alongside location, behind toggle */}
-          {!isMobile && showNameField && (
-            <div className="relative flex-1">
-              <input
-                value={name}
-                onChange={(e) => { setName(e.target.value) }}
-                onKeyDown={(e) => {
-                  if (e.key !== "Enter") return
-                  if (!location.trim() && name.trim()) onPlaceSearch?.(name.trim())
-                  else submit()
-                }}
-                placeholder={t.chat.namePlaceholder}
-                disabled={isLoading}
-                autoFocus
-                className={cn(
-                  "w-full rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]",
-                  "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
-                  "focus-visible:ring-ring disabled:opacity-50",
-                  name && "pr-7",
-                )}
-              />
-              {name && (
-                <button
-                  type="button"
-                  onMouseDown={(e) => { e.preventDefault(); setName(""); setShowNameField(false) }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label={t.chat.nameToggleHide}
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          )}
-
-          <Button
-            onClick={submit}
-            disabled={isLoading || (!location.trim() && !name.trim())}
-            size="sm"
-            className="shrink-0 relative overflow-hidden"
-          >
-            {isLoading && (
-              <span
-                className="absolute inset-y-0 left-0 pointer-events-none"
-                style={{ width: 0, background: "rgba(255,255,255,0.45)", animation: "btn-progress 30s linear forwards" }}
-                aria-hidden
-              />
-            )}
-            <span className="relative z-10 inline-flex items-center gap-1.5">
-              {isLoading
-                ? <Loader2 className="w-4 h-4 animate-spin" />
-                : <Send className="w-4 h-4" />
-              }
-              {isLoading ? t.chat.thinking : t.chat.send}
-            </span>
-          </Button>
-        </div>
-
-        {/* Mobile: name field behind toggle, shown as second row */}
-        {isMobile && showNameField && (
-          <div className="relative">
-            <input
-              value={name}
-              onChange={(e) => { setName(e.target.value) }}
-              onKeyDown={(e) => {
-                if (e.key !== "Enter") return
-                if (!location.trim() && name.trim()) onPlaceSearch?.(name.trim())
-                else submit()
-              }}
-              placeholder={t.chat.namePlaceholder}
-              disabled={isLoading}
-              autoFocus
-              className={cn(
-                "w-full rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]",
-                "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
-                "focus-visible:ring-ring disabled:opacity-50",
-                name && "pr-7",
-              )}
-            />
-            {name && (
-              <button
-                type="button"
-                onMouseDown={(e) => { e.preventDefault(); setName(""); setShowNameField(false) }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                aria-label={t.chat.nameToggleHide}
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Toggle to reveal the name filter */}
-        {!showNameField && (
-          <button
-            type="button"
-            onClick={() => setShowNameField(true)}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors text-left"
-          >
-            {t.chat.nameToggleShow}
-          </button>
-        )}
-        </>
-      )}
-
-      {/* ── Place search mode ── */}
-      {mode === "place" && (
-        <>
-          <div className="flex gap-2 items-center">
+          {/* Name / place input — desktop: inline flex-1 alongside location */}
+          {!isMobile && (
             <div className="relative flex-1">
               <input
                 value={name}
@@ -788,18 +663,18 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                       if (nameHighlightedIdx >= 0) { selectNameSuggestion(nameSuggestions[nameHighlightedIdx]); return }
                     }
                   }
-                  if (e.key === "Enter") submit()
+                  if (e.key !== "Enter") return
+                  if (!location.trim() && name.trim()) onPlaceSearch?.(name.trim())
+                  else submit()
                 }}
                 onBlur={() => setTimeout(() => setShowNameSuggestions(false), 150)}
                 onFocus={() => nameSuggestions.length > 0 && setShowNameSuggestions(true)}
-                placeholder={t.chat.placeModePlaceholder}
+                placeholder={location.trim() ? t.chat.namePlaceholder : t.chat.placeModePlaceholder}
                 disabled={isLoading}
-                autoFocus={autoFocus}
                 className={cn(
-                  "w-full rounded-md border bg-background px-3 py-2 text-sm h-[38px]",
+                  "w-full rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]",
                   "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
                   "focus-visible:ring-ring disabled:opacity-50",
-                  isMobile ? "border-primary" : "border-input",
                   name && "pr-7",
                 )}
               />
@@ -813,6 +688,8 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
+
+              {/* Name/place autocomplete dropdown (only when location is empty) */}
               {showNameSuggestions && nameSuggestions.length > 0 && (
                 <ul
                   role="listbox"
@@ -843,29 +720,105 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                 </ul>
               )}
             </div>
-            <Button
-              onClick={submit}
-              disabled={isLoading || !name.trim()}
-              size="sm"
-              className="shrink-0 relative overflow-hidden"
-            >
-              {isLoading && (
-                <span
-                  className="absolute inset-y-0 left-0 pointer-events-none"
-                  style={{ width: 0, background: "rgba(255,255,255,0.45)", animation: "btn-progress 30s linear forwards" }}
-                  aria-hidden
-                />
-              )}
-              <span className="relative z-10 inline-flex items-center gap-1.5">
-                {isLoading
-                  ? <Loader2 className="w-4 h-4 animate-spin" />
-                  : <Send className="w-4 h-4" />
+          )}
+
+          <Button
+            onClick={submit}
+            disabled={isLoading || (!location.trim() && !name.trim())}
+            size="sm"
+            className="shrink-0 relative overflow-hidden"
+          >
+            {isLoading && (
+              <span
+                className="absolute inset-y-0 left-0 pointer-events-none"
+                style={{ width: 0, background: "rgba(255,255,255,0.45)", animation: "btn-progress 30s linear forwards" }}
+                aria-hidden
+              />
+            )}
+            <span className="relative z-10 inline-flex items-center gap-1.5">
+              {isLoading
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <Send className="w-4 h-4" />
+              }
+              {isLoading ? t.chat.thinking : t.chat.send}
+            </span>
+          </Button>
+        </div>
+
+        {/* Mobile: name/place input as second row */}
+        {isMobile && (
+          <div className="relative">
+            <input
+              value={name}
+              onChange={(e) => { selectedNameRef.current = ""; setName(e.target.value); setNameHighlightedIdx(-1) }}
+              onKeyDown={(e) => {
+                if (showNameSuggestions && nameSuggestions.length > 0) {
+                  if (e.key === "ArrowDown") { e.preventDefault(); setNameHighlightedIdx((i) => Math.min(i + 1, nameSuggestions.length - 1)); return }
+                  if (e.key === "ArrowUp")   { e.preventDefault(); setNameHighlightedIdx((i) => Math.max(i - 1, -1)); return }
+                  if (e.key === "Escape")    { setShowNameSuggestions(false); setNameHighlightedIdx(-1); return }
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    if (nameHighlightedIdx >= 0) { selectNameSuggestion(nameSuggestions[nameHighlightedIdx]); return }
+                  }
                 }
-                {isLoading ? t.chat.thinking : t.chat.send}
-              </span>
-            </Button>
+                if (e.key !== "Enter") return
+                if (!location.trim() && name.trim()) onPlaceSearch?.(name.trim())
+                else submit()
+              }}
+              onBlur={() => setTimeout(() => setShowNameSuggestions(false), 150)}
+              onFocus={() => nameSuggestions.length > 0 && setShowNameSuggestions(true)}
+              placeholder={location.trim() ? t.chat.namePlaceholder : t.chat.placeModePlaceholder}
+              disabled={isLoading}
+              className={cn(
+                "w-full rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]",
+                "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
+                "focus-visible:ring-ring disabled:opacity-50",
+                name && "pr-7",
+              )}
+            />
+            {name && (
+              <button
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); setName(""); setNameSuggestions([]); setShowNameSuggestions(false) }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Clear"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {/* Name/place autocomplete dropdown (mobile, only when location is empty) */}
+            {showNameSuggestions && nameSuggestions.length > 0 && (
+              <ul
+                role="listbox"
+                className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg overflow-hidden"
+              >
+                {nameSuggestions.map((s, i) => (
+                  <li
+                    key={s.display}
+                    role="option"
+                    aria-selected={i === nameHighlightedIdx}
+                    onMouseDown={(e) => { e.preventDefault(); selectNameSuggestion(s) }}
+                    className={cn(
+                      "px-3 py-2 text-sm cursor-pointer transition-colors",
+                      i === nameHighlightedIdx
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted",
+                    )}
+                  >
+                    <span className="flex items-center gap-2">
+                      <PlaceCategoryIcon osmKey={s.osmKey} osmValue={s.osmValue} />
+                      <span>
+                        <span className="font-semibold">{s.name}</span>
+                        {s.display !== s.name && <span className="text-muted-foreground">{s.display.slice(s.name.length)}</span>}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-          <p className="text-xs text-muted-foreground">{t.chat.placeSearchHint}</p>
+        )}
         </>
       )}
 

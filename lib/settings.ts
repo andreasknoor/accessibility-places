@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react"
 
 export interface AppSettings {
-  defaultSearchMode:  "text" | "nearby" | "place" | null  // null = no preference (app default)
+  defaultSearchMode:  "text" | "nearby" | null  // null = no preference (app default)
   defaultMobileView:  "results" | "map"
   defaultChipIdx:     number | null   // null = first chip (Restaurants), same as current default
   sortOrder:          "confidence" | "distance"
@@ -54,7 +54,10 @@ export function loadSettings(): AppSettings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY)
     if (!raw) return DEFAULT_APP_SETTINGS
-    return { ...DEFAULT_APP_SETTINGS, ...JSON.parse(raw) }
+    const parsed = { ...DEFAULT_APP_SETTINGS, ...JSON.parse(raw) }
+    // Migrate legacy "place" mode (removed in v4.13) → "text"
+    if (parsed.defaultSearchMode === "place") parsed.defaultSearchMode = "text"
+    return parsed
   } catch {
     return DEFAULT_APP_SETTINGS
   }

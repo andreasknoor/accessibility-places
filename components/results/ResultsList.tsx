@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useMemo } from "react"
-import { Loader2, RefreshCw, MapPin, Building2, X, ChevronDown, ChevronRight, ArrowUpDown, SlidersHorizontal, Compass, LocateFixed } from "lucide-react"
+import { Loader2, RefreshCw, MapPin, X, ChevronDown, ChevronRight, ArrowUpDown, SlidersHorizontal, Compass, LocateFixed } from "lucide-react"
 import PlaceCard from "./PlaceCard"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
@@ -31,14 +31,13 @@ interface Props {
   parkingSpotCount?:    number
   sortBy?:              "confidence" | "distance"
   onSortChange?:        (s: "confidence" | "distance") => void
-  chatMode?:            "text" | "nearby" | "place"
-  onSwitchToPlace?:     () => void
+  chatMode?:            "text" | "nearby"
   onSwitchToText?:      () => void
   isFirstVisit?:        boolean
   onDismissWelcome?:    () => void
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToPlace, onSwitchToText, isFirstVisit, onDismissWelcome }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToText, isFirstVisit, onDismissWelcome }: Props) {
   const t = useTranslations()
   const [mapHintSeen, setMapHintSeen] = useState(() =>
     typeof window !== "undefined" && !!localStorage.getItem("ap_map_hint_seen")
@@ -240,21 +239,6 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
                 <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 group-hover:text-foreground transition-colors" />
               </button>
             )}
-            {onSwitchToPlace && (
-              <button
-                onClick={onSwitchToPlace}
-                className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 hover:bg-muted hover:border-primary/30 transition-colors text-left group"
-              >
-                <span className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <Building2 className="w-4 h-4 text-primary" />
-                </span>
-                <span className="flex-1 min-w-0">
-                  <span className="block text-sm font-medium text-foreground">{t.chat.welcomePlaceCard}</span>
-                  <span className="block text-xs text-muted-foreground mt-0.5">{t.chat.welcomePlaceCardHint}</span>
-                </span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 group-hover:text-foreground transition-colors" />
-              </button>
-            )}
           </div>
           {onDismissWelcome && (
             <button
@@ -284,46 +268,11 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
           {!isLoading && places.length === 0 && !hasSearched && chatMode !== "nearby" && (
             <div className="flex flex-col items-center gap-4 py-14 px-6 text-center">
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                {chatMode === "place"
-                  ? <Building2 className="w-8 h-8 text-muted-foreground" />
-                  : <MapPin    className="w-8 h-8 text-muted-foreground" />
-                }
+                <MapPin className="w-8 h-8 text-muted-foreground" />
               </div>
               <div className="flex flex-col gap-2">
-                {chatMode === "place" ? (
-                  <>
-                    <p className="font-semibold text-foreground">{t.chat.noSearchYetTitlePlace}</p>
-                    <p className="text-sm text-muted-foreground">{t.chat.noSearchYetPlace}</p>
-                    {onSwitchToText && (
-                      <p className="text-xs text-muted-foreground/70 mt-1">
-                        {t.chat.noSearchYetExploreHint}{" "}
-                        <button
-                          onClick={onSwitchToText}
-                          className="text-primary hover:underline font-medium"
-                        >
-                          {t.chat.noSearchYetExploreLink}
-                        </button>
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <p className="font-semibold text-foreground">{t.chat.noSearchYetTitle}</p>
-                    <p className="text-sm text-muted-foreground">{t.chat.noSearchYet}</p>
-                    <p className="text-xs text-muted-foreground/70 mt-1">{t.chat.noSearchYetNameHint}</p>
-                    {onSwitchToPlace && (
-                      <p className="text-xs text-muted-foreground/70">
-                        {t.chat.noSearchYetPlaceHint}{" "}
-                        <button
-                          onClick={onSwitchToPlace}
-                          className="text-primary hover:underline font-medium"
-                        >
-                          {t.chat.noSearchYetPlaceLink}
-                        </button>
-                      </p>
-                    )}
-                  </>
-                )}
+                <p className="font-semibold text-foreground">{t.chat.noSearchYetTitle}</p>
+                <p className="text-sm text-muted-foreground">{t.chat.noSearchYet}</p>
               </div>
             </div>
           )}

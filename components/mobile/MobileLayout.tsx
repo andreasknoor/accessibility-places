@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import dynamic from "next/dynamic"
 import Script from "next/script"
 import Link from "next/link"
-import { Map, List, SlidersHorizontal, Compass, Building2, ChevronRight, LocateFixed } from "lucide-react"
+import { Map, List, SlidersHorizontal, Compass, ChevronRight, LocateFixed } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import ChatPanel       from "@/components/chat/ChatPanel"
@@ -71,9 +71,8 @@ interface Props {
   hasGpsCoords?:        boolean
   locateTrigger?:       number
   onSwitchToText?:      () => void
-  onSwitchToPlace?:     () => void
-  chatMode:             "text" | "nearby" | "place"
-  onChatModeChange:     (mode: "text" | "nearby" | "place") => void
+  chatMode:             "text" | "nearby"
+  onChatModeChange:     (mode: "text" | "nearby") => void
   biasCoords?:          { lat: number; lon: number }
 }
 
@@ -84,7 +83,7 @@ export default function MobileLayout({
   onReset, onLogoTap, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
   showParking, showToilets, onSetMapLayers, hasToiletData, onToggleParking, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
-  onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, hasGpsCoords, locateTrigger, onSwitchToText, onSwitchToPlace,
+  onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, hasGpsCoords, locateTrigger, onSwitchToText,
   chatMode, onChatModeChange, biasCoords,
   focusLayers, onToggleFocusLayer, focusLoadingLayer, focusHints,
 }: Props) {
@@ -122,11 +121,6 @@ export default function MobileLayout({
     if (activeTab === "map") setMapMounted(true)
   }, [activeTab])
 
-  // When switching to place mode, redirect away from the (now-hidden) filter tab
-  useEffect(() => {
-    if (chatMode === "place" && activeTab === "filter") setActiveTab("results")
-  }, [chatMode, activeTab])
-
   const showWelcome = !!isFirstVisit && chatMode === "nearby" && !hasSearched && places.length === 0 && !isLoading
 
   const activeFilterCount = [filters.entrance, filters.toilet, filters.parking, filters.seating, filters.onlyVerified].filter(Boolean).length
@@ -145,8 +139,7 @@ export default function MobileLayout({
       </span>
     )},
   ]
-  // Filter tab is irrelevant in place mode — hide it and redirect if currently active
-  const tabs = chatMode === "place" ? allTabs.filter((tab) => tab.id !== "filter") : allTabs
+  const tabs = allTabs
 
   return (
     <>
@@ -215,21 +208,6 @@ export default function MobileLayout({
                 <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 group-hover:text-foreground transition-colors" />
               </button>
             )}
-            {onSwitchToPlace && (
-              <button
-                onClick={onSwitchToPlace}
-                className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 hover:bg-muted hover:border-primary/30 transition-colors text-left group"
-              >
-                <span className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <Building2 className="w-4 h-4 text-primary" />
-                </span>
-                <span className="flex-1 min-w-0">
-                  <span className="block text-sm font-medium text-foreground">{t.chat.welcomePlaceCard}</span>
-                  <span className="block text-xs text-muted-foreground mt-0.5">{t.chat.welcomePlaceCardHint}</span>
-                </span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 group-hover:text-foreground transition-colors" />
-              </button>
-            )}
           </div>
           {onDismissWelcome && (
             <button
@@ -267,7 +245,6 @@ export default function MobileLayout({
             sortBy={sortBy}
             onSortChange={onSortChange}
             chatMode={chatMode}
-            onSwitchToPlace={onSwitchToPlace}
             onSwitchToText={onSwitchToText}
             isFirstVisit={isFirstVisit}
           />

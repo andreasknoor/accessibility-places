@@ -23,21 +23,12 @@ export interface Translations {
     noResults:        string
     noSearchYetTitle:      string
     noSearchYet:           string
-    noSearchYetNameHint:    string
-    noSearchYetPlaceHint:   string
-    noSearchYetPlaceLink:   string
-    noSearchYetTitlePlace:  string
-    noSearchYetPlace:       string
-    noSearchYetExploreHint: string
-    noSearchYetExploreLink: string
     errorGeneric:  string
     errorTimeout:  string
     modeText:      string
     modeNearby:    string
-    modePlace:     string
     modeTextSub:   string
     modeNearbySub: string
-    modePlaceSub:  string
     locateButton:  string
     locationError: string
     nearbyIn:        (district: string) => string
@@ -49,10 +40,7 @@ export interface Translations {
     focusChipParking:     string
     focusChipToilet:      string
     namePlaceholder:      string
-    nameToggleShow:       string
-    nameToggleHide:       string
     placeModePlaceholder: string
-    placeSearchHint:   string
     placeNotFound:     string
     placeNoData:       (name: string) => string
     welcomeTitle:       string
@@ -61,8 +49,6 @@ export interface Translations {
     welcomeOrDivider:   string
     welcomeTextCard:     string
     welcomeTextCardHint: string
-    welcomePlaceCard:    string
-    welcomePlaceCardHint:string
     welcomeDismiss:      string
   }
   filters: {
@@ -311,7 +297,6 @@ export interface Translations {
     searchModeDefault: string
     searchModeText:    string
     searchModeNearby:  string
-    searchModePlace:   string
     defaultCategory:   string
     categoryNone:      string
     sortOrder:         string

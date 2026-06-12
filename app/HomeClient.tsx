@@ -118,7 +118,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // initialise to the same value the server renders. The stored preference is
   // applied post-hydration in the useLayoutEffect below to avoid a server/client
   // mismatch (React #418). initialCity is a prop → deterministic, safe here.
-  const [chatMode,      setChatMode]     = useState<"text" | "nearby" | "place">(
+  const [chatMode,      setChatMode]     = useState<"text" | "nearby">(
     initialCity ? "text" : (DEFAULT_APP_SETTINGS.defaultSearchMode ?? "nearby"),
   )
   const [filterCollapsed, setFilterCollapsed] = useState(true)
@@ -413,13 +413,13 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setFocusLoadingLayer(null)
   }, [])
 
-  const handleSwitchMode = useCallback((mode: "text" | "nearby" | "place") => {
+  const handleSwitchMode = useCallback((mode: "text" | "nearby") => {
     clearSearchState()
     setChatMode(mode)
     setResetKey((k) => k + 1)
   }, [clearSearchState])
 
-  const handleModeChange = useCallback((mode: "text" | "nearby" | "place") => {
+  const handleModeChange = useCallback((mode: "text" | "nearby") => {
     clearSearchState()
     setChatMode(mode)
   }, [clearSearchState])
@@ -547,16 +547,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setHasGpsCoords(true)
   }, [])
 
-  // Silently pre-fetch GPS when entering place-search mode so coords are
-  // available immediately when the user submits (avoids mid-submit delay).
-  useEffect(() => {
-    if (chatMode !== "place") return
-    if (gpsCoordRef.current) return
-    if (!isGeolocationAvailable()) return
-    getCurrentPosition({ timeout: 20_000, enableHighAccuracy: false, maximumAge: 60_000 })
-      .then((c) => { gpsCoordRef.current = c; setGpsCoords(c) })
-      .catch(() => { /* silently ignored — place search has other fallbacks */ })
-  }, [chatMode])
 
   // Amenity focus mode: toggle a layer (parking / WC) on or off. Adding the
   // first layer enters focus mode; removing the last exits it. Each toggle
@@ -776,7 +766,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         locateTrigger={locateTriggerKey}
         biasCoords={searchCenter ?? gpsCoords ?? undefined}
         onSwitchToText={() => handleSwitchMode("text")}
-        onSwitchToPlace={() => handleSwitchMode("place")}
         chatMode={chatMode}
         onChatModeChange={handleModeChange}
         focusLayers={focusLayers}
@@ -855,8 +844,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
       {/* ── Main: filter | results | divider | map ── */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {chatMode !== "place" && (
-          filterCollapsed ? (
+        {filterCollapsed ? (
             <button
               onClick={() => setFilterCollapsed(false)}
               className={cn("shrink-0 w-12 border-r border-border flex flex-col items-center justify-center gap-3 py-6 hover:bg-muted/50 transition-colors cursor-pointer", isFullscreen && "hidden")}
@@ -894,8 +882,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
                 <ChevronLeft className="w-4 h-4 text-muted-foreground" />
               </button>
             </div>
-          )
-        )}
+          )}
 
         <div
           className={cn("shrink-0 border-r border-border flex flex-col min-h-0", isFullscreen && "hidden")}
@@ -920,7 +907,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             sortBy={sortBy}
             onSortChange={(s) => { setSortBy(s); updateSettings({ sortOrder: s }) }}
             chatMode={chatMode}
-            onSwitchToPlace={chatMode !== "place" ? () => handleSwitchMode("place") : undefined}
             onSwitchToText={chatMode !== "text" ? () => handleSwitchMode("text") : undefined}
             isFirstVisit={isFirstVisit}
             onDismissWelcome={handleDismissWelcome}
