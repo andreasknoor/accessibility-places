@@ -548,6 +548,51 @@ describe("ChatPanel place mode", () => {
   })
 })
 
+// ─── Amenity focus mode — chip strip ────────────────────────────────────────
+
+describe("ChatPanel focus mode — chip strip", () => {
+  it("shows chips in text mode without focus layers", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
+    expect(screen.getByText(/🍽 Restaurants/)).toBeInTheDocument()
+  })
+
+  it("hides chips when focusLayers has parking", () => {
+    render(
+      <ChatPanel
+        onSearch={vi.fn()}
+        isLoading={false}
+        initialMode="text"
+        focusLayers={new Set(["parking"] as const)}
+      />,
+    )
+    expect(screen.queryByText(/🍽 Restaurants/)).not.toBeInTheDocument()
+  })
+
+  it("hides chips when focusLayers has toilet", () => {
+    render(
+      <ChatPanel
+        onSearch={vi.fn()}
+        isLoading={false}
+        initialMode="text"
+        focusLayers={new Set(["toilet"] as const)}
+      />,
+    )
+    expect(screen.queryByText(/🍽 Restaurants/)).not.toBeInTheDocument()
+  })
+
+  it("shows chips again when focusLayers is empty", () => {
+    render(
+      <ChatPanel
+        onSearch={vi.fn()}
+        isLoading={false}
+        initialMode="text"
+        focusLayers={new Set()}
+      />,
+    )
+    expect(screen.getByText(/🍽 Restaurants/)).toBeInTheDocument()
+  })
+})
+
 // ─── Quoted-name stripping ───────────────────────────────────────────────────
 
 describe("ChatPanel autocomplete — quote stripping", () => {

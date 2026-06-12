@@ -563,8 +563,8 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
         </div>
       )}
 
-      {/* ── Category chip strip — hidden in place mode ── */}
-      {mode !== "place" && (
+      {/* ── Category chip strip — hidden in place mode or during amenity focus ── */}
+      {mode !== "place" && !(focusLayers?.size) && (
         <div className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none] -mx-4 px-4">
           {CHIPS.map((chip, idx) => (
             <button
