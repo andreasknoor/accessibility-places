@@ -17,7 +17,9 @@ export interface Translations {
     copied:      string
   }
   chat: {
-    locationPlaceholder: string
+    unifiedPlaceholder: string
+    suggestGroupAreas:  string
+    suggestGroupVenues: string
     send:          string
     thinking:      string
     noResults:        string
@@ -40,8 +42,6 @@ export interface Translations {
     focusChipParking:     string
     focusChipToilet:      string
     focusExit:            string
-    namePlaceholder:      string
-    placeModePlaceholder: string
     placeNotFound:     string
     placeNoData:       (name: string) => string
     welcomeTitle:       string

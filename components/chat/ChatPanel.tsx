@@ -1,11 +1,13 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, Fragment } from "react"
 import { Send, Loader2, LocateFixed, Compass, X, Coffee, UtensilsCrossed, Beer, BookOpen, Hotel, Landmark, Film, Library, GalleryHorizontal, Star, IceCream, MapPin } from "lucide-react"
+import { track } from "@vercel/analytics"
 import { Button } from "@/components/ui/button"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { cn } from "@/lib/utils"
+import { extractQuotedName } from "@/lib/llm"
 import { getCurrentPosition, isGeolocationAvailable } from "@/lib/native/geolocation"
 import DevConsole from "@/components/easter-eggs/DevConsole"
 import type { AmenityType } from "@/lib/types"
@@ -50,9 +52,28 @@ const CHIPS = [
 type Mode        = "text" | "nearby"
 type NearbyPhase = "idle" | "locating" | { district: string; lat: number; lon: number } | "error"
 
-type Suggestion = { display: string; name: string }
+// One suggestion from /api/geocode/unified-suggest — areas (cities/districts)
+// and venues (POIs) arrive classified in a single ranked list, areas first.
+type UnifiedSuggestion = {
+  kind:     "area" | "venue"
+  display:  string
+  name:     string
+  lat:      number | null
+  lon:      number | null
+  osmKey:   string | null
+  osmValue: string | null
+}
 
-type PlaceSuggestion = Suggestion & { lat: number | null; lon: number | null; osmKey: string | null; osmValue: string | null }
+// Matches any quoted segment (straight, curly, German typographic, guillemets) —
+// used to strip the quoted name filter before autocomplete / location parsing.
+// Mirrors the quote classes in extractQuotedName (lib/llm.ts).
+const QUOTE_STRIP_RE = /["'„""‟"«»‹›][^"'„""‟"«»‹›]*["'„""‟"«»‹›]?/gu
+
+// The plain-text part of the input: quoted name removed, a leading "in " dropped
+// so "…" in Berlin" doesn't produce "<Chip> in in Berlin" queries.
+function locationPart(input: string): string {
+  return input.replace(QUOTE_STRIP_RE, "").replace(/^\s*in\s+/i, "").trim()
+}
 
 function PlaceCategoryIcon({ osmKey, osmValue }: { osmKey: string | null; osmValue: string | null }) {
   const Icon = (() => {
@@ -104,41 +125,34 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const [mode,           setMode]           = useState<Mode>(initialMode === "place" ? "text" : (initialMode ?? "nearby"))
   const [nearbyPhase,    setNearbyPhase]    = useState<NearbyPhase>("idle")
   const [location,       setLocation]       = useState("")
-  const [name,           setName]           = useState("")
   const [selectedIdx,    setSelectedIdx]    = useState(0)
-  const [suggestions,    setSuggestions]    = useState<Suggestion[]>([])
+  const [suggestions,    setSuggestions]    = useState<UnifiedSuggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [highlightedIdx, setHighlightedIdx] = useState(-1)
-  const [inputPulse,         setInputPulse]         = useState(false)
-  const [nameSuggestions,    setNameSuggestions]    = useState<PlaceSuggestion[]>([])
-  const [showNameSuggestions, setShowNameSuggestions] = useState(false)
-  const [nameHighlightedIdx,  setNameHighlightedIdx]  = useState(-1)
-  const [showDevConsole,      setShowDevConsole]      = useState(false)
+  const [inputPulse,     setInputPulse]     = useState(false)
+  // True while the input holds a venue picked from the dropdown — chips are
+  // meaningless for a single-venue search and are greyed out until the user
+  // edits the field again.
+  const [venuePicked,    setVenuePicked]    = useState(false)
+  const [showDevConsole, setShowDevConsole] = useState(false)
   const selectedIdxRef       = useRef(0)
   const debounceRef          = useRef<ReturnType<typeof setTimeout>>(undefined)
   const suggestAbortRef      = useRef<AbortController>(undefined)
-  const nameDebounceRef      = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const nameAbortRef         = useRef<AbortController>(undefined)
-  // Holds the place-name set programmatically by selecting a name suggestion.
-  // Name autocomplete is suppressed while `name` equals this value — this
-  // survives the biasCoords/locale re-renders that fire after the place search
-  // completes (setSearchCenter → biasCoords change), which a one-shot flag would
-  // miss, causing the dropdown to re-open. Cleared when the user types. Same
-  // rationale as restoredLocRef for the location field.
-  const selectedNameRef      = useRef("")
-  const skipSuggestRef       = useRef(false)
   const locatingRef          = useRef(false)
   const watchIdRef           = useRef<number | null>(null)
-  // Holds the location value that was set programmatically on restore.
-  // Autocomplete is suppressed as long as location equals this value —
-  // survives locale re-renders that would otherwise consume the one-shot
-  // skipSuggestRef too early. Cleared when the user types.
-  const restoredLocRef    = useRef("")
+  // Holds the location value that was set programmatically (restore, area pick,
+  // venue pick). Autocomplete is suppressed as long as location equals this
+  // value — survives the locale/biasCoords re-renders that fire after a search
+  // completes, which a one-shot skip flag would miss (the dropdown would
+  // re-open). Cleared when the user types.
+  const programmaticLocRef = useRef("")
+  // The venue picked from the dropdown — lets Enter re-run the place search
+  // while the input still shows the picked suggestion.
+  const pickedVenueRef    = useRef<{ display: string; name: string; lat: number | null; lon: number | null } | null>(null)
   const inputRef          = useRef<HTMLInputElement>(null)
-  const handleLocateRef      = useRef<() => void>(() => {})
-  // Refs mirror `name` and `locale` so async callbacks in handleLocate (GPS success,
-  // watchPosition) read the current value rather than the closure-captured snapshot.
-  const nameRef           = useRef("")
+  const handleLocateRef   = useRef<() => void>(() => {})
+  // Mirrors `locale` so async GPS callbacks read the live value rather than the
+  // closure-captured snapshot.
   const localeRef         = useRef(locale)
 
   const district = typeof nearbyPhase === "object" ? nearbyPhase.district : null
@@ -153,7 +167,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // URL-derived initialLocation takes priority over localStorage.
   useEffect(() => {
     if (initialLocation) {
-      restoredLocRef.current = initialLocation
+      programmaticLocRef.current = initialLocation
       setLocation(initialLocation)
       if (initialChipIdx !== undefined && initialChipIdx >= 0 && initialChipIdx < CHIPS.length) {
         setSelectedIdx(initialChipIdx)
@@ -178,7 +192,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           applyDefaultChip()
         }
         if (typeof loc === "string" && loc.trim()) {
-          restoredLocRef.current = loc
+          programmaticLocRef.current = loc
           setLocation(loc)
         }
       } else {
@@ -230,8 +244,6 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
 
   // Keep ref pointing at latest handleLocate to avoid stale closure in the trigger effect
   useEffect(() => { handleLocateRef.current = handleLocate })
-  // Keep mirrors of name/locale in refs so the async GPS callbacks read live values.
-  useEffect(() => { nameRef.current = name })
   useEffect(() => { localeRef.current = locale })
 
   // Fire locate when the parent bumps locateTrigger (e.g. welcome-screen dismiss)
@@ -244,19 +256,14 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   }, [locateTrigger])
 
 
-  // Fetch location autocomplete suggestions (Photon via backend proxy)
+  // Fetch unified autocomplete suggestions (areas + venues, Photon via backend proxy)
   useEffect(() => {
-    // Skip fetch when location was set by selecting a suggestion (not by the user typing)
-    if (skipSuggestRef.current) {
-      skipSuggestRef.current = false
-      return
-    }
-    // Skip fetch for the restored value — stays suppressed across locale
-    // re-renders until the user actually modifies the field.
-    if (restoredLocRef.current && location === restoredLocRef.current) return
+    // Skip fetch for programmatically set values (restore / suggestion pick) —
+    // stays suppressed across re-renders until the user actually edits the field.
+    if (programmaticLocRef.current && location === programmaticLocRef.current) return
 
     // Autocomplete on the non-quoted part of the input
-    const query = location.replace(/["'„""‟"«»‹›][^"'„""‟"«»‹›]*["'„""‟"«»‹›]?/gu, "").trim()
+    const query = location.replace(QUOTE_STRIP_RE, "").trim()
 
     if (query.length < 2) {
       setSuggestions([])
@@ -270,9 +277,10 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       const ac = new AbortController()
       suggestAbortRef.current = ac
       try {
-        const res = await fetch(`/api/geocode/suggest?q=${encodeURIComponent(query)}&lang=${locale}`, { signal: ac.signal })
+        const bias = biasCoords ? `&lat=${biasCoords.lat}&lon=${biasCoords.lon}` : ""
+        const res = await fetch(`/api/geocode/unified-suggest?q=${encodeURIComponent(query)}&lang=${locale}${bias}`, { signal: ac.signal })
         if (!res.ok) return
-        const data: Suggestion[] = await res.json()
+        const data: UnifiedSuggestion[] = await res.json()
         setSuggestions(data)
         setShowSuggestions(data.length > 0)
         setHighlightedIdx(-1)
@@ -283,52 +291,19 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       clearTimeout(debounceRef.current)
       suggestAbortRef.current?.abort()
     }
-  }, [location, locale])
+  }, [location, locale, biasCoords?.lat, biasCoords?.lon])
 
-  // Fetch place-name suggestions — active in text mode when the location field is
-  // empty (place-search intent). When location is filled the name field acts as a
-  // filter and Photon autocomplete would be confusing/redundant.
-  useEffect(() => {
-    // Suppress while name matches a just-selected suggestion — survives the
-    // biasCoords re-render fired by setSearchCenter after the search completes.
-    if (name && name === selectedNameRef.current) {
-      setNameSuggestions([])
-      setShowNameSuggestions(false)
-      return
-    }
-    if (mode !== "text" || location.trim() || name.length < 2) {
-      setNameSuggestions([])
-      setShowNameSuggestions(false)
-      return
-    }
-    clearTimeout(nameDebounceRef.current)
-    nameAbortRef.current?.abort()
-    nameDebounceRef.current = setTimeout(async () => {
-      const ac = new AbortController()
-      nameAbortRef.current = ac
-      try {
-        const bias = biasCoords ? `&lat=${biasCoords.lat}&lon=${biasCoords.lon}` : ""
-        const res = await fetch(`/api/geocode/place-suggest?q=${encodeURIComponent(name)}&lang=${locale}${bias}`, { signal: ac.signal })
-        if (!res.ok) return
-        const data = await res.json()
-        setNameSuggestions(data)
-        setShowNameSuggestions(data.length > 0)
-        setNameHighlightedIdx(-1)
-      } catch { /* AbortError or network error */ }
-    }, 300)
-    return () => {
-      clearTimeout(nameDebounceRef.current)
-      nameAbortRef.current?.abort()
-    }
-  }, [name, location, locale, mode, biasCoords?.lat, biasCoords?.lon])
+  function clearPickState() {
+    programmaticLocRef.current = ""
+    pickedVenueRef.current = null
+    setVenuePicked(false)
+  }
 
   function switchMode(next: Mode) {
     setMode(next)
     onModeChange?.(next)
-    setName("")
-    selectedNameRef.current = ""
-    setNameSuggestions([])
-    setShowNameSuggestions(false)
+    setSuggestions([])
+    setShowSuggestions(false)
     if (next !== "nearby") {
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current)
@@ -340,7 +315,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       handleLocate()
     } else if (typeof nearbyPhase === "object") {
       const label = locale === "de" ? CHIPS[selectedIdx].de : CHIPS[selectedIdx].en
-      onSearch(`${label} in ${nearbyPhase.district}`, { lat: nearbyPhase.lat, lon: nearbyPhase.lon }, name.trim() || undefined)
+      onSearch(`${label} in ${nearbyPhase.district}`, { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
     }
   }
 
@@ -349,11 +324,12 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     selectedIdxRef.current = idx
     const label = locale === "de" ? CHIPS[idx].de : CHIPS[idx].en
     if (mode === "nearby" && typeof nearbyPhase === "object") {
-      onSearch(`${label} in ${nearbyPhase.district}`, { lat: nearbyPhase.lat, lon: nearbyPhase.lon }, name.trim() || undefined)
-    } else if (mode === "text" && location.trim()) {
+      onSearch(`${label} in ${nearbyPhase.district}`, { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
+    } else if (mode === "text" && !venuePicked && locationPart(location)) {
       setSuggestions([])
       setShowSuggestions(false)
-      onSearch(`${label} in ${location.trim()}`, undefined, name.trim() || undefined)
+      const quoted = extractQuotedName(location)
+      onSearch(`${label} in ${locationPart(location)}`, undefined, quoted || undefined)
     }
   }
 
@@ -366,46 +342,61 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     if (isLoading) return
     clearTimeout(debounceRef.current)
     suggestAbortRef.current?.abort()
-    clearTimeout(nameDebounceRef.current)
-    nameAbortRef.current?.abort()
     if (location.trim().toLowerCase() === "accessible places") {
       setShowDevConsole(true)
       setLocation("")
       return
     }
-    if (!location.trim()) {
-      if (name.trim()) {
-        setNameSuggestions([])
-        setShowNameSuggestions(false)
-        onPlaceSearch?.(name.trim())
-      }
-      return
-    }
+    if (!location.trim()) return
     setSuggestions([])
     setShowSuggestions(false)
+
+    // Input still holds a picked venue → re-run the place search for it.
+    const picked = pickedVenueRef.current
+    if (picked && location.trim() === picked.display) {
+      const coords = picked.lat != null && picked.lon != null ? { lat: picked.lat, lon: picked.lon } : undefined
+      onPlaceSearch?.(picked.name, coords)
+      return
+    }
+
+    const quoted = extractQuotedName(location)
+    const rest   = locationPart(location)
+    if (!rest) {
+      // Only a quoted name, no location → search the venue by name.
+      if (quoted) onPlaceSearch?.(quoted)
+      return
+    }
+    // Default for raw free text: area search (conservative — never silently
+    // routes typed text to a venue lookup; venues are reached via the dropdown).
     try { localStorage.setItem("ap_last_search", JSON.stringify({ idx: selectedIdx, loc: location.trim() })) } catch { /* ignore */ }
-    onSearch(buildQuery(location), undefined, name.trim() || undefined)
+    onSearch(buildQuery(rest), undefined, quoted || undefined)
   }
 
-  function selectNameSuggestion(s: { display: string; name: string; lat: number | null; lon: number | null }) {
-    selectedNameRef.current = s.name
-    setName(s.name)
-    setNameSuggestions([])
-    setShowNameSuggestions(false)
-    setNameHighlightedIdx(-1)
-    const coords = s.lat != null && s.lon != null ? { lat: s.lat, lon: s.lon } : undefined
-    onPlaceSearch?.(s.name, coords)
-  }
-
-  function selectSuggestion(s: Suggestion) {
-    const newLocation = s.display
-    skipSuggestRef.current = true
-    setLocation(newLocation)
+  function selectSuggestion(s: UnifiedSuggestion) {
     setSuggestions([])
     setShowSuggestions(false)
     setHighlightedIdx(-1)
+    track("suggest_pick", { kind: s.kind })
+
+    if (s.kind === "venue") {
+      programmaticLocRef.current = s.display
+      pickedVenueRef.current = { display: s.display, name: s.name, lat: s.lat, lon: s.lon }
+      setVenuePicked(true)
+      setLocation(s.display)
+      const coords = s.lat != null && s.lon != null ? { lat: s.lat, lon: s.lon } : undefined
+      onPlaceSearch?.(s.name, coords)
+      return
+    }
+
+    // Area pick — preserve a quoted name filter the user already typed.
+    const quoted      = extractQuotedName(location)
+    const newLocation = quoted ? `"${quoted}" in ${s.display}` : s.display
+    programmaticLocRef.current = newLocation
+    pickedVenueRef.current = null
+    setVenuePicked(false)
+    setLocation(newLocation)
     try { localStorage.setItem("ap_last_search", JSON.stringify({ idx: selectedIdx, loc: newLocation.trim() })) } catch { /* ignore */ }
-    onSearch(buildQuery(newLocation), undefined, name.trim() || undefined)
+    onSearch(buildQuery(s.display), undefined, quoted || undefined)
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -457,11 +448,10 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           setNearbyPhase({ district: d, lat, lon })
           onGpsResolved?.({ lat, lon })
           const chip = CHIPS[selectedIdxRef.current]
-          // Read locale/name from refs so a fix that arrives after the user typed
-          // or switched language still uses the current values.
+          // Read locale from a ref so a fix that arrives after the user switched
+          // language still uses the current value.
           const label = localeRef.current === "de" ? chip.de : chip.en
-          const nameHint = nameRef.current.trim() || undefined
-          onSearch(d ? `${label} in ${d}` : label, { lat, lon }, nameHint)
+          onSearch(d ? `${label} in ${d}` : label, { lat, lon })
         } catch {
           setNearbyPhase("error")
         }
@@ -486,6 +476,10 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
         console.error("[geolocation] error", err instanceof Error ? err.message : String(err))
       })
   }
+
+  // Index of the first suggestion of each kind — used to emit the group header rows.
+  const firstAreaIdx  = suggestions.findIndex((s) => s.kind === "area")
+  const firstVenueIdx = suggestions.findIndex((s) => s.kind === "venue")
 
   return (
     <>
@@ -553,7 +547,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             <button
               key={chip.de}
               onClick={() => selectChip(idx)}
-              disabled={isLoading}
+              disabled={isLoading || (mode === "text" && venuePicked)}
               className={cn(
                 "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
                 idx === selectedIdx
@@ -569,9 +563,8 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
 
       {/* ── Text search mode ── */}
       {mode === "text" && (
-        <>
         <div className="flex gap-2 items-center">
-          {/* Location input */}
+          {/* Unified search input — areas, venues, and quoted name filters */}
           <div className="relative flex-1">
             {inputPulse && (
               <span
@@ -584,13 +577,18 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             <input
               ref={inputRef}
               value={location}
-              onChange={(e) => { restoredLocRef.current = ""; setLocation(e.target.value); setHighlightedIdx(-1) }}
+              onChange={(e) => { clearPickState(); setLocation(e.target.value); setHighlightedIdx(-1) }}
               onKeyDown={handleKeyDown}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
               onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-              placeholder={t.chat.locationPlaceholder}
+              placeholder={t.chat.unifiedPlaceholder}
               disabled={isLoading}
               autoFocus={autoFocus}
+              role="combobox"
+              aria-expanded={showSuggestions && suggestions.length > 0}
+              aria-controls="unified-suggest-list"
+              aria-autocomplete="list"
+              aria-activedescendant={highlightedIdx >= 0 ? `unified-opt-${highlightedIdx}` : undefined}
               className={cn(
                 "w-full rounded-md border bg-background px-3 py-2 text-sm h-[38px]",
                 "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
@@ -604,6 +602,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                 type="button"
                 onMouseDown={(e) => {
                   e.preventDefault()
+                  clearPickState()
                   setLocation("")
                   setSuggestions([])
                   setShowSuggestions(false)
@@ -617,10 +616,11 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
               </button>
             )}
 
-            {/* Location autocomplete dropdown */}
+            {/* Grouped autocomplete dropdown: areas first, then venues */}
             {showSuggestions && suggestions.length > 0 && (
               <ul
                 role="listbox"
+                id="unified-suggest-list"
                 className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg overflow-hidden"
               >
                 {suggestions.map((s, i) => {
@@ -629,104 +629,55 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                   const bold     = splitAt !== -1 ? s.display.slice(0, splitAt) : s.display
                   const rest     = splitAt !== -1 ? s.display.slice(splitAt)    : ""
                   return (
-                    <li
-                      key={s.display}
-                      role="option"
-                      aria-selected={i === highlightedIdx}
-                      onMouseDown={(e) => { e.preventDefault(); selectSuggestion(s) }}
-                      className={cn(
-                        "px-3 py-2 text-sm cursor-pointer transition-colors",
-                        i === highlightedIdx
-                          ? "bg-primary text-primary-foreground"
-                          : "hover:bg-muted",
+                    <Fragment key={`${s.kind}-${s.display}`}>
+                      {i === firstAreaIdx && (
+                        <li role="presentation" className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground select-none">
+                          {t.chat.suggestGroupAreas}
+                        </li>
                       )}
-                    >
-                      <span className="font-semibold">{bold}</span>{rest}
-                    </li>
+                      {i === firstVenueIdx && (
+                        <li role="presentation" className={cn(
+                          "px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground select-none",
+                          firstVenueIdx > 0 && "border-t border-border",
+                        )}>
+                          {t.chat.suggestGroupVenues}
+                        </li>
+                      )}
+                      <li
+                        id={`unified-opt-${i}`}
+                        role="option"
+                        aria-selected={i === highlightedIdx}
+                        onMouseDown={(e) => { e.preventDefault(); selectSuggestion(s) }}
+                        className={cn(
+                          "px-3 py-2 text-sm cursor-pointer transition-colors",
+                          i === highlightedIdx
+                            ? "bg-primary text-primary-foreground"
+                            : "hover:bg-muted",
+                        )}
+                      >
+                        {s.kind === "venue" ? (
+                          <span className="flex items-center gap-2">
+                            <PlaceCategoryIcon osmKey={s.osmKey} osmValue={s.osmValue} />
+                            <span>
+                              <span className="font-semibold">{bold}</span>{rest}
+                            </span>
+                          </span>
+                        ) : (
+                          <span>
+                            <span className="font-semibold">{bold}</span>{rest}
+                          </span>
+                        )}
+                      </li>
+                    </Fragment>
                   )
                 })}
               </ul>
             )}
           </div>
 
-          {/* Name / place input — desktop: inline flex-1 alongside location */}
-          {!isMobile && (
-            <div className="relative flex-1">
-              <input
-                value={name}
-                onChange={(e) => { selectedNameRef.current = ""; setName(e.target.value); setNameHighlightedIdx(-1) }}
-                onKeyDown={(e) => {
-                  if (showNameSuggestions && nameSuggestions.length > 0) {
-                    if (e.key === "ArrowDown") { e.preventDefault(); setNameHighlightedIdx((i) => Math.min(i + 1, nameSuggestions.length - 1)); return }
-                    if (e.key === "ArrowUp")   { e.preventDefault(); setNameHighlightedIdx((i) => Math.max(i - 1, -1)); return }
-                    if (e.key === "Escape")    { setShowNameSuggestions(false); setNameHighlightedIdx(-1); return }
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      if (nameHighlightedIdx >= 0) { selectNameSuggestion(nameSuggestions[nameHighlightedIdx]); return }
-                    }
-                  }
-                  if (e.key !== "Enter") return
-                  if (!location.trim() && name.trim()) onPlaceSearch?.(name.trim())
-                  else submit()
-                }}
-                onBlur={() => setTimeout(() => setShowNameSuggestions(false), 150)}
-                onFocus={() => nameSuggestions.length > 0 && setShowNameSuggestions(true)}
-                placeholder={location.trim() ? t.chat.namePlaceholder : t.chat.placeModePlaceholder}
-                disabled={isLoading}
-                className={cn(
-                  "w-full rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]",
-                  "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
-                  "focus-visible:ring-ring disabled:opacity-50",
-                  name && "pr-7",
-                )}
-              />
-              {name && (
-                <button
-                  type="button"
-                  onMouseDown={(e) => { e.preventDefault(); setName(""); setNameSuggestions([]); setShowNameSuggestions(false) }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label="Clear"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-
-              {/* Name/place autocomplete dropdown (only when location is empty) */}
-              {showNameSuggestions && nameSuggestions.length > 0 && (
-                <ul
-                  role="listbox"
-                  className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg overflow-hidden"
-                >
-                  {nameSuggestions.map((s, i) => (
-                    <li
-                      key={s.display}
-                      role="option"
-                      aria-selected={i === nameHighlightedIdx}
-                      onMouseDown={(e) => { e.preventDefault(); selectNameSuggestion(s) }}
-                      className={cn(
-                        "px-3 py-2 text-sm cursor-pointer transition-colors",
-                        i === nameHighlightedIdx
-                          ? "bg-primary text-primary-foreground"
-                          : "hover:bg-muted",
-                      )}
-                    >
-                      <span className="flex items-center gap-2">
-                        <PlaceCategoryIcon osmKey={s.osmKey} osmValue={s.osmValue} />
-                        <span>
-                          <span className="font-semibold">{s.name}</span>
-                          {s.display !== s.name && <span className="text-muted-foreground">{s.display.slice(s.name.length)}</span>}
-                        </span>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
-
           <Button
             onClick={submit}
-            disabled={isLoading || (!location.trim() && !name.trim())}
+            disabled={isLoading || !location.trim()}
             size="sm"
             className="shrink-0 relative overflow-hidden"
           >
@@ -746,82 +697,6 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             </span>
           </Button>
         </div>
-
-        {/* Mobile: name/place input as second row */}
-        {isMobile && (
-          <div className="relative">
-            <input
-              value={name}
-              onChange={(e) => { selectedNameRef.current = ""; setName(e.target.value); setNameHighlightedIdx(-1) }}
-              onKeyDown={(e) => {
-                if (showNameSuggestions && nameSuggestions.length > 0) {
-                  if (e.key === "ArrowDown") { e.preventDefault(); setNameHighlightedIdx((i) => Math.min(i + 1, nameSuggestions.length - 1)); return }
-                  if (e.key === "ArrowUp")   { e.preventDefault(); setNameHighlightedIdx((i) => Math.max(i - 1, -1)); return }
-                  if (e.key === "Escape")    { setShowNameSuggestions(false); setNameHighlightedIdx(-1); return }
-                  if (e.key === "Enter") {
-                    e.preventDefault()
-                    if (nameHighlightedIdx >= 0) { selectNameSuggestion(nameSuggestions[nameHighlightedIdx]); return }
-                  }
-                }
-                if (e.key !== "Enter") return
-                if (!location.trim() && name.trim()) onPlaceSearch?.(name.trim())
-                else submit()
-              }}
-              onBlur={() => setTimeout(() => setShowNameSuggestions(false), 150)}
-              onFocus={() => nameSuggestions.length > 0 && setShowNameSuggestions(true)}
-              placeholder={location.trim() ? t.chat.namePlaceholder : t.chat.placeModePlaceholder}
-              disabled={isLoading}
-              className={cn(
-                "w-full rounded-md border border-input bg-background px-3 py-2 text-sm h-[38px]",
-                "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
-                "focus-visible:ring-ring disabled:opacity-50",
-                name && "pr-7",
-              )}
-            />
-            {name && (
-              <button
-                type="button"
-                onMouseDown={(e) => { e.preventDefault(); setName(""); setNameSuggestions([]); setShowNameSuggestions(false) }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Clear"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-
-            {/* Name/place autocomplete dropdown (mobile, only when location is empty) */}
-            {showNameSuggestions && nameSuggestions.length > 0 && (
-              <ul
-                role="listbox"
-                className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg overflow-hidden"
-              >
-                {nameSuggestions.map((s, i) => (
-                  <li
-                    key={s.display}
-                    role="option"
-                    aria-selected={i === nameHighlightedIdx}
-                    onMouseDown={(e) => { e.preventDefault(); selectNameSuggestion(s) }}
-                    className={cn(
-                      "px-3 py-2 text-sm cursor-pointer transition-colors",
-                      i === nameHighlightedIdx
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted",
-                    )}
-                  >
-                    <span className="flex items-center gap-2">
-                      <PlaceCategoryIcon osmKey={s.osmKey} osmValue={s.osmValue} />
-                      <span>
-                        <span className="font-semibold">{s.name}</span>
-                        {s.display !== s.name && <span className="text-muted-foreground">{s.display.slice(s.name.length)}</span>}
-                      </span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-        </>
       )}
 
       {/* ── Nearby mode ── */}

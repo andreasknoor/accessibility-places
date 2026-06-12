@@ -12,11 +12,31 @@ vi.mock("@/lib/i18n", async (importOriginal) => {
   }
 })
 
-function renderPanel(onSearch = vi.fn(), isLoading = false) {
-  return render(<ChatPanel onSearch={onSearch} isLoading={isLoading} initialMode="text" />)
+vi.mock("@vercel/analytics", () => ({ track: vi.fn() }))
+
+type MockSuggestion = {
+  kind: "area" | "venue"
+  display: string
+  name: string
+  lat: number | null
+  lon: number | null
+  osmKey: string | null
+  osmValue: string | null
 }
 
-function mockFetch(suggestions: { display: string; name: string }[]) {
+function area(name: string, display = name): MockSuggestion {
+  return { kind: "area", display, name, lat: 52.5, lon: 13.4, osmKey: "place", osmValue: "city" }
+}
+
+function venue(name: string, display = name, coords: { lat: number | null; lon: number | null } = { lat: 51.54, lon: 6.42 }): MockSuggestion {
+  return { kind: "venue", display, name, ...coords, osmKey: "amenity", osmValue: "pub" }
+}
+
+function renderPanel(onSearch = vi.fn(), isLoading = false, onPlaceSearch = vi.fn()) {
+  return render(<ChatPanel onSearch={onSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} initialMode="text" />)
+}
+
+function mockFetch(suggestions: MockSuggestion[]) {
   vi.stubGlobal(
     "fetch",
     vi.fn().mockResolvedValue(
@@ -29,8 +49,7 @@ function mockFetch(suggestions: { display: string; name: string }[]) {
 }
 
 function getInput() {
-  // Match location-input placeholder specifically — the name field also contains "Ort" in DE
-  return screen.getByPlaceholderText(/Ort eingeben|Enter a city/i) as HTMLInputElement
+  return screen.getByPlaceholderText(/Ort oder Name|Place or name/i) as HTMLInputElement
 }
 
 beforeEach(() => {
@@ -56,13 +75,13 @@ describe("ChatPanel autocomplete — trigger", () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it("fetches suggestions after 300 ms debounce for 2+ char input", async () => {
-    mockFetch([{ display: "Berlin", name: "Berlin" }])
+  it("fetches unified suggestions after 300 ms debounce for 2+ char input", async () => {
+    mockFetch([area("Berlin")])
     renderPanel()
     fireEvent.change(getInput(), { target: { value: "Be" } })
     await act(() => vi.advanceTimersByTimeAsync(300))
     expect(vi.mocked(fetch)).toHaveBeenCalledWith(
-      expect.stringContaining("q=Be"),
+      expect.stringContaining("unified-suggest?q=Be"),
       expect.any(Object),
     )
   })
@@ -76,7 +95,7 @@ describe("ChatPanel autocomplete — trigger", () => {
   })
 
   it("only fires one fetch for rapid successive keystrokes", async () => {
-    mockFetch([{ display: "Berlin", name: "Berlin" }])
+    mockFetch([area("Berlin")])
     renderPanel()
     fireEvent.change(getInput(), { target: { value: "Be" } })
     fireEvent.change(getInput(), { target: { value: "Ber" } })
@@ -86,7 +105,7 @@ describe("ChatPanel autocomplete — trigger", () => {
   })
 
   it("clears suggestions when input drops below 2 chars", async () => {
-    mockFetch([{ display: "Berlin", name: "Berlin" }])
+    mockFetch([area("Berlin")])
     renderPanel()
     fireEvent.change(getInput(), { target: { value: "Berlin" } })
     await act(() => vi.runAllTimersAsync())
@@ -98,21 +117,37 @@ describe("ChatPanel autocomplete — trigger", () => {
   })
 })
 
-// ─── Dropdown rendering ──────────────────────────────────────────────────────
+// ─── Dropdown rendering (grouped) ────────────────────────────────────────────
 
-describe("ChatPanel autocomplete — dropdown", () => {
-  it("shows suggestion items when API returns data", async () => {
-    mockFetch([
-      { display: "Berlin", name: "Berlin" },
-      { display: "Mitte, Berlin", name: "Mitte" },
-    ])
+describe("ChatPanel autocomplete — grouped dropdown", () => {
+  it("shows the areas group header for area suggestions", async () => {
+    mockFetch([area("Berlin"), area("Bernau", "Bernau, Brandenburg (DE)")])
     renderPanel()
     fireEvent.change(getInput(), { target: { value: "Ber" } })
     await act(() => vi.runAllTimersAsync())
     expect(screen.getByRole("listbox")).toBeInTheDocument()
-    expect(screen.getByText("Berlin")).toBeInTheDocument()
-    // "Mitte, Berlin" is rendered as <span>Mitte</span>, Berlin — match by full text content
-    expect(screen.getByText((_, el) => el?.textContent === "Mitte, Berlin")).toBeInTheDocument()
+    expect(screen.getByText("Orte")).toBeInTheDocument()
+    expect(screen.queryByText("Lokationen")).not.toBeInTheDocument()
+  })
+
+  it("shows the venues group header for venue suggestions", async () => {
+    mockFetch([venue("Bierpumpe", "Bierpumpe, Issum (DE)")])
+    renderPanel()
+    fireEvent.change(getInput(), { target: { value: "Bier" } })
+    await act(() => vi.runAllTimersAsync())
+    expect(screen.getByText("Lokationen")).toBeInTheDocument()
+    expect(screen.queryByText("Orte")).not.toBeInTheDocument()
+  })
+
+  it("shows both group headers, areas first, for mixed results", async () => {
+    mockFetch([area("Essen"), venue("Restaurant Essen", "Restaurant Essen, Bochum (DE)")])
+    renderPanel()
+    fireEvent.change(getInput(), { target: { value: "Essen" } })
+    await act(() => vi.runAllTimersAsync())
+    const headers = [screen.getByText("Orte"), screen.getByText("Lokationen")]
+    expect(headers[0].compareDocumentPosition(headers[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // headers are not selectable options
+    expect(screen.getAllByRole("option")).toHaveLength(2)
   })
 
   it("hides dropdown when API returns empty array", async () => {
@@ -132,7 +167,7 @@ describe("ChatPanel autocomplete — dropdown", () => {
   })
 
   it("hides dropdown on Escape", async () => {
-    mockFetch([{ display: "Berlin", name: "Berlin" }])
+    mockFetch([area("Berlin")])
     renderPanel()
     fireEvent.change(getInput(), { target: { value: "Ber" } })
     await act(() => vi.runAllTimersAsync())
@@ -143,11 +178,11 @@ describe("ChatPanel autocomplete — dropdown", () => {
   })
 })
 
-// ─── Keyboard navigation ─────────────────────────────────────────────────────
+// ─── Keyboard navigation (flat index across groups) ─────────────────────────
 
 describe("ChatPanel autocomplete — keyboard navigation", () => {
   it("ArrowDown highlights first item", async () => {
-    mockFetch([{ display: "Berlin", name: "Berlin" }])
+    mockFetch([area("Berlin")])
     renderPanel()
     fireEvent.change(getInput(), { target: { value: "Ber" } })
     await act(() => vi.runAllTimersAsync())
@@ -157,11 +192,20 @@ describe("ChatPanel autocomplete — keyboard navigation", () => {
     expect(option).toHaveAttribute("aria-selected", "true")
   })
 
+  it("ArrowDown crosses from the areas group into the venues group", async () => {
+    mockFetch([area("Essen"), venue("Bierpumpe", "Bierpumpe, Issum (DE)")])
+    renderPanel()
+    fireEvent.change(getInput(), { target: { value: "Essen" } })
+    await act(() => vi.runAllTimersAsync())
+
+    fireEvent.keyDown(getInput(), { key: "ArrowDown" })
+    fireEvent.keyDown(getInput(), { key: "ArrowDown" })
+    const venueOpt = screen.getByRole("option", { name: /Bierpumpe/ })
+    expect(venueOpt).toHaveAttribute("aria-selected", "true")
+  })
+
   it("ArrowUp after ArrowDown moves highlight back", async () => {
-    mockFetch([
-      { display: "Berlin", name: "Berlin" },
-      { display: "Hamburg", name: "Hamburg" },
-    ])
+    mockFetch([area("Berlin"), area("Hamburg")])
     renderPanel()
     fireEvent.change(getInput(), { target: { value: "Ber" } })
     await act(() => vi.runAllTimersAsync())
@@ -173,9 +217,19 @@ describe("ChatPanel autocomplete — keyboard navigation", () => {
     expect(first).toHaveAttribute("aria-selected", "true")
   })
 
-  it("Enter with highlighted item selects the suggestion", async () => {
+  it("sets aria-activedescendant on the input while navigating", async () => {
+    mockFetch([area("Berlin")])
+    renderPanel()
+    fireEvent.change(getInput(), { target: { value: "Ber" } })
+    await act(() => vi.runAllTimersAsync())
+
+    fireEvent.keyDown(getInput(), { key: "ArrowDown" })
+    expect(getInput()).toHaveAttribute("aria-activedescendant", "unified-opt-0")
+  })
+
+  it("Enter with highlighted area selects it and fires onSearch", async () => {
     const onSearch = vi.fn()
-    mockFetch([{ display: "Berlin", name: "Berlin" }])
+    mockFetch([area("Berlin")])
     renderPanel(onSearch)
     fireEvent.change(getInput(), { target: { value: "Ber" } })
     await act(() => vi.runAllTimersAsync())
@@ -187,24 +241,26 @@ describe("ChatPanel autocomplete — keyboard navigation", () => {
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
   })
 
-  it("Enter without highlighted item submits the current input", async () => {
+  it("Enter without highlighted item submits the raw input as area search", async () => {
     const onSearch = vi.fn()
-    mockFetch([{ display: "Berlin", name: "Berlin" }])
-    renderPanel(onSearch)
+    const onPlaceSearch = vi.fn()
+    mockFetch([area("Berlin"), venue("Berliner Kindl")])
+    renderPanel(onSearch, false, onPlaceSearch)
     fireEvent.change(getInput(), { target: { value: "Berlin" } })
     await act(() => vi.runAllTimersAsync())
 
     fireEvent.keyDown(getInput(), { key: "Enter" })
     expect(onSearch).toHaveBeenCalledWith(expect.stringContaining("Berlin"), undefined, undefined)
+    expect(onPlaceSearch).not.toHaveBeenCalled()
   })
 })
 
 // ─── Suggestion selection ────────────────────────────────────────────────────
 
 describe("ChatPanel autocomplete — selection", () => {
-  it("clicking a suggestion sets the input value and triggers search", async () => {
+  it("clicking an area suggestion sets the input value and triggers onSearch", async () => {
     const onSearch = vi.fn()
-    mockFetch([{ display: "Mitte, Berlin", name: "Mitte" }])
+    mockFetch([area("Mitte", "Mitte, Berlin")])
     renderPanel(onSearch)
     fireEvent.change(getInput(), { target: { value: "Mit" } })
     await act(() => vi.runAllTimersAsync())
@@ -214,26 +270,47 @@ describe("ChatPanel autocomplete — selection", () => {
     expect(onSearch).toHaveBeenCalledWith(expect.stringContaining("Mitte, Berlin"), undefined, undefined)
   })
 
-  it("passes name field value as nameHint to onSearch when selecting a suggestion", async () => {
+  it("clicking a venue suggestion triggers onPlaceSearch with name and coords", async () => {
     const onSearch = vi.fn()
-    mockFetch([{ display: "Berlin", name: "Berlin" }])
-    renderPanel(onSearch)
-    // Name field is always visible in text mode (desktop) — fill it first
-    const nameInput = screen.getByPlaceholderText(/Hotel Adlon Berlin/i) as HTMLInputElement
-    fireEvent.change(nameInput, { target: { value: "Goldener Löwe" } })
-    // Type and select location
-    fireEvent.change(getInput(), { target: { value: "Ber" } })
+    const onPlaceSearch = vi.fn()
+    mockFetch([venue("Bierpumpe", "Bierpumpe, Issum (DE)", { lat: 51.54, lon: 6.42 })])
+    renderPanel(onSearch, false, onPlaceSearch)
+    fireEvent.change(getInput(), { target: { value: "Bierpumpe Issum" } })
     await act(() => vi.runAllTimersAsync())
-    fireEvent.mouseDown(screen.getByRole("option", { name: "Berlin" }))
-    expect(onSearch).toHaveBeenCalledWith(
-      expect.stringContaining("Berlin"),
-      undefined,
-      "Goldener Löwe",
-    )
+
+    fireEvent.mouseDown(screen.getByRole("option", { name: /Bierpumpe/ }))
+    expect(onPlaceSearch).toHaveBeenCalledWith("Bierpumpe", { lat: 51.54, lon: 6.42 })
+    expect(onSearch).not.toHaveBeenCalled()
+    expect(getInput().value).toBe("Bierpumpe, Issum (DE)")
+  })
+
+  it("venue pick without coordinates calls onPlaceSearch without coords", async () => {
+    const onPlaceSearch = vi.fn()
+    mockFetch([venue("Bierpumpe", "Bierpumpe, Issum (DE)", { lat: null, lon: null })])
+    renderPanel(vi.fn(), false, onPlaceSearch)
+    fireEvent.change(getInput(), { target: { value: "Bierpumpe" } })
+    await act(() => vi.runAllTimersAsync())
+
+    fireEvent.mouseDown(screen.getByRole("option", { name: /Bierpumpe/ }))
+    expect(onPlaceSearch).toHaveBeenCalledWith("Bierpumpe", undefined)
+  })
+
+  it("Enter after a venue pick re-runs the place search", async () => {
+    const onPlaceSearch = vi.fn()
+    mockFetch([venue("Bierpumpe", "Bierpumpe, Issum (DE)", { lat: 51.54, lon: 6.42 })])
+    renderPanel(vi.fn(), false, onPlaceSearch)
+    fireEvent.change(getInput(), { target: { value: "Bierpumpe" } })
+    await act(() => vi.runAllTimersAsync())
+    fireEvent.mouseDown(screen.getByRole("option", { name: /Bierpumpe/ }))
+    expect(onPlaceSearch).toHaveBeenCalledTimes(1)
+
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+    expect(onPlaceSearch).toHaveBeenCalledTimes(2)
+    expect(onPlaceSearch).toHaveBeenLastCalledWith("Bierpumpe", { lat: 51.54, lon: 6.42 })
   })
 
   it("closes the dropdown after selecting a suggestion", async () => {
-    mockFetch([{ display: "Berlin", name: "Berlin" }])
+    mockFetch([area("Berlin")])
     renderPanel()
     fireEvent.change(getInput(), { target: { value: "Ber" } })
     await act(() => vi.runAllTimersAsync())
@@ -245,7 +322,7 @@ describe("ChatPanel autocomplete — selection", () => {
   it("does not re-open the dropdown after selection even after debounce fires", async () => {
     // Regression: selecting a suggestion triggers setLocation which used to re-fetch
     // and call setShowSuggestions(true) 300 ms later (visible bug on iPhone).
-    mockFetch([{ display: "Berlin", name: "Berlin" }])
+    mockFetch([area("Berlin")])
     renderPanel()
     fireEvent.change(getInput(), { target: { value: "Ber" } })
     await act(() => vi.runAllTimersAsync())
@@ -254,6 +331,80 @@ describe("ChatPanel autocomplete — selection", () => {
     // Advance past debounce — must NOT re-open
     await act(() => vi.advanceTimersByTimeAsync(500))
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+  })
+
+  it("greys out category chips after a venue pick and re-enables them on edit", async () => {
+    mockFetch([venue("Bierpumpe", "Bierpumpe, Issum (DE)")])
+    renderPanel()
+    fireEvent.change(getInput(), { target: { value: "Bierpumpe" } })
+    await act(() => vi.runAllTimersAsync())
+    fireEvent.mouseDown(screen.getByRole("option", { name: /Bierpumpe/ }))
+
+    const chip = screen.getAllByRole("button").find((b) => b.textContent?.includes("Restaurants"))
+    expect(chip).toBeDisabled()
+
+    fireEvent.change(getInput(), { target: { value: "Bierpump" } })
+    expect(chip).not.toBeDisabled()
+  })
+})
+
+// ─── Quoted name filter (single-field replacement for the old name input) ────
+
+describe("ChatPanel quoted-name syntax", () => {
+  it("does not send the quoted part to the suggest API", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify([]), { status: 200 }),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+    renderPanel()
+    fireEvent.change(getInput(), { target: { value: '"Goldener Löwe" Ber' } })
+    await act(() => vi.runAllTimersAsync())
+
+    const calledUrl: string = fetchMock.mock.calls[0][0]
+    expect(calledUrl).toContain("q=Ber")
+    expect(calledUrl).not.toContain("Goldener")
+  })
+
+  it("passes the quoted name as nameHint on submit", async () => {
+    const onSearch = vi.fn()
+    mockFetch([])
+    renderPanel(onSearch)
+    fireEvent.change(getInput(), { target: { value: '"Goldener Löwe" Berlin' } })
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+    expect(onSearch).toHaveBeenCalledWith(expect.stringContaining("Berlin"), undefined, "Goldener Löwe")
+  })
+
+  it("a quoted name without location triggers onPlaceSearch", async () => {
+    const onSearch = vi.fn()
+    const onPlaceSearch = vi.fn()
+    mockFetch([])
+    renderPanel(onSearch, false, onPlaceSearch)
+    fireEvent.change(getInput(), { target: { value: '"Bierpumpe"' } })
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+    expect(onPlaceSearch).toHaveBeenCalledWith("Bierpumpe")
+    expect(onSearch).not.toHaveBeenCalled()
+  })
+
+  it("preserves the quoted name when picking an area suggestion", async () => {
+    const onSearch = vi.fn()
+    mockFetch([area("Berlin", "Berlin (DE)")])
+    renderPanel(onSearch)
+    fireEvent.change(getInput(), { target: { value: '"Goldener Löwe" Ber' } })
+    await act(() => vi.runAllTimersAsync())
+
+    fireEvent.mouseDown(screen.getByRole("option", { name: "Berlin (DE)" }))
+    expect(getInput().value).toBe('"Goldener Löwe" in Berlin (DE)')
+    expect(onSearch).toHaveBeenCalledWith(expect.stringContaining("Berlin (DE)"), undefined, "Goldener Löwe")
+  })
+
+  it("does not produce a double 'in' when submitting after an area pick with quotes", async () => {
+    const onSearch = vi.fn()
+    mockFetch([])
+    renderPanel(onSearch)
+    fireEvent.change(getInput(), { target: { value: '"Goldener Löwe" in Berlin' } })
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+    const query: string = onSearch.mock.calls[0][0]
+    expect(query).not.toMatch(/in\s+in/)
   })
 })
 
@@ -272,7 +423,7 @@ describe("ChatPanel clear button", () => {
   })
 
   it("clears the input and closes the dropdown on click", async () => {
-    mockFetch([{ display: "Berlin", name: "Berlin" }])
+    mockFetch([area("Berlin")])
     renderPanel()
     fireEvent.change(getInput(), { target: { value: "Berlin" } })
     await act(() => vi.runAllTimersAsync())
@@ -376,7 +527,7 @@ describe("ChatPanel initialMode", () => {
   })
 })
 
-// ─── Parking button ──────────────────────────────────────────────────────────
+// ─── GPS resolution ──────────────────────────────────────────────────────────
 
 function simulateGpsSuccess(lat = 52.52, lon = 13.405, district = "Mitte") {
   vi.stubGlobal("navigator", {
@@ -404,67 +555,15 @@ describe("ChatPanel GPS resolution", () => {
   })
 })
 
-// ─── Place-search trigger (via text mode, name field always visible) ─────────
+// ─── Single-field UI (name field removed in step 2 of issue #24) ─────────────
 
-describe("ChatPanel place-search", () => {
-  function getNameInput() {
-    // In text mode with empty location, name field shows the place-mode placeholder
-    return screen.getByPlaceholderText(/Hotel Adlon Berlin/i) as HTMLInputElement
-  }
-
-  it("name field is always visible in text mode (no toggle required)", () => {
+describe("ChatPanel single-field UI", () => {
+  it("renders exactly one text input in text mode", () => {
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
-    expect(getNameInput()).toBeInTheDocument()
+    expect(screen.getAllByRole("combobox")).toHaveLength(1)
+    expect(screen.queryByPlaceholderText(/Hotel Adlon Berlin/i)).not.toBeInTheDocument()
   })
 
-  it("search button is disabled when both location and name are empty", () => {
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onPlaceSearch={vi.fn()} initialMode="text" />)
-    const btn = screen.getByRole("button", { name: "Suchen" })
-    expect(btn).toBeDisabled()
-  })
-
-  it("search button is enabled when name has content and location is empty", () => {
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onPlaceSearch={vi.fn()} initialMode="text" />)
-    fireEvent.change(getNameInput(), { target: { value: "Hotel Adlon" } })
-    const btn = screen.getByRole("button", { name: "Suchen" })
-    expect(btn).not.toBeDisabled()
-  })
-
-  it("clicking Suchen with name+no-location calls onPlaceSearch, not onSearch", () => {
-    const onSearch = vi.fn()
-    const onPlaceSearch = vi.fn()
-    render(<ChatPanel onSearch={onSearch} isLoading={false} onPlaceSearch={onPlaceSearch} initialMode="text" />)
-    fireEvent.change(getNameInput(), { target: { value: "Hotel Adlon" } })
-    fireEvent.click(screen.getByRole("button", { name: "Suchen" }))
-    expect(onPlaceSearch).toHaveBeenCalledWith("Hotel Adlon")
-    expect(onSearch).not.toHaveBeenCalled()
-  })
-
-  it("pressing Enter in name field with no location calls onPlaceSearch", () => {
-    const onPlaceSearch = vi.fn()
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onPlaceSearch={onPlaceSearch} initialMode="text" />)
-    fireEvent.change(getNameInput(), { target: { value: "Goldener Löwe" } })
-    fireEvent.keyDown(getNameInput(), { key: "Enter" })
-    expect(onPlaceSearch).toHaveBeenCalledWith("Goldener Löwe")
-  })
-
-  it("pressing Enter in name field WITH location calls onSearch, not onPlaceSearch", () => {
-    const onSearch = vi.fn()
-    const onPlaceSearch = vi.fn()
-    render(<ChatPanel onSearch={onSearch} isLoading={false} onPlaceSearch={onPlaceSearch} initialMode="text" />)
-    fireEvent.change(getInput(), { target: { value: "Berlin" } })
-    // After location is filled the name field shows a different placeholder
-    const nameInput = screen.getByPlaceholderText(/Zur Linde|The Crown/i) as HTMLInputElement
-    fireEvent.change(nameInput, { target: { value: "Goldener Löwe" } })
-    fireEvent.keyDown(nameInput, { key: "Enter" })
-    expect(onSearch).toHaveBeenCalledWith(expect.stringContaining("Berlin"), undefined, "Goldener Löwe")
-    expect(onPlaceSearch).not.toHaveBeenCalled()
-  })
-})
-
-// ─── Place mode removed — verify two-mode UI (v4.13+) ────────────────────────
-
-describe("ChatPanel two-mode UI (place mode removed)", () => {
   it("does NOT render an 'Ort suchen' button in the mode bar", () => {
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
     expect(screen.queryByRole("button", { name: /Ort suchen/ })).not.toBeInTheDocument()
@@ -481,19 +580,30 @@ describe("ChatPanel two-mode UI (place mode removed)", () => {
     expect(screen.getByText(/Restaurants/)).toBeInTheDocument()
   })
 
-  it("initialMode='place' falls back to text mode with location input visible", () => {
+  it("initialMode='place' falls back to text mode with the unified input visible", () => {
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="place" />)
-    expect(screen.getByPlaceholderText(/Ort eingeben|Enter a city/i)).toBeInTheDocument()
+    expect(getInput()).toBeInTheDocument()
   })
 
-  it("calls onPlaceSearch when submit clicked in text mode with name-only", () => {
-    const onPlaceSearch = vi.fn()
+  it("search button is disabled when the input is empty", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
+    expect(screen.getByRole("button", { name: "Suchen" })).toBeDisabled()
+  })
+
+  it("search button is enabled when the input has text", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "Berlin" } })
+    expect(screen.getByRole("button", { name: "Suchen" })).not.toBeDisabled()
+  })
+
+  it("clicking Suchen with raw text fires an area search, never onPlaceSearch", () => {
     const onSearch = vi.fn()
-    render(<ChatPanel onSearch={onSearch} isLoading={false} onPlaceSearch={onPlaceSearch} initialMode="text" />)
-    fireEvent.change(screen.getByPlaceholderText(/Hotel Adlon Berlin/i), { target: { value: "Café Einstein" } })
+    const onPlaceSearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} onPlaceSearch={onPlaceSearch} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "Bierpumpe Issum" } })
     fireEvent.click(screen.getByRole("button", { name: "Suchen" }))
-    expect(onPlaceSearch).toHaveBeenCalledWith("Café Einstein")
-    expect(onSearch).not.toHaveBeenCalled()
+    expect(onSearch).toHaveBeenCalledWith(expect.stringContaining("Bierpumpe Issum"), undefined, undefined)
+    expect(onPlaceSearch).not.toHaveBeenCalled()
   })
 })
 
@@ -539,23 +649,5 @@ describe("ChatPanel focus mode — chip strip", () => {
       />,
     )
     expect(screen.getByText(/🍽 Restaurants/)).toBeInTheDocument()
-  })
-})
-
-// ─── Quoted-name stripping ───────────────────────────────────────────────────
-
-describe("ChatPanel autocomplete — quote stripping", () => {
-  it("does not send the quoted part to the suggest API", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify([]), { status: 200 }),
-    )
-    vi.stubGlobal("fetch", fetchMock)
-    renderPanel()
-    fireEvent.change(getInput(), { target: { value: '"Goldener Löwe" Ber' } })
-    await act(() => vi.runAllTimersAsync())
-
-    const calledUrl: string = fetchMock.mock.calls[0][0]
-    expect(calledUrl).toContain("q=Ber")
-    expect(calledUrl).not.toContain("Goldener")
   })
 })
