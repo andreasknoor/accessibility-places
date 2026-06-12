@@ -54,7 +54,7 @@ Client reads this as a `ReadableStream` in `app/HomeClient.tsx` and updates stat
 
 ### Query parsing (`lib/llm.ts`)
 
-No LLM is used at runtime (despite the name, `lib/llm.ts` does no model inference). `parseQuery()` deterministically extracts `locationQuery` (for Nominatim) and `categories` (from `CATEGORY_HINTS` regex match). `extractQuotedName()` pulls text inside any quote style (straight, curly, guillemets) and is used by `ChatPanel` to populate `nameHint` when the user wraps a name in quotes. The name filter is entirely separate — it is passed as `nameHint` in the API body and applied server-side after all adapter results are merged.
+No LLM is used at runtime (despite the name, `lib/llm.ts` does no model inference). `parseQuery()` deterministically extracts `locationQuery` (for Nominatim) and `categories` (from `CATEGORY_HINTS` regex match). **Categories are inferred only from the part before the first `"in"`** — city names must not trigger category hints (the city "Essen" matches the restaurant hint "essen"); a query without `"in"` is scanned as a whole. No hint match → all 16 categories (the all-categories default; the UI sends `"in <location>"` for known-pure locations). `extractQuotedName()` pulls text inside any quote style (straight, curly, guillemets) and is used by `ChatPanel` to populate `nameHint` when the user wraps a name in quotes (`"Vapiano" in Berlin`). The name filter is entirely separate — it is passed as `nameHint` in the API body and applied server-side after all adapter results are merged.
 
 ### Adapters (`lib/adapters/`)
 
@@ -63,88 +63,25 @@ Five adapters run in parallel via `startAdapterTasks()`:
 - **accessibility.cloud** (`accessibility-cloud.ts`): A11yJSON-shaped records. Always uses `accessibilityPreset=at-least-partially-accessible-by-wheelchair`.
 - **Reisen für Alle** (`reisen-fuer-alle.ts`): Highest reliability weight (1.0). Hidden from FilterPanel UI (not in `SOURCE_ORDER`) but always active when the key is set.
 - **Ginto** (`ginto.ts`): GraphQL API (`POST https://api.ginto.guide/graphql`). Data is Switzerland-focused but with scattered entries across DACH; queried for every search by default. `GINTO_GEOFENCE=1` re-enables the CH bounding-box fence (skips calls whose search circle cannot reach CH) as an emergency brake against rate limits. `position.countryCode` is normalised ISO-3→ISO-2 (`AUT`→`AT` etc.; empty→`CH`). `defaultRatings[].key` prefix convention maps to A11yValue: no prefix → entrance, `toilet_` → toilet, `parking_` → parking. Paginates up to 2 pages (100 results). Base weight 0.90; SELF_DECLARED entries use 0.94, AUDITED entries use 1.0 (via `qualityInfo.approvalLevels` — who vouches for the data: operator vs. external authority). `qualityInfo.detailLevels` measures data completeness, not trustworthiness — stored in `metadata` only, never affects the weight. `updatedAt` is a system republish timestamp, not a human verification date — stored in `metadata` only, never sets `verifiedRecently`. AUDITED also does not set `verifiedRecently` (no audit date in the API).
-- **Google Places** (`google-places.ts`): Lowest reliability weight (0.35); fires one POST per category. **Disabled by default** in `DEFAULT_SOURCES` (defined in `app/HomeClient.tsx`).
+- **Google Places** (`google-places.ts`): Lowest reliability weight (0.35); fires one POST per category, capped at `GOOGLE_MAX_CATEGORIES = 3` so an all-categories search cannot fan out 16 upstream calls. **Disabled by default** in `DEFAULT_SOURCES` (defined in `app/HomeClient.tsx`).
 
 ### Categories (`lib/config.ts`)
 
-16 search categories, each with dedicated OSM tag mappings:
-
-```
-cafe          amenity=cafe
-restaurant    amenity=restaurant
-bar           amenity=bar
-pub           amenity=pub
-biergarten    amenity=biergarten
-fast_food     amenity=fast_food | food_court
-hotel         tourism=hotel | motel | guest_house
-hostel        tourism=hostel
-apartment     tourism=apartment
-museum        tourism=museum
-theater       amenity=theatre
-cinema        amenity=cinema
-library       amenity=library
-gallery       tourism=gallery | amenity=arts_centre
-attraction    tourism=attraction | theme_park
-ice_cream     amenity=ice_cream
-```
+16 search categories, each with dedicated OSM tag mappings (see `CATEGORIES` in `lib/config.ts` for the full tag list).
 
 Only 10 of these have SEO landing pages (`SEO_CATEGORY_SLUGS` in `lib/cities.ts`): cafe, restaurant, bar, pub, biergarten, hotel, museum, theater, cinema, attraction. The other six — `fast_food`, `hostel`, `apartment`, `library`, `gallery`, and `ice_cream` — are search-only (the first five had SEO pages until they were removed as chip-less categories in `67a2622`; old URLs now 404).
 
 ### Matching & merging (`lib/matching/`)
 
-`match.ts` – a candidate place is considered the same as an existing canonical place when a weighted score exceeds `MATCH_SCORE_THRESHOLD = 0.72`. The formula is:
-
-```
-effectiveName × 0.5 + addrScore × 0.3 + geoScore × 0.2
-```
-
-where `addrScore = streetTrigram × 0.6 + cityMatch × 0.25 + zipMatch × 0.15`. A fast reject fires when distance > 3 × `GEO_MATCH_RADIUS_M` (240 m). Name containment (one normalised name substring of the other within 80 m) raises the effective name score to ≥ 0.9.
-
-`merge.ts` – winning `A11yValue` is determined by summed source reliability weight. Toilet confidence is boosted to 1.0 when `isDesignated` or `hasGrabBars` is true; capped at 0.9 for weaker toilet signals. The `computeFilteredConfidence()` function averages criteria that are either active or have a non-unknown value — active-but-unknown criteria are included in the denominator so that enabling `acceptUnknown` doesn't artificially inflate scores to 100%. `passesFiltersForSource(place, sourceId, filters)` answers "would this place pass if only this one source were active?" — used by `FilterPanel` to show a predictive per-source result count. Note: `seating` is an optional criterion — not all adapters populate it, so `Place.accessibility.seating` may be `undefined`.
-
-`passesFilters` treats both `"yes"` and `"limited"` as passing for any active criterion. This is intentional: `"limited"` (eingeschränkt) means potentially usable, not inaccessible. Only `"no"` fails; `"unknown"` fails unless `acceptUnknown` is true.
-
-`nearby-parking.ts` – post-merge enrichment controlled by the `ENABLE_NEARBY_PARKING` flag. `enrichWithNearbyParking()` upgrades `parking.value` from `"unknown"` to `"yes"` with `details.nearbyOnly = true` when a disabled-parking OSM node (capacity:disabled > 0 or parking_space=disabled) is found within `DEFAULT_MAX_NEARBY_PARKING_M = 250 m`. Deliberately does **not** add a `SourceAttribution`, so confidence and per-source filter counts are unaffected. Confidence is set to `NEARBY_PARKING_CONFIDENCE = 0.75` (matches the OSM reliability weight). Map display uses a wider `NEARBY_PARKING_DISPLAY_RADIUS_M = 500 m`: parking markers are shown near any enriched result within this radius, even if slightly too far to trigger enrichment. This file also exports `dedupeToiletFeatures()` (collapses WC duplicates within `TOILET_DEDUP_RADIUS_M = 25 m`, preferring strong tier then standalone host) and `TOILET_DISPLAY_CAP = 300` — see the Amenities section below.
-
-**`parkingNearby`** (`SearchFilters.parkingNearby`) — sub-toggle that only matters when `parking: true`. When `false`, the parking filter accepts only places with on-site parking attribution and rejects `nearbyOnly` enriched places. Default `true` preserves legacy behaviour (nearby enrichment counts as passing). Controlled by an explicit checkbox in `FilterPanel`.
-
-**`parkingNearby`** is the parking-specific filter sub-toggle; the broader display/focus machinery is now generalised across amenity types — see the **Amenities** section below.
+`match.ts` dedupes candidates against canonical places via a weighted score (`MATCH_SCORE_THRESHOLD = 0.72`); `merge.ts` resolves the winning `A11yValue` by summed source weight and computes filtered confidence; `nearby-parking.ts` does post-merge disabled-parking enrichment. **`passesFilters` treats both `"yes"` and `"limited"` as passing; only `"no"` fails (`"unknown"` fails unless `acceptUnknown`).** Full formulas, the `parkingNearby` sub-toggle, and `passesFiltersForSource` → **[docs/architecture/matching.md](docs/architecture/matching.md)**.
 
 ### Amenities: parking + WC (`lib/amenities/`, `osm.ts`, `nearby-parking.ts`)
 
-Both disabled parking and wheelchair WCs are modelled as **typed point features** rather than place attributes. `AmenityType = "parking" | "toilet"`, `AmenityTier = "strong" | "weak"` (replaces the old `ParkingTier` "disabled"/"accessible"), and `AmenityFeature` (in `lib/types.ts`) carries `amenityType`, `tier`, `osmId`, plus type-specific fields (`capacity`/`fee`/`maxstay` for parking; `euroKey`/`changingTable`/`host` for WCs). `lib/amenities/registry.ts` declares per-type properties incl. `enrichesVenue` (parking `true`, toilet `false`). `ParkingSpot` remains as a structural alias for back-compat.
-
-**Fetching — `fetchOsmAccessibleAmenities(location, radiusKm, types[], opts)`** in `osm.ts` builds one Overpass union query over the requested types. Parking clauses are identical to the older `fetchOsmDisabledParking` (kept as a thin wrapper for `seo-search.ts`, parking-only). WC clauses are a **union of two sources**: ① standalone public toilets (`amenity=toilets` + `wheelchair=yes|designated`) → `host.kind = "standalone"`; ② any venue tagging its own WC (`nwr[toilets:wheelchair=yes|designated]`, `access!=private/no`) → `host.kind = "venue"` with `name`/`access` for popup labelling. `parseAmenityFeatures` infers `amenityType` + `tier` from tags (designated → strong, yes → weak). Query ends `out 1000 center tags`.
-
-**WC enrichment is deliberately absent.** Unlike parking (you park nearby and walk in), a WC 200 m away is not "the venue's WC" — `enrichWithNearbyParking()` filters to `amenityType === "parking" && tier === "strong"`, so a place's `toilet.value` is never changed by a nearby WC marker.
-
-**Dedup + payload cap.** The ① standalone and ② venue clauses can return the same physical WC twice (also node + parent way). `dedupeToiletFeatures()` (25 m radius) runs in **both** `/api/nearby-parking` and `/api/search`. `/api/search` additionally dedups, distance-sorts to the search centre, and slices to `TOILET_DISPLAY_CAP = 300` so a dense 5 km search doesn't ship ~1000 markers per response. The merged result event field is `amenitySpots: AmenityFeature[]` (toilets); parking still ships as `parkingSpots`.
-
-**Focus mode (`focusLayers: Set<AmenityType>` in `HomeClient`)** — generalises the old boolean "Parkplatz-Modus". The `[🅿 Parkplätze] [🚻 WCs]` chips in `ChatPanel`'s nearby info row are **single-select** (parking XOR toilet); `handleToggleFocusLayer` aborts any in-flight fetch via `focusAbortRef`, then fetches the chosen layer from `/api/nearby-parking` within `settings.parkingRadiusKm`. `focusSpots` is separate state (no backup/restore ref). `focusHints` holds per-layer "none found" amber text; `focusLoadingLayer` drives the per-chip spinner (only the latest request clears it). While `focusActive` (`focusLayers.size > 0`), place markers hide and the map-layer pills are disabled.
-
-**Map display tiers & gating.** Parking strong tier = blue "P"; weak tier = amber "P" (dark letter — white-on-amber fails contrast); weak is **display-only** (never enriches/filters), gated client-side by `showWeakParking`. WC marker colour encodes **host** (not tier): standalone = green, venue = violet. `visibleParkingSpots`/`visibleToiletSpots` in `HomeClient` resolve focus-vs-passive source and apply `showWeakParking` (parking) / `publicToiletsOnly` (WCs, restricts to `host.kind === "standalone"`). `MapView`'s bottom-left **layer-pill control** (`🅿`/`🚻`, two independent `onSetMapLayers(parking, toilets)` toggles) drives the passive layer; the bottom-right **collapsible legend** lists only the marker types currently present.
-
-**Popup XSS rule.** Map popups are built with `innerHTML`. **Any OSM-sourced string** (place name, address, `fee`, `maxstay`, WC `host.name`) must be wrapped in the local `esc()` helper before interpolation — OSM is publicly editable. i18n strings and numbers are trusted.
-
-`buildAttribute(…, weightMultiplier)` — when `weightMultiplier > 1.0` the source gets `verifiedRecently: true`. Currently only the OSM adapter sets this (via `check_date:wheelchair` ≤ 2 years old). The `onlyVerified` filter in `SearchFilters` requires at least one attribution to carry this flag.
+Disabled parking and wheelchair WCs are modelled as **typed point features** (`AmenityFeature`), not place attributes. Parking enriches a venue's `parking.value`; **WCs never enrich** `toilet.value`. Two display systems: a passive map layer (from `/api/search`) and single-select **focus mode** (from `/api/nearby-parking`). **Popup XSS rule: any OSM-sourced string in a map popup must be wrapped in `esc()`** (OSM is publicly editable; i18n strings and numbers are trusted). Tiers, host colours, dedup/payload-cap, and focus-mode state → **[docs/architecture/amenities.md](docs/architecture/amenities.md)**.
 
 ### Confidence weights (`lib/config.ts`)
 
-```ts
-reisen_fuer_alle:    1.00
-ginto:               0.90  // SELF_DECLARED entries → 0.94, AUDITED → 1.0
-accessibility_cloud: 0.70
-osm:                 0.75
-google_places:       0.35
-osm_parking:         0     // stats-only; never used as a place-attribution source
-osm_parking_private: 0     // stats-only; tracks parking requests won by private Overpass server
-osm_parking_public:  0     // stats-only; tracks parking requests won by public mirrors
-osm_private:         0     // stats-only; tracks requests won by private Overpass server
-osm_public:          0     // stats-only; tracks requests won by public mirrors
-nominatim:           0     // stats-only
-```
-
-`CONFIDENCE_THRESHOLDS`: `high = 0.70`, `medium = 0.40`. These map directly to the `confidenceLabel()` output — `"high"` → "Verlässlich", `"medium"` → "Mittel", below → "Unsicher".
+Reliability weights live in `SOURCE_RELIABILITY` (`reisen_fuer_alle 1.0` > `ginto 0.90` > `osm 0.75` > `accessibility_cloud 0.70` > `google_places 0.35`). Ginto refines per-entry: SELF_DECLARED → 0.94, AUDITED → 1.0. The `osm_*`/`nominatim` entries are weight `0` (stats-only, never place attributions). `CONFIDENCE_THRESHOLDS`: `high = 0.70`, `medium = 0.40` → `confidenceLabel()` "Verlässlich" / "Mittel" / "Unsicher".
 
 `OSM_ENTRANCE_WEIGHT_FACTOR = 0.90` applies an extra reduction when OSM's whole-place `wheelchair=*` tag stands in for the entrance criterion specifically.
 
@@ -154,7 +91,7 @@ nominatim:           0     // stats-only
 
 ### Mobile vs desktop
 
-`useIsMobile()` (`hooks/useIsMobile.ts` — pointer: coarse or max-width 767px) gates layout branching in `HomeClient.tsx`. Mobile uses `MobileLayout` (tab bar: results / map / filter). Desktop has a resizable results column with a drag handle. In tests, `matchMedia` is mocked to always return `false` (desktop), so both inputs in the search bar are always rendered.
+`useIsMobile()` (`hooks/useIsMobile.ts` — pointer: coarse or max-width 767px) gates layout branching in `HomeClient.tsx`. Mobile uses `MobileLayout` (tab bar: results / map / filter). Desktop has a resizable results column with a drag handle. In tests, `matchMedia` is mocked to always return `false` (desktop).
 
 **Empty state actions** — `ResultsList` accepts an optional `onAdjustFilters?: () => void` prop. When present (mobile only), a primary "Filter anpassen" button is rendered alongside the expand-radius button; clicking it calls the callback. `MobileLayout` passes `() => setActiveTab("filter")`. When absent (desktop), a text hint is shown instead — the filter panel is already visible.
 
@@ -178,29 +115,15 @@ nominatim:           0     // stats-only
 
 `AppSettings` is a user-configurable set of defaults persisted to `localStorage` under key `ap_settings`. `useSettings()` returns `[settings, updateSettings]`; `loadSettings()` is called in lazy `useState` initialisers in `HomeClient` for settings that must be available before React mounts.
 
-Fields: `defaultSearchMode` (`"text"` | `"nearby"` | `"place"` | `null` = no preference), `defaultMobileView` (`"results"` | `"map"`), `defaultChipIdx` (which chip is pre-selected, `null` = Restaurants), `sortOrder` (`"confidence"` | `"distance"`), `autoZoom` (MapView auto-fits after search), `alwaysShowParking` / `alwaysShowToilets` (passive map-layer display toggles, default `false`; persisted here, **not** in the filter-prefs key, and excluded from it in `HomeClient`), `showWeakParking` (show the weak parking tier as amber markers, incl. in focus mode; default `false`), `publicToiletsOnly` (restrict the WC layer to standalone public toilets, hiding venue WCs; default `false`), `parkingRadiusKm` (radius for the amenity focus fetch — parking **and** WC — 0.05–5.0, default 4.0).
+Fields: `defaultSearchMode` (`"text"` | `"nearby"` | `null` = no preference; legacy `"place"` is migrated to `"text"` on load), `defaultMobileView` (`"results"` | `"map"`), `defaultChipIdx` (which chip is pre-selected, `null` = "Alle"/all categories — the app default), `sortOrder` (`"confidence"` | `"distance"`), `autoZoom` (MapView auto-fits after search), `alwaysShowParking` / `alwaysShowToilets` (passive map-layer display toggles, default `false`; persisted here, **not** in the filter-prefs key, and excluded from it in `HomeClient`), `showWeakParking` (show the weak parking tier as amber markers, incl. in focus mode; default `false`), `publicToiletsOnly` (restrict the WC layer to standalone public toilets, hiding venue WCs; default `false`), `parkingRadiusKm` (radius for the amenity focus fetch — parking **and** WC — 0.05–5.0, default 4.0).
 
-**Critical invariant:** `SETTING_CHIPS` in `lib/settings.ts` and `CHIPS` in `ChatPanel.tsx` must stay in the **same order** — `defaultChipIdx` is an index into both simultaneously. Reordering chips in either file requires updating the other.
+**Critical invariant:** `SETTING_CHIPS` in `lib/settings.ts` and `CHIPS` in `ChatPanel.tsx` must stay in the **same order** — `defaultChipIdx` is an index into both simultaneously. Reordering chips in either file requires updating the other. The "Alle" chip in the UI is a pseudo-chip rendered before `CHIPS` (state `selectedIdx === null`), **not** part of either array.
 
 `SettingsSheet` (`components/settings/SettingsSheet.tsx`) renders via `createPortal` and is triggered from a gear icon in `HomeClient`. It receives `settings` and `onUpdate`; `HomeClient.handleUpdateSettings` applies the patch and syncs derived state (e.g. propagates `sortOrder` → `sortBy`).
 
-### Name filter & place search (ChatPanel → API)
+### Unified search field & place search (ChatPanel → API)
 
-The name field is a separate input, **not** embedded in the query string. `ChatPanel.onSearch` signature: `(query: string, coords?: Coords, nameHint?: string)`. The `nameHint` is passed in the API request body and applied as a JS post-filter (`filterByNameHint` — substring + trigram ≥ 0.6) after the merge step. This means accessibility filters apply independently of name searches.
-
-**Place-search mode** (`placeSearch: true` on `SearchParams`) is a second path for looking up a specific venue by name without city/category. Triggered either via the explicit `"place"` chat mode (third tab: "Ort suchen" / "Find Place") or from text mode when the name field is filled and the location field is empty (power-user shortcut).
-
-`HomeClient.handlePlaceSearch(nameHint, preResolvedCoords?)` flow:
-1. If Photon autocomplete provided coordinates, skip Nominatim and use them directly
-2. Otherwise resolve a location: `searchCenter` → `gpsCoordRef` → `navigator.geolocation` (5 s timeout, 60 s cache) → Nominatim with optional viewbox bias
-3. If Nominatim returns 404: sets `place_not_found` error. If the stream completes with zero places: sets `place_no_data` error (distinct states).
-4. If exactly one result: auto-selects it (opens the info sheet)
-
-**OSM adapter** in `placeSearch` mode replaces the tag-based Overpass query with a name-regex query across node/way/relation within 500 m. Uses character-class case-insensitive regex (`[hH][oO][tT]...`) — not the `,i` flag which is broken on some Overpass mirrors. Radius is capped at 0.5 km server-side regardless of user setting. Other adapters are unchanged; they search by bbox and the `nameHint` post-filter applies as usual.
-
-**`skipNameSuggestRef`** (ref in ChatPanel) — one-shot flag set in `selectNameSuggestion` before calling `setName()`, consumed at the top of the name-suggestion `useEffect`. Prevents the debounced Photon fetch from re-firing (and re-showing the dropdown) immediately after a suggestion is selected. Same pattern as `skipSuggestRef` for the location field.
-
-**`chatMode` union** — `"text" | "nearby" | "place"`. In `place` mode: `FilterPanel` is hidden on desktop (HomeClient), the filter tab is hidden on mobile (MobileLayout), and `switchMode("place")` clears the location field so the name-suggestion `useEffect` fires unconditionally. `defaultSearchMode` in `AppSettings` and `SettingsSheet` also accept `"place"`.
+Explore mode has **one search input** backed by `/api/geocode/unified-suggest`; the dropdown groups results into **areas** (→ `onSearch`, category search) and **venues** (→ `onPlaceSearch(name, coords)`, place search). The selection commits the intent — Enter on raw free text always runs an area search. A name *filter* is expressed via quote syntax (`"Vapiano" in Berlin` → `nameHint`, applied as a post-merge JS filter `filterByNameHint`, so accessibility filters apply independently). **Place-search mode** (`placeSearch: true` on `SearchParams`) looks up a specific venue, with the OSM adapter switching to a name-regex Overpass query (capped 0.5 km). The `handlePlaceSearch` resolution chain, `place_not_found` vs `place_no_data` states, and the `programmaticLocRef` suppression pattern → **[docs/architecture/place-search.md](docs/architecture/place-search.md)**.
 
 ### Supplementary Place fields
 
@@ -213,10 +136,10 @@ The name field is a separate input, **not** embedded in the query string. `ChatP
 
 ### Geocoding API routes
 
-Four proxy routes forward to external geocoding services (all restricted to DACH):
+Proxy routes forward to external geocoding services (all restricted to DACH):
 - `GET /api/geocode?q=` — Nominatim forward geocoding; returns `{ lat, lon, displayName }`. Accepts optional `?lat=&lon=` to bias results via a ±0.2° viewbox (`bounded=0` so it falls back globally).
-- `GET /api/geocode/suggest?q=&lang=` — Photon/Komoot autocomplete restricted to `layer=city,district,locality`; returns `[{ display, name }]`. Used by the location field.
-- `GET /api/geocode/place-suggest?q=&lang=` — Photon/Komoot POI autocomplete **without** layer restrictions; returns `[{ display, name, lat, lon }]`. Used by the name field. Accepts optional `?lat=&lon=` to bias results toward last-known coordinates (forwarded to Photon's `lat`/`lon` bias params). Requests 20 candidates, deduplicates, slices to 5. Photon often omits `countrycode` for POIs — the filter is `if (cc && !DACH_CODES.has(cc))` (only hard-exclude explicit non-DACH), trusting the bbox for geographic containment.
+- `GET /api/geocode/unified-suggest?q=&lang=` — **the active autocomplete route**: one Photon call without layer restriction, classified into `kind: "area" | "venue"` via `osm_key`/`type` (streets excluded); returns max 3 areas + 5 venues, areas first. Accepts optional `?lat=&lon=` bias (validated, forwarded to Photon). Photon often omits `countrycode` for POIs — the filter is `if (cc && !DACH_CODES.has(cc))` (only hard-exclude explicit non-DACH), trusting the bbox for geographic containment.
+- `GET /api/geocode/suggest?q=&lang=` and `GET /api/geocode/place-suggest?q=&lang=` — the legacy area-only / POI-only autocomplete routes, superseded by `unified-suggest` (kept live for one release, no longer called by the UI).
 - `GET /api/geocode/reverse?lat=&lon=` — Nominatim reverse geocoding; returns `{ district }` for the "Nearby" label.
 
 The `countrycodes=de,at,ch` constraint in Nominatim calls and the Photon bounding box must both be updated when expanding beyond DACH.
@@ -247,43 +170,7 @@ In production, `raw` adapter response data is stripped from `sourceRecords` befo
 
 ### Local SEO pages (`app/[city]/[category]/` and `app/en/[city]/[category]/`)
 
-ISR landing pages for 32 DACH cities × 10 categories × 2 locales = **640 potential routes**. `generateStaticParams` returns `[]` and `dynamicParams` is left at the default `true` — pages render **lazily on first request** (no build-time pre-rendering). Unknown slugs fall through to `notFound()` after a `CITY_MAP`/`SEO_CATEGORY_SLUGS` lookup at the top of the page component. The DE route uses `export const revalidate = 432000` (5 days); the EN route uses `Math.round(5.5 * 24 * 3600)` (5.5 days) to stagger revalidation across locales. Data is fetched live at render time via `fetchPlacesForSeoPage(...).catch(() => [])` — if the fetch fails the page renders with an empty list rather than erroring, and the ISR stale copy is served until the next successful revalidation.
-
-**City/category configuration — `lib/cities.ts`:**
-- `CITIES` — 32 cities with slug, nameDe, nameEn, country, lat, lon. `CitySlug` union type must be kept in sync with this array.
-- `SEO_CATEGORY_SLUGS` — URL slug → `Category` type (all 10 current slugs are identical to their `Category` value). `SEO_CATEGORY_TO_SLUG` is the reverse.
-- `SEO_CATEGORY_TO_CHIP_IDX` — slug → CHIPS array index in ChatPanel (all 10 SEO categories have a chip equivalent). The "Related categories" section on SEO pages **only shows chip-backed categories** — both for UX consistency and because those categories have a pre-select chip when the user lands on the main app.
-- `SEO_CATEGORY_QUERY_TERM` — slug → `{ de, en }` query string recognisable by `parseQuery()`. Used for the auto-search trigger on the home page.
-- `SEO_CATEGORY_LABEL` — plural display labels used in page headings and navigation chips.
-- `CITY_MAP` — `Map<CitySlug, City>` for O(1) lookup in page routes.
-
-**Data fetching — `lib/seo-search.ts`:**
-`fetchPlacesForSeoPage(lat, lon, category, radiusKm=5)` calls `fetchAllSources` directly (no HTTP round-trip). Fetches with all filters off (`acceptUnknown: true`) and `SEO_SOURCES` (excludes Google Places). When `ENABLE_NEARBY_PARKING=1`, also fetches disabled-parking OSM nodes in parallel and runs `enrichWithNearbyParking()` before filtering. After merging, always applies `FILTERS_STRICT` (entrance=true, toilet=true, acceptUnknown=false). Recomputes `computeFilteredConfidence` using these filters, sorts descending (tiebreaker: `name.localeCompare`), returns top 25.
-
-**Rendering — `components/seo/SeoPageContent.tsx`:**
-Server component shared by DE and EN routes. Includes Schema.org `ItemList` + `BreadcrumbList` JSON-LD, hreflang language switcher, related categories (chip-backed only — `SEO_CATEGORY_TO_CHIP_IDX !== undefined` — and filtered by `hasData`), and related cities (filtered by `hasData`). The confidence badge format matches the main app exactly: `"X% · Verlässlich/Mittel/Unsicher"` via `confidenceLabel()` from `merge.ts`. Source attribution names the active adapters (`"OpenStreetMap, accessibility.cloud, Ginto (CH)"`) — exclude adapters that require keys absent in the deployment. Place cards show entrance, toilet, and parking attributes (parking is only shown when its value is not `"unknown"`); the `nearbyOnly` parking case renders as `"Ja, in der Nähe (Xm)"`. External links (Wheelmap, Google Maps, website) are icon-only (`Accessibility`, `Map`, `Globe` from lucide-react).
-
-**Validity data — `lib/generated/seo-validity.json` + `lib/seo-validity.ts`:**
-A JSON file with 320 `citySlug/categorySlug → boolean` entries (plus a `_generatedAt` metadata key) that records which combinations actually have accessible places. Updated by `npm run check:seo` (or the daily GitHub Actions cron `.github/workflows/check-seo-validity.yml`). Safety rules: failed checks never overwrite an existing `true` (Overpass downtime cannot remove confirmed pages); the file is not written if < 50% of checks succeed. `hasData(citySlug, categorySlug)` defaults to `true` for unknown combos (conservative). `VALID_SEO_PATHS` is a `Set<string>` used by both the sitemap and `SeoPageContent`.
-
-**Sitemap — `app/sitemap.ts`:**
-Filters SEO pages through `VALID_SEO_PATHS` — only confirmed combos appear in the sitemap. Adding a city to `CITIES` (and `CitySlug`) automatically includes it once the validity cron runs.
-
-**Deep-link flow — two entry points:**
-
-*SEO page → main app:* Each place card on an SEO page links to:
-```
-/?q={cityName}&cat={categorySlug}&selectLat={lat}&selectLon={lon}&selectName={name}
-```
-On mount, `HomeClient` auto-fires the city+category search (geocoded via Nominatim), then after results arrive selects the nearest place within 100 m via Haversine distance — setting `selectedId` and `scrollToId` to trigger highlight+scroll.
-
-*Info sheet copy-link:* The place info sheet (`PlaceDebugSheet`) has a copy-link button that writes to the clipboard:
-```
-/?selectLat={lat}&selectLon={lon}&selectName={name}&cat={category}
-```
-No `q=` (no city name). On mount, `HomeClient` detects `selectLat`/`selectLon` without `initialCity` and fires a coordinate-centred search with **all sources enabled** (ignoring the receiver's source toggles) and `nameHint = selectName` to bypass `passesFilters` — so the linked place always appears regardless of the receiver's active filters.
-
-`app/page.tsx` (and `app/en/page.tsx`) reads all five params and passes them as props to `HomeClient`.
+ISR landing pages for 32 DACH cities × 10 categories × 2 locales = **640 potential routes**, rendered **lazily on first request** (`generateStaticParams` returns `[]`; DE revalidate 5 days, EN 5.5 days to stagger). Data comes from `fetchPlacesForSeoPage` in `lib/seo-search.ts` (calls `fetchAllSources` directly, applies `FILTERS_STRICT`, top 25); config in `lib/cities.ts`; rendering in `components/seo/SeoPageContent.tsx`; validity gating via `lib/seo-validity.ts` + `seo-validity.json` (feeds the sitemap). Full route config, the `lib/cities.ts` lookup tables, the two deep-link flows (SEO→app, info-sheet copy-link), and validity safety rules → **[docs/architecture/seo-pages.md](docs/architecture/seo-pages.md)**.
 
 ### Static pages
 
