@@ -114,6 +114,12 @@ function toPlace(item: any, category: Category): Place | null {
 
 // ─── Public adapter function ───────────────────────────────────────────────
 
+// Google fires one POST per category. An all-categories search (16) would
+// burn quota and the 3/min Google rate budget in a single request — cap the
+// fan-out; categories beyond the cap are silently dropped (Google is the
+// lowest-weight supplementary source, never the only one).
+const GOOGLE_MAX_CATEGORIES = 3
+
 export async function fetchGooglePlaces(params: SearchParams): Promise<Place[]> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY
   if (!apiKey) {
@@ -136,7 +142,7 @@ export async function fetchGooglePlaces(params: SearchParams): Promise<Place[]> 
   ].join(",")
 
   const results = await Promise.all(
-    params.categories.map(async (category) => {
+    params.categories.slice(0, GOOGLE_MAX_CATEGORIES).map(async (category) => {
       const body = {
         includedTypes:       CATEGORY_TYPES[category],
         maxResultCount:      20,

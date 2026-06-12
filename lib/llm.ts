@@ -1,22 +1,22 @@
 import type { Category, ParsedQuery } from "./types"
 
 const CATEGORY_HINTS: Record<Category, string[]> = {
-  cafe:        ["cafe", "café", "kaffee", "kaffeehaus", "bistro", "coffee"],
-  restaurant:  ["restaurant", "essen", "speiselokal", "gastronomie", "gastro", "lokal"],
-  bar:         ["bar", "cocktail"],
-  pub:         ["pub", "kneipe"],
+  cafe:        ["cafe", "café", "kaffee", "kaffeehaus", "bistro", "coffee", "brunch", "frühstück", "breakfast"],
+  restaurant:  ["restaurant", "essen", "speiselokal", "gastronomie", "gastro", "lokal", "sushi", "pizzeria", "ristorante", "trattoria", "steakhouse", "brasserie"],
+  bar:         ["bar", "cocktail", "weinbar", "wine bar"],
+  pub:         ["pub", "kneipe", "brauhaus"],
   biergarten:  ["biergarten", "beer garden", "bier"],
-  fast_food:   ["fast food", "fastfood", "imbiss", "döner", "burger", "pizza"],
-  hotel:       ["hotel", "motel", "unterkunft", "übernachtung", "pension", "gästehaus", "lodge"],
+  fast_food:   ["fast food", "fastfood", "imbiss", "döner", "burger", "pizza", "kebab", "currywurst", "snack"],
+  hotel:       ["hotel", "motel", "unterkunft", "übernachtung", "übernachten", "pension", "gästehaus", "lodge"],
   hostel:      ["hostel"],
   apartment:   ["apartment", "ferienwohnung", "fewo"],
   museum:      ["museum", "museen"],
-  theater:     ["theater", "theatre", "oper", "schauspiel"],
-  cinema:      ["kino", "cinema"],
-  library:     ["bibliothek", "bücherei", "library"],
+  theater:     ["theater", "theatre", "oper", "schauspiel", "musical", "bühne"],
+  cinema:      ["kino", "cinema", "filmtheater", "lichtspielhaus", "movie"],
+  library:     ["bibliothek", "bücherei", "library", "stadtbibliothek", "stadtbücherei", "mediathek"],
   gallery:     ["galerie", "gallery", "kunsthalle", "ausstellung"],
-  attraction:  ["sehenswürdigkeit", "attraktion", "attraction", "freizeitpark", "zoo"],
-  ice_cream:   ["eisdiele", "eisdielen", "eis", "gelato", "gelateria", "ice cream", "icecream"],
+  attraction:  ["sehenswürdigkeit", "attraktion", "attraction", "freizeitpark", "zoo", "tierpark", "ausflugsziel", "aquarium"],
+  ice_cream:   ["eisdiele", "eisdielen", "eis", "gelato", "gelateria", "ice cream", "icecream", "eiscafe", "eiscafé"],
 }
 
 const ALL_CATEGORIES: Category[] = [
@@ -81,16 +81,23 @@ export function extractLocationFallback(query: string): string {
 /**
  * Deterministic query parser — no LLM involved.
  *
- * The UI always sends: "<ChipLabel> in <LocationInput>"
- * Categories are inferred from the chip label; location extracted via fallback.
+ * The UI sends either "<ChipLabel> in <Location>" (chip selected), raw user
+ * text ("Sushi in Berlin"), or "in <Location>" (all-categories search).
+ * Categories are inferred only from the part BEFORE the first "in" — city
+ * and district names must not trigger category hints (the city "Essen"
+ * matches the restaurant hint "essen" otherwise). A query without "in"
+ * is scanned as a whole, as before. No category hint → all categories.
  * Name filtering is handled separately as a post-filter on results.
  */
 export function parseQuery(userQuery: string): ParsedQuery {
   const locationQuery = extractLocationFallback(userQuery).trim() || userQuery.trim()
 
+  const inIdx        = userQuery.search(/\bin\s/i)
+  const categoryPart = inIdx >= 0 ? userQuery.slice(0, inIdx) : userQuery
+
   return {
     locationQuery,
-    categories: inferCategories(userQuery),
+    categories: inferCategories(categoryPart),
     freeTextHint: "",
   }
 }

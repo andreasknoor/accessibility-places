@@ -5,7 +5,7 @@ import { useState, useCallback, useEffect } from "react"
 export interface AppSettings {
   defaultSearchMode:  "text" | "nearby" | null  // null = no preference (app default)
   defaultMobileView:  "results" | "map"
-  defaultChipIdx:     number | null   // null = first chip (Restaurants), same as current default
+  defaultChipIdx:     number | null   // null = "Alle" (all categories, the app default)
   sortOrder:          "confidence" | "distance"
   autoZoom:           boolean
   alwaysShowParking:  boolean

@@ -173,6 +173,20 @@ describe("fetchGooglePlaces", () => {
     expect(result).toEqual([])
   })
 
+  it("caps the per-category fan-out at 3 requests for an all-categories search", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ places: [] }) })
+    vi.stubGlobal("fetch", fetchMock)
+    await fetchGooglePlaces({
+      ...BASE_PARAMS,
+      categories: [
+        "cafe", "restaurant", "bar", "pub", "biergarten", "fast_food",
+        "hotel", "hostel", "apartment",
+        "museum", "theater", "cinema", "library", "gallery", "attraction", "ice_cream",
+      ],
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
   it("combines user signal with timeout so client disconnect aborts the fetch (Bug 3)", async () => {
     const controller = new AbortController()
     let capturedSignal: AbortSignal | undefined

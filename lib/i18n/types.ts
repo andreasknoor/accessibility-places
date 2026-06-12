@@ -20,6 +20,7 @@ export interface Translations {
     unifiedPlaceholder: string
     suggestGroupAreas:  string
     suggestGroupVenues: string
+    chipAll:            string
     send:          string
     thinking:      string
     noResults:        string

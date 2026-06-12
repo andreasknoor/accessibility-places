@@ -467,12 +467,79 @@ describe("ChatPanel initialChipIdx restore", () => {
     expect(biergartChip).toHaveClass("bg-primary")
   })
 
-  it("defaults to chip 0 (Restaurant) when neither saved search nor initialChipIdx exist", () => {
+  it("defaults to the 'Alle' chip (all categories) when neither saved search nor initialChipIdx exist", () => {
     localStorage.clear()
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
     const buttons = screen.getAllByRole("button")
+    const alleChip       = buttons.find((b) => b.textContent?.includes("Alle"))
     const restaurantChip = buttons.find((b) => b.textContent?.includes("Restaurants"))
-    expect(restaurantChip).toHaveClass("bg-primary")
+    expect(alleChip).toHaveClass("bg-primary")
+    expect(restaurantChip).not.toHaveClass("bg-primary")
+  })
+
+  it("restores a saved null chip ('Alle') without falling back to a category", () => {
+    localStorage.setItem("ap_last_search", JSON.stringify({ idx: null, loc: "Berlin" }))
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialChipIdx={2} />)
+    const buttons = screen.getAllByRole("button")
+    const alleChip = buttons.find((b) => b.textContent?.includes("Alle"))
+    expect(alleChip).toHaveClass("bg-primary")
+  })
+})
+
+// ─── All-categories default (chips as optional quick-fills) ──────────────────
+
+describe("ChatPanel all-categories chip", () => {
+  it("clicking a category chip and then 'Alle' returns to the all-categories state", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
+    const buttons = screen.getAllByRole("button")
+    const hotelChip = buttons.find((b) => b.textContent?.includes("Hotels"))!
+    const alleChip  = buttons.find((b) => b.textContent?.includes("Alle"))!
+
+    fireEvent.click(hotelChip)
+    expect(hotelChip).toHaveClass("bg-primary")
+    expect(alleChip).not.toHaveClass("bg-primary")
+
+    fireEvent.click(alleChip)
+    expect(alleChip).toHaveClass("bg-primary")
+    expect(hotelChip).not.toHaveClass("bg-primary")
+  })
+
+  it("submit with 'Alle' sends the raw text without a chip-label prefix", () => {
+    const onSearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "Sushi in Berlin" } })
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+    expect(onSearch).toHaveBeenCalledWith("Sushi in Berlin", undefined, undefined)
+  })
+
+  it("submit with a selected chip prefixes the chip label", () => {
+    const onSearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} isLoading={false} initialMode="text" />)
+    const hotelChip = screen.getAllByRole("button").find((b) => b.textContent?.includes("Hotels"))!
+    fireEvent.click(hotelChip)
+    fireEvent.change(getInput(), { target: { value: "Berlin" } })
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+    expect(onSearch).toHaveBeenCalledWith("Hotels in Berlin", undefined, undefined)
+  })
+
+  it("area pick with 'Alle' sends 'in <display>' so city names never become category hints", async () => {
+    const onSearch = vi.fn()
+    mockFetch([area("Essen", "Essen (DE)")])
+    renderPanel(onSearch)
+    fireEvent.change(getInput(), { target: { value: "Essen" } })
+    await act(() => vi.runAllTimersAsync())
+
+    fireEvent.mouseDown(screen.getByRole("option", { name: "Essen (DE)" }))
+    expect(onSearch).toHaveBeenCalledWith("in Essen (DE)", undefined, undefined)
+  })
+
+  it("clicking 'Alle' with a filled location re-fires the search as 'in <location>'", () => {
+    const onSearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "Berlin" } })
+    const alleChip = screen.getAllByRole("button").find((b) => b.textContent?.includes("Alle"))!
+    fireEvent.click(alleChip)
+    expect(onSearch).toHaveBeenCalledWith("in Berlin", undefined, undefined)
   })
 })
 

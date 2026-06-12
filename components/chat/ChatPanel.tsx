@@ -125,7 +125,9 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const [mode,           setMode]           = useState<Mode>(initialMode === "place" ? "text" : (initialMode ?? "nearby"))
   const [nearbyPhase,    setNearbyPhase]    = useState<NearbyPhase>("idle")
   const [location,       setLocation]       = useState("")
-  const [selectedIdx,    setSelectedIdx]    = useState(0)
+  // null = "Alle" (all categories, the default) — chips are optional scope
+  // shortcuts, not a mandatory pre-selection.
+  const [selectedIdx,    setSelectedIdx]    = useState<number | null>(null)
   const [suggestions,    setSuggestions]    = useState<UnifiedSuggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [highlightedIdx, setHighlightedIdx] = useState(-1)
@@ -135,7 +137,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // edits the field again.
   const [venuePicked,    setVenuePicked]    = useState(false)
   const [showDevConsole, setShowDevConsole] = useState(false)
-  const selectedIdxRef       = useRef(0)
+  const selectedIdxRef       = useRef<number | null>(null)
   const debounceRef          = useRef<ReturnType<typeof setTimeout>>(undefined)
   const suggestAbortRef      = useRef<AbortController>(undefined)
   const locatingRef          = useRef(false)
@@ -188,7 +190,8 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
         if (typeof idx === "number" && idx >= 0 && idx < CHIPS.length) {
           setSelectedIdx(idx)
           selectedIdxRef.current = idx
-        } else {
+        } else if (idx !== null) {
+          // null is a valid saved state ("Alle"); anything else invalid → default
           applyDefaultChip()
         }
         if (typeof loc === "string" && loc.trim()) {
@@ -299,6 +302,21 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     setVenuePicked(false)
   }
 
+  function chipLabel(idx: number | null, loc: string = locale): string | null {
+    if (idx === null) return null
+    return loc === "de" ? CHIPS[idx].de : CHIPS[idx].en
+  }
+
+  // Query for a coordinates-backed nearby search. With no chip, "in <district>"
+  // keeps parseQuery on the all-categories path (the location part must not
+  // trigger category hints — e.g. the city "Essen"); the no-district fallback
+  // is a neutral non-empty string (the route rejects empty queries).
+  function nearbyQuery(label: string | null, district: string): string {
+    if (label) return district ? `${label} in ${district}` : label
+    if (district) return `in ${district}`
+    return localeRef.current === "de" ? "Orte in der Nähe" : "places nearby"
+  }
+
   function switchMode(next: Mode) {
     setMode(next)
     onModeChange?.(next)
@@ -314,27 +332,32 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     if (nearbyPhase === "idle") {
       handleLocate()
     } else if (typeof nearbyPhase === "object") {
-      const label = locale === "de" ? CHIPS[selectedIdx].de : CHIPS[selectedIdx].en
-      onSearch(`${label} in ${nearbyPhase.district}`, { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
+      onSearch(nearbyQuery(chipLabel(selectedIdx), nearbyPhase.district), { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
     }
   }
 
-  function selectChip(idx: number) {
+  function selectChip(idx: number | null) {
     setSelectedIdx(idx)
     selectedIdxRef.current = idx
-    const label = locale === "de" ? CHIPS[idx].de : CHIPS[idx].en
+    const label = chipLabel(idx)
     if (mode === "nearby" && typeof nearbyPhase === "object") {
-      onSearch(`${label} in ${nearbyPhase.district}`, { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
+      onSearch(nearbyQuery(label, nearbyPhase.district), { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
     } else if (mode === "text" && !venuePicked && locationPart(location)) {
       setSuggestions([])
       setShowSuggestions(false)
       const quoted = extractQuotedName(location)
-      onSearch(`${label} in ${locationPart(location)}`, undefined, quoted || undefined)
+      const locPart = locationPart(location)
+      // "in <loc>" (not raw) so a re-fired all-categories search never re-parses
+      // category terms out of what is known to be a location string.
+      onSearch(label ? `${label} in ${locPart}` : `in ${locPart}`, undefined, quoted || undefined)
     }
   }
 
   function buildQuery(loc: string) {
-    const label = locale === "de" ? CHIPS[selectedIdx].de : CHIPS[selectedIdx].en
+    const label = chipLabel(selectedIdx)
+    // No chip → send the raw text; parseQuery scopes categories from the part
+    // before "in" ("Sushi in Berlin") or falls back to all categories.
+    if (!label) return loc.trim()
     return loc.trim() ? `${label} in ${loc.trim()}` : label
   }
 
@@ -396,7 +419,9 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     setVenuePicked(false)
     setLocation(newLocation)
     try { localStorage.setItem("ap_last_search", JSON.stringify({ idx: selectedIdx, loc: newLocation.trim() })) } catch { /* ignore */ }
-    onSearch(buildQuery(s.display), undefined, quoted || undefined)
+    // A picked area is known to be a pure location — "in <display>" keeps an
+    // all-categories search from re-parsing category terms out of city names.
+    onSearch(selectedIdx === null ? `in ${s.display}` : buildQuery(s.display), undefined, quoted || undefined)
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -447,11 +472,10 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           const d = await reverseGeocode(lat, lon)
           setNearbyPhase({ district: d, lat, lon })
           onGpsResolved?.({ lat, lon })
-          const chip = CHIPS[selectedIdxRef.current]
           // Read locale from a ref so a fix that arrives after the user switched
           // language still uses the current value.
-          const label = localeRef.current === "de" ? chip.de : chip.en
-          onSearch(d ? `${label} in ${d}` : label, { lat, lon })
+          const label = chipLabel(selectedIdxRef.current, localeRef.current)
+          onSearch(nearbyQuery(label, d), { lat, lon })
         } catch {
           setNearbyPhase("error")
         }
@@ -543,6 +567,19 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       {/* ── Category chip strip — hidden during amenity focus ── */}
       {!(focusLayers?.size) && (
         <div className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none] -mx-4 px-4">
+          <button
+            key="all"
+            onClick={() => selectChip(null)}
+            disabled={isLoading || (mode === "text" && venuePicked)}
+            className={cn(
+              "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
+              selectedIdx === null
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+            )}
+          >
+            ✨ {t.chat.chipAll}
+          </button>
           {CHIPS.map((chip, idx) => (
             <button
               key={chip.de}

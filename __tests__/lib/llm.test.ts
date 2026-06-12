@@ -177,4 +177,63 @@ describe("parseQuery", () => {
     expect(r.locationQuery).toBe("Basel (CH)")
     expect(r.categories).toContain("pub")
   })
+
+  // ── All-categories default (chips optional, issue #24 step 3) ──────────────
+
+  it("'in <city>' (no category part) returns all categories", () => {
+    const r = parseQuery("in Berlin")
+    expect(r.categories.length).toBe(16)
+    expect(r.locationQuery).toBe("Berlin")
+  })
+
+  it("does not infer categories from the location part: city 'Essen' is not a restaurant hint", () => {
+    const r = parseQuery("in Essen")
+    expect(r.categories.length).toBe(16)
+    expect(r.locationQuery).toBe("Essen")
+  })
+
+  it("category before 'in' stays scoped even when the city name is a hint ('Cafés in Essen')", () => {
+    const r = parseQuery("Cafés in Essen")
+    expect(r.categories).toContain("cafe")
+    expect(r.categories).not.toContain("restaurant")
+  })
+
+  it("plain city name without 'in' geocodes as location", () => {
+    const r = parseQuery("Berlin")
+    expect(r.locationQuery).toBe("Berlin")
+    expect(r.categories.length).toBe(16)
+  })
+
+  it("free text with category term and 'in' scopes correctly ('Sushi in Hamburg')", () => {
+    const r = parseQuery("Sushi in Hamburg")
+    expect(r.categories).toContain("restaurant")
+    expect(r.locationQuery).toBe("Hamburg")
+  })
+})
+
+// ─── Expanded category hints (issue #24 step 3) ──────────────────────────────
+
+describe("inferCategories — expanded hints", () => {
+  it("maps Sushi and Pizzeria to restaurant", () => {
+    expect(inferCategories("Sushi")).toContain("restaurant")
+    expect(inferCategories("Pizzeria Napoli")).toContain("restaurant")
+  })
+
+  it("maps Eiscafé to ice_cream (compound word not covered by 'eis' word boundary)", () => {
+    expect(inferCategories("Eiscafé")).toContain("ice_cream")
+  })
+
+  it("maps Stadtbibliothek to library (compound word)", () => {
+    expect(inferCategories("Stadtbibliothek")).toContain("library")
+  })
+
+  it("maps Brauhaus to pub and Tierpark to attraction", () => {
+    expect(inferCategories("Brauhaus")).toContain("pub")
+    expect(inferCategories("Tierpark")).toContain("attraction")
+  })
+
+  it("maps Musical to theater and Currywurst to fast_food", () => {
+    expect(inferCategories("Musical")).toContain("theater")
+    expect(inferCategories("Currywurst")).toContain("fast_food")
+  })
 })
