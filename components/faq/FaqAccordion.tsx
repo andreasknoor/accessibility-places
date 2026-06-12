@@ -97,7 +97,7 @@ export function FaqAccordion({ categories }: { categories: FaqCategory[] }) {
                   <div
                     key={item.id}
                     id={item.id}
-                    className="scroll-mt-20 border-b border-border last:border-0"
+                    className={`scroll-mt-20 border-b border-border last:border-0 border-l-2 transition-colors duration-200 ${isOpen ? "border-l-primary" : "border-l-transparent"}`}
                   >
                     <dt className="flex items-center group">
                       <button
