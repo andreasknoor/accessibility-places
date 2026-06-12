@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { ChevronDown } from "lucide-react"
+import { useState, useEffect, useLayoutEffect } from "react"
+import { ChevronDown, Link2, Check } from "lucide-react"
 import type { ReactNode } from "react"
 
 export interface FaqItem {
@@ -19,13 +19,50 @@ export interface FaqCategory {
 }
 
 export function FaqAccordion({ categories }: { categories: FaqCategory[] }) {
-  const [openId, setOpenId] = useState<string | null>(null)
+  const [openId,   setOpenId]   = useState<string | null>(null)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
 
-  // Auto-open when arriving via deep-link (e.g. /faq#coloured-circle)
-  useEffect(() => {
+  // useLayoutEffect runs synchronously before the browser paints, so the item
+  // is already open when Next.js scrolls to the hash element — avoids the
+  // race where the browser scrolls to a still-collapsed accordion.
+  useLayoutEffect(() => {
     const hash = window.location.hash.slice(1)
     if (hash) setOpenId(hash)
   }, [])
+
+  // Handle hash changes that happen while the component is already mounted:
+  // - hashchange: clicking an <a href="#id"> link on the same page
+  // - popstate:   browser back/forward restoring a hash from history
+  useEffect(() => {
+    function syncHash() {
+      const hash = window.location.hash.slice(1)
+      if (hash) setOpenId(hash)
+    }
+    window.addEventListener("hashchange", syncHash)
+    window.addEventListener("popstate",   syncHash)
+    return () => {
+      window.removeEventListener("hashchange", syncHash)
+      window.removeEventListener("popstate",   syncHash)
+    }
+  }, [])
+
+  function toggleItem(id: string) {
+    const next = openId === id ? null : id
+    setOpenId(next)
+    if (next) {
+      history.replaceState(null, "", `#${id}`)
+    } else {
+      history.replaceState(null, "", window.location.pathname + window.location.search)
+    }
+  }
+
+  function copyLink(id: string) {
+    const url = `${window.location.origin}${window.location.pathname}#${id}`
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedId(id)
+      setTimeout(() => setCopiedId(null), 2000)
+    }).catch(() => { /* clipboard access denied — silently ignore */ })
+  }
 
   return (
     <>
@@ -54,26 +91,38 @@ export function FaqAccordion({ categories }: { categories: FaqCategory[] }) {
 
             <dl>
               {cat.items.map((item) => {
-                const isOpen = openId === item.id
+                const isOpen   = openId   === item.id
+                const isCopied = copiedId === item.id
                 return (
                   <div
                     key={item.id}
                     id={item.id}
-                    className="scroll-mt-20 border-b border-border last:border-0"
+                    className={`scroll-mt-20 border-b border-border last:border-b-0 border-l-2 transition-all duration-200 ${isOpen ? "border-l-primary pl-3" : "border-l-transparent"}`}
                   >
-                    <dt>
+                    <dt className="flex items-center group">
                       <button
                         type="button"
-                        onClick={() => setOpenId(isOpen ? null : item.id)}
+                        onClick={() => toggleItem(item.id)}
                         aria-expanded={isOpen}
                         aria-controls={`answer-${item.id}`}
-                        className="w-full flex items-center justify-between gap-3 py-3.5 text-left text-sm font-medium text-foreground hover:text-primary transition-colors"
+                        className="flex-1 flex items-center justify-between gap-3 py-3.5 text-left text-sm font-medium text-foreground hover:text-primary transition-colors"
                       >
                         <span>{item.q}</span>
                         <ChevronDown
                           className="w-4 h-4 shrink-0 text-muted-foreground transition-transform duration-200"
                           style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
                         />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => copyLink(item.id)}
+                        aria-label={isCopied ? "Link kopiert" : "Link zu dieser Frage kopieren"}
+                        className="shrink-0 ml-2 p-1 rounded opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-muted-foreground hover:text-foreground transition-all"
+                      >
+                        {isCopied
+                          ? <Check  className="w-3.5 h-3.5 text-green-600" />
+                          : <Link2  className="w-3.5 h-3.5" />
+                        }
                       </button>
                     </dt>
                     <dd
