@@ -256,7 +256,7 @@ describe("fetchAccessibilityCloud", () => {
     expect(result.map((p) => p.name)).toEqual(["Café Wagner"])
   })
 
-  it("keeps records with attraction-like categories", async () => {
+  it("maps zoo category to zoo (not attraction)", async () => {
     const feature = {
       _id: "zoo1",
       geometry: { type: "Point", coordinates: [13.0, 52.0] },
@@ -264,7 +264,7 @@ describe("fetchAccessibilityCloud", () => {
     }
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ features: [feature] }) }))
     const [p] = await fetchAccessibilityCloud(BASE_PARAMS)
-    expect(p.category).toBe("attraction")
+    expect(p.category).toBe("zoo")
   })
 
   it("handles toilet details with grab bars", async () => {

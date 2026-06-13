@@ -101,6 +101,18 @@ function mapCategory(item: any): Category {
   if (type.includes("theater") || type.includes("oper"))                                         return "theater"
   if (type.includes("bibliothek") || type.includes("bücherei"))                                  return "library"
   if (type.includes("galerie") || type.includes("gallery"))                                      return "gallery"
+  if (type.includes("apotheke") || type.includes("pharmacy"))                                    return "pharmacy"
+  if (type.includes("arztpraxis") || type.includes("arzt") || type.includes("praxis") || type.includes("klinik")) return "doctors"
+  if (type.includes("zahnarzt") || type.includes("dental"))                                      return "dentist"
+  if (type.includes("tierarzt") || type.includes("veterinary"))                                  return "veterinary"
+  if (type.includes("krankenhaus") || type.includes("klinikum") || type.includes("hospital"))    return "hospital"
+  if (type.includes("drogerie") || type.includes("chemist"))                                     return "chemist"
+  if (type.includes("supermarkt") || type.includes("supermarket") || type.includes("lebensmittel")) return "supermarket"
+  if (type.includes("bäckerei") || type.includes("bäcker") || type.includes("bakery"))          return "bakery"
+  if (type.includes("friseur") || type.includes("frisör") || type.includes("hairdresser"))      return "hairdresser"
+  if (type.includes("bank") || type.includes("sparkasse"))                                       return "bank"
+  if (type.includes("postamt") || type.includes("post_office") || type.includes("post office")) return "post_office"
+  if (type.includes("zoo") || type.includes("tierpark") || type.includes("aquarium"))           return "zoo"
   return "attraction"
 }
 

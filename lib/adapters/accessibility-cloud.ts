@@ -132,7 +132,19 @@ function mapCategory(props: any): Category | undefined {
   if (cat.includes("theatre") || cat.includes("theater") || cat.includes("oper")) return "theater"
   if (cat.includes("library") || cat.includes("bibliothek"))                      return "library"
   if (cat.includes("gallery") || cat.includes("galerie"))                         return "gallery"
-  if (cat.includes("attraction") || cat.includes("theme_park") || cat.includes("zoo")) return "attraction"
+  if (cat.includes("attraction") || cat.includes("theme_park"))                       return "attraction"
+  if (cat.includes("pharmacy") || cat.includes("apotheke"))                           return "pharmacy"
+  if (cat.includes("doctor") || cat.includes("arztpraxis") || cat.includes("clinic") || cat.includes("praxis")) return "doctors"
+  if (cat.includes("dentist") || cat.includes("zahnarzt"))                            return "dentist"
+  if (cat.includes("veterinary") || cat.includes("tierarzt") || cat.includes("vet")) return "veterinary"
+  if (cat.includes("hospital") || cat.includes("krankenhaus") || cat.includes("klinikum")) return "hospital"
+  if (cat.includes("chemist") || cat.includes("drogerie"))                            return "chemist"
+  if (cat.includes("supermarket") || cat.includes("supermarkt"))                      return "supermarket"
+  if (cat.includes("bakery") || cat.includes("bäckerei") || cat.includes("backerei")) return "bakery"
+  if (cat.includes("hairdresser") || cat.includes("friseur") || cat.includes("frisör")) return "hairdresser"
+  if (cat.includes("bank"))                                                            return "bank"
+  if (cat.includes("post_office") || cat.includes("postamt") || cat.includes("post office")) return "post_office"
+  if (cat.includes("zoo") || cat.includes("aquarium") || cat.includes("tierpark"))   return "zoo"
   return undefined
 }
 

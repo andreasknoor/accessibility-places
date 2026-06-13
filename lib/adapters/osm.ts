@@ -46,15 +46,17 @@ export function buildOverpassQuery(params: SearchParams): string {
   }
 
   // ── Category-driven query ─────────────────────────────────────────────────
-  // Collect all amenity and tourism values across requested categories
+  // Collect all amenity, tourism, and shop values across requested categories
   const amenityVals = new Set<string>()
   const tourismVals = new Set<string>()
+  const shopVals    = new Set<string>()
 
   for (const cat of categories) {
     const tags = CATEGORY_OSM_TAGS[cat]
     if (!tags) continue
     tags.amenity?.forEach((v) => amenityVals.add(v))
     tags.tourism?.forEach((v) => tourismVals.add(v))
+    tags.shop?.forEach((v)    => shopVals.add(v))
   }
 
   // Pre-filter: when at least one accessibility criterion is active and unknown
@@ -87,6 +89,7 @@ export function buildOverpassQuery(params: SearchParams): string {
   const clauses: string[] = []
   if (amenityVals.size > 0) addClauses("amenity", [...amenityVals].join("|"))
   if (tourismVals.size > 0) addClauses("tourism", [...tourismVals].join("|"))
+  if (shopVals.size    > 0) addClauses("shop",    [...shopVals].join("|"))
 
   if (clauses.length === 0) return ""
 
@@ -123,6 +126,7 @@ export function osmParking(tags: Record<string, string>): A11yValue {
 function osmCategory(tags: Record<string, string>): Category {
   const amenity = tags["amenity"] ?? ""
   const tourism = tags["tourism"] ?? ""
+  const shop    = tags["shop"]    ?? ""
   if (amenity === "cafe")                                              return "cafe"
   if (amenity === "restaurant")                                        return "restaurant"
   if (amenity === "bar")                                               return "bar"
@@ -138,6 +142,18 @@ function osmCategory(tags: Record<string, string>): Category {
   if (amenity === "library")                                           return "library"
   if (tourism === "gallery" || amenity === "arts_centre")              return "gallery"
   if (amenity === "ice_cream")                                         return "ice_cream"
+  if (amenity === "pharmacy")                                          return "pharmacy"
+  if (amenity === "doctors" || amenity === "clinic")                   return "doctors"
+  if (amenity === "dentist")                                           return "dentist"
+  if (amenity === "veterinary")                                        return "veterinary"
+  if (amenity === "hospital")                                          return "hospital"
+  if (shop === "chemist")                                              return "chemist"
+  if (shop === "supermarket")                                          return "supermarket"
+  if (shop === "bakery")                                               return "bakery"
+  if (shop === "hairdresser")                                          return "hairdresser"
+  if (amenity === "bank")                                              return "bank"
+  if (amenity === "post_office")                                       return "post_office"
+  if (tourism === "zoo" || tourism === "aquarium")                     return "zoo"
   return "attraction"
 }
 

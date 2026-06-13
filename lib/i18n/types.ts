@@ -213,6 +213,7 @@ export interface Translations {
     toiletWheelchairLabel:  string
     toiletDesignatedValue:  string
     toiletAccessLabel:      string
+    searchHere:             string
   }
   categories: {
     cafe:        string
@@ -231,6 +232,18 @@ export interface Translations {
     gallery:     string
     attraction:  string
     ice_cream:   string
+    pharmacy:    string
+    doctors:     string
+    dentist:     string
+    veterinary:  string
+    hospital:    string
+    chemist:     string
+    supermarket: string
+    bakery:      string
+    hairdresser: string
+    bank:        string
+    post_office: string
+    zoo:         string
   }
   info: {
     basicInfo:      string

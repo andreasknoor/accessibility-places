@@ -38,6 +38,18 @@ const CATEGORY_ICONS: Record<string, string> = {
   library:     "📚",
   gallery:     "🎨",
   attraction:  "🎡",
+  pharmacy:    "💊",
+  doctors:     "🩺",
+  dentist:     "🦷",
+  veterinary:  "🐾",
+  hospital:    "🏥",
+  chemist:     "🧴",
+  supermarket: "🛒",
+  bakery:      "🥨",
+  hairdresser: "💈",
+  bank:        "🏦",
+  post_office: "📮",
+  zoo:         "🦁",
 }
 
 export default function PlaceCard({ place, isSelected, onClick, distanceM }: Props) {

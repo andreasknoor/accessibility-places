@@ -15,14 +15,29 @@ const CATEGORY_HINTS: Record<Category, string[]> = {
   cinema:      ["kino", "cinema", "filmtheater", "lichtspielhaus", "movie"],
   library:     ["bibliothek", "bücherei", "library", "stadtbibliothek", "stadtbücherei", "mediathek"],
   gallery:     ["galerie", "gallery", "kunsthalle", "ausstellung"],
-  attraction:  ["sehenswürdigkeit", "attraktion", "attraction", "freizeitpark", "zoo", "tierpark", "ausflugsziel", "aquarium"],
+  attraction:  ["sehenswürdigkeit", "attraktion", "attraction", "freizeitpark", "ausflugsziel"],
   ice_cream:   ["eisdiele", "eisdielen", "eis", "gelato", "gelateria", "ice cream", "icecream", "eiscafe", "eiscafé"],
+  pharmacy:    ["apotheke", "pharmacy"],
+  doctors:     ["arzt", "arztpraxis", "praxis", "hausarzt", "facharzt", "ärztehaus", "doctor", "gp", "clinic", "klinik"],
+  dentist:     ["zahnarzt", "zahnärztin", "zahnarztpraxis", "dentist", "dental"],
+  veterinary:  ["tierarzt", "tierärztin", "tierarztpraxis", "tierarztpraxis", "vet", "veterinary", "kleintierpraxis"],
+  hospital:    ["krankenhaus", "klinikum", "klinik", "hospital", "notaufnahme", "spital"],
+  chemist:     ["drogerie", "drugstore", "chemist", "rossmann", "dm ", "müller"],
+  supermarket: ["supermarkt", "supermarket", "lebensmittel", "edeka", "rewe", "aldi", "lidl", "netto", "penny", "billa", "spar"],
+  bakery:      ["bäckerei", "bäcker", "bakery", "backstube", "konditorei"],
+  hairdresser: ["friseur", "frisör", "friseurin", "hairdresser", "hairstylist", "barbier", "barber"],
+  bank:        ["bank", "sparkasse", "volksbank", "raiffeisenbank", "commerzbank", "deutsche bank"],
+  post_office: ["post", "postamt", "post office", "deutsche post", "österreichische post", "briefkasten"],
+  zoo:         ["zoo", "tierpark", "tierpark", "aquarium", "zoopark", "wildpark", "vogelpark", "wildgehege"],
 }
 
 const ALL_CATEGORIES: Category[] = [
   "cafe","restaurant","bar","pub","biergarten","fast_food",
   "hotel","hostel","apartment",
   "museum","theater","cinema","library","gallery","attraction","ice_cream",
+  "pharmacy","doctors","dentist","veterinary","hospital",
+  "chemist","supermarket","bakery","hairdresser",
+  "bank","post_office","zoo",
 ]
 
 function normaliseForMatch(s: string): string {

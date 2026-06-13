@@ -66,8 +66,19 @@ const FROM_GINTO: Record<string, Category> = {
   cinema:       "cinema",
   library:      "library",
   landmark:     "attraction",
-  zoo:          "attraction",
+  zoo:          "zoo",
+  aquarium:     "zoo",
   park:         "attraction",
+  pharmacy:     "pharmacy",
+  doctor:       "doctors",
+  dentist:      "dentist",
+  veterinary:   "veterinary",
+  hospital:     "hospital",
+  supermarket:  "supermarket",
+  bakery:       "bakery",
+  hairdresser:  "hairdresser",
+  bank:         "bank",
+  post_office:  "post_office",
 }
 
 // ─── Country code normalisation ────────────────────────────────────────────

@@ -45,6 +45,8 @@ export const SETTING_CHIPS = [
   { icon: "🍦", de: "Eisdielen",           en: "Ice Cream"     },
   { icon: "🍸", de: "Bars",                en: "Bars"          },
   { icon: "🗺",  de: "Sehenswürdigkeiten", en: "Attractions"   },
+  { icon: "💊", de: "Apotheken",           en: "Pharmacies"    },
+  { icon: "🩺", de: "Arztpraxen",          en: "Doctors"       },
 ] as const
 
 const SETTINGS_KEY = "ap_settings"

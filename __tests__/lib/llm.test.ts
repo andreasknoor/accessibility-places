@@ -182,13 +182,13 @@ describe("parseQuery", () => {
 
   it("'in <city>' (no category part) returns all categories", () => {
     const r = parseQuery("in Berlin")
-    expect(r.categories.length).toBe(16)
+    expect(r.categories.length).toBe(28)
     expect(r.locationQuery).toBe("Berlin")
   })
 
   it("does not infer categories from the location part: city 'Essen' is not a restaurant hint", () => {
     const r = parseQuery("in Essen")
-    expect(r.categories.length).toBe(16)
+    expect(r.categories.length).toBe(28)
     expect(r.locationQuery).toBe("Essen")
   })
 
@@ -201,7 +201,7 @@ describe("parseQuery", () => {
   it("plain city name without 'in' geocodes as location", () => {
     const r = parseQuery("Berlin")
     expect(r.locationQuery).toBe("Berlin")
-    expect(r.categories.length).toBe(16)
+    expect(r.categories.length).toBe(28)
   })
 
   it("free text with category term and 'in' scopes correctly ('Sushi in Hamburg')", () => {
@@ -227,9 +227,10 @@ describe("inferCategories — expanded hints", () => {
     expect(inferCategories("Stadtbibliothek")).toContain("library")
   })
 
-  it("maps Brauhaus to pub and Tierpark to attraction", () => {
+  it("maps Brauhaus to pub and Tierpark to zoo", () => {
     expect(inferCategories("Brauhaus")).toContain("pub")
-    expect(inferCategories("Tierpark")).toContain("attraction")
+    expect(inferCategories("Tierpark")).toContain("zoo")
+    expect(inferCategories("Tierpark")).not.toContain("attraction")
   })
 
   it("maps Musical to theater and Currywurst to fast_food", () => {

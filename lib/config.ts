@@ -2,7 +2,7 @@ import type { SourceId, Category } from "./types"
 
 // User-visible app version, shown in the header next to the subtitle.
 // Bump on every meaningful release.
-export const APP_VERSION = "4.27"
+export const APP_VERSION = "4.29"
 
 export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
   reisen_fuer_alle:    1.00,
@@ -94,7 +94,7 @@ export const NOMINATIM_ENDPOINT =
   "https://nominatim.openstreetmap.org"
 
 // OSM category → amenity/tourism tags
-export const CATEGORY_OSM_TAGS: Record<Category, { amenity?: readonly string[]; tourism?: readonly string[] }> = {
+export const CATEGORY_OSM_TAGS: Record<Category, { amenity?: readonly string[]; tourism?: readonly string[]; shop?: readonly string[] }> = {
   cafe:        { amenity: ["cafe"] },
   restaurant:  { amenity: ["restaurant"] },
   bar:         { amenity: ["bar"] },
@@ -111,4 +111,16 @@ export const CATEGORY_OSM_TAGS: Record<Category, { amenity?: readonly string[]; 
   gallery:     { tourism: ["gallery"], amenity: ["arts_centre"] },
   attraction:  { tourism: ["attraction", "theme_park"] },
   ice_cream:   { amenity: ["ice_cream"] },
+  pharmacy:    { amenity: ["pharmacy"] },
+  doctors:     { amenity: ["doctors", "clinic"] },
+  dentist:     { amenity: ["dentist"] },
+  veterinary:  { amenity: ["veterinary"] },
+  hospital:    { amenity: ["hospital"] },
+  chemist:     { shop: ["chemist"] },
+  supermarket: { shop: ["supermarket"] },
+  bakery:      { shop: ["bakery"] },
+  hairdresser: { shop: ["hairdresser"] },
+  bank:        { amenity: ["bank"] },
+  post_office: { amenity: ["post_office"] },
+  zoo:         { tourism: ["zoo", "aquarium"] },
 }

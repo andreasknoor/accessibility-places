@@ -19,6 +19,9 @@ export type Category =
   | "hotel" | "hostel" | "apartment"
   | "museum" | "theater" | "cinema" | "library" | "gallery" | "attraction"
   | "ice_cream"
+  | "pharmacy" | "doctors" | "dentist" | "veterinary" | "hospital"
+  | "chemist" | "supermarket" | "bakery" | "hairdresser"
+  | "bank" | "post_office" | "zoo"
 
 // ─── Sub-attributes per criterion ──────────────────────────────────────────
 
