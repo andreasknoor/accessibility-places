@@ -97,8 +97,8 @@ function svgToiletMarker(host: ToiletHost = "standalone") {
 }
 
 function svgMarker(color: string, selected: boolean, emoji: string) {
-  const w      = selected ? 36 : 26
-  const h      = selected ? 47 : 34
+  const w      = selected ? 41 : 30
+  const h      = selected ? 54 : 39
   const stroke = selected ? "#1d4ed8" : "#fff"
   const sw     = selected ? 2.5 : 1.5
   // Pin shape: circular head (center ≈ 13,12) tapering to a tip at (13,32)
@@ -557,8 +557,8 @@ export default function MapView({
       const emoji      = CATEGORY_ICONS[place.category] ?? "📍"
       const iconHtml   = svgMarker(color, isSelected, emoji)
 
-      const pinW = isSelected ? 36 : 26
-      const pinH = isSelected ? 47 : 34
+      const pinW = isSelected ? 41 : 30
+      const pinH = isSelected ? 54 : 39
       const icon = L!.divIcon({
         html:        iconHtml,
         className:   "",
