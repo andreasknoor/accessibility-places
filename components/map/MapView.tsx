@@ -96,13 +96,16 @@ function svgToiletMarker(host: ToiletHost = "standalone") {
   </svg>`
 }
 
-function svgMarker(color: string, selected: boolean) {
-  const size   = selected ? 46 : 36
+function svgMarker(color: string, selected: boolean, emoji: string) {
+  const w      = selected ? 36 : 26
+  const h      = selected ? 47 : 34
   const stroke = selected ? "#1d4ed8" : "#fff"
-  const sw     = selected ? 3 : 2
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24">
-    <circle cx="12" cy="12" r="9" fill="${color}" stroke="${stroke}" stroke-width="${sw}"/>
-    <text x="12" y="16" text-anchor="middle" font-size="11" fill="white" font-family="sans-serif">♿</text>
+  const sw     = selected ? 2.5 : 1.5
+  // Pin shape: circular head (center ≈ 13,12) tapering to a tip at (13,32)
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 26 34">
+    <path d="M13,1.5 C7.2,1.5 2.5,6.2 2.5,12 C2.5,19.5 13,32.5 13,32.5 C13,32.5 23.5,19.5 23.5,12 C23.5,6.2 18.8,1.5 13,1.5 Z"
+      fill="${color}" stroke="${stroke}" stroke-width="${sw}"/>
+    <text x="13" y="15.5" text-anchor="middle" font-size="13">${emoji}</text>
   </svg>`
 }
 
@@ -551,15 +554,17 @@ export default function MapView({
     for (const place of places) {
       const isSelected = place.id === selectedId
       const color      = markerColor(place.overallConfidence)
-      const iconHtml   = svgMarker(color, isSelected)
+      const emoji      = CATEGORY_ICONS[place.category] ?? "📍"
+      const iconHtml   = svgMarker(color, isSelected, emoji)
 
-      const iconSz = isSelected ? 46 : 36
+      const pinW = isSelected ? 36 : 26
+      const pinH = isSelected ? 47 : 34
       const icon = L!.divIcon({
         html:        iconHtml,
         className:   "",
-        iconSize:    [iconSz, iconSz],
-        iconAnchor:  [iconSz / 2, iconSz],
-        popupAnchor: [0, -iconSz - 4],
+        iconSize:    [pinW, pinH],
+        iconAnchor:  [pinW / 2, pinH],
+        popupAnchor: [0, -pinH],
       })
 
       const existing = markers.current.get(place.id)
