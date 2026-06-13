@@ -166,7 +166,11 @@ export default function MapView({
 
   // Floating "search here" button state — set when user pans away from search centre.
   const [searchHereCenter, setSearchHereCenter] = useState<{ lat: number; lon: number } | null>(null)
-  const userPannedRef = useRef(false)
+  // Counter > 0 means the next moveend(s) are programmatic — don't show the button.
+  // Initialized to 1 to swallow the moveend that Leaflet fires on map creation.
+  // Using a counter (not boolean) because zoomToShowLayer can fire two moveends
+  // (zoom-in + spiderfy) for a single programmatic call.
+  const programmaticMoveRef = useRef(1)
 
   // Dismiss the button whenever a new search result arrives (centre changed).
   useEffect(() => { setSearchHereCenter(null) }, [center])
@@ -202,14 +206,16 @@ export default function MapView({
 
       mapInst.current = map
 
-      // "Search here" — listen for user-initiated pans only.
-      // dragend fires exclusively on user drag (not on programmatic panTo/fitBounds),
-      // so it safely distinguishes user intent from app-triggered moves.
-      // moveend fires after the inertia animation finishes, giving the settled centre.
-      map.on("dragend", () => { userPannedRef.current = true })
+      // "Search here" — detect user-initiated pans via moveend.
+      // dragend is unreliable on iOS WKWebView (touch gestures may not fire it),
+      // so we invert the logic: mark every programmatic move with programmaticMoveRef++
+      // before calling setView/fitBounds/zoomToShowLayer, then ignore those moveends.
+      // Any moveend that isn't accounted for must be a real user pan.
       map.on("moveend", () => {
-        if (!userPannedRef.current) return
-        userPannedRef.current = false
+        if (programmaticMoveRef.current > 0) {
+          programmaticMoveRef.current--
+          return
+        }
         if (!onSearchHereRef.current || !searchCenterRef.current) return
         const newCenter = map.getCenter()
         const bounds    = map.getBounds()
@@ -649,6 +655,7 @@ export default function MapView({
     const latlngs: [number, number][] = places.map((p) => [p.coordinates.lat, p.coordinates.lon])
     const ul = userLocationRef.current
     if (ul) latlngs.push([ul.lat, ul.lon])
+    programmaticMoveRef.current++
     mapInst.current.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 15 })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [places, mapReady, autoZoom, focusMode])
@@ -662,6 +669,7 @@ export default function MapView({
     if (!mapInst.current || !selectedId) return
     const marker = markers.current.get(selectedId)
     if (!marker || !placeClusterRef.current) return
+    programmaticMoveRef.current += 2  // zoomToShowLayer can fire two moveends (zoom + spiderfy)
     placeClusterRef.current.zoomToShowLayer(marker, () => marker.openPopup())
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, panTrigger, mapReady])
@@ -681,10 +689,12 @@ export default function MapView({
       const latlngs: [number, number][] = amenities.map((s) => [s.lat, s.lon])
       const ul = userLocationRef.current
       if (ul) latlngs.push([ul.lat, ul.lon])
+      programmaticMoveRef.current++
       mapInst.current.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 16 })
       return
     }
     if (!center) return
+    programmaticMoveRef.current++
     mapInst.current.setView([center.lat, center.lon], 13)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [center, parkingSpots, toiletSpots, mapReady, focusMode, isLoading])
@@ -720,6 +730,7 @@ export default function MapView({
       if (selectedId) {
         const selMarker = placeClusterRef.current ? markers.current.get(selectedId) : undefined
         if (selMarker && placeClusterRef.current) {
+          programmaticMoveRef.current += 2
           placeClusterRef.current.zoomToShowLayer(selMarker, () => selMarker.openPopup())
         }
         return
@@ -728,6 +739,7 @@ export default function MapView({
         const latlngs: [number, number][] = places.map((p) => [p.coordinates.lat, p.coordinates.lon])
         const ul = userLocationRef.current
         if (ul) latlngs.push([ul.lat, ul.lon])
+        programmaticMoveRef.current++
         mapInst.current?.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 15 })
       } else {
         const spots = [...(parkingSpots ?? []), ...(toiletSpots ?? [])]
@@ -735,8 +747,10 @@ export default function MapView({
           const latlngs: [number, number][] = spots.map((s) => [s.lat, s.lon])
           const ul = userLocationRef.current
           if (ul) latlngs.push([ul.lat, ul.lon])
+          programmaticMoveRef.current++
           mapInst.current?.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 16 })
         } else if (center) {
+          programmaticMoveRef.current++
           mapInst.current?.setView([center.lat, center.lon], 13)
         }
       }
