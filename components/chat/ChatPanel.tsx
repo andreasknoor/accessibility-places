@@ -497,7 +497,8 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       .catch((err) => {
         locatingRef.current = false
         setNearbyPhase("error")
-        console.error("[geolocation] error", err instanceof Error ? err.message : String(err))
+        const msg = (err as { message?: string; code?: number }).message ?? String(err)
+        console.error("[geolocation] error", msg)
       })
   }
 

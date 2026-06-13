@@ -8,7 +8,7 @@ import SeoPageContent            from "@/components/seo/SeoPageContent"
 // ISR: 5-day revalidation. generateStaticParams returns [] so no pages are
 // pre-rendered at build time — all 320 routes render lazily on first request.
 // dynamicParams = true (default) allows any valid city/category slug.
-export const revalidate = 432000
+export const revalidate = 2592000
 
 export function generateStaticParams() { return [] }
 
