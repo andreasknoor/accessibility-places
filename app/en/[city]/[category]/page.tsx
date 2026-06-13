@@ -8,7 +8,7 @@ import SeoPageContent            from "@/components/seo/SeoPageContent"
 // ISR: 5.5-day revalidation, offset from DE (5 days) so both locales don't
 // revalidate simultaneously. generateStaticParams returns [] so no pages are
 // pre-rendered at build time — all 320 routes render lazily on first request.
-export const revalidate = 475200
+export const revalidate = 2635200
 
 export function generateStaticParams() { return [] }
 
