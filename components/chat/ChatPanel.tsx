@@ -373,6 +373,10 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     if (!location.trim()) return
     setSuggestions([])
     setShowSuggestions(false)
+    // Suppress the suggestions effect from re-firing when biasCoords changes
+    // after the search completes (searchCenter updates → biasCoords dep changes
+    // → effect re-runs with the same input text → dropdown reappears).
+    programmaticLocRef.current = location.trim()
 
     // Input still holds a picked venue → re-run the place search for it.
     const picked = pickedVenueRef.current
