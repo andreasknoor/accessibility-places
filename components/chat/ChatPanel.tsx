@@ -709,39 +709,6 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           </Button>
         </div>
 
-        {/* ── Category chip strip — below input, hidden during amenity focus ── */}
-        {!(focusLayers?.size) && (
-          <div className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none] -mx-4 px-4">
-            <button
-              key="all"
-              onClick={() => selectChip(null)}
-              disabled={isLoading || venuePicked}
-              className={cn(
-                "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
-                selectedIdx === null
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
-              )}
-            >
-              {t.chat.chipAll}
-            </button>
-            {CHIPS.map((chip, idx) => (
-              <button
-                key={chip.de}
-                onClick={() => selectChip(idx)}
-                disabled={isLoading || venuePicked}
-                className={cn(
-                  "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
-                  idx === selectedIdx
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
-                )}
-              >
-                {chip.icon} {locale === "de" ? chip.de : chip.en}
-              </button>
-            ))}
-          </div>
-        )}
         </>
       )}
 
@@ -834,6 +801,40 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           )}
 
         </>
+      )}
+
+      {/* ── Category chip strip — both modes, hidden during amenity focus ── */}
+      {!(focusLayers?.size) && (
+        <div className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none] -mx-4 px-4">
+          <button
+            key="all"
+            onClick={() => selectChip(null)}
+            disabled={isLoading || venuePicked}
+            className={cn(
+              "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
+              selectedIdx === null
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+            )}
+          >
+            {t.chat.chipAll}
+          </button>
+          {CHIPS.map((chip, idx) => (
+            <button
+              key={chip.de}
+              onClick={() => selectChip(idx)}
+              disabled={isLoading || venuePicked}
+              className={cn(
+                "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
+                idx === selectedIdx
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+              )}
+            >
+              {chip.icon} {locale === "de" ? chip.de : chip.en}
+            </button>
+          ))}
+        </div>
       )}
 
     </div>
