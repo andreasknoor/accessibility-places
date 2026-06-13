@@ -45,7 +45,7 @@ Built with **Next.js 16 (Turbopack)**, **React 19**, **Tailwind v4**, and **Leaf
 - **Containment-aware deduplication.** OSM duplicates like `Meierei` (node) and `Meierei – Brauerei Potsdam` (way) at the same coordinates merge into a single canonical place.
 - **Verified-recently badge.** OSM `check_date:wheelchair` (written by Wheelmap surveys) within 2 years boosts the source weight ×1.2 and renders a verified mark next to the score.
 - **Nearby amenities.** Optionally upgrades a venue's parking value when a dedicated disabled-parking node sits within 250 m, and renders disabled-parking and wheelchair-WC markers on the map — as passive layers or via a single-select focus mode (🅿 / 🚻 chips).
-- **Three search modes.** Text search ("Cafés in Berlin"), "In der Nähe" GPS search, and place-search by name.
+- **Two search modes.** "In der Nähe" GPS search, and a unified "Überall" field that handles both area/category search ("Cafés in Berlin") and looking up a specific venue by name — picked apart by the autocomplete (areas vs. venues).
 - **Bilingual UI.** German and English, with a runtime language switcher and dedicated `/en/*` routes.
 - **Responsive layout.** Full desktop layout (filter sidebar | resizable results column | map) and a mobile layout with a tab bar (results / map / filter). Installable as a PWA.
 - **SEO landing pages.** ISR pages for 32 DACH cities × 10 categories × 2 locales, rendered lazily on first request.
@@ -261,11 +261,10 @@ Wheelchair WCs (`ENABLE_NEARBY_TOILETS`) are a second amenity type sharing the s
 
 ## Search modes
 
-`chatMode` is a three-way union:
+`chatMode` is a two-way union:
 
-- **Text** — "Cafés in Berlin"; geocoded via Nominatim.
+- **Text ("Überall")** — one unified field. Free text or a picked **area** runs a geocoded category search ("Cafés in Berlin", via Nominatim); picking a **venue** from the autocomplete runs a place lookup instead (`onPlaceSearch`, `placeSearch: true` on `SearchParams` — the OSM adapter switches to a name-regex Overpass query within 500 m, other adapters use the `nameHint` post-filter). What used to be two separate modes ("Erkunden" + "Ort suchen") is now this single field.
 - **In der Nähe (nearby)** — one tap locates the user (native plugin in the Capacitor app, browser Geolocation API otherwise) and searches around the current position, with a pulsing marker on the map and inline distances on result cards. A per-session **amenity focus mode** (single-select 🅿 / 🚻 chips) can switch the map to show only disabled-parking spots or wheelchair WCs within the configured radius.
-- **Ort suchen (place)** — look up a specific venue by name without a city/category. The OSM adapter switches to a name-regex Overpass query within 500 m; other adapters use the `nameHint` post-filter.
 
 A name field (separate from the query string) lets users restrict any search to a quoted name; it is passed as `nameHint` and applied after the merge, so accessibility filters apply independently of name searches.
 
