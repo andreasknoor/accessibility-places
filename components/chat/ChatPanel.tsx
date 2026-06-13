@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, Fragment } from "react"
-import { Send, Loader2, LocateFixed, Compass, X, Coffee, UtensilsCrossed, Beer, BookOpen, Hotel, Landmark, Film, Library, GalleryHorizontal, Star, IceCream, MapPin } from "lucide-react"
+import { Send, Loader2, LocateFixed, Search, X, Coffee, UtensilsCrossed, Beer, BookOpen, Hotel, Landmark, Film, Library, GalleryHorizontal, Star, IceCream, MapPin } from "lucide-react"
 import { track } from "@vercel/analytics"
 import { Button } from "@/components/ui/button"
 import { useTranslations, useLocale } from "@/lib/i18n"
@@ -526,7 +526,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
               )}
             >
               {m === "nearby" && <LocateFixed className="w-[1.125rem] h-[1.125rem]" />}
-              {m === "text"   && <Compass     className="w-[1.125rem] h-[1.125rem]" />}
+              {m === "text"   && <Search      className="w-[1.125rem] h-[1.125rem]" />}
               <span className="text-xs font-medium leading-none flex items-center gap-1">
                 {m === "text"   && t.chat.modeText}
                 {m === "nearby" && t.chat.modeNearby}
@@ -552,7 +552,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
               )}
             >
               {m === "nearby" && <LocateFixed className="w-5 h-5" />}
-              {m === "text"   && <Compass     className="w-5 h-5" />}
+              {m === "text"   && <Search      className="w-5 h-5" />}
               <span className="text-sm font-semibold leading-tight flex items-center gap-1">
                 {m === "text"   && t.chat.modeText}
                 {m === "nearby" && t.chat.modeNearby}
@@ -565,42 +565,9 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
         </div>
       )}
 
-      {/* ── Category chip strip — hidden during amenity focus ── */}
-      {!(focusLayers?.size) && (
-        <div className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none] -mx-4 px-4">
-          <button
-            key="all"
-            onClick={() => selectChip(null)}
-            disabled={isLoading || (mode === "text" && venuePicked)}
-            className={cn(
-              "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
-              selectedIdx === null
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
-            )}
-          >
-            ✨ {t.chat.chipAll}
-          </button>
-          {CHIPS.map((chip, idx) => (
-            <button
-              key={chip.de}
-              onClick={() => selectChip(idx)}
-              disabled={isLoading || (mode === "text" && venuePicked)}
-              className={cn(
-                "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
-                idx === selectedIdx
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
-              )}
-            >
-              {chip.icon} {locale === "de" ? chip.de : chip.en}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* ── Text search mode ── */}
       {mode === "text" && (
+        <>
         <div className="flex gap-2 items-center">
           {/* Unified search input — areas, venues, and quoted name filters */}
           <div className="relative flex-1">
@@ -735,6 +702,41 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             </span>
           </Button>
         </div>
+
+        {/* ── Category chip strip — below input, hidden during amenity focus ── */}
+        {!(focusLayers?.size) && (
+          <div className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none] -mx-4 px-4">
+            <button
+              key="all"
+              onClick={() => selectChip(null)}
+              disabled={isLoading || venuePicked}
+              className={cn(
+                "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
+                selectedIdx === null
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+              )}
+            >
+              {t.chat.chipAll}
+            </button>
+            {CHIPS.map((chip, idx) => (
+              <button
+                key={chip.de}
+                onClick={() => selectChip(idx)}
+                disabled={isLoading || venuePicked}
+                className={cn(
+                  "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
+                  idx === selectedIdx
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+                )}
+              >
+                {chip.icon} {locale === "de" ? chip.de : chip.en}
+              </button>
+            ))}
+          </div>
+        )}
+        </>
       )}
 
       {/* ── Nearby mode ── */}

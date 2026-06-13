@@ -440,7 +440,7 @@ describe("ChatPanel clear button", () => {
 describe("ChatPanel initialChipIdx restore", () => {
   it("selects the chip at initialChipIdx when no saved last-search exists", () => {
     localStorage.clear()
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialChipIdx={2} />)
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" initialChipIdx={2} />)
     // chip index 2 = Hotels
     const buttons = screen.getAllByRole("button")
     const hotelChip = buttons.find((b) => b.textContent?.includes("Hotels"))
@@ -450,7 +450,7 @@ describe("ChatPanel initialChipIdx restore", () => {
 
   it("saved last-search chip overrides initialChipIdx", () => {
     localStorage.setItem("ap_last_search", JSON.stringify({ idx: 1, loc: "Berlin" }))
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialChipIdx={2} />)
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" initialChipIdx={2} />)
     const buttons = screen.getAllByRole("button")
     const cafeChip  = buttons.find((b) => b.textContent?.includes("Cafés"))
     const hotelChip = buttons.find((b) => b.textContent?.includes("Hotels"))
@@ -460,7 +460,7 @@ describe("ChatPanel initialChipIdx restore", () => {
 
   it("falls back to initialChipIdx when saved idx is invalid", () => {
     localStorage.setItem("ap_last_search", JSON.stringify({ idx: 999, loc: "Berlin" }))
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialChipIdx={3} />)
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" initialChipIdx={3} />)
     const buttons = screen.getAllByRole("button")
     // chip index 3 = Biergärten
     const biergartChip = buttons.find((b) => b.textContent?.includes("Biergärten"))
@@ -469,7 +469,7 @@ describe("ChatPanel initialChipIdx restore", () => {
 
   it("defaults to the 'Alle' chip (all categories) when neither saved search nor initialChipIdx exist", () => {
     localStorage.clear()
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
     const buttons = screen.getAllByRole("button")
     const alleChip       = buttons.find((b) => b.textContent?.includes("Alle"))
     const restaurantChip = buttons.find((b) => b.textContent?.includes("Restaurants"))
@@ -479,7 +479,7 @@ describe("ChatPanel initialChipIdx restore", () => {
 
   it("restores a saved null chip ('Alle') without falling back to a category", () => {
     localStorage.setItem("ap_last_search", JSON.stringify({ idx: null, loc: "Berlin" }))
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialChipIdx={2} />)
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" initialChipIdx={2} />)
     const buttons = screen.getAllByRole("button")
     const alleChip = buttons.find((b) => b.textContent?.includes("Alle"))
     expect(alleChip).toHaveClass("bg-primary")
@@ -636,9 +636,9 @@ describe("ChatPanel single-field UI", () => {
     expect(screen.queryByRole("button", { name: /Ort suchen/ })).not.toBeInTheDocument()
   })
 
-  it("renders exactly two mode buttons: In der Nähe and Erkunden", () => {
+  it("renders exactly two mode buttons: In der Nähe and Überall", () => {
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
-    const modeButtons = screen.getAllByRole("button", { name: /In der Nähe|Erkunden/ })
+    const modeButtons = screen.getAllByRole("button", { name: /In der Nähe|Überall/ })
     expect(modeButtons).toHaveLength(2)
   })
 
