@@ -9,6 +9,7 @@ import {
   Truck, ShoppingBag, Link2, Car, Hash, Navigation, Copy,
 } from "lucide-react"
 import { SOURCE_LABELS } from "@/lib/config"
+import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { NativeLink } from "@/components/ui/native-link"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
@@ -298,6 +299,10 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
         <div className="flex items-start justify-between gap-3 px-4 py-3 border-b border-border shrink-0">
           <div className="min-w-0">
             <p className="font-semibold text-sm truncate">{place.name}</p>
+            <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+              <span aria-hidden>{CATEGORY_ICONS[place.category] ?? "📍"}</span>
+              <span>{(t.categories as Record<string, string>)[place.category] ?? place.category}</span>
+            </p>
             {addrStr && <p className="text-xs text-muted-foreground mt-0.5 truncate">{addrStr}</p>}
           </div>
           <div className="flex items-center gap-3 shrink-0 mt-0.5">

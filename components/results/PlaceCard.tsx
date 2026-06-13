@@ -12,6 +12,7 @@ import PlaceDebugSheet  from "./PlaceDebugSheet"
 import { track } from "@vercel/analytics"
 import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS }   from "@/lib/config"
+import { CATEGORY_ICONS }  from "@/lib/category-icons"
 import { cn } from "@/lib/utils"
 import type { Place } from "@/lib/types"
 
@@ -20,36 +21,6 @@ interface Props {
   isSelected?: boolean
   onClick?:    () => void
   distanceM?:  number
-}
-
-const CATEGORY_ICONS: Record<string, string> = {
-  cafe:        "☕",
-  restaurant:  "🍽",
-  bar:         "🍸",
-  pub:         "🍺",
-  biergarten:  "🍻",
-  fast_food:   "🍔",
-  hotel:       "🏨",
-  hostel:      "🛏",
-  apartment:   "🏠",
-  museum:      "🏛",
-  theater:     "🎭",
-  cinema:      "🎬",
-  library:     "📚",
-  gallery:     "🎨",
-  attraction:  "🎡",
-  pharmacy:    "💊",
-  doctors:     "🩺",
-  dentist:     "🦷",
-  veterinary:  "🐾",
-  hospital:    "🏥",
-  chemist:     "🧴",
-  supermarket: "🛒",
-  bakery:      "🥨",
-  hairdresser: "💈",
-  bank:        "🏦",
-  post_office: "📮",
-  zoo:         "🦁",
 }
 
 export default function PlaceCard({ place, isSelected, onClick, distanceM }: Props) {
@@ -113,6 +84,9 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
               <h3 className="font-semibold text-sm leading-snug line-clamp-2 break-words">
                 {place.name}
               </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {(t.categories as Record<string, string>)[place.category] ?? place.category}
+              </p>
               {(addr || distanceM !== undefined) && (
                 <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                   <MapPin className="w-3 h-3 shrink-0" />

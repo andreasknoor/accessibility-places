@@ -1,10 +1,11 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Maximize2, Minimize2 } from "lucide-react"
+import { Maximize2, Minimize2, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS } from "@/lib/config"
+import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { openExternalUrl } from "@/lib/native/browser"
 import { confidenceLabel } from "@/lib/matching/merge"
 import { haversineMetres } from "@/lib/matching/match"
@@ -32,6 +33,7 @@ interface Props {
   visible?:            boolean
   showParking?:        boolean
   showToilets?:        boolean
+  isLoading?:          boolean
   // Called when the user picks a segment in the map-layer control.
   // Replaces the old onToggleParking single-toggle.
   onSetMapLayers?:     (parking: boolean, toilets: boolean) => void
@@ -45,6 +47,9 @@ interface Props {
   // Whether the weak "accessible" parking tier is enabled — drives the legend
   // (the yellow entry is only relevant when those markers can appear).
   showWeakParking?:        boolean
+  // Called when the user pans the map and clicks "Search here". Receives the
+  // new map centre; caller should re-run the last search at that location.
+  onSearchHere?:           (center: { lat: number; lon: number }) => void
 }
 
 const CONFIDENCE_COLORS = {
@@ -119,9 +124,11 @@ export default function MapView({
   showToilets,
   onSetMapLayers,
   hasToiletData = false,
+  isLoading = false,
   autoZoom = true,
   focusMode = false,
   showWeakParking = false,
+  onSearchHere,
 }: Props) {
   const t        = useTranslations()
   const mapRef   = useRef<HTMLDivElement>(null)
@@ -146,9 +153,20 @@ export default function MapView({
   const onShowInResultsRef  = useRef(onShowInResults)
   const placesRef           = useRef(places)
   const userLocationRef     = useRef(userLocation)
+  const searchCenterRef     = useRef(center)
+  const onSearchHereRef     = useRef(onSearchHere)
   useEffect(() => { onShowInResultsRef.current = onShowInResults }, [onShowInResults])
   useEffect(() => { placesRef.current = places }, [places])
   useEffect(() => { userLocationRef.current = userLocation }, [userLocation])
+  useEffect(() => { searchCenterRef.current = center }, [center])
+  useEffect(() => { onSearchHereRef.current = onSearchHere }, [onSearchHere])
+
+  // Floating "search here" button state — set when user pans away from search centre.
+  const [searchHereCenter, setSearchHereCenter] = useState<{ lat: number; lon: number } | null>(null)
+  const userPannedRef = useRef(false)
+
+  // Dismiss the button whenever a new search result arrives (centre changed).
+  useEffect(() => { setSearchHereCenter(null) }, [center])
 
   // Init map once
   useEffect(() => {
@@ -180,6 +198,31 @@ export default function MapView({
       }).addTo(map)
 
       mapInst.current = map
+
+      // "Search here" — listen for user-initiated pans only.
+      // dragend fires exclusively on user drag (not on programmatic panTo/fitBounds),
+      // so it safely distinguishes user intent from app-triggered moves.
+      // moveend fires after the inertia animation finishes, giving the settled centre.
+      map.on("dragend", () => { userPannedRef.current = true })
+      map.on("moveend", () => {
+        if (!userPannedRef.current) return
+        userPannedRef.current = false
+        if (!onSearchHereRef.current || !searchCenterRef.current) return
+        const newCenter = map.getCenter()
+        const bounds    = map.getBounds()
+        const minSpan   = Math.min(
+          bounds.getNorth() - bounds.getSouth(),
+          bounds.getEast()  - bounds.getWest(),
+        )
+        const threshold = 0.25 * minSpan
+        const sc = searchCenterRef.current
+        if (Math.abs(newCenter.lat - sc.lat) > threshold ||
+            Math.abs(newCenter.lng - sc.lon) > threshold) {
+          setSearchHereCenter({ lat: newCenter.lat, lon: newCenter.lng })
+        } else {
+          setSearchHereCenter(null)
+        }
+      })
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const Lany = L as any
@@ -540,8 +583,12 @@ export default function MapView({
           return t.a11y[p.value] ?? p.value
         })()
 
+        const categoryIcon  = CATEGORY_ICONS[place.category] ?? "📍"
+        const categoryLabel = (t.categories as Record<string, string>)[place.category] ?? place.category
+
         div.innerHTML = `
-          <strong style="display:block;margin-bottom:4px">${esc(place.name)} <span style="color:${markerColor(place.overallConfidence)};font-weight:normal">(${Math.round(place.overallConfidence * 100)}%)</span></strong>
+          <strong style="display:block;margin-bottom:2px">${esc(place.name)} <span style="color:${markerColor(place.overallConfidence)};font-weight:normal">(${Math.round(place.overallConfidence * 100)}%)</span></strong>
+          <div style="color:#666;font-size:11px;margin-bottom:4px">${categoryIcon} ${esc(categoryLabel)}</div>
           ${addr ? `<div style="color:#666;font-size:11px;margin-bottom:6px">${esc(addr)}</div>` : ""}
           <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:11px">
             <span style="color:#888">${t.criteria.entrance}</span>
@@ -617,8 +664,12 @@ export default function MapView({
   // Pan to center — only when no results (e.g. failed search, initial state, or parking-only view)
   // When parking spots are visible without venue results, fit the view to all spots + GPS location.
   // In focus mode we always fit to spots regardless of how many places exist.
+  // Suppressed while a search is in flight: resetting places/spots to [] while loading
+  // triggers this effect with the stale center, causing a visible snap-back to the old
+  // position before the new result arrives. Let the result's own fitBounds handle it.
   useEffect(() => {
     if (!mapInst.current || !L) return
+    if (isLoading) return
     if (!focusMode && places.length > 0) return
     const amenities = [...(parkingSpots ?? []), ...(toiletSpots ?? [])]
     if (amenities.length > 0) {
@@ -631,7 +682,7 @@ export default function MapView({
     if (!center) return
     mapInst.current.setView([center.lat, center.lon], 13)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [center, parkingSpots, toiletSpots, mapReady, focusMode])
+  }, [center, parkingSpots, toiletSpots, mapReady, focusMode, isLoading])
 
   // ESC exits fullscreen. Parkplatz-Modus has its own explicit toggle in the
   // ChatPanel, so no keyboard shortcut is needed for it.
@@ -706,6 +757,21 @@ export default function MapView({
             : <Maximize2 className="w-4 h-4" />
           }
         </Button>
+      )}
+
+      {searchHereCenter && onSearchHere && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000]">
+          <button
+            onClick={() => {
+              onSearchHere(searchHereCenter)
+              setSearchHereCenter(null)
+            }}
+            className="flex items-center gap-1.5 rounded-full border border-border bg-background/95 backdrop-blur-sm px-3 py-1.5 text-sm font-medium shadow-md hover:bg-muted transition-colors"
+          >
+            <Search className="w-3.5 h-3.5" aria-hidden />
+            {t.map.searchHere}
+          </button>
+        </div>
       )}
 
       {/* ── Map-layer toggle pills (bottom-left) ── */}
