@@ -163,11 +163,13 @@ export default function MapView({
   const userLocationRef     = useRef(userLocation)
   const searchCenterRef     = useRef(center)
   const onSearchHereRef     = useRef(onSearchHere)
+  const focusModeRef        = useRef(focusMode)
   useEffect(() => { onShowInResultsRef.current = onShowInResults }, [onShowInResults])
   useEffect(() => { placesRef.current = places }, [places])
   useEffect(() => { userLocationRef.current = userLocation }, [userLocation])
   useEffect(() => { searchCenterRef.current = center }, [center])
   useEffect(() => { onSearchHereRef.current = onSearchHere }, [onSearchHere])
+  useEffect(() => { focusModeRef.current = focusMode }, [focusMode])
 
   // Floating "search here" button state — set when user pans away from search centre.
   const [searchHereCenter, setSearchHereCenter] = useState<{ lat: number; lon: number } | null>(null)
@@ -222,6 +224,9 @@ export default function MapView({
       // lastProgrammaticMoveRef just before it runs; a moveend within the window
       // after that stamp is app-driven and ignored. Any later moveend is a user pan.
       map.on("moveend", () => {
+        // No "search here" in amenity focus mode — it would re-run the venue
+        // search and silently drop the parking/WC focus layers.
+        if (focusModeRef.current) return
         if (Date.now() - lastProgrammaticMoveRef.current < PROGRAMMATIC_MOVE_WINDOW_MS) return
         if (!onSearchHereRef.current || !searchCenterRef.current) return
         const newCenter = map.getCenter()
@@ -793,7 +798,9 @@ export default function MapView({
         </Button>
       )}
 
-      {searchHereCenter && onSearchHere && (
+      {/* Hidden in amenity focus mode: "search here" re-runs the venue search and
+          resets the focus layers, which would silently exit the parking/WC view. */}
+      {searchHereCenter && onSearchHere && !focusMode && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000]">
           <button
             onClick={() => {
