@@ -74,6 +74,7 @@ interface Props {
   chatMode:             "text" | "nearby"
   onChatModeChange:     (mode: "text" | "nearby") => void
   biasCoords?:          { lat: number; lon: number }
+  onSearchHere?:        (center: { lat: number; lon: number }) => void
 }
 
 export default function MobileLayout({
@@ -84,7 +85,7 @@ export default function MobileLayout({
   showParking, showToilets, onSetMapLayers, hasToiletData, onToggleParking, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
   onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, hasGpsCoords, locateTrigger, onSwitchToText,
-  chatMode, onChatModeChange, biasCoords,
+  chatMode, onChatModeChange, biasCoords, onSearchHere,
   focusLayers, onToggleFocusLayer, focusLoadingLayer, focusHints,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
@@ -271,9 +272,11 @@ export default function MobileLayout({
               showToilets={showToilets}
               onSetMapLayers={onSetMapLayers}
               hasToiletData={hasToiletData}
+              isLoading={isLoading}
               autoZoom={settings.autoZoom}
               focusMode={focusActive}
               showWeakParking={settings.showWeakParking}
+              onSearchHere={onSearchHere}
             />
           )}
         </div>

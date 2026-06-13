@@ -488,6 +488,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
   }, [searchCenter, t, handleSearch])
 
+  const handleSearchHere = useCallback((coords: { lat: number; lon: number }) => {
+    if (!lastQuery) return
+    handleSearch(lastQuery, undefined, coords, lastNameHint)
+  }, [lastQuery, lastNameHint, handleSearch])
+
   const handleExpandRadius = useCallback(() => {
     if (!lastQuery) return
     const newRadius = Math.min(radiusKm * 2, RADIUS_MAX_KM)
@@ -775,6 +780,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         showToilets={filters.alwaysShowToilets}
         onSetMapLayers={hasParkingToggle || toiletSpots.length > 0 ? handleSetMapLayers : undefined}
         hasToiletData={toiletSpots.length > 0}
+        onSearchHere={lastQuery ? handleSearchHere : undefined}
       />
       </>
     )
@@ -959,9 +965,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             showToilets={filters.alwaysShowToilets}
             onSetMapLayers={hasParkingToggle || toiletSpots.length > 0 ? handleSetMapLayers : undefined}
             hasToiletData={toiletSpots.length > 0}
+            isLoading={isLoading}
             autoZoom={settings.autoZoom}
             focusMode={focusActive}
             showWeakParking={settings.showWeakParking}
+            onSearchHere={lastQuery ? handleSearchHere : undefined}
           />
         </div>
       </div>
