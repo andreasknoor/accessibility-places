@@ -22,7 +22,7 @@ import { SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
 import { useSettings, loadSettings, DEFAULT_APP_SETTINGS } from "@/lib/settings"
-import { getCurrentPosition, isGeolocationAvailable } from "@/lib/native/geolocation"
+import { getCurrentPosition, getBestPosition, isGeolocationAvailable } from "@/lib/native/geolocation"
 import { cn } from "@/lib/utils"
 import type { AppSettings } from "@/lib/settings"
 import type { Place, ParkingSpot, AmenityFeature, AmenityType, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug } from "@/lib/types"
@@ -566,9 +566,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // Also keeps gpsCoords in sync so nearby searches benefit from the fresh position.
   // Returns a promise so MapView can track loading/error state on the button itself.
   const handleLocate = useCallback(async () => {
-    // maximumAge:0 forces a fresh fix — a cached position can be up to 30 s old
-    // (often a low-accuracy cell/wifi fix), which lands "where I just was".
-    const coords = await getCurrentPosition({ timeout: 20_000, enableHighAccuracy: true, maximumAge: 0 })
+    // getBestPosition watches briefly and keeps the most accurate fix (resolving
+    // early at <=50 m) instead of the first, often-coarse one — avoids the "next
+    // to me" / "where I just was" jumps a single getCurrentPosition can produce.
+    const coords = await getBestPosition({ timeout: 20_000, windowMs: 4_000, desiredAccuracyM: 50 })
     gpsCoordRef.current = coords
     setGpsCoords(coords)
     setHasGpsCoords(true)

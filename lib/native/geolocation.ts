@@ -59,6 +59,101 @@ export async function getCurrentPosition(opts?: GeoOptions): Promise<GeoPosition
   })
 }
 
+export interface BestPositionOptions {
+  /** Max time to wait for the FIRST fix before giving up. Default 20 s. */
+  timeout?: number
+  /** Keep refining for this long after the first fix arrives. Default 4 s. */
+  windowMs?: number
+  /** Resolve immediately once a fix is at least this accurate (metres). Default 50. */
+  desiredAccuracyM?: number
+}
+
+// Robust single-shot location: a plain getCurrentPosition often returns the first
+// (coarse, network-derived or last-known) fix, which lands "next to" the real
+// position. Instead, watch briefly and keep the most accurate fix seen within a
+// short window — resolving early once a fix is good enough. Always maximumAge:0 +
+// highAccuracy so we never reuse a stale fix.
+export async function getBestPosition(opts?: BestPositionOptions): Promise<GeoPosition> {
+  const timeout          = opts?.timeout ?? 20_000
+  const windowMs         = opts?.windowMs ?? 4_000
+  const desiredAccuracyM = opts?.desiredAccuracyM ?? 50
+
+  if (Capacitor.isNativePlatform()) {
+    const { Geolocation } = await import("@capacitor/geolocation")
+    let perm = await Geolocation.checkPermissions()
+    if (perm.location === "prompt" || perm.location === "prompt-with-rationale") {
+      perm = await Geolocation.requestPermissions()
+    }
+    if (perm.location !== "granted") {
+      throw new GeolocationPermissionError("location-permission-denied")
+    }
+
+    return new Promise<GeoPosition>((resolve, reject) => {
+      let best: { lat: number; lon: number; acc: number } | null = null
+      let watchId: string | null = null
+      let settled = false
+      let windowTimer: ReturnType<typeof setTimeout> | null = null
+      const firstFixTimer = setTimeout(() => { if (!best) finish(new Error("location-timeout")) }, timeout)
+
+      function finish(err?: unknown) {
+        if (settled) return
+        settled = true
+        clearTimeout(firstFixTimer)
+        if (windowTimer) clearTimeout(windowTimer)
+        if (watchId !== null) Geolocation.clearWatch({ id: watchId }).catch(() => {})
+        if (best) resolve({ lat: best.lat, lon: best.lon })
+        else reject(err ?? new Error("no-position"))
+      }
+
+      Geolocation.watchPosition(
+        { enableHighAccuracy: true, timeout, maximumAge: 0 },
+        (pos, err) => {
+          if (err) { if (!best) finish(err); return }
+          if (!pos) return
+          const acc = pos.coords.accuracy ?? Number.POSITIVE_INFINITY
+          if (!best || acc < best.acc) best = { lat: pos.coords.latitude, lon: pos.coords.longitude, acc }
+          if (acc <= desiredAccuracyM) { finish(); return }
+          if (windowTimer === null) windowTimer = setTimeout(() => finish(), windowMs)
+        },
+      ).then((id) => {
+        watchId = id
+        // If we already settled before the id resolved, clear it now.
+        if (settled) Geolocation.clearWatch({ id }).catch(() => {})
+      }).catch((e) => { if (!best) finish(e) })
+    })
+  }
+
+  // Web
+  return new Promise<GeoPosition>((resolve, reject) => {
+    if (!("geolocation" in navigator)) { reject(new Error("no-geolocation")); return }
+    let best: { lat: number; lon: number; acc: number } | null = null
+    let settled = false
+    let windowTimer: ReturnType<typeof setTimeout> | null = null
+    const firstFixTimer = setTimeout(() => { if (!best) finish(new Error("location-timeout")) }, timeout)
+
+    function finish(err?: unknown) {
+      if (settled) return
+      settled = true
+      clearTimeout(firstFixTimer)
+      if (windowTimer) clearTimeout(windowTimer)
+      navigator.geolocation.clearWatch(id)
+      if (best) resolve({ lat: best.lat, lon: best.lon })
+      else reject(err ?? new Error("no-position"))
+    }
+
+    const id = navigator.geolocation.watchPosition(
+      (pos) => {
+        const acc = pos.coords.accuracy ?? Number.POSITIVE_INFINITY
+        if (!best || acc < best.acc) best = { lat: pos.coords.latitude, lon: pos.coords.longitude, acc }
+        if (acc <= desiredAccuracyM) { finish(); return }
+        if (windowTimer === null) windowTimer = setTimeout(() => finish(), windowMs)
+      },
+      (err) => { if (!best) finish(err) },
+      { enableHighAccuracy: true, timeout, maximumAge: 0 },
+    )
+  })
+}
+
 export class GeolocationPermissionError extends Error {
   constructor(message: string) {
     super(message)
