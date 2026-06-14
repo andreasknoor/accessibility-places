@@ -837,9 +837,11 @@ export default function MapView({
         </Button>
       )}
 
-      {/* Locate button — pan to user's GPS position (zoom 16), then offer "search here". */}
+      {/* Locate button — pan to user's GPS position, then offer "search here".
+          Sits left of the fullscreen toggle on desktop; on mobile (no toggle) it
+          takes the top-right corner itself. */}
       {onLocate && !focusMode && (
-        <div className="absolute top-14 right-3 z-[1000] flex flex-col items-end gap-1">
+        <div className={`absolute top-3 z-[1000] flex flex-col items-end gap-1 ${showFullscreenToggle ? "right-14" : "right-3"}`}>
           <Button
             variant="secondary"
             size="icon"
