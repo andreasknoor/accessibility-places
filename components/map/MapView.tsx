@@ -192,6 +192,10 @@ export default function MapView({
   // (or a no-op move that fires none) can never desync a counter. Replaces the
   // old dragend flag, which iOS WKWebView fires unreliably for touch pans.
   const lastProgrammaticMoveRef = useRef(Date.now())
+  // Last search center the pan-to-center effect has seen. Lets it recenter only on
+  // a real center change (new search), not when a mode switch merely clears the
+  // results/spots while the old center lingers.
+  const prevCenterRef = useRef<{ lat: number; lon: number } | null>(null)
 
   // Dismiss the button whenever a new search result arrives (centre changed).
   useEffect(() => { setSearchHereCenter(null) }, [center])
@@ -738,6 +742,13 @@ export default function MapView({
   useEffect(() => {
     if (!mapInst.current || !L) return
     if (isLoading) return
+    // Did the search center actually change since we last evaluated? Updated on
+    // every (non-loading) run so a later mode switch — which keeps the old center
+    // but clears places/spots — is correctly seen as "unchanged".
+    const centerChanged = !prevCenterRef.current
+      || center?.lat !== prevCenterRef.current.lat
+      || center?.lon !== prevCenterRef.current.lon
+    prevCenterRef.current = center ?? null
     if (!focusMode && places.length > 0) return
     const amenities = [...(parkingSpots ?? []), ...(toiletSpots ?? [])]
     if (amenities.length > 0) {
@@ -749,6 +760,10 @@ export default function MapView({
       return
     }
     if (!center) return
+    // Option 1: only recenter on a genuine new search (center changed). A mode
+    // switch (e.g. nearby → "search everywhere" with no location yet) clears
+    // places/spots but keeps the old center — leave the user's view untouched.
+    if (!centerChanged) return
     lastProgrammaticMoveRef.current = Date.now()
     mapInst.current.setView([center.lat, center.lon], 13)
   // eslint-disable-next-line react-hooks/exhaustive-deps
