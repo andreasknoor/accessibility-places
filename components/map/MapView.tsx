@@ -206,7 +206,7 @@ export default function MapView({
     const ul = userLocationRef.current
     if (!ul) return
     lastProgrammaticMoveRef.current = Date.now()
-    mapInst.current.setView([ul.lat, ul.lon], 16)
+    mapInst.current.setView([ul.lat, ul.lon], 14)  // ~2 km radius visible
     // Option 2: show "search here" explicitly if a previous search exists
     if (onSearchHereRef.current) {
       setSearchHereCenter({ lat: ul.lat, lon: ul.lon })
