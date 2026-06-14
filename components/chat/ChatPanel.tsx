@@ -349,11 +349,11 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       }
       return
     }
-    if (nearbyPhase === "idle") {
-      handleLocate()
-    } else if (typeof nearbyPhase === "object") {
-      onSearch(nearbyQuery(chipLabel(selectedIdx), nearbyPhase.district), { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
-    }
+    // Always fetch a fresh fix on entering nearby mode. Reusing the cached
+    // nearbyPhase coords here re-ran the search at an arbitrarily old position
+    // ("I see an old location"); handleLocate re-locates, calls onGpsResolved
+    // (so the dot is fresh too) and searches at the current coords.
+    handleLocate()
   }
 
   function selectChip(idx: number | null) {
