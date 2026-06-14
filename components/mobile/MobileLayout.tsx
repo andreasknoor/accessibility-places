@@ -78,6 +78,7 @@ interface Props {
   onLocate?:            () => Promise<void>
   locatePanTrigger?:    number
   manualUserLocation?:  { lat: number; lon: number } | null
+  gpsCoords?:           { lat: number; lon: number } | null
 }
 
 export default function MobileLayout({
@@ -88,7 +89,7 @@ export default function MobileLayout({
   showParking, showToilets, onSetMapLayers, hasToiletData, onToggleParking, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
   onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, hasGpsCoords, locateTrigger, onSwitchToText,
-  chatMode, onChatModeChange, biasCoords, onSearchHere, onLocate, locatePanTrigger, manualUserLocation,
+  chatMode, onChatModeChange, biasCoords, onSearchHere, onLocate, locatePanTrigger, manualUserLocation, gpsCoords,
   focusLayers, onToggleFocusLayer, focusLoadingLayer, focusHints,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
@@ -262,7 +263,7 @@ export default function MobileLayout({
               parkingSpots={parkingSpots}
               toiletSpots={toiletSpots}
               center={searchCenter}
-              userLocation={manualUserLocation ?? (chatMode === "nearby" ? searchCenter : undefined)}
+              userLocation={manualUserLocation ?? gpsCoords ?? undefined}
               selectedId={selectedId}
               panTrigger={panTrigger}
               onSelect={onSelect}

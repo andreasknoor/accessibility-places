@@ -800,6 +800,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onLocate={isGeolocationAvailable() ? handleLocate : undefined}
         locatePanTrigger={locatePanTrigger}
         manualUserLocation={manualUserLocation}
+        gpsCoords={gpsCoords}
       />
       </>
     )
@@ -975,7 +976,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             parkingSpots={visibleParkingSpots}
             toiletSpots={visibleToiletSpots.length > 0 ? visibleToiletSpots : undefined}
             center={searchCenter}
-            userLocation={manualUserLocation ?? (chatMode === "nearby" ? searchCenter : undefined)}
+            userLocation={manualUserLocation ?? gpsCoords ?? undefined}
             selectedId={selectedId}
             onSelect={(p) => { setSelectedId(p.id); setScrollToId(p.id) }}
             isFullscreen={isFullscreen}
