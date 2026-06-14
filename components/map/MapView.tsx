@@ -695,8 +695,12 @@ export default function MapView({
     if (!mapInst.current || !L || places.length === 0 || !autoZoom) return
     if (focusMode) return  // focus-mode fit handled below
     const latlngs: [number, number][] = places.map((p) => [p.coordinates.lat, p.coordinates.lon])
-    const ul = userLocationRef.current
-    if (ul) latlngs.push([ul.lat, ul.lon])
+    // Frame the SEARCH area, not the user's GPS dot. After "search here" in nearby
+    // mode the search center diverges from the real user location; including the
+    // (possibly far-away) dot would zoom out to span both. Fit to results + search
+    // center so the searched area stays framed and the distant dot is left out.
+    const sc = searchCenterRef.current
+    if (sc) latlngs.push([sc.lat, sc.lon])
     lastProgrammaticMoveRef.current = Date.now()
     mapInst.current.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 15 })
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -787,8 +791,9 @@ export default function MapView({
       }
       if (places.length > 0) {
         const latlngs: [number, number][] = places.map((p) => [p.coordinates.lat, p.coordinates.lon])
-        const ul = userLocationRef.current
-        if (ul) latlngs.push([ul.lat, ul.lon])
+        // Frame the search area, not the user dot — see the results-fit effect above.
+        const sc = searchCenterRef.current
+        if (sc) latlngs.push([sc.lat, sc.lon])
         lastProgrammaticMoveRef.current = Date.now()
         mapInst.current?.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 15 })
       } else {
