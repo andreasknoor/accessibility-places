@@ -17,7 +17,7 @@ const CATEGORY_HINTS: Record<Category, string[]> = {
   gallery:     ["galerie", "gallery", "kunsthalle", "ausstellung"],
   attraction:  ["sehenswürdigkeit", "attraktion", "attraction", "freizeitpark", "ausflugsziel"],
   ice_cream:   ["eisdiele", "eisdielen", "eis", "gelato", "gelateria", "ice cream", "icecream", "eiscafe", "eiscafé"],
-  pharmacy:    ["apotheke", "pharmacy"],
+  pharmacy:    ["apotheke", "pharmacy", "pharmacies"],
   doctors:     ["arzt", "arztpraxis", "praxis", "hausarzt", "facharzt", "ärztehaus", "doctor", "gp", "clinic", "klinik"],
   dentist:     ["zahnarzt", "zahnärztin", "zahnarztpraxis", "dentist", "dental"],
   veterinary:  ["tierarzt", "tierärztin", "tierarztpraxis", "tierarztpraxis", "vet", "veterinary", "kleintierpraxis"],
@@ -51,8 +51,10 @@ export function inferCategories(query: string): Category[] {
     if (hints.some((h) => {
       const norm = normaliseForMatch(h)
       // Short hints (≤3 chars) need a word boundary at the end to avoid false
-      // positives like "bar" matching "barrierefreie".
-      const pattern = norm.length <= 3 ? `\\b${norm}\\b` : `\\b${norm}`
+      // positives like "bar" matching "barrierefreie". An optional trailing "s"
+      // is allowed so plurals still match ("bar"→"bars", "pub"→"pubs") without
+      // re-opening the "barrierefrei" false positive (the trailing \b still holds).
+      const pattern = norm.length <= 3 ? `\\b${norm}s?\\b` : `\\b${norm}`
       return new RegExp(pattern, "i").test(lower)
     })) found.push(cat)
   }

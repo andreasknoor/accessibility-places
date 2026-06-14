@@ -144,6 +144,26 @@ describe("inferCategories", () => {
   it("infers hotel for 'unterkunft'", () => {
     expect(inferCategories("Unterkunft Wien")).toContain("hotel")
   })
+
+  // Plurals of short (≤3 char) hints must still match — chip labels like "Pubs"
+  // and "Bars" are plural. The optional trailing "s" must not re-open the
+  // "barrierefrei" false positive that the end word-boundary guards against.
+  it("matches plurals of short hints (pub/bar/zoo)", () => {
+    expect(inferCategories("Pubs")).toEqual(["pub"])
+    expect(inferCategories("Bars")).toEqual(["bar"])
+    expect(inferCategories("Zoos in Berlin")).toEqual(["zoo"])
+  })
+
+  it("does not let the plural-s re-trigger the 'barrierefrei' false positive", () => {
+    // "barrierefrei" alone hits no hint → all-categories fallback (which includes
+    // "bar"); combine with a real category so a spurious "bar" match would show.
+    expect(inferCategories("barrierefreie Restaurants")).toEqual(["restaurant"])
+    expect(inferCategories("Restaurant mit Bart")).toEqual(["restaurant"])
+  })
+
+  it("matches the English plural 'Pharmacies'", () => {
+    expect(inferCategories("Pharmacies")).toEqual(["pharmacy"])
+  })
 })
 
 // ─── parseQuery (deterministic, sync) ────────────────────────────────────────
