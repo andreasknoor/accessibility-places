@@ -203,10 +203,14 @@ export default function MapView({
   // repeat their last search at their position with one more tap.
   useEffect(() => {
     if (locatePanTrigger === undefined || !mapInst.current || !L) return
-    const ul = userLocationRef.current
+    // Read the prop directly (not the ref): the prop and the trigger update in the
+    // same commit, so the closure value is fresh — no chance of centring on a stale
+    // ref. animate:false lands exactly on the point (an interrupted pan animation
+    // would otherwise stop slightly off-centre).
+    const ul = userLocation
     if (!ul) return
     lastProgrammaticMoveRef.current = Date.now()
-    mapInst.current.setView([ul.lat, ul.lon], 14)  // ~2 km radius visible
+    mapInst.current.setView([ul.lat, ul.lon], 14, { animate: false })  // ~2 km radius visible
     // Option 2: show "search here" explicitly if a previous search exists
     if (onSearchHereRef.current) {
       setSearchHereCenter({ lat: ul.lat, lon: ul.lon })
