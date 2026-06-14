@@ -214,6 +214,8 @@ export interface Translations {
     toiletDesignatedValue:  string
     toiletAccessLabel:      string
     searchHere:             string
+    locate:                 string
+    locateError:            string
   }
   categories: {
     cafe:        string

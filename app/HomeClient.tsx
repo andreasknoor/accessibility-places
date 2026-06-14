@@ -136,6 +136,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [focusLoadingLayer,   setFocusLoadingLayer]   = useState<AmenityType | null>(null)
   const [isFirstVisit,        setIsFirstVisit]        = useState(false)  // SSR-safe; real value read post-hydration (React #418)
   const [locateTriggerKey,    setLocateTriggerKey]    = useState(0)
+  // manualUserLocation: set when user taps the map locate button (mode-independent).
+  // Merged as userLocation prop: manualUserLocation takes priority over the
+  // nearby-mode searchCenter so the dot stays visible regardless of search mode.
+  const [manualUserLocation,  setManualUserLocation]  = useState<{ lat: number; lon: number } | null>(null)
+  const [locatePanTrigger,    setLocatePanTrigger]    = useState(0)
   // ── Easter Eggs ────────────────────────────────────────────────────────────
   const [showRace,         setShowRace]         = useState(false)
   const logoTapCount  = useRef(0)
@@ -552,6 +557,17 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setHasGpsCoords(true)
   }, [])
 
+  // Locate button: fetch GPS, set user dot, trigger pan in MapView (locatePanTrigger).
+  // Also keeps gpsCoords in sync so nearby searches benefit from the fresh position.
+  // Returns a promise so MapView can track loading/error state on the button itself.
+  const handleLocate = useCallback(async () => {
+    const coords = await getCurrentPosition({ timeout: 20_000, enableHighAccuracy: true, maximumAge: 30_000 })
+    gpsCoordRef.current = coords
+    setGpsCoords(coords)
+    setHasGpsCoords(true)
+    setManualUserLocation(coords)
+    setLocatePanTrigger((k) => k + 1)
+  }, [])
 
   // Amenity focus mode: toggle a layer (parking / WC) on or off. Adding the
   // first layer enters focus mode; removing the last exits it. Each toggle
@@ -781,6 +797,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onSetMapLayers={hasParkingToggle || toiletSpots.length > 0 ? handleSetMapLayers : undefined}
         hasToiletData={toiletSpots.length > 0}
         onSearchHere={lastQuery ? handleSearchHere : undefined}
+        onLocate={isGeolocationAvailable() ? handleLocate : undefined}
+        locatePanTrigger={locatePanTrigger}
+        manualUserLocation={manualUserLocation}
       />
       </>
     )
@@ -956,7 +975,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             parkingSpots={visibleParkingSpots}
             toiletSpots={visibleToiletSpots.length > 0 ? visibleToiletSpots : undefined}
             center={searchCenter}
-            userLocation={chatMode === "nearby" ? searchCenter : undefined}
+            userLocation={manualUserLocation ?? (chatMode === "nearby" ? searchCenter : undefined)}
             selectedId={selectedId}
             onSelect={(p) => { setSelectedId(p.id); setScrollToId(p.id) }}
             isFullscreen={isFullscreen}
@@ -970,6 +989,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             focusMode={focusActive}
             showWeakParking={settings.showWeakParking}
             onSearchHere={lastQuery ? handleSearchHere : undefined}
+            onLocate={isGeolocationAvailable() ? handleLocate : undefined}
+            locatePanTrigger={locatePanTrigger}
           />
         </div>
       </div>

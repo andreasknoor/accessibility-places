@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Maximize2, Minimize2, Search } from "lucide-react"
+import { Maximize2, Minimize2, Search, LocateFixed, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS } from "@/lib/config"
@@ -50,6 +50,13 @@ interface Props {
   // Called when the user pans the map and clicks "Search here". Receives the
   // new map centre; caller should re-run the last search at that location.
   onSearchHere?:           (center: { lat: number; lon: number }) => void
+  // Called when the user taps the locate button. Should resolve with GPS coords
+  // or reject on permission denial / timeout. MapView tracks loading + error state.
+  onLocate?:               () => Promise<void>
+  // Incrementing this key triggers MapView to pan to the current userLocation
+  // at zoom 16. Stamped as programmatic so "search here" is NOT auto-shown by
+  // moveend — instead the button is shown explicitly (Option 2).
+  locatePanTrigger?:       number
 }
 
 const CONFIDENCE_COLORS = {
@@ -137,6 +144,8 @@ export default function MapView({
   focusMode = false,
   showWeakParking = false,
   onSearchHere,
+  onLocate,
+  locatePanTrigger,
 }: Props) {
   const t        = useTranslations()
   const mapRef   = useRef<HTMLDivElement>(null)
@@ -173,6 +182,9 @@ export default function MapView({
 
   // Floating "search here" button state — set when user pans away from search centre.
   const [searchHereCenter, setSearchHereCenter] = useState<{ lat: number; lon: number } | null>(null)
+  // Locate button interaction state
+  const [locating,          setLocating]          = useState(false)
+  const [locateErrorVisible, setLocateErrorVisible] = useState(false)
   // Timestamp of the last programmatic move (setView/fitBounds/zoomToShowLayer).
   // A moveend within PROGRAMMATIC_MOVE_WINDOW_MS of this is treated as app-driven
   // and ignored; any later moveend must be a real user pan. This time-window
@@ -183,6 +195,24 @@ export default function MapView({
 
   // Dismiss the button whenever a new search result arrives (centre changed).
   useEffect(() => { setSearchHereCenter(null) }, [center])
+
+  // Pan to userLocation when locatePanTrigger increments (locate button tapped).
+  // Stamp the move as programmatic so moveend does NOT show "search here" via the
+  // normal pan-detection path. Instead we show it explicitly below (Option 2):
+  // the button is offered directly after a successful locate so the user can
+  // repeat their last search at their position with one more tap.
+  useEffect(() => {
+    if (locatePanTrigger === undefined || !mapInst.current || !L) return
+    const ul = userLocationRef.current
+    if (!ul) return
+    lastProgrammaticMoveRef.current = Date.now()
+    mapInst.current.setView([ul.lat, ul.lon], 16)
+    // Option 2: show "search here" explicitly if a previous search exists
+    if (onSearchHereRef.current) {
+      setSearchHereCenter({ lat: ul.lat, lon: ul.lon })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locatePanTrigger, mapReady])
 
   // Init map once
   useEffect(() => {
@@ -796,6 +826,42 @@ export default function MapView({
             : <Maximize2 className="w-4 h-4" />
           }
         </Button>
+      )}
+
+      {/* Locate button — pan to user's GPS position (zoom 16), then offer "search here". */}
+      {onLocate && !focusMode && (
+        <div className="absolute top-14 right-3 z-[1000] flex flex-col items-end gap-1">
+          <Button
+            variant="secondary"
+            size="icon"
+            onClick={async () => {
+              setLocating(true)
+              setLocateErrorVisible(false)
+              try {
+                await onLocate()
+              } catch {
+                setLocateErrorVisible(true)
+                setTimeout(() => setLocateErrorVisible(false), 3000)
+              } finally {
+                setLocating(false)
+              }
+            }}
+            disabled={locating}
+            className="shadow-md"
+            title={t.map.locate}
+            aria-label={t.map.locate}
+          >
+            {locating
+              ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+              : <LocateFixed className="w-4 h-4" aria-hidden />
+            }
+          </Button>
+          {locateErrorVisible && (
+            <span className="rounded-md bg-background/95 backdrop-blur-sm border border-border px-2 py-1 text-xs shadow-md text-destructive whitespace-nowrap">
+              {t.map.locateError}
+            </span>
+          )}
+        </div>
       )}
 
       {/* Hidden in amenity focus mode: "search here" re-runs the venue search and
