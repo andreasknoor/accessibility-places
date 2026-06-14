@@ -114,6 +114,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [lastQuery,     setLastQuery]    = useState<string | undefined>()
   const [lastCoords,    setLastCoords]   = useState<{ lat: number; lon: number } | undefined>()
   const [lastNameHint,  setLastNameHint] = useState<string | undefined>()
+  // Category-only query mirroring ChatPanel's chip selection. Lets "search here"
+  // run before any search exists (text mode, no location yet), respecting the chip.
+  const [categoryQuery, setCategoryQuery] = useState<string>("")
   // SSR-safe init: the server has no localStorage (loadSettings → defaults), so
   // initialise to the same value the server renders. The stored preference is
   // applied post-hydration in the useLayoutEffect below to avoid a server/client
@@ -494,9 +497,15 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   }, [searchCenter, t, handleSearch])
 
   const handleSearchHere = useCallback((coords: { lat: number; lon: number }) => {
-    if (!lastQuery) return
-    handleSearch(lastQuery, undefined, coords, lastNameHint)
-  }, [lastQuery, lastNameHint, handleSearch])
+    // Re-run the last search if there is one; otherwise (text mode, nothing
+    // searched yet) run a fresh search at the panned point using the current
+    // chip category. lastNameHint only applies to the re-run case.
+    if (lastQuery) {
+      handleSearch(lastQuery, undefined, coords, lastNameHint)
+    } else if (categoryQuery) {
+      handleSearch(categoryQuery, undefined, coords)
+    }
+  }, [lastQuery, lastNameHint, categoryQuery, handleSearch])
 
   const handleExpandRadius = useCallback(() => {
     if (!lastQuery) return
@@ -796,11 +805,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         showToilets={filters.alwaysShowToilets}
         onSetMapLayers={hasParkingToggle || toiletSpots.length > 0 ? handleSetMapLayers : undefined}
         hasToiletData={toiletSpots.length > 0}
-        onSearchHere={lastQuery ? handleSearchHere : undefined}
+        onSearchHere={handleSearchHere}
         onLocate={isGeolocationAvailable() ? handleLocate : undefined}
         locatePanTrigger={locatePanTrigger}
         manualUserLocation={manualUserLocation}
         gpsCoords={gpsCoords}
+        onCategoryQueryChange={setCategoryQuery}
       />
       </>
     )
@@ -858,6 +868,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           onToggleFocusLayer={canEnterFocus ? handleToggleFocusLayer : undefined}
           focusLoadingLayer={focusLoadingLayer}
           focusHints={focusHints}
+          onCategoryQueryChange={setCategoryQuery}
         />
       </div>
 
@@ -989,7 +1000,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             autoZoom={settings.autoZoom}
             focusMode={focusActive}
             showWeakParking={settings.showWeakParking}
-            onSearchHere={lastQuery ? handleSearchHere : undefined}
+            onSearchHere={handleSearchHere}
             onLocate={isGeolocationAvailable() ? handleLocate : undefined}
             locatePanTrigger={locatePanTrigger}
           />

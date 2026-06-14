@@ -79,6 +79,7 @@ interface Props {
   locatePanTrigger?:    number
   manualUserLocation?:  { lat: number; lon: number } | null
   gpsCoords?:           { lat: number; lon: number } | null
+  onCategoryQueryChange?: (query: string) => void
 }
 
 export default function MobileLayout({
@@ -89,7 +90,7 @@ export default function MobileLayout({
   showParking, showToilets, onSetMapLayers, hasToiletData, onToggleParking, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
   onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, hasGpsCoords, locateTrigger, onSwitchToText,
-  chatMode, onChatModeChange, biasCoords, onSearchHere, onLocate, locatePanTrigger, manualUserLocation, gpsCoords,
+  chatMode, onChatModeChange, biasCoords, onSearchHere, onLocate, locatePanTrigger, manualUserLocation, gpsCoords, onCategoryQueryChange,
   focusLayers, onToggleFocusLayer, focusLoadingLayer, focusHints,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
@@ -173,7 +174,7 @@ export default function MobileLayout({
       <h1 className="sr-only">{t.app.srHeading}</h1>
 
       {/* ── Search bar (always visible) ── */}
-      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} locateTrigger={locateTrigger} biasCoords={biasCoords} focusLayers={focusLayers} onToggleFocusLayer={handleToggleFocusLayer} focusLoadingLayer={focusLoadingLayer} focusHints={focusHints} />
+      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} locateTrigger={locateTrigger} biasCoords={biasCoords} focusLayers={focusLayers} onToggleFocusLayer={handleToggleFocusLayer} focusLoadingLayer={focusLoadingLayer} focusHints={focusHints} onCategoryQueryChange={onCategoryQueryChange} />
 
       {/* ── Error banner ── */}
       {error && (

@@ -33,6 +33,10 @@ interface Props {
   onToggleFocusLayer?: (type: AmenityType) => void
   focusLoadingLayer?:  AmenityType | null
   focusHints?:         Partial<Record<AmenityType, string>>
+  // Reports a category-only query reflecting the current chip selection, so the
+  // map's "search here" can run even before any search has been submitted (text
+  // mode, no location entered). Null chip → an all-categories query.
+  onCategoryQueryChange?: (query: string) => void
 }
 
 const CHIPS = [
@@ -120,7 +124,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
   return data.district ?? ""
 }
 
-export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onGpsResolved, skipAutoLocate, hasGpsCoords, locateTrigger, biasCoords, focusLayers, onToggleFocusLayer, focusLoadingLayer, focusHints }: Props) {
+export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onGpsResolved, skipAutoLocate, hasGpsCoords, locateTrigger, biasCoords, focusLayers, onToggleFocusLayer, focusLoadingLayer, focusHints, onCategoryQueryChange }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
   const isMobile = useIsMobile()
@@ -318,6 +322,20 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     if (district) return `in ${district}`
     return localeRef.current === "de" ? "Orte in der Nähe" : "places nearby"
   }
+
+  // Category-only query for the map's "search here" when no search has run yet.
+  // Coordinates from the pan are passed alongside, so the location part is ignored
+  // by the route — only the category is parsed out. Null chip → all categories
+  // (a neutral non-empty word that matches no category hint; route rejects empty).
+  function categoryQuery(label: string | null): string {
+    return label ?? (localeRef.current === "de" ? "Orte" : "places")
+  }
+
+  // Keep the parent's "search here" query in sync with the visible chip selection.
+  useEffect(() => {
+    onCategoryQueryChange?.(categoryQuery(chipLabel(selectedIdx)))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedIdx, locale])
 
   function switchMode(next: Mode) {
     setMode(next)
