@@ -37,6 +37,10 @@ interface Props {
   // map's "search here" can run even before any search has been submitted (text
   // mode, no location entered). Null chip → an all-categories query.
   onCategoryQueryChange?: (query: string) => void
+  // Coordinates of the currently displayed search when it was coordinate-based
+  // (e.g. "search here", nearby). Set → a chip change in text mode refines THIS
+  // area in place instead of re-geocoding the (possibly stale) location textbox.
+  activeSearchCoords?: Coords
 }
 
 const CHIPS = [
@@ -124,7 +128,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
   return data.district ?? ""
 }
 
-export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onGpsResolved, skipAutoLocate, hasGpsCoords, locateTrigger, biasCoords, focusLayers, onToggleFocusLayer, focusLoadingLayer, focusHints, onCategoryQueryChange }: Props) {
+export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onGpsResolved, skipAutoLocate, hasGpsCoords, locateTrigger, biasCoords, focusLayers, onToggleFocusLayer, focusLoadingLayer, focusHints, onCategoryQueryChange, activeSearchCoords }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
   const isMobile = useIsMobile()
@@ -362,6 +366,13 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     const label = chipLabel(idx)
     if (mode === "nearby" && typeof nearbyPhase === "object") {
       onSearch(nearbyQuery(label, nearbyPhase.district), { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
+    } else if (mode === "text" && !venuePicked && activeSearchCoords) {
+      // Current results came from a coordinate-based search ("search here" /
+      // nearby) — refine THIS area with the new category instead of jumping to
+      // the location textbox, which may show an unrelated, stale place.
+      setSuggestions([])
+      setShowSuggestions(false)
+      onSearch(categoryQuery(label), activeSearchCoords)
     } else if (mode === "text" && !venuePicked && locationPart(location)) {
       setSuggestions([])
       setShowSuggestions(false)

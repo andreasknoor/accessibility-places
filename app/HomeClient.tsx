@@ -808,6 +808,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         locatePanTrigger={locatePanTrigger}
         gpsCoords={gpsCoords}
         onCategoryQueryChange={setCategoryQuery}
+        activeSearchCoords={lastCoords}
       />
       </>
     )
@@ -866,6 +867,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           focusLoadingLayer={focusLoadingLayer}
           focusHints={focusHints}
           onCategoryQueryChange={setCategoryQuery}
+          activeSearchCoords={lastCoords}
         />
       </div>
 
