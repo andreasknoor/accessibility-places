@@ -6,6 +6,18 @@
   to   { width: 100% }
 }
 
+/* Indeterminate loading bar (mobile search indicator) — a segment slides across. */
+@keyframes loading-bar {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+.animate-loading-bar {
+  animation: loading-bar 1.1s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-loading-bar { animation: none; transform: translateX(0); width: 100%; }
+}
+
 /* ── Easter Egg animations ─────────────────────────────────────────────────── */
 
 /* #2 Rollstuhl-Rennen: racers move from off-screen left to off-screen right.

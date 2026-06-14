@@ -175,6 +175,14 @@ export default function MobileLayout({
       {/* ── Search bar (always visible) ── */}
       <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} locateTrigger={locateTrigger} biasCoords={biasCoords} focusLayers={focusLayers} onToggleFocusLayer={handleToggleFocusLayer} focusLoadingLayer={focusLoadingLayer} focusHints={focusHints} onCategoryQueryChange={onCategoryQueryChange} />
 
+      {/* Global search progress — covers every trigger (search here, filter, radius,
+          tab switch), since the ChatPanel's button spinner isn't visible on the map tab. */}
+      {isLoading && (
+        <div className="h-0.5 shrink-0 overflow-hidden bg-primary/15" role="status" aria-label={t.chat.thinking}>
+          <div className="h-full w-1/4 rounded-full bg-primary animate-loading-bar" />
+        </div>
+      )}
+
       {/* ── Error banner ── */}
       {error && (
         <div className="px-4 py-2 bg-destructive/10 text-destructive text-sm border-b border-destructive/20 shrink-0">
