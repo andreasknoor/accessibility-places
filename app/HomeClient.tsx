@@ -569,7 +569,27 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     // getBestPosition watches briefly and keeps the most accurate fix (resolving
     // early at <=50 m) instead of the first, often-coarse one — avoids the "next
     // to me" / "where I just was" jumps a single getCurrentPosition can produce.
-    const coords = await getBestPosition({ timeout: 20_000, windowMs: 4_000, desiredAccuracyM: 50 })
+    // It forces highAccuracy + maximumAge:0, which is ideal on mobile GPS but
+    // often fails on desktop (no GPS, network-only location): POSITION_UNAVAILABLE
+    // or timeout. On failure, fall back to a relaxed fix that may reuse a recent
+    // network position rather than surfacing "location unavailable".
+    const codeOf = (e: unknown) => (e as { code?: number } | undefined)?.code
+    let coords: { lat: number; lon: number }
+    try {
+      coords = await getBestPosition({ timeout: 20_000, windowMs: 4_000, desiredAccuracyM: 50 })
+    } catch (primaryErr) {
+      console.warn("[locate] precise fix failed (code", codeOf(primaryErr), ")", primaryErr)
+      try {
+        coords = await getCurrentPosition({ enableHighAccuracy: false, maximumAge: 600_000, timeout: 10_000 })
+      } catch (fallbackErr) {
+        console.error("[locate] fallback fix failed (code", codeOf(fallbackErr), ")", fallbackErr)
+        Sentry.captureException(fallbackErr, {
+          tags: { feature: "locate" },
+          extra: { primaryCode: codeOf(primaryErr), fallbackCode: codeOf(fallbackErr) },
+        })
+        throw fallbackErr  // let the locate button show the error toast
+      }
+    }
     gpsCoordRef.current = coords
     setGpsCoords(coords)
     setHasGpsCoords(true)
