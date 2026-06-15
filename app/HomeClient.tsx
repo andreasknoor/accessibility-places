@@ -918,7 +918,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
           ) : (
-            <div className={cn("relative flex flex-col shrink-0", isFullscreen && "hidden")}>
+            <div className={cn("relative flex flex-col shrink-0 min-h-0", isFullscreen && "hidden")}>
               <FilterPanel
                 filters={filters}
                 sources={sources}

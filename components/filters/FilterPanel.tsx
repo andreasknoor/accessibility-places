@@ -106,7 +106,7 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
   }
 
   return (
-    <aside className={cn("flex flex-col gap-5 w-64 shrink-0 border-r border-border bg-card overflow-y-auto", isMobile ? "p-4" : "px-4 pb-4 pt-9")}>
+    <aside className={cn("flex flex-col gap-5 w-64 shrink-0 border-r border-border bg-card overflow-y-auto", isMobile ? "p-4" : "px-4 pb-4 pt-9 flex-1 min-h-0")}>
       {/* ── Rerun button ── */}
       {onRerun && (
         <button
