@@ -2,7 +2,7 @@ import type { SourceId, Category } from "./types"
 
 // User-visible app version, shown in the header next to the subtitle.
 // Bump on every meaningful release.
-export const APP_VERSION = "6.8"
+export const APP_VERSION = "6.9"
 
 export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
   reisen_fuer_alle:    1.00,
@@ -61,7 +61,9 @@ export const SOURCE_LABELS: Record<SourceId, string> = {
 
 // Both are raced in parallel — the first successful response wins.
 // overpass.osm.ch removed: returns 0 results for any non-CH query (Swiss-only data).
-// overpass.private.coffee removed: same operator as kumi.systems, unreachable.
+// overpass.private.coffee / overpass.kumi.systems removed: same operator/backend,
+// unreachable in live tests (2026-06-15). Replaced by the OSM-France mirror
+// (overpass.openstreetmap.fr) — EU-hosted, global coverage, reliable in testing.
 //
 // Set OVERPASS_ENDPOINTS (comma-separated) to point to a private Overpass server,
 // e.g. "https://overpass.example.com/api/interpreter". Multiple URLs retain the
@@ -75,7 +77,7 @@ export const OVERPASS_ENDPOINTS: string[] = _overpassEnv?.length
   ? _overpassEnv
   : [
       "https://overpass-api.de/api/interpreter",
-      "https://overpass.kumi.systems/api/interpreter",
+      "https://overpass.openstreetmap.fr/api/interpreter",
     ]
 
 export const OVERPASS_ENDPOINT = OVERPASS_ENDPOINTS[0]
@@ -84,7 +86,7 @@ export const OVERPASS_ENDPOINT = OVERPASS_ENDPOINTS[0]
 // self-hosted endpoints from public ones in health checks and stats tracking.
 export const PUBLIC_OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
-  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.openstreetmap.fr/api/interpreter",
 ]
 
 // Set NOMINATIM_ENDPOINT to point to a private Nominatim instance.
