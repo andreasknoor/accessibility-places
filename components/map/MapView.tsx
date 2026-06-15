@@ -830,8 +830,12 @@ export default function MapView({
       }
     }, 50)
     return () => clearTimeout(id)
+  // mapReady is included so this runs once the map finishes its async init on a
+  // fresh lazy mount: the initial run bails (mapInst null), and `visible` doesn't
+  // change when mapReady flips — without this the container is never invalidateSize'd
+  // on first mount, so the selection zoom/popup ("show on map") silently fails once.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, isFullscreen])
+  }, [visible, isFullscreen, mapReady])
 
   return (
     <div className="relative w-full h-full">
