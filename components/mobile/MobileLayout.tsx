@@ -68,6 +68,7 @@ interface Props {
   isFirstVisit?:        boolean
   onResetOnboarding?:   () => void
   onDismissWelcome?:    () => void
+  onStartNearby?:       () => void
   hasGpsCoords?:        boolean
   locateTrigger?:       number
   onSwitchToText?:      () => void
@@ -89,7 +90,7 @@ export default function MobileLayout({
   onReset, onLogoTap, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
   showParking, showToilets, onSetMapLayers, hasToiletData, onToggleParking, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
-  onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, hasGpsCoords, locateTrigger, onSwitchToText,
+  onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, onStartNearby, hasGpsCoords, locateTrigger, onSwitchToText,
   chatMode, onChatModeChange, biasCoords, onSearchHere, onLocate, locatePanTrigger, gpsCoords, onCategoryQueryChange, activeSearchCoords,
   focusLayers, onToggleFocusLayer, focusLoadingLayer, focusHints,
 }: Props) {
@@ -201,10 +202,21 @@ export default function MobileLayout({
             <p className="font-semibold text-foreground">{t.chat.welcomeTitle}</p>
             <p className="text-sm text-muted-foreground">{t.chat.welcomeSubtitle}</p>
           </div>
-          <div className="w-full rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm text-foreground/80 flex items-center gap-2">
-            <LocateFixed className="w-4 h-4 text-primary shrink-0" />
-            {t.chat.welcomeGpsHint}
-          </div>
+          {onStartNearby && (
+            <button
+              onClick={onStartNearby}
+              className="w-full flex items-center gap-3 rounded-lg bg-primary text-primary-foreground px-4 py-3 shadow-sm hover:bg-primary/90 transition-colors text-left"
+            >
+              <span className="w-9 h-9 rounded-full bg-primary-foreground/15 flex items-center justify-center shrink-0">
+                <LocateFixed className="w-4 h-4" />
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-semibold">{t.chat.welcomeNearbyCard}</span>
+                <span className="block text-xs text-primary-foreground/80 mt-0.5">{t.chat.welcomeNearbyCardHint}</span>
+              </span>
+              <ChevronRight className="w-4 h-4 shrink-0" />
+            </button>
+          )}
           <div className="w-full flex flex-col gap-2">
             <p className="text-xs text-muted-foreground">{t.chat.welcomeOrDivider}</p>
             {onSwitchToText && (

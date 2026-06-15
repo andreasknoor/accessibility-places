@@ -47,7 +47,8 @@ export interface Translations {
     placeNoData:       (name: string) => string
     welcomeTitle:       string
     welcomeSubtitle:    string
-    welcomeGpsHint:     string
+    welcomeNearbyCard:     string
+    welcomeNearbyCardHint: string
     welcomeOrDivider:   string
     welcomeTextCard:     string
     welcomeTextCardHint: string

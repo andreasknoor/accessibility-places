@@ -549,10 +549,18 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleDismissWelcome = useCallback(() => {
+  // Primary welcome CTA: start the nearby search (triggers ChatPanel locate) and
+  // leave the welcome screen.
+  const handleStartNearby = useCallback(() => {
     try { localStorage.setItem("ap_welcome_dismissed", "1") } catch { /* ignore */ }
     setIsFirstVisit(false)
     setLocateTriggerKey((k) => k + 1)
+  }, [])
+
+  // Secondary "don't show again": dismiss the welcome without starting a search.
+  const handleDismissWelcome = useCallback(() => {
+    try { localStorage.setItem("ap_welcome_dismissed", "1") } catch { /* ignore */ }
+    setIsFirstVisit(false)
   }, [])
 
   const handleGpsResolved = useCallback((coords: { lat: number; lon: number }) => {
@@ -810,6 +818,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         isFirstVisit={isFirstVisit}
         onResetOnboarding={() => { try { localStorage.removeItem("ap_visited"); localStorage.removeItem("ap_welcome_dismissed") } catch { /* ignore */ }; setIsFirstVisit(true) }}
         onDismissWelcome={handleDismissWelcome}
+        onStartNearby={handleStartNearby}
         hasGpsCoords={hasGpsCoords}
         locateTrigger={locateTriggerKey}
         biasCoords={searchCenter ?? gpsCoords ?? undefined}
@@ -966,6 +975,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             onSwitchToText={chatMode !== "text" ? () => handleSwitchMode("text") : undefined}
             isFirstVisit={isFirstVisit}
             onDismissWelcome={handleDismissWelcome}
+            onStartNearby={handleStartNearby}
           />
           <div className="shrink-0 border-t border-border px-4 py-2 flex justify-end gap-4">
             <Link href={locale === "en" ? "/en/faq" : "/faq"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
