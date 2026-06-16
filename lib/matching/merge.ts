@@ -349,6 +349,18 @@ export function passesFiltersForSource(
     if (v === "unknown") return filters.acceptUnknown
     return false
   }
+
+  // A place is only attributable to a source if that source contributed at
+  // least one accessibility attribute. Without this guard every source would
+  // claim every merged place when no attribute filters are active.
+  const allAttrs = [
+    place.accessibility.entrance,
+    place.accessibility.toilet,
+    place.accessibility.parking,
+    ...(place.accessibility.seating ? [place.accessibility.seating] : []),
+  ]
+  if (!allAttrs.some((a) => a.sources.some((s) => s.sourceId === sourceId))) return false
+
   if (filters.entrance && !check(place.accessibility.entrance)) return false
   if (filters.toilet   && !check(place.accessibility.toilet))   return false
   if (filters.parking) {

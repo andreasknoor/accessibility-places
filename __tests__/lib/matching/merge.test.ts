@@ -453,11 +453,11 @@ describe("passesFiltersForSource", () => {
     expect(passesFiltersForSource(p, "osm", ALL_FILTERS)).toBe(false)
   })
 
-  it("treats missing source value as unknown", () => {
+  it("rejects source that has no attribution at all", () => {
     const p = placeWith()
-    // google_places has no contribution → value resolves to "unknown"
+    // google_places contributed nothing → should not claim this place regardless of acceptUnknown
     expect(passesFiltersForSource(p, "google_places", ALL_FILTERS)).toBe(false)
-    expect(passesFiltersForSource(p, "google_places", { ...ALL_FILTERS, acceptUnknown: true })).toBe(true)
+    expect(passesFiltersForSource(p, "google_places", { ...ALL_FILTERS, acceptUnknown: true })).toBe(false)
   })
 
   describe("seating sub-filter (Bug 5 parity)", () => {
