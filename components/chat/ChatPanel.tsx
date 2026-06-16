@@ -8,6 +8,7 @@ import { useTranslations, useLocale } from "@/lib/i18n"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { cn } from "@/lib/utils"
 import { extractQuotedName } from "@/lib/llm"
+import { loadSettings } from "@/lib/settings"
 import { getCurrentPosition, isGeolocationAvailable } from "@/lib/native/geolocation"
 import DevConsole from "@/components/easter-eggs/DevConsole"
 import type { AmenityType } from "@/lib/types"
@@ -258,7 +259,19 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       try { return !localStorage.getItem("ap_visited") && !localStorage.getItem("ap_welcome_dismissed") }
       catch { return false }
     })()
-    if (!isFirstVisit && (initialMode ?? "nearby") === "nearby") {
+    // Effective startup mode. `initialMode` is racy on the iOS standalone PWA:
+    // it derives from chatMode, which is seeded via a synchronous loadSettings()
+    // in a useLayoutEffect that returns the default ("nearby") when localStorage
+    // is not yet readable at layout-effect time — so a saved "text" preference
+    // would arrive too late and this effect would wrongly auto-locate. Like the
+    // isFirstVisit read above, localStorage is the ground truth at passive-effect
+    // time. initialMode === "text" is never the stale value (the stale default is
+    // always "nearby"), so we trust it as an override (SEO deep-link); otherwise
+    // we read the resolved preference directly.
+    const effectiveMode = initialMode === "text"
+      ? "text"
+      : (loadSettings().defaultSearchMode ?? "nearby")
+    if (!isFirstVisit && effectiveMode === "nearby") {
       onModeChange?.("nearby")
       handleLocate()
     }
