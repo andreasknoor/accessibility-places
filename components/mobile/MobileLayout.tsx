@@ -81,6 +81,7 @@ interface Props {
   gpsCoords?:           { lat: number; lon: number } | null
   onCategoryQueryChange?: (query: string) => void
   activeSearchCoords?:  { lat: number; lon: number }
+  intlNotice?:          string
 }
 
 export default function MobileLayout({
@@ -92,7 +93,7 @@ export default function MobileLayout({
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
   onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, onStartNearby, hasGpsCoords, locateTrigger, onSwitchToText,
   chatMode, onChatModeChange, biasCoords, onSearchHere, onLocate, locatePanTrigger, gpsCoords, onCategoryQueryChange, activeSearchCoords,
-  focusLayers, onToggleFocusLayer, focusLoadingLayer, focusHints,
+  focusLayers, onToggleFocusLayer, focusLoadingLayer, focusHints, intlNotice,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -175,7 +176,7 @@ export default function MobileLayout({
       <h1 className="sr-only">{t.app.srHeading}</h1>
 
       {/* ── Search bar (always visible) ── */}
-      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} locateTrigger={locateTrigger} biasCoords={biasCoords} focusLayers={focusLayers} onToggleFocusLayer={handleToggleFocusLayer} focusLoadingLayer={focusLoadingLayer} focusHints={focusHints} onCategoryQueryChange={onCategoryQueryChange} activeSearchCoords={activeSearchCoords} />
+      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} locateTrigger={locateTrigger} biasCoords={biasCoords} focusLayers={focusLayers} onToggleFocusLayer={handleToggleFocusLayer} focusLoadingLayer={focusLoadingLayer} focusHints={focusHints} onCategoryQueryChange={onCategoryQueryChange} activeSearchCoords={activeSearchCoords} international={settings.internationalMode} />
 
       {/* Global search progress — covers every trigger (search here, filter, radius,
           tab switch), since the ChatPanel's button spinner isn't visible on the map tab. */}
@@ -257,6 +258,7 @@ export default function MobileLayout({
             selectedId={selectedId}
             onSelect={(p) => { onSelect(p); setPanTrigger((n) => n + 1); setActiveTab("map") }}
             isLoading={isLoading}
+            intlNotice={intlNotice}
             scrollToId={scrollToId ?? externalScrollToId}
             onRerun={handleRerun}
             hasSourceError={hasSourceError}

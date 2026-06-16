@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { render, screen, fireEvent } from "@testing-library/react"
+import { render, screen, fireEvent, within } from "@testing-library/react"
 import SettingsSheet from "@/components/settings/SettingsSheet"
 import { DEFAULT_APP_SETTINGS } from "@/lib/settings"
 import type { AppSettings } from "@/lib/settings"
@@ -65,11 +65,12 @@ describe("SettingsSheet", () => {
     const onUpdate = vi.fn()
     renderSheet({ ...DEFAULT_APP_SETTINGS, alwaysShowParking: false }, onUpdate)
     fireEvent.click(screen.getByRole("button", { name: /Einstellungen/i }))
-    const parkingSwitch = screen
-      .getAllByRole("switch")
-      .find((el) => el.getAttribute("aria-checked") === "false")
-    expect(parkingSwitch).toBeDefined()
-    fireEvent.click(parkingSwitch!)
+    // Locate the switch by its row label (robust against other toggles being
+    // added/reordered) rather than by position among all switches.
+    const label = screen.getByText("Rollstuhlparkplätze immer in Karte")
+    const row = label.parentElement!.parentElement! // <p> → label wrapper → Row root
+    const parkingSwitch = within(row).getByRole("switch")
+    fireEvent.click(parkingSwitch)
     expect(onUpdate).toHaveBeenCalledWith({ alwaysShowParking: true })
   })
 

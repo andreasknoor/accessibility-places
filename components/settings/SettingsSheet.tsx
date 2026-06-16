@@ -170,6 +170,12 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
                 <option value="map">{ts.mobileViewMap}</option>
               </SelectInput>
             </Row>
+            <Row label={ts.internationalMode} hint={ts.internationalModeHint}>
+              <Toggle
+                value={settings.internationalMode}
+                onChange={(v) => onUpdate({ internationalMode: v })}
+              />
+            </Row>
           </div>
 
           {/* ── Map & Parking ── */}

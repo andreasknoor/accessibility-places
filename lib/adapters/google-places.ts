@@ -96,7 +96,7 @@ function toPlace(item: any, category: Category): Place | null {
       houseNumber: getComp("street_number"),
       postalCode:  String(getComp("postal_code")),
       city:        getComp("locality") || getComp("administrative_area_level_2"),
-      country:     getComp("country") || "DE",
+      country:     getComp("country") || undefined,
       raw:         addr,
     },
     coordinates: { lat: loc.latitude, lon: loc.longitude },

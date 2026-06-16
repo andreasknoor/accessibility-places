@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { ipFromRequest, isRateLimited, rateLimitResponse } from "@/lib/rate-limit"
+import { DACH_BBOX_STR, DACH_CODES, SUPPORTED_COUNTRY_CODES } from "@/lib/config"
 
 const PHOTON_URL = "https://photon.komoot.io/api/"
-const DACH_BBOX  = "5.87,45.82,17.17,55.06"
-const DACH_CODES = new Set(["DE", "AT", "CH"])
+const DACH_CODE_SET      = new Set<string>(DACH_CODES)
+const SUPPORTED_CODE_SET = new Set<string>(SUPPORTED_COUNTRY_CODES)
 
 // Photon `type` values that describe an administrative area rather than a venue.
 const AREA_TYPES = new Set(["city", "district", "locality", "county", "state", "country"])
@@ -36,6 +37,10 @@ export async function GET(req: NextRequest) {
   const lang = req.nextUrl.searchParams.get("lang") ?? "de"
   const latRaw = req.nextUrl.searchParams.get("lat")
   const lonRaw = req.nextUrl.searchParams.get("lon")
+  // International mode (opt-in): widen the area filter from DACH to the full
+  // supported-country allowlist. UI sends ?intl=1 only when the setting is on.
+  const intl = req.nextUrl.searchParams.get("intl") === "1"
+  const codeSet = intl ? SUPPORTED_CODE_SET : DACH_CODE_SET
 
   if (!q || q.length < 2 || q.length > 200) return NextResponse.json([])
 
@@ -49,7 +54,11 @@ export async function GET(req: NextRequest) {
   // No layer restriction — areas and POIs come back in one response.
   // Ask for more candidates than needed so classification + dedupe still
   // fill both groups.
-  let url = `${PHOTON_URL}?q=${encodeURIComponent(q)}&limit=20&lang=${lang}&bbox=${DACH_BBOX}`
+  // In DACH mode a tight bbox sharpens results. In international mode no single
+  // bbox can cover the allowlist (Europe + US), so we drop it and rely on the
+  // per-result country-code filter below plus the optional lat/lon bias.
+  let url = `${PHOTON_URL}?q=${encodeURIComponent(q)}&limit=20&lang=${lang}`
+  if (!intl) url += `&bbox=${DACH_BBOX_STR}`
   if (biasOk) url += `&lat=${lat}&lon=${lon}`
 
   try {
@@ -68,10 +77,10 @@ export async function GET(req: NextRequest) {
     for (const f of data.features ?? []) {
       const p = f?.properties ?? {}
 
-      // countrycode is often absent for POIs — trust the bbox filter instead.
-      // Only hard-exclude results with an explicit non-DACH country code.
+      // countrycode is often absent for POIs — trust the bbox/bias instead.
+      // Only hard-exclude results with an explicit out-of-allowlist country code.
       const cc = (p.countrycode ?? "").toUpperCase()
-      if (cc && !DACH_CODES.has(cc)) continue
+      if (cc && !codeSet.has(cc)) continue
 
       const name = (p.name ?? "").trim()
       if (!name) continue

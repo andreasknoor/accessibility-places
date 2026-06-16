@@ -1,3 +1,12 @@
+// Give tests a realistic two-endpoint Overpass config (a private server first,
+// then the public mirror) so the OSM adapter's parallel-race / fallback logic
+// stays exercised even though the production *default* is a single public
+// mirror. Must be set before lib/config is imported (setup runs before the test
+// module). The private entry is intentionally NOT in PUBLIC_OVERPASS_ENDPOINTS so
+// region-aware endpoint tests can verify it is dropped outside DACH.
+process.env.OVERPASS_ENDPOINTS =
+  "https://overpass.private.test/api/interpreter,https://overpass-api.de/api/interpreter"
+
 import "@testing-library/jest-dom"
 
 // Radix UI Slider uses ResizeObserver — mock it for jsdom

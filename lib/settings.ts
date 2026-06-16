@@ -17,6 +17,10 @@ export interface AppSettings {
   // (amenity=toilets) and hides WCs that are part of a venue. Default off (show all).
   publicToiletsOnly:  boolean
   parkingRadiusKm:    number          // radius for the amenity focus fetch (parking + WC), 0.05–5.0
+  // Opt-in: allow searches outside DACH (curated country allowlist). Default off.
+  // When on, geocoding + OSM endpoint choice widen to the allowlist; DACH searches
+  // are unaffected (still use the private server + all sources).
+  internationalMode:  boolean
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -30,6 +34,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   showWeakParking:    false,
   publicToiletsOnly:  false,
   parkingRadiusKm:    4.0,
+  internationalMode:  false,
 }
 
 // Mirrors CHIPS in ChatPanel.tsx — same order and indices must stay in sync

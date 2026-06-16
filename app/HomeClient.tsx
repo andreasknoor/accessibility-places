@@ -17,7 +17,7 @@ import MobileLayout from "@/components/mobile/MobileLayout"
 import SettingsSheet from "@/components/settings/SettingsSheet"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { useTranslations, useLocale } from "@/lib/i18n"
-import { DEFAULT_RADIUS_KM, RADIUS_MAX_KM } from "@/lib/config"
+import { DEFAULT_RADIUS_KM, RADIUS_MAX_KM, regionForCoordinates } from "@/lib/config"
 import { SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
@@ -262,7 +262,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       const res = await fetch("/api/search", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ userQuery: query, radiusKm: radiusKmOverride ?? radiusKm, filters: { ...filters, ...filtersOverride }, sources: { ...sources, ...sourcesOverride }, locale, coordinates: coords, nameHint, placeSearch }),
+        body:    JSON.stringify({ userQuery: query, radiusKm: radiusKmOverride ?? radiusKm, filters: { ...filters, ...filtersOverride }, sources: { ...sources, ...sourcesOverride }, locale, coordinates: coords, nameHint, placeSearch, international: settings.internationalMode }),
         signal:  controller.signal,
       })
 
@@ -352,6 +352,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
               for (const id of Object.keys(prev) as SourceId[]) {
                 if (next[id]?.status === "ok") {
                   next[id] = { ...next[id]!, finalCount: finalCounts[id] ?? 0 }
+                } else if (next[id]?.status === "loading") {
+                  // The result event is sent last, after every started adapter has
+                  // already reported. A source still "loading" here was never
+                  // started server-side (e.g. skipped outside DACH) — resolve it to
+                  // an empty result so its spinner doesn't hang until the timeout.
+                  next[id] = { status: "ok", rawCount: 0, finalCount: 0, durationMs: 0 }
                 }
               }
               return next
@@ -398,7 +404,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       // while the newer one runs — but a timeout has no successor, so it must.
       if (!controller.signal.aborted || timedOut) setIsLoading(false)
     }
-  }, [filters, sources, radiusKm, t])
+  }, [filters, sources, radiusKm, t, settings.internationalMode])
 
   const clearSearchState = useCallback(() => {
     setPlaces([])
@@ -481,6 +487,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       const coords = await getCoords()
       const qs = new URLSearchParams({ q: nameHint })
       if (coords) { qs.set("lat", String(coords.lat)); qs.set("lon", String(coords.lon)) }
+      if (settings.internationalMode) qs.set("intl", "1")
       const res = await fetch(`/api/geocode?${qs}`)
       if (res.status === 404) { track("place_not_found", { reason: "not_found" }); setError(t.chat.placeNotFound); setIsLoading(false); return }
       if (!res.ok)            { setError(t.chat.errorGeneric);  setIsLoading(false); return }
@@ -490,7 +497,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       setError(t.chat.errorGeneric)
       setIsLoading(false)
     }
-  }, [searchCenter, t, handleSearch])
+  }, [searchCenter, t, handleSearch, settings.internationalMode])
 
   const handleSearchHere = useCallback((coords: { lat: number; lon: number }) => {
     // Re-run the last search if there is one; otherwise (text mode, nothing
@@ -712,6 +719,13 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     ? toiletSource.filter((s) => s.host?.kind === "standalone")
     : toiletSource
 
+  // Data-coverage caveat banner: only when international mode is on AND the
+  // resolved search centre is outside DACH. DACH searches never show it.
+  const intlNotice = settings.internationalMode && searchCenter &&
+    regionForCoordinates(searchCenter.lat, searchCenter.lon) !== "dach"
+      ? t.results.intlNotice
+      : undefined
+
   const handleFilters = useCallback((next: SearchFilters) => {
     const activated = (["entrance", "toilet", "parking", "seating", "onlyVerified"] as const)
       .filter((k) => next[k] && !filters[k])
@@ -749,6 +763,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     if (patch.defaultSearchMode !== undefined) {
       setChatMode(patch.defaultSearchMode ?? "text")
     }
+    if (patch.internationalMode === true) {
+      setSources((s) => ({ ...s, google_places: true }))
+    }
   }, [updateSettings])
 
   // Show the parking toggle whenever the server returned spots OR any result
@@ -783,6 +800,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         selectedId={selectedId}
         onSelect={(p) => setSelectedId(p.id)}
         isLoading={isLoading}
+        intlNotice={intlNotice}
         filters={filters}
         sources={sources}
         radiusKm={radiusKm}
@@ -880,6 +898,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           key={resetKey}
           onSearch={(query, coords, nameHint) => handleSearch(query, undefined, coords, nameHint)}
           onPlaceSearch={handlePlaceSearch}
+          international={settings.internationalMode}
           isLoading={isLoading}
           onModeChange={handleModeChange}
           autoFocus
@@ -967,6 +986,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             hasSearched={!!(lastQuery || lastNameHint)}
             scrollToId={scrollToId}
             filterDebug={filterDebug}
+            intlNotice={intlNotice}
             searchCenter={chatMode === "nearby" ? searchCenter : undefined}
             parkingSpotCount={parkingSpots.length > 0 ? parkingSpots.length : undefined}
             sortBy={sortBy}

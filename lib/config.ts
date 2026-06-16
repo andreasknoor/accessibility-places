@@ -2,7 +2,7 @@ import type { SourceId, Category } from "./types"
 
 // User-visible app version, shown in the header next to the subtitle.
 // Bump on every meaningful release.
-export const APP_VERSION = "6.9"
+export const APP_VERSION = "7.5"
 
 export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
   reisen_fuer_alle:    1.00,
@@ -59,15 +59,22 @@ export const SOURCE_LABELS: Record<SourceId, string> = {
   nominatim:           "Nominatim",
 }
 
-// Both are raced in parallel — the first successful response wins.
-// overpass.osm.ch removed: returns 0 results for any non-CH query (Swiss-only data).
-// overpass.private.coffee / overpass.kumi.systems removed: same operator/backend,
-// unreachable in live tests (2026-06-15). Replaced by the OSM-France mirror
-// (overpass.openstreetmap.fr) — EU-hosted, global coverage, reliable in testing.
+// Raced in parallel — the first successful response wins.
+// Mirror history (all verified with REAL data queries, not just `out count`):
+//   • overpass.osm.ch — Swiss-only data (0 results outside CH) → unusable as a
+//     general mirror (it would win the race with an empty response).
+//   • overpass.private.coffee / overpass.kumi.systems — same dead backend.
+//   • overpass.openstreetmap.fr — returns HTTP 403 "only available to white-listed
+//     usages" for real venue/parking queries (only trivial `out count` passes).
+//     Removed 2026-06-16; it broke OSM outside DACH (where the private server is
+//     intentionally dropped) and as the prod fallback #3.
+// overpass-api.de is the only reliably-open public mirror; outside DACH it is the
+// single available endpoint (its own per-IP fair-use limit can surface as 429).
 //
-// Set OVERPASS_ENDPOINTS (comma-separated) to point to a private Overpass server,
-// e.g. "https://overpass.example.com/api/interpreter". Multiple URLs retain the
-// parallel-race behaviour. When unset, the two public mirrors are used.
+// Set OVERPASS_ENDPOINTS (comma-separated) to put the private Overpass server
+// first, e.g. "https://overpass.example.com/api/interpreter,https://overpass-api.de/api/interpreter".
+// Multiple URLs retain the parallel-race behaviour. When unset, only the public
+// mirror is used.
 const _overpassEnv = process.env.OVERPASS_ENDPOINTS
   ?.split(",")
   .map((s) => s.trim())
@@ -77,17 +84,91 @@ export const OVERPASS_ENDPOINTS: string[] = _overpassEnv?.length
   ? _overpassEnv
   : [
       "https://overpass-api.de/api/interpreter",
-      "https://overpass.openstreetmap.fr/api/interpreter",
     ]
 
 export const OVERPASS_ENDPOINT = OVERPASS_ENDPOINTS[0]
 
-// The two well-known public Overpass mirrors — used to distinguish private
-// self-hosted endpoints from public ones in health checks and stats tracking.
+// Well-known public Overpass mirrors — used to distinguish private self-hosted
+// endpoints from public ones in health checks and stats tracking.
 export const PUBLIC_OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
-  "https://overpass.openstreetmap.fr/api/interpreter",
 ]
+
+// ─── Supported regions (DACH + opt-in international allowlist) ───────────────
+//
+// Single source of truth for every geo gate in the app: region detection, the
+// Nominatim `countrycodes` constraint (both forward-geocode paths), the Photon
+// country-code filter in unified-suggest, and the OSM Overpass endpoint choice.
+//
+// DACH is always available. The international countries below are only reachable
+// when the user opts into `internationalMode` (AppSettings, default off). Boxes
+// are deliberately generous but must NOT extend into the DACH box — otherwise a
+// border point could resolve to "intl" and lose the fast private Overpass server.
+//
+// Adding a country = one `{ code, bbox }` entry here + one regionForCoordinates
+// unit test. Everything else derives from this list. SEO pages stay DACH-only.
+
+export type BBox = readonly [number, number, number, number] // [minLon, minLat, maxLon, maxLat]
+
+export const DACH_BBOX: BBox = [5.87, 45.82, 17.17, 55.06]
+// String form for Photon's `bbox=` query param (forward geocoding autocomplete).
+export const DACH_BBOX_STR = "5.87,45.82,17.17,55.06"
+export const DACH_CODES = ["DE", "AT", "CH"] as const
+
+// International countries (outside DACH), available only in international mode.
+// bboxes from docs/plans/international-search.md (density-driven recommendation).
+// Overseas territories deliberately excluded to keep boxes usable.
+export const INTL_COUNTRIES: readonly { code: string; bbox: BBox }[] = [
+  { code: "FR", bbox: [-5.14, 41.33,  9.56, 51.09] },
+  { code: "GB", bbox: [-8.65, 49.84,  1.77, 60.86] },
+  { code: "NL", bbox: [ 3.36, 50.75,  7.23, 53.56] },
+  { code: "ES", bbox: [-18.16, 27.64, 4.33, 43.79] },
+  { code: "IT", bbox: [ 6.63, 35.49, 18.52, 47.09] },
+  { code: "US", bbox: [-124.85, 24.40, -66.88, 49.38] },
+] as const
+
+// All ISO-2 codes the app accepts when international mode is on.
+export const SUPPORTED_COUNTRY_CODES = [
+  ...DACH_CODES,
+  ...INTL_COUNTRIES.map((c) => c.code),
+] as const
+
+export type Region = "dach" | "intl" | "outside"
+
+function bboxContains(bbox: BBox, lat: number, lon: number): boolean {
+  const [minLon, minLat, maxLon, maxLat] = bbox
+  return lon >= minLon && lon <= maxLon && lat >= minLat && lat <= maxLat
+}
+
+/**
+ * Classifies a coordinate as DACH (private server + all sources), an in-allowlist
+ * international country (public mirrors + global sources), or outside the
+ * supported set. DACH is checked first so border overlaps resolve to DACH.
+ */
+export function regionForCoordinates(lat: number, lon: number): Region {
+  if (bboxContains(DACH_BBOX, lat, lon)) return "dach"
+  if (INTL_COUNTRIES.some((c) => bboxContains(c.bbox, lat, lon))) return "intl"
+  return "outside"
+}
+
+/** Nominatim `countrycodes` value (lowercase, comma-separated) for the active mode. */
+export function countryCodesParam(international: boolean): string {
+  const codes = international ? SUPPORTED_COUNTRY_CODES : DACH_CODES
+  return codes.map((c) => c.toLowerCase()).join(",")
+}
+
+/**
+ * Overpass endpoints to race for a given coordinate. In DACH (or when
+ * international mode is off) the full list is used — the private Hetzner server
+ * wins on speed. Outside DACH in international mode the private DACH-only server
+ * is dropped so it cannot win the race with a valid-but-empty response; only the
+ * public global mirrors are raced.
+ */
+export function endpointsForCoordinates(lat: number, lon: number, international: boolean): string[] {
+  if (!international || regionForCoordinates(lat, lon) === "dach") return OVERPASS_ENDPOINTS
+  const publicOnly = OVERPASS_ENDPOINTS.filter((e) => PUBLIC_OVERPASS_ENDPOINTS.includes(e))
+  return publicOnly.length ? publicOnly : OVERPASS_ENDPOINTS
+}
 
 // Set NOMINATIM_ENDPOINT to point to a private Nominatim instance.
 // Trailing slash is stripped to keep URL construction consistent.

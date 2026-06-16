@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { NOMINATIM_ENDPOINT } from "@/lib/config"
+import { NOMINATIM_ENDPOINT, countryCodesParam } from "@/lib/config"
 import { ipFromRequest, isRateLimited, rateLimitResponse } from "@/lib/rate-limit"
 
 export async function GET(req: NextRequest) {
@@ -18,7 +18,8 @@ export async function GET(req: NextRequest) {
     ? `&viewbox=${lonN - 0.2},${latN + 0.2},${lonN + 0.2},${latN - 0.2}&bounded=0`
     : ""
 
-  const url = `${NOMINATIM_ENDPOINT}/search?q=${encodeURIComponent(q)}&format=json&limit=1&countrycodes=de,at,ch${viewbox}`
+  const intl = req.nextUrl.searchParams.get("intl") === "1"
+  const url = `${NOMINATIM_ENDPOINT}/search?q=${encodeURIComponent(q)}&format=json&limit=1&countrycodes=${countryCodesParam(intl)}${viewbox}`
 
   const res = await fetch(url, {
     headers: { "User-Agent": "AccessiblePlaces/1.0 (contact@accessible-places.org)" },
