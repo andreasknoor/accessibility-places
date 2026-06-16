@@ -31,6 +31,8 @@ A pre-commit hook (`.githooks/pre-commit`, installed via `npm run prepare`) runs
 
 **Always run `npm test` before committing or pushing.** No check-ins without a full test run.
 
+**Also run `npx tsc --noEmit` before pushing** when adding fields to `ActiveSources`, `SearchFilters`, or any other interface that appears in test fixtures. `vitest` strips types at runtime so missing required fields only surface in `next build` (which runs `tsc`) — catching them locally avoids a failed Vercel deploy. The `__tests__/` directory is excluded from the production `tsc` config but included when running `npx tsc --noEmit` directly.
+
 ## Next.js version note
 
 This project uses **Next.js 16.2.6**, which contains breaking changes from prior versions. APIs, conventions, and file structure may differ from training-data knowledge. Before writing Next.js-specific code, read the relevant guide in `node_modules/next/dist/docs/` and heed any deprecation notices in the build output.
@@ -63,17 +65,33 @@ Five adapters run in parallel via `startAdapterTasks()`:
 - **accessibility.cloud** (`accessibility-cloud.ts`): A11yJSON-shaped records. Always uses `accessibilityPreset=at-least-partially-accessible-by-wheelchair`.
 - **Reisen für Alle** (`reisen-fuer-alle.ts`): Highest reliability weight (1.0). Hidden from FilterPanel UI (not in `SOURCE_ORDER`) but always active when the key is set.
 - **Ginto** (`ginto.ts`): GraphQL API (`POST https://api.ginto.guide/graphql`). Data is Switzerland-focused but with scattered entries across DACH; queried for every search by default. `GINTO_GEOFENCE=1` re-enables the CH bounding-box fence (skips calls whose search circle cannot reach CH) as an emergency brake against rate limits. `position.countryCode` is normalised ISO-3→ISO-2 (`AUT`→`AT` etc.; empty→`CH`). `defaultRatings[].key` prefix convention maps to A11yValue: no prefix → entrance, `toilet_` → toilet, `parking_` → parking. Paginates up to 2 pages (100 results). Base weight 0.90; SELF_DECLARED entries use 0.94, AUDITED entries use 1.0 (via `qualityInfo.approvalLevels` — who vouches for the data: operator vs. external authority). `qualityInfo.detailLevels` measures data completeness, not trustworthiness — stored in `metadata` only, never affects the weight. `updatedAt` is a system republish timestamp, not a human verification date — stored in `metadata` only, never sets `verifiedRecently`. AUDITED also does not set `verifiedRecently` (no audit date in the API).
-- **Google Places** (`google-places.ts`): Lowest reliability weight (0.35); fires one POST per category, capped at `GOOGLE_MAX_CATEGORIES = 3` so an all-categories search cannot fan out one upstream call per category. **Disabled by default** in `DEFAULT_SOURCES` (defined in `app/HomeClient.tsx`).
+- **AccèsLibre** (`acceslibre.ts`): French government accessibility database (`https://acceslibre.beta.gouv.fr/api/erps/`). REST API, `Authorization: Api-Key` header. **Only runs in international mode when the search centre is inside the FR bounding box** — always skipped for DACH searches. Weight 0.90. Category fan-out via `?activite=<slug>`: `TO_ACCESLIBRE` maps each `Category` to one or more AccèsLibre slugs; `FROM_ACCESLIBRE` maps slugs back. For specific categories the adapter fetches one request per slug sequentially with a 250 ms pacing gap to stay under the ~5 req/s burst limit; for all-categories it does a single unfiltered fetch instead. 429 responses are retried up to `MAX_429_RETRIES=2` times honouring `Retry-After`. `entree_marches_rampe="aucune"` means no ramp (not falsy); coordinate order in `geom.coordinates` is `[lon, lat]` — always swap. The `commentaire.commentaire` field (free-text FR note from the venue) is stored in source-record `metadata.commentaire` and rendered in `PlaceDebugSheet`.
+- **Google Places** (`google-places.ts`): Lowest reliability weight (0.35); fires one POST per category, capped at `GOOGLE_MAX_CATEGORIES = 3` so an all-categories search cannot fan out one upstream call per category. **Disabled by default** in `DEFAULT_SOURCES` (defined in `app/HomeClient.tsx`). Auto-enabled when the user turns on international mode.
 
 ### Categories (`lib/config.ts`, `lib/types.ts`)
 
 28 search categories (the `Category` union in `lib/types.ts`). Each maps to OSM tags in `CATEGORY_OSM_TAGS` — a `{ amenity?, tourism?, shop? }` record. The `shop` dimension was added for the everyday categories (`chemist`/`supermarket`/`bakery`/`hairdresser`); the OSM query builder in `osm.ts` collects all three dimensions into separate clauses. The 12 everyday categories (pharmacy, doctors, dentist, veterinary, hospital, chemist, supermarket, bakery, hairdresser, bank, post_office, zoo) were added in v4.29.
+
+**Adding a source touches many files in lockstep:** `SourceId` union and `ActiveSources` interface (`lib/types.ts`), `RELIABILITY_WEIGHTS` + `SOURCE_LABELS` (`lib/config.ts`), `SOURCE_ORDER` in `FilterPanel.tsx`, `DEFAULT_SOURCES` in `HomeClient.tsx`, every `ActiveSources` literal in `app/api/health/route.ts`, `lib/seo-search.ts`, and all test fixtures. Missing `ActiveSources` keys are not caught by `vitest` (types are stripped) but will fail `next build` — run `npx tsc --noEmit` before pushing.
 
 **Adding a category touches many files in lockstep:** the `Category` union (`lib/types.ts`), `CATEGORY_OSM_TAGS` (`lib/config.ts`), every adapter's category mapper (`lib/adapters/*`), `ALL_CATEGORIES` + `CATEGORY_HINTS` (`lib/llm.ts`), the `categories` i18n block (`lib/i18n/*`), and `CATEGORY_ICONS` (`lib/category-icons.ts`). A missing adapter entry is a TypeScript error (the maps are `Record<Category, …>`), so the build catches most omissions.
 
 `lib/category-icons.ts` exports the shared `CATEGORY_ICONS` emoji map (one entry per category), used in the `PlaceCard` header, the map popup, the `PlaceDebugSheet` header, **and** the map pin-marker glyph. Each of those three views also shows the localised category label (`t.categories[place.category]`) near the top.
 
 Only 10 categories have SEO landing pages (`SEO_CATEGORY_SLUGS` in `lib/cities.ts`): cafe, restaurant, bar, pub, biergarten, hotel, museum, theater, cinema, attraction. The other 18 are search-only — the `[city]/[category]` route 404s any non-SEO slug.
+
+### International mode (`lib/config.ts`)
+
+`AppSettings.internationalMode` (default `false`) unlocks search beyond DACH. The single source of truth for all geo gates is `lib/config.ts`:
+
+- `DACH_BBOX` / `DACH_CODES` — always available.
+- `INTL_COUNTRIES` — the opt-in allowlist (FR, GB, NL, ES, IT, US). Each entry has a `code` and a `bbox`. Adding a new country = one entry here + one unit test in `regionForCoordinates`.
+- `regionForCoordinates(lat, lon)` → `"dach" | "intl" | "outside"` — DACH checked first so border overlaps stay on the fast path.
+- `endpointsForCoordinates(lat, lon, international)` — drops the private Hetzner server outside DACH so it cannot win the Overpass race with a geographically empty response.
+- `countryCodesParam(international)` — Nominatim `countrycodes=` value.
+- `GINTO_GEOFENCE=1` env var restricts Ginto to its CH bbox (emergency brake).
+
+When `internationalMode` is toggled on in `HomeClient.handleUpdateSettings`, Google Places and AccèsLibre are also auto-enabled. Ginto and RfA emit a synthetic skipped source event outside their regions to prevent the search spinner from hanging. The `/api/nearby-parking` route requires `?intl=1` to pass the flag through to `fetchOsmAccessibleAmenities`; `HomeClient` appends it from `settings.internationalMode`.
 
 ### Matching & merging (`lib/matching/`)
 
@@ -85,7 +103,7 @@ Disabled parking and wheelchair WCs are modelled as **typed point features** (`A
 
 ### Confidence weights (`lib/config.ts`)
 
-Reliability weights live in `SOURCE_RELIABILITY` (`reisen_fuer_alle 1.0` > `ginto 0.90` > `osm 0.75` > `accessibility_cloud 0.70` > `google_places 0.35`). Ginto refines per-entry: SELF_DECLARED → 0.94, AUDITED → 1.0. The `osm_*`/`nominatim` entries are weight `0` (stats-only, never place attributions). `CONFIDENCE_THRESHOLDS`: `high = 0.70`, `medium = 0.40` → `confidenceLabel()` "Verlässlich" / "Mittel" / "Unsicher".
+Reliability weights live in `SOURCE_RELIABILITY` (`reisen_fuer_alle 1.0` > `ginto 0.90` = `acceslibre 0.90` > `osm 0.75` > `accessibility_cloud 0.70` > `google_places 0.35`). Ginto refines per-entry: SELF_DECLARED → 0.94, AUDITED → 1.0. The `osm_*`/`nominatim` entries are weight `0` (stats-only, never place attributions). `CONFIDENCE_THRESHOLDS`: `high = 0.70`, `medium = 0.40` → `confidenceLabel()` "Verlässlich" / "Mittel" / "Unsicher".
 
 `OSM_ENTRANCE_WEIGHT_FACTOR = 0.90` applies an extra reduction when OSM's whole-place `wheelchair=*` tag stands in for the entrance criterion specifically.
 
@@ -100,6 +118,8 @@ Reliability weights live in `SOURCE_RELIABILITY` (`reisen_fuer_alle 1.0` > `gint
 **Empty state actions** — `ResultsList` accepts an optional `onAdjustFilters?: () => void` prop. When present (mobile only), a primary "Filter anpassen" button is rendered alongside the expand-radius button; clicking it calls the callback. `MobileLayout` passes `() => setActiveTab("filter")`. When absent (desktop), a text hint is shown instead — the filter panel is already visible.
 
 **PlaceCard interaction** — Clicking the card body opens `PlaceDebugSheet` (the place info sheet) via `createPortal`. The info sheet is a full user-facing panel: structured accessibility details, enriched metadata (hours, cuisine, ratings, dogs, etc.), external links (Wheelmap, OSM, Google Maps, website, Ginto), and a copy-link button. A separate map-pin button on the card (`onClick` prop) selects the place on the map without opening the sheet.
+
+**PlaceDebugSheet detail rows** — For each accessibility criterion (entrance, toilet, seating) the sheet renders a header row then wraps sub-detail rows in `ml-6 pl-3 border-l border-border` so the parent is unambiguous. The structured detail types are `EntranceDetails`, `ToiletDetails`, `ParkingDetails`, `SeatingDetails` (all in `lib/types.ts`); they are carried in `AccessibilityAttribute.details` (merged) and `SourceAttribution.details` (per-source). AccèsLibre's free-text `commentaire` is read from `getMeta(place, "acceslibre")?.commentaire` and rendered at the bottom of the accessibility section.
 
 **Distance display** — `PlaceCard` shows inline distance (`t.results.distanceFromHere`) when `distanceM` prop is provided. `HomeClient` passes `searchCenter` to `ResultsList` **only when `chatMode === "nearby"`** — distance is intentionally not shown for text-search results.
 
