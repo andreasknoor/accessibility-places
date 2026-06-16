@@ -360,7 +360,7 @@ const de: Translations = {
     resetToDefaults:   "Auf Standard zurücksetzen",
     resetDone:         "Zurückgesetzt",
     parkingRadius:     'Suchradius „in der Nähe" (Parkplätze & WCs)',
-    internationalMode:     "Internationale Suche",
+    internationalMode:     "Internationale Suche (Beta)",
     internationalModeHint: "Suche auch außerhalb von DACH (Frankreich, Großbritannien, Niederlande, Spanien, Italien, USA). Datenlage variiert je nach Land und ist außerhalb großer Städte oft dünn.",
   },
 }

@@ -360,7 +360,7 @@ const en: Translations = {
     resetToDefaults:   "Reset to defaults",
     resetDone:         "Reset",
     parkingRadius:     "\"Nearby\" search radius (parking & toilets)",
-    internationalMode:     "International search",
+    internationalMode:     "International search (Beta)",
     internationalModeHint: "Search beyond the DACH region (France, United Kingdom, Netherlands, Spain, Italy, USA). Data coverage varies by country and is often sparse outside major cities.",
   },
 } as const
