@@ -7,6 +7,7 @@ export const APP_VERSION = "7.7"
 export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
   reisen_fuer_alle:    1.00,
   ginto:               0.90,
+  acceslibre:          0.90,
   accessibility_cloud: 0.70,
   osm:                 0.75,
   google_places:       0.35,
@@ -50,6 +51,7 @@ export const SOURCE_LABELS: Record<SourceId, string> = {
   osm:                 "OpenStreetMap",
   reisen_fuer_alle:    "Reisen für Alle",
   ginto:               "Ginto",
+  acceslibre:          "AccèsLibre",
   google_places:       "Google Places",
   osm_parking:         "OSM Parking",
   osm_parking_private: "↳ Parking privat",

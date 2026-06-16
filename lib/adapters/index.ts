@@ -4,6 +4,7 @@ import { fetchAccessibilityCloud }   from "./accessibility-cloud"
 import { fetchReisenFuerAlle }       from "./reisen-fuer-alle"
 import { fetchGooglePlaces }         from "./google-places"
 import { fetchGinto }                from "./ginto"
+import { fetchAccesLibre }          from "./acceslibre"
 
 export type AdapterResult = {
   sourceId: SourceId
@@ -53,6 +54,8 @@ export function startAdapterTasks(
     tasks.push({ sourceId: "google_places",       promise: safeRun("google_places",       () => fetchGooglePlaces(params)) })
   if (sources.ginto)
     tasks.push({ sourceId: "ginto",               promise: safeRun("ginto",               () => fetchGinto(params)) })
+  if (sources.acceslibre)
+    tasks.push({ sourceId: "acceslibre",           promise: safeRun("acceslibre",           () => fetchAccesLibre(params)) })
   return tasks
 }
 

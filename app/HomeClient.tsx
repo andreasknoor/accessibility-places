@@ -51,6 +51,7 @@ const DEFAULT_SOURCES: ActiveSources = {
   osm:                 true,
   reisen_fuer_alle:    true,
   ginto:               true,
+  acceslibre:          true,
   google_places:       false,
 }
 
@@ -550,7 +551,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       { lat: initialSelectLat, lon: initialSelectLon },
       initialSelectName,
       undefined,
-      { osm: true, accessibility_cloud: true, reisen_fuer_alle: true, ginto: true, google_places: true },
+      { osm: true, accessibility_cloud: true, reisen_fuer_alle: true, ginto: true, acceslibre: true, google_places: true },
     )
   // Only run once on mount — URL params are stable
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -764,7 +765,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       setChatMode(patch.defaultSearchMode ?? "text")
     }
     if (patch.internationalMode === true) {
-      setSources((s) => ({ ...s, google_places: true }))
+      setSources((s) => ({ ...s, google_places: true, acceslibre: true }))
     }
   }, [updateSettings])
 

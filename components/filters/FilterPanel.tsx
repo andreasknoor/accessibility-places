@@ -80,6 +80,7 @@ const SOURCE_ORDER: (keyof ActiveSources)[] = [
   "osm",
   "accessibility_cloud",
   "ginto",
+  "acceslibre",
   "google_places",
 ]
 
@@ -88,6 +89,7 @@ const SOURCE_RELIABILITY: Partial<Record<SourceId, string>> = {
   accessibility_cloud: "bg-lime-500",
   reisen_fuer_alle:    "bg-green-500",
   ginto:               "bg-teal-500",
+  acceslibre:          "bg-blue-600",
   google_places:       "bg-orange-400",
 }
 

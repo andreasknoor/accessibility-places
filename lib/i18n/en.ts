@@ -100,6 +100,7 @@ const en: Translations = {
     phoneLink:      "Call",
     wheelmapLink:   "Check on Wheelmap.org",
     gintoLink:      "Check on Ginto",
+    acceslibreLink: "Check on AccèsLibre",
     googleMapsLink: "Open in Google Maps",
     verifiedRecently: "User-verified on-site",
     verifiedAt: (date: string, sources: string[]) => {

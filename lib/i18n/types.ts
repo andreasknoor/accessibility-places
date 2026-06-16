@@ -96,6 +96,7 @@ export interface Translations {
     phoneLink:         string
     wheelmapLink:      string
     gintoLink:         string
+    acceslibreLink:    string
     googleMapsLink:    string
     verifiedRecently:  string
     verifiedAt:        (date: string, sources: string[]) => string

@@ -504,6 +504,13 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
                 </NativeLink>
               </InfoRow>
             )}
+            {place.acceslibreUrl && (
+              <InfoRow icon={ExternalLink} label="AccèsLibre">
+                <NativeLink href={place.acceslibreUrl} className="text-blue-600 hover:underline">
+                  acceslibre.beta.gouv.fr
+                </NativeLink>
+              </InfoRow>
+            )}
             {place.sourceRecords.some((r) => r.sourceId === "reisen_fuer_alle") && (
               <InfoRow icon={Award} label="Reisen für Alle">
                 <span className="text-muted-foreground">Zertifizierter Eintrag</span>

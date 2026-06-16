@@ -8,7 +8,7 @@ import { fetchOsmDisabledParking, fetchOsmAccessibleAmenities } from "@/lib/adap
 import type { AmenityFeature } from "@/lib/types"
 import { enrichWithNearbyParking, haversineMeters, NEARBY_PARKING_DISPLAY_RADIUS_M, dedupeToiletFeatures, TOILET_DISPLAY_CAP } from "@/lib/matching/nearby-parking"
 import { parseQuery } from "@/lib/llm"
-import { NOMINATIM_ENDPOINT, RADIUS_MIN_KM, RADIUS_MAX_KM, PUBLIC_OVERPASS_ENDPOINTS, countryCodesParam, regionForCoordinates } from "@/lib/config"
+import { NOMINATIM_ENDPOINT, RADIUS_MIN_KM, RADIUS_MAX_KM, PUBLIC_OVERPASS_ENDPOINTS, countryCodesParam, regionForCoordinates, INTL_COUNTRIES } from "@/lib/config"
 import * as Sentry from "@sentry/nextjs"
 
 // Adapter errors come back from safeRun as plain strings (the original Error is
@@ -217,6 +217,7 @@ export async function POST(req: NextRequest) {
     osm:                 Boolean(req_s.osm),
     reisen_fuer_alle:    Boolean(req_s.reisen_fuer_alle)    && Boolean(process.env.REISEN_FUER_ALLE_API_KEY),
     ginto:               Boolean(req_s.ginto)               && Boolean(process.env.GINTO_API_KEY),
+    acceslibre:          Boolean(req_s.acceslibre)          && Boolean(process.env.ACCESLIBRE_API_KEY),
     google_places:       Boolean(req_s.google_places)       && Boolean(process.env.GOOGLE_PLACES_API_KEY),
   }
 
@@ -288,6 +289,13 @@ export async function POST(req: NextRequest) {
           }
           sources.ginto            = false
           sources.reisen_fuer_alle = false
+          // AccèsLibre is FR-only: skip (with synthetic event) when outside France
+          const frBbox = INTL_COUNTRIES.find((c) => c.code === "FR")!.bbox
+          const inFrance = geo.lon >= frBbox[0] && geo.lon <= frBbox[2] && geo.lat >= frBbox[1] && geo.lat <= frBbox[3]
+          if (!inFrance) {
+            if (req_s.acceslibre) emit({ type: "source", sourceId: "acceslibre", status: "ok", count: 0, durationMs: 0 })
+            sources.acceslibre = false
+          }
         }
 
         // ── 3. Build per-source params ────────────────────────────────────────

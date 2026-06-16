@@ -9,6 +9,7 @@ export type SourceId =
   | "reisen_fuer_alle"
   | "google_places"
   | "ginto"
+  | "acceslibre"
   | "osm_parking"
   | "osm_parking_private"
   | "osm_parking_public"
@@ -133,6 +134,7 @@ export interface Place {
   // back. Used in preference to a manually constructed Wheelmap link.
   wheelmapUrl?: string
   gintoUrl?: string
+  acceslibreUrl?: string
 
   // Bonus info from supplementary A.Cloud datasets (e.g. Pfotenpiloten):
   // does the place welcome dogs? `undefined` = unknown.
@@ -194,6 +196,7 @@ export interface ActiveSources {
   osm: boolean
   reisen_fuer_alle: boolean
   ginto: boolean
+  acceslibre: boolean
   google_places: boolean
 }
 
