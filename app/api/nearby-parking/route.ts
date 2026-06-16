@@ -28,6 +28,11 @@ export async function GET(req: NextRequest) {
     ? Math.min(Math.max(radiusRaw, RADIUS_MIN_KM), RADIUS_MAX_KM)
     : 0.3
 
+  // International mode (opt-in): outside DACH the region-aware endpoint choice
+  // drops the DACH-only private Overpass server, which would otherwise win the
+  // race with an empty response (e.g. focus-mode parking/WC in Paris → nothing).
+  const international = searchParams.get("intl") === "1"
+
   // Parse requested types; default to parking for back-compat with old callers.
   const requested = (searchParams.get("types") ?? "parking")
     .split(",")
@@ -50,6 +55,7 @@ export async function GET(req: NextRequest) {
   const { features } = await fetchOsmAccessibleAmenities({ lat, lon }, radiusKm, types, {
     signal: req.signal,
     includeWeakTier: true,
+    international,
   }).catch(() => {
     failed = true
     return { features: [], winnerEndpoint: "", durationMs: 0 }

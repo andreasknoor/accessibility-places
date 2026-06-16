@@ -651,7 +651,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setFocusLoadingLayer(type)
     try {
       const res = await fetch(
-        `/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=${settings.parkingRadiusKm}&types=${layers.join(",")}`,
+        `/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=${settings.parkingRadiusKm}&types=${layers.join(",")}${settings.internationalMode ? "&intl=1" : ""}`,
         { signal: controller.signal },
       )
       const spots: AmenityFeature[] = res.ok ? await res.json() : []
@@ -671,7 +671,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       // Only the latest request clears the spinner; a superseded one must not.
       if (focusAbortRef.current === controller) setFocusLoadingLayer(null)
     }
-  }, [focusLayers, gpsCoords, settings.parkingRadiusKm, noneFoundFor])
+  }, [focusLayers, gpsCoords, settings.parkingRadiusKm, settings.internationalMode, noneFoundFor])
 
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     isDragging.current = true
