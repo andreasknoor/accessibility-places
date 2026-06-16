@@ -456,7 +456,7 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
               "streetAddress":   [p.address.street, p.address.houseNumber].filter(Boolean).join(" "),
               "addressLocality": p.address.city,
               "postalCode":      p.address.postalCode,
-              "addressCountry":  p.address.country,
+              "addressCountry":  p.address.country ?? "DE",
             },
             "geo": {
               "@type":     "GeoCoordinates",
