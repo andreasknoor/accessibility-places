@@ -11,7 +11,7 @@ import type {
   ParkingDetails,
 } from "../types"
 import { buildAttribute, emptyAttribute } from "../matching/merge"
-import { OVERPASS_ENDPOINTS, CATEGORY_OSM_TAGS } from "../config"
+import { CATEGORY_OSM_TAGS, endpointsForCoordinates } from "../config"
 import { nanoid } from "../utils"
 
 // ─── Overpass query builder ────────────────────────────────────────────────
@@ -289,7 +289,7 @@ function elementToPlace(el: any): Place | null {
       houseNumber: tags["addr:housenumber"] ?? "",
       postalCode:  String(tags["addr:postcode"] ?? ""),
       city:        tags["addr:city"]        ?? tags["addr:town"] ?? "",
-      country:     tags["addr:country"]     ?? "DE",
+      country:     tags["addr:country"]     ?? undefined,
       raw:         [tags["addr:street"], tags["addr:housenumber"], tags["addr:city"]].filter(Boolean).join(", "),
     },
     coordinates: { lat, lon },
@@ -333,10 +333,13 @@ export async function fetchOsm(params: SearchParams): Promise<{ places: Place[];
   // (28 s × 3 = 84 s) and naturally deprioritises slow mirrors at runtime.
   const cancelRace = new AbortController()
   const t0 = Date.now()
+  // Region-aware endpoint set: outside DACH in international mode the DACH-only
+  // private server is dropped so it cannot win the race with an empty response.
+  const endpoints = endpointsForCoordinates(params.location.lat, params.location.lon, params.international ?? false)
 
   try {
     const { json, winner } = await Promise.any(
-      OVERPASS_ENDPOINTS.map(async (endpoint) => {
+      endpoints.map(async (endpoint) => {
         const signal = params.signal
           ? AbortSignal.any([params.signal, cancelRace.signal, AbortSignal.timeout(20_000)])
           : AbortSignal.any([cancelRace.signal, AbortSignal.timeout(20_000)])
@@ -403,6 +406,9 @@ export async function fetchOsmDisabledParking(
   // pure street-side parking). Display-only — never used for venue enrichment.
   // Default false so callers that don't opt in (e.g. SEO pages) stay tier-A only.
   includeAccessibleTier = false,
+  // Region-aware endpoint choice (mirrors the venue fetch): outside DACH in
+  // international mode the private DACH-only server is dropped from the race.
+  international = false,
 ): Promise<{ features: AmenityFeature[]; winnerEndpoint: string; durationMs: number }> {
   const r = Math.min(radiusKm + 0.5, NEARBY_PARKING_MAX_RADIUS_KM) * 1000
   const { lat, lon } = location
@@ -492,7 +498,7 @@ export async function fetchOsmDisabledParking(
       : AbortSignal.timeout(20_000)
 
     const { features: rawFeatures, winner: parkingWinner } = await Promise.any(
-      OVERPASS_ENDPOINTS.map(async (endpoint) => {
+      endpointsForCoordinates(lat, lon, international).map(async (endpoint) => {
         const res = await fetch(endpoint, { method: "POST", body, headers, signal: sig(endpoint) })
         if (!res.ok) throw new Error(`[parking] ${endpoint} → HTTP ${res.status}`)
         const ct = res.headers?.get("content-type") ?? ""
@@ -534,11 +540,12 @@ export async function fetchOsmAccessibleAmenities(
   opts?: {
     signal?: AbortSignal
     includeWeakTier?: boolean  // include weak parking tier (display-only)
+    international?: boolean     // region-aware endpoint choice (see endpointsForCoordinates)
   },
 ): Promise<{ features: AmenityFeature[]; winnerEndpoint: string; durationMs: number }> {
   const r = Math.min(radiusKm + 0.5, NEARBY_PARKING_MAX_RADIUS_KM) * 1000
   const { lat, lon } = location
-  const { signal, includeWeakTier = false } = opts ?? {}
+  const { signal, includeWeakTier = false, international = false } = opts ?? {}
 
   const headers = {
     "Content-Type": "application/x-www-form-urlencoded",
@@ -652,7 +659,7 @@ export async function fetchOsmAccessibleAmenities(
       : AbortSignal.timeout(20_000)
 
     const { features, winner } = await Promise.any(
-      OVERPASS_ENDPOINTS.map(async (endpoint) => {
+      endpointsForCoordinates(lat, lon, international).map(async (endpoint) => {
         const res = await fetch(endpoint, { method: "POST", body, headers, signal: sig() })
         if (!res.ok) throw new Error(`[amenities] ${endpoint} → HTTP ${res.status}`)
         const ct = res.headers?.get("content-type") ?? ""

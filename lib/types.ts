@@ -99,7 +99,9 @@ export interface NormalizedAddress {
   houseNumber: string
   postalCode: string
   city: string
-  country: "DE" | "AT" | "CH" | string
+  // Optional: undefined when the source has no addr:country (e.g. OSM venues
+  // outside DACH). Must not default to "DE" or foreign hits get mislabelled.
+  country?: "DE" | "AT" | "CH" | string
   raw?: string
 }
 
@@ -205,6 +207,9 @@ export interface SearchParams {
   signal?: AbortSignal
   nameHint?: string
   placeSearch?: boolean
+  // Opt-in international mode: when true and the search centre is outside DACH,
+  // the OSM adapter races public mirrors only (skips the DACH-only private server).
+  international?: boolean
 }
 
 // ─── LLM query parse result ────────────────────────────────────────────────

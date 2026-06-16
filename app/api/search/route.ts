@@ -8,7 +8,7 @@ import { fetchOsmDisabledParking, fetchOsmAccessibleAmenities } from "@/lib/adap
 import type { AmenityFeature } from "@/lib/types"
 import { enrichWithNearbyParking, haversineMeters, NEARBY_PARKING_DISPLAY_RADIUS_M, dedupeToiletFeatures, TOILET_DISPLAY_CAP } from "@/lib/matching/nearby-parking"
 import { parseQuery } from "@/lib/llm"
-import { NOMINATIM_ENDPOINT, RADIUS_MIN_KM, RADIUS_MAX_KM, PUBLIC_OVERPASS_ENDPOINTS } from "@/lib/config"
+import { NOMINATIM_ENDPOINT, RADIUS_MIN_KM, RADIUS_MAX_KM, PUBLIC_OVERPASS_ENDPOINTS, countryCodesParam, regionForCoordinates } from "@/lib/config"
 import * as Sentry from "@sentry/nextjs"
 
 // Adapter errors come back from safeRun as plain strings (the original Error is
@@ -58,8 +58,9 @@ function isGooglePlacesRateLimited(ip: string, requested: boolean): boolean {
 async function geocode(
   locationQuery: string,
   signal: AbortSignal,
+  international = false,
 ): Promise<{ lat: number; lon: number; label: string } | null> {
-  const url = `${NOMINATIM_ENDPOINT}/search?q=${encodeURIComponent(locationQuery)}&format=json&limit=1&countrycodes=de,at,ch`
+  const url = `${NOMINATIM_ENDPOINT}/search?q=${encodeURIComponent(locationQuery)}&format=json&limit=1&countrycodes=${countryCodesParam(international)}`
   try {
     trackCall("nominatim")
     const res = await fetch(url, {
@@ -158,8 +159,9 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Input validation ──────────────────────────────────────────────────────
-  const { userQuery, radiusKm: rawRadius, filters: rawFilters, sources: rawSources, locale, coordinates: rawCoords, nameHint: rawNameHint, placeSearch: rawPlaceSearch } = rawBody
+  const { userQuery, radiusKm: rawRadius, filters: rawFilters, sources: rawSources, locale, coordinates: rawCoords, nameHint: rawNameHint, placeSearch: rawPlaceSearch, international: rawInternational } = rawBody
   const placeSearch = rawPlaceSearch === true
+  const international = rawInternational === true
 
   const coordinates = (() => {
     if (!rawCoords || typeof rawCoords !== "object") return undefined
@@ -256,7 +258,7 @@ export async function POST(req: NextRequest) {
         if (coordinates) {
           geo = { lat: coordinates.lat, lon: coordinates.lon, label: userQuery }
         } else {
-          const geocoded = await geocode(parsed.locationQuery, signal)
+          const geocoded = await geocode(parsed.locationQuery, signal, international)
           if (signal.aborted) { controller.close(); return }
           if (!geocoded) {
             emit({ type: "fatal", error: `Location not found: "${parsed.locationQuery}"` })
@@ -264,6 +266,28 @@ export async function POST(req: NextRequest) {
             return
           }
           geo = geocoded
+        }
+
+        // Region of the resolved centre. In international mode, outside DACH we
+        // skip the DACH-only sources (Ginto is CH-focused, Reisen für Alle is
+        // DACH-only) — they return empty there and only add latency / rate-limit
+        // pressure. DACH searches are unaffected by the toggle.
+        const region = regionForCoordinates(geo.lat, geo.lon)
+        const outsideDach = international && region !== "dach"
+        if (outsideDach) {
+          // Emit a synthetic ok/empty event for each source we skip BEFORE
+          // disabling it, so the client's per-source spinner (initialised from
+          // its own active-source set, which still includes these) resolves
+          // instead of hanging until the overall search timeout — which would
+          // otherwise be mis-reported as a source error.
+          // Guard on the client's requested set (req_s), not the key-gated
+          // `sources` — the client's spinner exists for whatever it requested,
+          // independent of whether the server holds that source's API key.
+          for (const sid of ["ginto", "reisen_fuer_alle"] as const) {
+            if (req_s[sid]) emit({ type: "source", sourceId: sid, status: "ok", count: 0, durationMs: 0 })
+          }
+          sources.ginto            = false
+          sources.reisen_fuer_alle = false
         }
 
         // ── 3. Build per-source params ────────────────────────────────────────
@@ -277,6 +301,7 @@ export async function POST(req: NextRequest) {
           signal,
           nameHint:    nameHint || undefined,
           placeSearch: placeSearch || undefined,
+          international,
         }
 
         // ── 4. Fire all adapters ──────────────────────────────────────────────
@@ -333,7 +358,7 @@ export async function POST(req: NextRequest) {
         // display-only (never enriches/filters) and gated client-side by the
         // showWeakParking setting. SEO opts out via the function-arg default.
         const nearbyParkingPromise: Promise<AmenityFeature[]> = nearbyParkingEnabled
-          ? fetchOsmDisabledParking({ lat: geo.lat, lon: geo.lon }, radiusKm, signal, true).then(
+          ? fetchOsmDisabledParking({ lat: geo.lat, lon: geo.lon }, radiusKm, signal, true, international).then(
               ({ features, winnerEndpoint, durationMs }) => {
                 const parkingSrc = PUBLIC_OVERPASS.has(winnerEndpoint) ? "osm_parking_public" : "osm_parking_private"
                 trackCall(parkingSrc)
@@ -346,7 +371,7 @@ export async function POST(req: NextRequest) {
         // WC fetch: standalone amenity=toilets + any venue with toilets:wheelchair tag.
         // Not enriched into venue data (toilet.value stays as-is); only for map display.
         const nearbyToiletsPromise: Promise<AmenityFeature[]> = nearbyToiletsEnabled
-          ? fetchOsmAccessibleAmenities({ lat: geo.lat, lon: geo.lon }, radiusKm, ["toilet"], { signal }).then(
+          ? fetchOsmAccessibleAmenities({ lat: geo.lat, lon: geo.lon }, radiusKm, ["toilet"], { signal, international }).then(
               ({ features }) => features,
               () => [],
             )

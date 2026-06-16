@@ -142,6 +142,7 @@ const en: Translations = {
     detailsCollapse:       "Less",
     noResultsArea:         "No places found in this area.",
     networkError:          "Network error",
+    intlNotice:            "Outside the DACH region, data coverage may be limited.",
     noResultsFiltered:     (n: number) => `${n} place${n !== 1 ? "s" : ""} found – none match all active filters.`,
     filterBlockedBy:       "Main reason for exclusion:",
     sortByConfidence:      "Reliability",
@@ -359,6 +360,8 @@ const en: Translations = {
     resetToDefaults:   "Reset to defaults",
     resetDone:         "Reset",
     parkingRadius:     "\"Nearby\" search radius (parking & toilets)",
+    internationalMode:     "International search",
+    internationalModeHint: "Search beyond the DACH region (France, United Kingdom, Netherlands, Spain, Italy, USA). Data coverage varies by country and is often sparse outside major cities.",
   },
 } as const
 

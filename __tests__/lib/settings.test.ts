@@ -64,6 +64,7 @@ describe("loadSettings", () => {
       showWeakParking:   true,
       publicToiletsOnly: false,
       parkingRadiusKm:   1,
+      internationalMode: true,
     }
     localStorageMock.setItem(KEY, JSON.stringify(custom))
     expect(loadSettings()).toEqual(custom)

@@ -116,6 +116,7 @@ export interface Translations {
     detailsCollapse:      string
     noResultsArea:        string
     networkError:         string
+    intlNotice:           string
     noResultsFiltered:    (n: number) => string
     filterBlockedBy:      string
     sortByConfidence:     string
@@ -333,5 +334,7 @@ export interface Translations {
     resetToDefaults:   string
     resetDone:         string
     parkingRadius:     string
+    internationalMode:     string
+    internationalModeHint: string
   }
 }

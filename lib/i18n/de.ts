@@ -142,6 +142,7 @@ const de: Translations = {
     detailsCollapse:       "Weniger",
     noResultsArea:         "Keine Orte in diesem Bereich gefunden.",
     networkError:          "Netzwerkfehler",
+    intlNotice:            "Außerhalb der DACH-Region kann die Datenlage eingeschränkt sein.",
     noResultsFiltered:     (n: number) => `${n} Ort${n !== 1 ? "e" : ""} gefunden – keiner erfüllt alle aktiven Filter.`,
     filterBlockedBy:       "Hauptausschlussgrund:",
     sortByConfidence:      "Verlässlichkeit",
@@ -359,6 +360,8 @@ const de: Translations = {
     resetToDefaults:   "Auf Standard zurücksetzen",
     resetDone:         "Zurückgesetzt",
     parkingRadius:     'Suchradius „in der Nähe" (Parkplätze & WCs)',
+    internationalMode:     "Internationale Suche",
+    internationalModeHint: "Suche auch außerhalb von DACH (Frankreich, Großbritannien, Niederlande, Spanien, Italien, USA). Datenlage variiert je nach Land und ist außerhalb großer Städte oft dünn.",
   },
 }
 

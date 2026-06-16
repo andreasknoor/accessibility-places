@@ -41,6 +41,9 @@ interface Props {
   // (e.g. "search here", nearby). Set → a chip change in text mode refines THIS
   // area in place instead of re-geocoding the (possibly stale) location textbox.
   activeSearchCoords?: Coords
+  // Opt-in international mode (AppSettings.internationalMode). When true the
+  // autocomplete widens from DACH to the supported-country allowlist.
+  international?: boolean
 }
 
 const CHIPS = [
@@ -128,7 +131,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
   return data.district ?? ""
 }
 
-export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onGpsResolved, skipAutoLocate, hasGpsCoords, locateTrigger, biasCoords, focusLayers, onToggleFocusLayer, focusLoadingLayer, focusHints, onCategoryQueryChange, activeSearchCoords }: Props) {
+export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onGpsResolved, skipAutoLocate, hasGpsCoords, locateTrigger, biasCoords, focusLayers, onToggleFocusLayer, focusLoadingLayer, focusHints, onCategoryQueryChange, activeSearchCoords, international }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
   const isMobile = useIsMobile()
@@ -291,7 +294,8 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       suggestAbortRef.current = ac
       try {
         const bias = biasCoords ? `&lat=${biasCoords.lat}&lon=${biasCoords.lon}` : ""
-        const res = await fetch(`/api/geocode/unified-suggest?q=${encodeURIComponent(query)}&lang=${locale}${bias}`, { signal: ac.signal })
+        const intlParam = international ? "&intl=1" : ""
+        const res = await fetch(`/api/geocode/unified-suggest?q=${encodeURIComponent(query)}&lang=${locale}${bias}${intlParam}`, { signal: ac.signal })
         if (!res.ok) return
         const data: UnifiedSuggestion[] = await res.json()
         setSuggestions(data)
@@ -304,7 +308,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       clearTimeout(debounceRef.current)
       suggestAbortRef.current?.abort()
     }
-  }, [location, locale, biasCoords?.lat, biasCoords?.lon])
+  }, [location, locale, biasCoords?.lat, biasCoords?.lon, international])
 
   function clearPickState() {
     programmaticLocRef.current = ""

@@ -36,9 +36,12 @@ interface Props {
   isFirstVisit?:        boolean
   onDismissWelcome?:    () => void
   onStartNearby?:       () => void
+  // Shown as a thin banner above the list when the active search centre is
+  // outside DACH in international mode (data coverage caveat). Undefined = hidden.
+  intlNotice?:          string
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToText, isFirstVisit, onDismissWelcome, onStartNearby }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToText, isFirstVisit, onDismissWelcome, onStartNearby, intlNotice }: Props) {
   const t = useTranslations()
   const [mapHintSeen, setMapHintSeen] = useState(() =>
     typeof window !== "undefined" && !!localStorage.getItem("ap_map_hint_seen")
@@ -91,6 +94,11 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
 
   return (
     <div className="flex flex-col h-full min-h-0">
+      {intlNotice && (
+        <div className="px-4 py-2 text-xs text-amber-800 bg-amber-50 border-b border-amber-200 shrink-0">
+          {intlNotice}
+        </div>
+      )}
       {/* Header */}
       <div className="px-4 py-3 border-b border-border shrink-0">
         <div className="flex items-center justify-between">
