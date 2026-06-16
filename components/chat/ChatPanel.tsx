@@ -151,6 +151,11 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const [venuePicked,    setVenuePicked]    = useState(false)
   const [showDevConsole, setShowDevConsole] = useState(false)
   const selectedIdxRef       = useRef<number | null>(null)
+  // True once the startup category has been definitively established — by a SEO
+  // deep-link, a restored last search, the user's default-category setting, or a
+  // manual chip pick. Gates the async default-chip effect so it applies the
+  // setting exactly once and never overrides one of the above.
+  const chipResolvedRef      = useRef(false)
   const debounceRef          = useRef<ReturnType<typeof setTimeout>>(undefined)
   const suggestAbortRef      = useRef<AbortController>(undefined)
   const locatingRef          = useRef(false)
@@ -181,20 +186,23 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // Restore last search on mount (chip + location, never nearby mode).
   // URL-derived initialLocation takes priority over localStorage.
   useEffect(() => {
-    if (initialLocation) {
-      programmaticLocRef.current = initialLocation
-      setLocation(initialLocation)
-      if (initialChipIdx !== undefined && initialChipIdx >= 0 && initialChipIdx < CHIPS.length) {
-        setSelectedIdx(initialChipIdx)
-        selectedIdxRef.current = initialChipIdx
-      }
-      return
-    }
+    // applyDefaultChip only resolves when initialChipIdx is already known. At
+    // mount it is usually undefined for the settings-driven default (useSettings
+    // loads asynchronously) — leaving chipResolvedRef false so the reactive
+    // effect below applies it once the setting arrives. For SEO deep-links
+    // initialChipIdx is synchronous, so it resolves here immediately.
     const applyDefaultChip = () => {
       if (initialChipIdx !== undefined && initialChipIdx >= 0 && initialChipIdx < CHIPS.length) {
         setSelectedIdx(initialChipIdx)
         selectedIdxRef.current = initialChipIdx
+        chipResolvedRef.current = true
       }
+    }
+    if (initialLocation) {
+      programmaticLocRef.current = initialLocation
+      setLocation(initialLocation)
+      applyDefaultChip()
+      return
     }
     try {
       const saved = localStorage.getItem("ap_last_search")
@@ -203,8 +211,11 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
         if (typeof idx === "number" && idx >= 0 && idx < CHIPS.length) {
           setSelectedIdx(idx)
           selectedIdxRef.current = idx
-        } else if (idx !== null) {
-          // null is a valid saved state ("Alle"); anything else invalid → default
+          chipResolvedRef.current = true
+        } else if (idx === null) {
+          // Explicit "Alle" from the last search wins over the default setting.
+          chipResolvedRef.current = true
+        } else {
           applyDefaultChip()
         }
         if (typeof loc === "string" && loc.trim()) {
@@ -217,6 +228,20 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     } catch { applyDefaultChip() }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Apply the user's default category once it resolves. initialChipIdx arrives
+  // asynchronously (useSettings reads localStorage in an effect), so the mount
+  // effect above usually can't see it yet — the bug where "Standard-Kategorie"
+  // was ignored and the chip fell back to "Alle". Mirrors the initialMode
+  // effect. chipResolvedRef ensures it only fills the startup default and never
+  // overrides a SEO deep-link, a restored last search, or a manual pick.
+  useEffect(() => {
+    if (chipResolvedRef.current) return
+    if (initialChipIdx === undefined || initialChipIdx < 0 || initialChipIdx >= CHIPS.length) return
+    setSelectedIdx(initialChipIdx)
+    selectedIdxRef.current = initialChipIdx
+    chipResolvedRef.current = true
+  }, [initialChipIdx])
 
   // Auto-trigger geolocation when starting in "nearby" mode — but NOT for a
   // first-time visitor (the welcome screen must stay until they interact).
@@ -366,6 +391,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   }
 
   function selectChip(idx: number | null) {
+    chipResolvedRef.current = true
     setSelectedIdx(idx)
     selectedIdxRef.current = idx
     const label = chipLabel(idx)
