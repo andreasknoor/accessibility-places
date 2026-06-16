@@ -13,6 +13,11 @@ import { nanoid } from "../utils"
 const ENDPOINT = "https://acceslibre.beta.gouv.fr/api/erps/"
 const MAX_PAGES  = 2
 const PAGE_SIZE  = 50
+// AccèsLibre rate-limits bursts (~5 req/s, then HTTP 429 with `Retry-After: 1`).
+// We pace requests through a single in-flight queue and retry a 429 a couple of
+// times honouring the header, instead of firing the whole fan-out in parallel.
+const MAX_429_RETRIES   = 2
+const RATE_LIMIT_PAUSE_MS = 250  // min gap between successive requests
 // Cap the per-category fan-out so a multi-category search can't explode into
 // dozens of upstream calls. A selected category maps to ≤3 AccèsLibre slugs, so
 // this comfortably covers a handful of categories at once.
@@ -206,6 +211,8 @@ function searchBbox(lat: number, lon: number, radiusKm: number): string {
 
 // ─── Fetch one page ───────────────────────────────────────────────────────────
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
 async function fetchPage(
   apiKey: string,
   around: string,
@@ -221,19 +228,28 @@ async function fetchPage(
   url.searchParams.set("page_size", String(PAGE_SIZE))
   if (activite) url.searchParams.set("activite", activite)
 
-  const res = await fetch(url.toString(), {
-    method:  "GET",
-    headers: {
-      "Accept":        "application/json",
-      "Authorization": `Api-Key ${apiKey}`,
-    },
-    signal: signal
-      ? AbortSignal.any([signal, AbortSignal.timeout(20_000)])
-      : AbortSignal.timeout(20_000),
-  })
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url.toString(), {
+      method:  "GET",
+      headers: {
+        "Accept":        "application/json",
+        "Authorization": `Api-Key ${apiKey}`,
+      },
+      signal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(20_000)])
+        : AbortSignal.timeout(20_000),
+    })
 
-  if (!res.ok) throw new Error(`AccèsLibre API error: ${res.status}`)
-  return res.json() as Promise<AccesLibrePage>
+    // Retry a rate-limit response honouring Retry-After (seconds), then give up.
+    if (res.status === 429 && attempt < MAX_429_RETRIES) {
+      const retryAfter = Number(res.headers.get("retry-after")) || 1
+      await sleep(retryAfter * 1000)
+      continue
+    }
+
+    if (!res.ok) throw new Error(`AccèsLibre API error: ${res.status}`)
+    return res.json() as Promise<AccesLibrePage>
+  }
 }
 
 // ─── Map one result item → Place ──────────────────────────────────────────────
@@ -335,23 +351,41 @@ export async function fetchAccesLibre(params: SearchParams): Promise<Place[]> {
     ? []
     : [...new Set(params.categories.flatMap((c) => TO_ACCESLIBRE[c] ?? []))].slice(0, MAX_SLUGS)
 
+  // Pace every request through one in-flight queue: AccèsLibre 429s on bursts,
+  // so a parallel fan-out across slugs trips the limit. Sequential calls with a
+  // small gap stay comfortably under it (verified ~5 req/s budget).
+  let lastRequestAt = 0
+  async function pacedFetchPage(page: number, activite?: string): Promise<AccesLibrePage> {
+    const wait = RATE_LIMIT_PAUSE_MS - (Date.now() - lastRequestAt)
+    if (wait > 0) await sleep(wait)
+    lastRequestAt = Date.now()
+    return fetchPage(apiKey!, around, zone, page, activite, params.signal)
+  }
+
   async function fetchAllPages(activite?: string): Promise<AccesLibreItem[]> {
     const items: AccesLibreItem[] = []
     for (let page = 1; page <= MAX_PAGES; page++) {
-      const data = await fetchPage(apiKey!, around, zone, page, activite, params.signal)
+      const data = await pacedFetchPage(page, activite)
       items.push(...data.results)
       if (!data.next) break
     }
     return items
   }
 
-  let allItems: AccesLibreItem[]
+  const allItems: AccesLibreItem[] = []
   if (slugs.length === 0) {
     // All-categories mode (or no category maps to AccèsLibre): unfiltered nearest.
-    allItems = await fetchAllPages(undefined)
+    allItems.push(...(await fetchAllPages(undefined)))
   } else {
-    const perSlug = await Promise.all(slugs.map((slug) => fetchAllPages(slug)))
-    allItems = perSlug.flat()
+    // Query each slug in turn. Isolate failures so one slug 429ing out doesn't
+    // discard the results already gathered for the others.
+    for (const slug of slugs) {
+      try {
+        allItems.push(...(await fetchAllPages(slug)))
+      } catch (err) {
+        console.warn(`[adapter:acceslibre] slug "${slug}" failed, keeping partial results:`, err)
+      }
+    }
   }
 
   // A place can be returned by more than one slug query (rare) — dedupe by uuid.
