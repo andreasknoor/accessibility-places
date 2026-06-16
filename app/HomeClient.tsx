@@ -763,6 +763,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     if (patch.defaultSearchMode !== undefined) {
       setChatMode(patch.defaultSearchMode ?? "text")
     }
+    if (patch.internationalMode === true) {
+      setSources((s) => ({ ...s, google_places: true }))
+    }
   }, [updateSettings])
 
   // Show the parking toggle whenever the server returned spots OR any result
