@@ -152,6 +152,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // The persist effect must skip until the load effect has fired (otherwise
   // it would overwrite the user's saved prefs with defaults on first render).
   const prefsLoadedRef = useRef(false)
+  // True once the startup search mode has been definitively established. Gates
+  // the async default-mode effect so a late-resolving setting can't override a
+  // manual mode switch (see the effect below for the iOS cold-start rationale).
+  const modeResolvedRef = useRef(false)
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
   const selectTarget = useRef(
@@ -198,6 +202,23 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     if (!initialCity) setChatMode(loadSettings().defaultSearchMode ?? "nearby")
   }, [initialCity])
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Re-apply the default search mode once the async settings resolve. The
+  // useLayoutEffect above reads localStorage synchronously, which works on the
+  // web but is racy in the iOS standalone PWA: on cold start localStorage is not
+  // yet readable at layout-effect time, so loadSettings() returns the default
+  // ("nearby") and a saved "text" preference is lost. useSettings() loads in a
+  // passive effect that fires after storage is ready, so we mirror the chip /
+  // mobile-view fix and drive chatMode off that resolved value too. Only a
+  // non-null preference acts (null = no preference / not yet loaded); guarded by
+  // modeResolvedRef so it never overrides a manual mode switch.
+  useEffect(() => {
+    if (modeResolvedRef.current || initialCity) return
+    const pref = settings.defaultSearchMode
+    if (pref == null) return
+    setChatMode(pref)
+    modeResolvedRef.current = true
+  }, [settings.defaultSearchMode, initialCity])
 
   // Persist filter/source/radius preferences across sessions.
   // alwaysShowParking + alwaysShowToilets are intentionally excluded — persisted via AppSettings.
@@ -425,12 +446,14 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   }, [])
 
   const handleSwitchMode = useCallback((mode: "text" | "nearby") => {
+    modeResolvedRef.current = true
     clearSearchState()
     setChatMode(mode)
     setResetKey((k) => k + 1)
   }, [clearSearchState])
 
   const handleModeChange = useCallback((mode: "text" | "nearby") => {
+    modeResolvedRef.current = true
     clearSearchState()
     setChatMode(mode)
   }, [clearSearchState])
