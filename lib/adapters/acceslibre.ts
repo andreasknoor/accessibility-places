@@ -5,7 +5,7 @@
  * Coverage: France only. Only runs when international mode is active and the
  * search centre is inside the FR bounding box.
  */
-import type { Place, SearchParams, A11yValue, Category, EntranceDetails } from "../types"
+import type { Place, SearchParams, A11yValue, Category, EntranceDetails, ParkingDetails } from "../types"
 import { buildAttribute } from "../matching/merge"
 import { RELIABILITY_WEIGHTS, INTL_COUNTRIES, CATEGORY_OSM_TAGS } from "../config"
 import { nanoid } from "../utils"
@@ -132,9 +132,10 @@ interface AccesLibreItem {
   activite:      { nom: string; slug: string } | null
   geom:          { type: "Point"; coordinates: [number, number] }  // [lon, lat]
   accessibilite: {
-    entree?:    AccesLibreEntree
-    accueil?:   AccesLibreAccueil
-    transport?: AccesLibreTransport
+    entree?:      AccesLibreEntree
+    accueil?:     AccesLibreAccueil
+    transport?:   AccesLibreTransport
+    commentaire?: { commentaire?: string | null } | null
   } | null
 }
 
@@ -190,11 +191,11 @@ function deriveToilet(a: AccesLibreAccueil | undefined): A11yValue {
   return "unknown"
 }
 
-function deriveParking(t: AccesLibreTransport | undefined): A11yValue {
-  if (!t) return "unknown"
-  if (t.stationnement_pmr === true)     return "yes"
-  if (t.stationnement_ext_pmr === true) return "limited"
-  return "unknown"
+function deriveParking(t: AccesLibreTransport | undefined): { value: A11yValue; details: ParkingDetails } {
+  if (!t) return { value: "unknown", details: {} }
+  if (t.stationnement_pmr === true)     return { value: "yes",     details: { hasWheelchairSpaces: true } }
+  if (t.stationnement_ext_pmr === true) return { value: "limited", details: {} }
+  return { value: "unknown", details: {} }
 }
 
 // ─── Bbox helper ──────────────────────────────────────────────────────────────
@@ -265,12 +266,13 @@ function itemToPlace(item: AccesLibreItem): Place | null {
   const acc = item.accessibilite ?? {}
   const { value: entranceValue, details: entranceDetails } = deriveEntrance(acc.entree)
   const toiletValue   = deriveToilet(acc.accueil)
-  const parkingValue  = deriveParking(acc.transport)
+  const { value: parkingValue, details: parkingDetails }   = deriveParking(acc.transport)
+  const commentaire   = acc.commentaire?.commentaire?.trim() || undefined
 
   const rawValue = item.uuid
 
-  const attr = (value: A11yValue) =>
-    buildAttribute("acceslibre", value, rawValue, {}, false, 1, undefined, false)
+  const attr = (value: A11yValue, details = {}) =>
+    buildAttribute("acceslibre", value, rawValue, details, false, 1, undefined, false)
 
   const entranceAttr = buildAttribute(
     "acceslibre",
@@ -300,7 +302,7 @@ function itemToPlace(item: AccesLibreItem): Place | null {
     accessibility: {
       entrance: entranceAttr,
       toilet:   attr(toiletValue),
-      parking:  attr(parkingValue),
+      parking:  attr(parkingValue, parkingDetails),
     },
     overallConfidence: 0,
     primarySource:     "acceslibre",
@@ -314,9 +316,10 @@ function itemToPlace(item: AccesLibreItem): Place | null {
         address:    item.adresse,
         commune:    item.commune,
         web_url:    item.web_url,
-        entree:     acc.entree    ?? null,
-        accueil:    acc.accueil   ?? null,
-        transport:  acc.transport ?? null,
+        entree:       acc.entree    ?? null,
+        accueil:      acc.accueil   ?? null,
+        transport:    acc.transport ?? null,
+        commentaire:  commentaire   ?? null,
       },
       raw: item,
     }],

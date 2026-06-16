@@ -202,8 +202,8 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
     : t.a11y[parkingAttr.value]
 
   const osmRecord  = place.sourceRecords.find((r) => r.sourceId === "osm")
-
   const googleRecord = place.sourceRecords.find((r) => r.sourceId === "google_places")
+  const acceslibreCommentaire = getMeta(place, "acceslibre")?.commentaire as string | null | undefined
 
   // Image priority: Google Places photo (if source active) → OSM image/wikimedia_commons → Wikidata P18
   useEffect(() => {
@@ -345,18 +345,8 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
               const ed = key === "entrance" ? (attr.details as EntranceDetails) : null
               const td = key === "toilet"   ? (attr.details as ToiletDetails)   : null
               const sd = key === "seating"  ? (attr.details as SeatingDetails)  : null
-              return (
-                <Fragment key={key}>
-                  <InfoRow icon={Accessibility} label={label}>
-                    <span className={cn("font-medium", VALUE_COLORS[attr.value])}>
-                      {t.a11y[attr.value]}
-                    </span>
-                    {attr.sources.length > 0 && (
-                      <span className="text-muted-foreground ml-1.5">
-                        · {attr.sources.map((s) => SOURCE_LABELS[s.sourceId]).join(", ")}
-                      </span>
-                    )}
-                  </InfoRow>
+              const subRows = (
+                <>
                   {ed?.isLevel           != null && <InfoRow icon={Accessibility} label={t.details.entrance.isLevel}>{ed.isLevel ? "✓" : "✗"}</InfoRow>}
                   {ed?.hasRamp           != null && <InfoRow icon={Accessibility} label={t.details.entrance.hasRamp}>{ed.hasRamp ? "✓" : "✗"}</InfoRow>}
                   {ed?.rampSlopePercent  != null && <InfoRow icon={Hash}          label={t.details.entrance.rampSlopePercent}>{ed.rampSlopePercent} {t.details.units.percent}</InfoRow>}
@@ -375,6 +365,30 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
                   {td?.doorWidthCm           != null && <InfoRow icon={Hash}          label={t.details.toilet.doorWidthCm}>{td.doorWidthCm} {t.details.units.cm}</InfoRow>}
                   {td?.hasEmergencyPullstring != null && <InfoRow icon={Accessibility} label={t.details.toilet.hasEmergencyPullstring}>{td.hasEmergencyPullstring ? "✓" : "✗"}</InfoRow>}
                   {sd?.isAccessible          != null && <InfoRow icon={Accessibility} label={t.details.seating.isAccessible}>{sd.isAccessible ? "✓" : "✗"}</InfoRow>}
+                </>
+              )
+              const hasSubRows = ed != null
+                ? Object.values(ed).some((v) => v != null)
+                : td != null
+                  ? Object.values(td).some((v) => v != null)
+                  : sd?.isAccessible != null
+              return (
+                <Fragment key={key}>
+                  <InfoRow icon={Accessibility} label={label}>
+                    <span className={cn("font-medium", VALUE_COLORS[attr.value])}>
+                      {t.a11y[attr.value]}
+                    </span>
+                    {attr.sources.length > 0 && (
+                      <span className="text-muted-foreground ml-1.5">
+                        · {attr.sources.map((s) => SOURCE_LABELS[s.sourceId]).join(", ")}
+                      </span>
+                    )}
+                  </InfoRow>
+                  {hasSubRows && (
+                    <div className="ml-6 pl-3 border-l border-border space-y-2">
+                      {subRows}
+                    </div>
+                  )}
                 </Fragment>
               )
             })}
@@ -389,24 +403,33 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
                 </span>
               )}
             </InfoRow>
-            {parkingD.hasWheelchairSpaces != null && (
-              <InfoRow icon={Car} label={t.details.parking.hasWheelchairSpaces}>
-                {parkingD.hasWheelchairSpaces ? "✓" : "✗"}
-              </InfoRow>
+            {(parkingD.hasWheelchairSpaces != null || parkingD.spaceCount != null || parkingD.distanceToEntranceM != null || (parkingNearby && parkingNearbyDistM != null)) && (
+              <div className="ml-6 pl-3 border-l border-border space-y-2">
+                {parkingD.hasWheelchairSpaces != null && (
+                  <InfoRow icon={Car} label={t.details.parking.hasWheelchairSpaces}>
+                    {parkingD.hasWheelchairSpaces ? "✓" : "✗"}
+                  </InfoRow>
+                )}
+                {parkingD.spaceCount != null && (
+                  <InfoRow icon={Hash} label={t.details.parking.spaceCount}>
+                    {parkingD.spaceCount}
+                  </InfoRow>
+                )}
+                {parkingD.distanceToEntranceM != null && (
+                  <InfoRow icon={MapPin} label={t.details.parking.distanceToEntranceM}>
+                    {parkingD.distanceToEntranceM} {t.details.units.m}
+                  </InfoRow>
+                )}
+                {parkingNearby && parkingNearbyDistM != null && (
+                  <InfoRow icon={Navigation} label={t.details.parking.nearbyParkingDistanceM}>
+                    {parkingNearbyDistM} {t.details.units.m}
+                  </InfoRow>
+                )}
+              </div>
             )}
-            {parkingD.spaceCount != null && (
-              <InfoRow icon={Hash} label={t.details.parking.spaceCount}>
-                {parkingD.spaceCount}
-              </InfoRow>
-            )}
-            {parkingD.distanceToEntranceM != null && (
-              <InfoRow icon={MapPin} label={t.details.parking.distanceToEntranceM}>
-                {parkingD.distanceToEntranceM} {t.details.units.m}
-              </InfoRow>
-            )}
-            {parkingNearby && parkingNearbyDistM != null && (
-              <InfoRow icon={Navigation} label={t.details.parking.nearbyParkingDistanceM}>
-                {parkingNearbyDistM} {t.details.units.m}
+            {acceslibreCommentaire && (
+              <InfoRow icon={MessageSquare} label={ti.description}>
+                <span className="italic">{acceslibreCommentaire}</span>
               </InfoRow>
             )}
           </Section>
