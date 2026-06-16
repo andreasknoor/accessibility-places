@@ -340,8 +340,8 @@ describe("SeoPageContent — JSON-LD amenityFeature", () => {
   it("omits amenityFeature when all values are unknown", () => {
     render(<SeoPageContent locale="de" city={BERLIN} categorySlug="restaurant" places={[makePlace({
       accessibility: {
-        entrance: null,
-        toilet:   null,
+        entrance: buildAttribute("osm", "unknown", "unknown", {}),
+        toilet:   buildAttribute("osm", "unknown", "unknown", {}),
         parking:  buildAttribute("osm", "unknown", "unknown", {}),
       },
     })]} />)

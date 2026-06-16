@@ -21,7 +21,7 @@ function makePlace(overrides: Partial<Place> = {}): Place {
     address: { street: "Hauptstraße", houseNumber: "5", postalCode: "10115", city: "Berlin", country: "DE" },
     coordinates: { lat: 52.52, lon: 13.405 },
     accessibility: {
-      entrance: { value: "yes",     confidence: 0.75, conflict: false, sources: [{ sourceId: "osm", weight: 0.75, verifiedRecently: false }], details: {} },
+      entrance: { value: "yes",     confidence: 0.75, conflict: false, sources: [{ sourceId: "osm", value: "yes", rawValue: "yes", reliabilityWeight: 0.75 }], details: {} },
       toilet:   { value: "unknown", confidence: 0,    conflict: false, sources: [], details: {} },
       parking:  { value: "no",      confidence: 0.75, conflict: false, sources: [], details: {} },
     },

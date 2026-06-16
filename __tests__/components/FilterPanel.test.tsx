@@ -5,10 +5,10 @@ import type { SearchFilters, ActiveSources } from "@/lib/types"
 
 const DEFAULT_FILTERS: SearchFilters = {
   entrance: true, toilet: true, parking: true, parkingNearby: true, seating: false,
-  onlyVerified: false, acceptUnknown: false, alwaysShowParking: false,
+  onlyVerified: false, acceptUnknown: false, alwaysShowParking: false, alwaysShowToilets: false,
 }
 const DEFAULT_SOURCES: ActiveSources = {
-  accessibility_cloud: true, osm: true, reisen_fuer_alle: true, ginto: true, google_places: true,
+  accessibility_cloud: true, osm: true, reisen_fuer_alle: true, ginto: true, acceslibre: true, google_places: true,
 }
 
 function renderPanel(

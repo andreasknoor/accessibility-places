@@ -43,8 +43,8 @@ const PARAMS: SearchParams = {
   location: { lat: 52.5200, lon: 13.4050 },
   radiusKm: 2,
   categories: ["restaurant"],
-  filters: { entrance: true, toilet: true, parking: true, parkingNearby: true, seating: false, onlyVerified: false, acceptUnknown: true, alwaysShowParking: false },
-  sources:  { accessibility_cloud: true, osm: true, reisen_fuer_alle: true, ginto: true, google_places: true },
+  filters: { entrance: true, toilet: true, parking: true, parkingNearby: true, seating: false, onlyVerified: false, acceptUnknown: true, alwaysShowParking: false, alwaysShowToilets: false },
+  sources:  { accessibility_cloud: true, osm: true, reisen_fuer_alle: true, ginto: true, acceslibre: false, google_places: true },
 }
 
 function isPlaceholder(val: string | undefined): boolean {

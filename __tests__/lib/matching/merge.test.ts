@@ -35,7 +35,7 @@ function makePlace(overrides: Partial<Place> = {}): Place {
 }
 
 const ALL_FILTERS: SearchFilters = {
-  entrance: true, toilet: true, parking: true, parkingNearby: true, seating: false, onlyVerified: false, acceptUnknown: false, alwaysShowParking: false,
+  entrance: true, toilet: true, parking: true, parkingNearby: true, seating: false, onlyVerified: false, acceptUnknown: false, alwaysShowParking: false, alwaysShowToilets: false,
 }
 
 // ─── buildAttribute ──────────────────────────────────────────────────────────

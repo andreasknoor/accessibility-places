@@ -100,7 +100,7 @@ describe("haversineMeters", () => {
 describe("enrichWithNearbyParking", () => {
   it("upgrades unknown parking → yes when a feature is within range", () => {
     const place   = makePlace()
-    const feature = { lat: place.coordinates.lat + 0.0005, lon: place.coordinates.lon } // ~55 m north
+    const feature: AmenityFeature = { amenityType: "parking", tier: "strong", lat: place.coordinates.lat + 0.0005, lon: place.coordinates.lon } // ~55 m north
     enrichWithNearbyParking([place], [feature])
 
     expect(place.accessibility.parking.value).toBe("yes")
@@ -131,7 +131,7 @@ describe("enrichWithNearbyParking", () => {
 
   it("leaves parking untouched when the nearest feature is past the threshold", () => {
     const place   = makePlace()
-    const feature = { lat: place.coordinates.lat + 0.005, lon: place.coordinates.lon } // ~556 m north
+    const feature: AmenityFeature = { amenityType: "parking", tier: "strong", lat: place.coordinates.lat + 0.005, lon: place.coordinates.lon } // ~556 m north
     enrichWithNearbyParking([place], [feature])
 
     expect(place.accessibility.parking.value).toBe("unknown")
@@ -146,7 +146,7 @@ describe("enrichWithNearbyParking", () => {
         parking:  { value: "no",  confidence: 0.7, conflict: false, sources: [], details: {} },
       },
     })
-    const feature = { lat: place.coordinates.lat, lon: place.coordinates.lon } // co-located
+    const feature: AmenityFeature = { amenityType: "parking", tier: "strong", lat: place.coordinates.lat, lon: place.coordinates.lon } // co-located
     enrichWithNearbyParking([place], [feature])
 
     expect(place.accessibility.parking.value).toBe("no")
@@ -163,7 +163,7 @@ describe("enrichWithNearbyParking", () => {
 
   it("respects an explicit maxDistanceM override", () => {
     const place    = makePlace()
-    const feature  = { lat: place.coordinates.lat + 0.0009, lon: place.coordinates.lon } // ~100 m
+    const feature: AmenityFeature  = { amenityType: "parking", tier: "strong", lat: place.coordinates.lat + 0.0009, lon: place.coordinates.lon } // ~100 m
     enrichWithNearbyParking([place], [feature], 50)
 
     expect(place.accessibility.parking.value).toBe("unknown")
@@ -171,8 +171,8 @@ describe("enrichWithNearbyParking", () => {
 
   it("uses the closest feature when several are within range", () => {
     const place    = makePlace()
-    const far      = { lat: place.coordinates.lat + 0.0010, lon: place.coordinates.lon } // ~111 m
-    const close    = { lat: place.coordinates.lat + 0.0003, lon: place.coordinates.lon } // ~33 m
+    const far: AmenityFeature      = { amenityType: "parking", tier: "strong", lat: place.coordinates.lat + 0.0010, lon: place.coordinates.lon } // ~111 m
+    const close: AmenityFeature    = { amenityType: "parking", tier: "strong", lat: place.coordinates.lat + 0.0003, lon: place.coordinates.lon } // ~33 m
     enrichWithNearbyParking([place], [far, close])
 
     expect(parkingDetails(place).nearbyParkingDistanceM).toBeGreaterThan(25)
@@ -189,7 +189,7 @@ describe("enrichWithNearbyParking", () => {
     // the only active filter — the upgraded value="yes" is included in `known`
     // but confidence=0 drags the score to zero.
     const place   = makePlace()
-    const feature = { lat: place.coordinates.lat, lon: place.coordinates.lon }
+    const feature: AmenityFeature = { amenityType: "parking", tier: "strong", lat: place.coordinates.lat, lon: place.coordinates.lon }
     enrichWithNearbyParking([place], [feature])
 
     expect(place.accessibility.parking.value).toBe("yes")
@@ -211,7 +211,7 @@ describe("nearbyOnly vs on-site parking distinction", () => {
         parking:  { value: "yes", confidence: 0.75, conflict: false, sources: [], details: {} },
       },
     })
-    const feature = { lat: place.coordinates.lat, lon: place.coordinates.lon }
+    const feature: AmenityFeature = { amenityType: "parking", tier: "strong", lat: place.coordinates.lat, lon: place.coordinates.lon }
     enrichWithNearbyParking([place], [feature])
 
     // on-site yes must not be overwritten and must not get nearbyOnly flag
@@ -227,7 +227,7 @@ describe("nearbyOnly vs on-site parking distinction", () => {
         parking:  { value: "limited", confidence: 0.6, conflict: false, sources: [], details: {} },
       },
     })
-    enrichWithNearbyParking([place], [{ lat: place.coordinates.lat, lon: place.coordinates.lon }])
+    enrichWithNearbyParking([place], [{ amenityType: "parking", tier: "strong", lat: place.coordinates.lat, lon: place.coordinates.lon }])
 
     expect(place.accessibility.parking.value).toBe("limited")
     expect(parkingDetails(place).nearbyOnly).toBeUndefined()
@@ -246,7 +246,7 @@ describe("nearbyOnly vs on-site parking distinction", () => {
     }})
     const placeUnknown = makePlace({ id: "unknown-place" }) // parking: unknown
 
-    const feature = { lat: placeYes.coordinates.lat, lon: placeYes.coordinates.lon }
+    const feature: AmenityFeature = { amenityType: "parking", tier: "strong", lat: placeYes.coordinates.lat, lon: placeYes.coordinates.lon }
     enrichWithNearbyParking([placeYes, placeNo, placeUnknown], [feature])
 
     expect(placeYes.accessibility.parking.value).toBe("yes")
@@ -262,7 +262,7 @@ describe("nearbyOnly vs on-site parking distinction", () => {
 
   it("nearbyOnly=true place records the distance in nearbyParkingDistanceM", () => {
     const place   = makePlace()
-    const feature = { lat: place.coordinates.lat + 0.001, lon: place.coordinates.lon } // ~111 m
+    const feature: AmenityFeature = { amenityType: "parking", tier: "strong", lat: place.coordinates.lat + 0.001, lon: place.coordinates.lon } // ~111 m
     enrichWithNearbyParking([place], [feature])
 
     expect(parkingDetails(place).nearbyOnly).toBe(true)
@@ -278,7 +278,7 @@ describe("nearbyOnly vs on-site parking distinction", () => {
         parking:  { value: "yes", confidence: 0.75, conflict: false, sources: [], details: {} },
       },
     })
-    enrichWithNearbyParking([place], [{ lat: place.coordinates.lat, lon: place.coordinates.lon }])
+    enrichWithNearbyParking([place], [{ amenityType: "parking", tier: "strong", lat: place.coordinates.lat, lon: place.coordinates.lon }])
 
     expect(parkingDetails(place).nearbyParkingDistanceM).toBeUndefined()
   })
