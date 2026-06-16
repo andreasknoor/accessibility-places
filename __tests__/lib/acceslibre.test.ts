@@ -240,6 +240,59 @@ describe("AccèsLibre adapter — geo-fence", () => {
   })
 })
 
+describe("AccèsLibre adapter — category fan-out (activite filter)", () => {
+  beforeEach(() => vi.restoreAllMocks())
+
+  /** Spy fetch that records every requested URL and returns one matching item per call. */
+  function spyFetch() {
+    const urls: string[] = []
+    const fn = vi.fn().mockImplementation((url: string) => {
+      urls.push(url)
+      return Promise.resolve({
+        ok:   true,
+        json: async () => ({ count: 1, next: null, results: [makeItem({ uuid: `u-${urls.length}` })] }),
+      })
+    })
+    vi.stubGlobal("fetch", fn)
+    return urls
+  }
+
+  it("pushes the category down to the API as activite=<slug> for a specific category", async () => {
+    const urls = spyFetch()
+    await fetchAccesLibre({ ...makeParams(48.8566, 2.3522), categories: ["restaurant"] })
+    // restaurant maps to 3 AccèsLibre slugs → each must appear as an activite filter
+    const activites = urls.map((u) => new URL(u).searchParams.get("activite"))
+    expect(activites).toContain("restaurant")
+    expect(activites).toContain("hotel-restaurant")
+    expect(activites).toContain("restaurant-scolaire")
+    // every request is category-scoped — none is an unfiltered nearest-N fetch
+    expect(activites.every((a) => a !== null)).toBe(true)
+  })
+
+  it("falls back to a single unfiltered fetch when (nearly) all categories are requested", async () => {
+    const urls = spyFetch()
+    // Mimic the "Alle" default — every known category.
+    const allCats = Object.keys(
+      (await import("../../lib/config")).CATEGORY_OSM_TAGS,
+    ) as SearchParams["categories"]
+    await fetchAccesLibre({ ...makeParams(48.8566, 2.3522), categories: allCats })
+    const activites = urls.map((u) => new URL(u).searchParams.get("activite"))
+    // No activite filter on any call (unfiltered nearest mix), and not a huge fan-out.
+    expect(activites.every((a) => a === null)).toBe(true)
+    expect(urls.length).toBeLessThanOrEqual(2) // MAX_PAGES
+  })
+
+  it("dedupes a venue returned under multiple slug queries", async () => {
+    // Both slug queries return the SAME uuid → one Place.
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok:   true,
+      json: async () => ({ count: 1, next: null, results: [makeItem({ uuid: "dup" })] }),
+    }))
+    const places = await fetchAccesLibre({ ...makeParams(48.8566, 2.3522), categories: ["restaurant"] })
+    expect(places).toHaveLength(1)
+  })
+})
+
 describe("AccèsLibre adapter — Place fields", () => {
   beforeEach(() => vi.restoreAllMocks())
 

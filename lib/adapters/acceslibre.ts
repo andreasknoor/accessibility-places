@@ -7,12 +7,20 @@
  */
 import type { Place, SearchParams, A11yValue, Category, EntranceDetails } from "../types"
 import { buildAttribute } from "../matching/merge"
-import { RELIABILITY_WEIGHTS, INTL_COUNTRIES } from "../config"
+import { RELIABILITY_WEIGHTS, INTL_COUNTRIES, CATEGORY_OSM_TAGS } from "../config"
 import { nanoid } from "../utils"
 
 const ENDPOINT = "https://acceslibre.beta.gouv.fr/api/erps/"
 const MAX_PAGES  = 2
 const PAGE_SIZE  = 50
+// Cap the per-category fan-out so a multi-category search can't explode into
+// dozens of upstream calls. A selected category maps to ≤3 AccèsLibre slugs, so
+// this comfortably covers a handful of categories at once.
+const MAX_SLUGS = 12
+// Total distinct categories the app knows about. When the search asks for (close
+// to) all of them — the "Alle" default — fanning out per slug would mean ~50
+// calls; instead we fall back to a single unfiltered nearest-N fetch.
+const ALL_CATEGORY_COUNT = Object.keys(CATEGORY_OSM_TAGS).length
 
 // ─── FR bounding box ──────────────────────────────────────────────────────────
 // Taken from INTL_COUNTRIES in config.ts: { code: "FR", bbox: [-5.14, 41.33, 9.56, 51.09] }
@@ -75,6 +83,15 @@ const FROM_ACCESLIBRE: Partial<Record<string, Category>> = {
   "bureau-de-poste":                   "post_office",
   "glacier":                           "ice_cream",
   "confiserie":                        "ice_cream",
+}
+
+// Reverse map (our Category → AccèsLibre activite slugs), derived from
+// FROM_ACCESLIBRE so the two can never drift apart. Used to push the category
+// filter up to the API via `activite=<slug>` instead of fetching the nearest
+// results of every type and discarding most of them downstream.
+const TO_ACCESLIBRE: Partial<Record<Category, string[]>> = {}
+for (const [slug, cat] of Object.entries(FROM_ACCESLIBRE) as [string, Category][]) {
+  ;(TO_ACCESLIBRE[cat] ??= []).push(slug)
 }
 
 // ─── API response types ───────────────────────────────────────────────────────
@@ -194,6 +211,7 @@ async function fetchPage(
   around: string,
   zone: string,
   page: number,
+  activite?: string,
   signal?: AbortSignal,
 ): Promise<AccesLibrePage> {
   const url = new URL(ENDPOINT)
@@ -201,6 +219,7 @@ async function fetchPage(
   url.searchParams.set("zone",      zone)
   url.searchParams.set("page",      String(page))
   url.searchParams.set("page_size", String(PAGE_SIZE))
+  if (activite) url.searchParams.set("activite", activite)
 
   const res = await fetch(url.toString(), {
     method:  "GET",
@@ -304,16 +323,43 @@ export async function fetchAccesLibre(params: SearchParams): Promise<Place[]> {
   const around = `${params.location.lat},${params.location.lon}`
   const zone   = searchBbox(params.location.lat, params.location.lon, params.radiusKm)
 
-  const allItems: AccesLibreItem[] = []
+  // Map the requested categories to AccèsLibre activite slugs. When the search
+  // asks for (nearly) all categories — the "Alle" default — fanning out per slug
+  // would mean dozens of calls, so fall back to a single unfiltered nearest-N
+  // fetch that naturally returns a mix of types. Otherwise query each relevant
+  // slug so the 100-result budget is spent on the categories the user wants,
+  // not on whatever happens to be geographically nearest (the bug that made a
+  // wheelchair-filtered restaurant search collapse to a couple of hits).
+  const isAllCategories = params.categories.length >= ALL_CATEGORY_COUNT
+  const slugs = isAllCategories
+    ? []
+    : [...new Set(params.categories.flatMap((c) => TO_ACCESLIBRE[c] ?? []))].slice(0, MAX_SLUGS)
 
-  for (let page = 1; page <= MAX_PAGES; page++) {
-    const data = await fetchPage(apiKey, around, zone, page, params.signal)
-    allItems.push(...data.results)
-    if (!data.next) break
+  async function fetchAllPages(activite?: string): Promise<AccesLibreItem[]> {
+    const items: AccesLibreItem[] = []
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const data = await fetchPage(apiKey!, around, zone, page, activite, params.signal)
+      items.push(...data.results)
+      if (!data.next) break
+    }
+    return items
   }
 
+  let allItems: AccesLibreItem[]
+  if (slugs.length === 0) {
+    // All-categories mode (or no category maps to AccèsLibre): unfiltered nearest.
+    allItems = await fetchAllPages(undefined)
+  } else {
+    const perSlug = await Promise.all(slugs.map((slug) => fetchAllPages(slug)))
+    allItems = perSlug.flat()
+  }
+
+  // A place can be returned by more than one slug query (rare) — dedupe by uuid.
+  const seen = new Set<string>()
   const places: Place[] = []
   for (const item of allItems) {
+    if (seen.has(item.uuid)) continue
+    seen.add(item.uuid)
     const place = itemToPlace(item)
     if (place) places.push(place)
   }
