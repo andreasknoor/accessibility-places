@@ -59,7 +59,16 @@ export async function GET(req: NextRequest) {
   // per-result country-code filter below plus the optional lat/lon bias.
   let url = `${PHOTON_URL}?q=${encodeURIComponent(q)}&limit=20&lang=${lang}`
   if (!intl) url += `&bbox=${DACH_BBOX_STR}`
-  if (biasOk) url += `&lat=${lat}&lon=${lon}`
+  if (biasOk) {
+    url += `&lat=${lat}&lon=${lon}`
+    // International mode: widen the proximity-bias radius via a low `zoom`.
+    // Photon's default zoom (16) makes lat/lon act as a hard nearby filter — a
+    // query like "Paris" from Berlin returns only local "Paris*" features and
+    // drops Paris (FR) from the response entirely. zoom=10 keeps a mild local
+    // preference (nearby matches still surface) while letting distant major
+    // cities rank in. DACH mode keeps the default (tight) bias + bbox.
+    if (intl) url += `&zoom=10`
+  }
 
   try {
     const res = await fetch(url, {
