@@ -346,6 +346,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   }, [selectedIdx, locale])
 
   function switchMode(next: Mode) {
+    clearPickState()
     setMode(next)
     onModeChange?.(next)
     setSuggestions([])
