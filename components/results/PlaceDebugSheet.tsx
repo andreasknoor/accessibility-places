@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, Fragment } from "react"
 import {
   X, MapPin, Phone, Globe, Tag, Clock, Mail,
   Utensils, Leaf, Dog, Wifi, Star, DollarSign,
@@ -13,7 +13,7 @@ import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { NativeLink } from "@/components/ui/native-link"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
-import type { Place, SourceId, ParkingDetails } from "@/lib/types"
+import type { Place, SourceId, ParkingDetails, EntranceDetails, ToiletDetails, SeatingDetails } from "@/lib/types"
 
 interface Props {
   place:   Place
@@ -341,18 +341,43 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
             {wheelchairDesc && (
               <InfoRow icon={MessageSquare} label={ti.description}>{wheelchairDesc}</InfoRow>
             )}
-            {criteria.map(({ key, label, attr }) => (
-              <InfoRow key={key} icon={Accessibility} label={label}>
-                <span className={cn("font-medium", VALUE_COLORS[attr.value])}>
-                  {t.a11y[attr.value]}
-                </span>
-                {attr.sources.length > 0 && (
-                  <span className="text-muted-foreground ml-1.5">
-                    · {attr.sources.map((s) => SOURCE_LABELS[s.sourceId]).join(", ")}
-                  </span>
-                )}
-              </InfoRow>
-            ))}
+            {criteria.map(({ key, label, attr }) => {
+              const ed = key === "entrance" ? (attr.details as EntranceDetails) : null
+              const td = key === "toilet"   ? (attr.details as ToiletDetails)   : null
+              const sd = key === "seating"  ? (attr.details as SeatingDetails)  : null
+              return (
+                <Fragment key={key}>
+                  <InfoRow icon={Accessibility} label={label}>
+                    <span className={cn("font-medium", VALUE_COLORS[attr.value])}>
+                      {t.a11y[attr.value]}
+                    </span>
+                    {attr.sources.length > 0 && (
+                      <span className="text-muted-foreground ml-1.5">
+                        · {attr.sources.map((s) => SOURCE_LABELS[s.sourceId]).join(", ")}
+                      </span>
+                    )}
+                  </InfoRow>
+                  {ed?.isLevel           != null && <InfoRow icon={Accessibility} label={t.details.entrance.isLevel}>{ed.isLevel ? "✓" : "✗"}</InfoRow>}
+                  {ed?.hasRamp           != null && <InfoRow icon={Accessibility} label={t.details.entrance.hasRamp}>{ed.hasRamp ? "✓" : "✗"}</InfoRow>}
+                  {ed?.rampSlopePercent  != null && <InfoRow icon={Hash}          label={t.details.entrance.rampSlopePercent}>{ed.rampSlopePercent} {t.details.units.percent}</InfoRow>}
+                  {ed?.stepCount         != null && <InfoRow icon={Hash}          label={t.details.entrance.stepCount}>{ed.stepCount}</InfoRow>}
+                  {ed?.stepHeightCm      != null && <InfoRow icon={Hash}          label={t.details.entrance.stepHeightCm}>{ed.stepHeightCm} {t.details.units.cm}</InfoRow>}
+                  {ed?.doorWidthCm       != null && <InfoRow icon={Hash}          label={t.details.entrance.doorWidthCm}>{ed.doorWidthCm} {t.details.units.cm}</InfoRow>}
+                  {ed?.hasAutomaticDoor  != null && <InfoRow icon={Accessibility} label={t.details.entrance.hasAutomaticDoor}>{ed.hasAutomaticDoor ? "✓" : "✗"}</InfoRow>}
+                  {ed?.hasHoist          != null && <InfoRow icon={Accessibility} label={t.details.entrance.hasHoist}>{ed.hasHoist ? "✓" : "✗"}</InfoRow>}
+                  {ed?.description             && <InfoRow icon={MessageSquare}  label={t.details.entrance.description}>{ed.description}</InfoRow>}
+                  {td?.isDesignated          != null && <InfoRow icon={Accessibility} label={t.details.toilet.isDesignated}>{td.isDesignated ? "✓" : "✗"}</InfoRow>}
+                  {td?.isInside              != null && <InfoRow icon={Accessibility} label={t.details.toilet.isInside}>{td.isInside ? "✓" : "✗"}</InfoRow>}
+                  {td?.hasGrabBars           != null && <InfoRow icon={Accessibility} label={t.details.toilet.hasGrabBars}>{td.hasGrabBars ? "✓" : "✗"}</InfoRow>}
+                  {td?.grabBarsOnBothSides   != null && <InfoRow icon={Accessibility} label={t.details.toilet.grabBarsOnBothSides}>{td.grabBarsOnBothSides ? "✓" : "✗"}</InfoRow>}
+                  {td?.grabBarsFoldable      != null && <InfoRow icon={Accessibility} label={t.details.toilet.grabBarsFoldable}>{td.grabBarsFoldable ? "✓" : "✗"}</InfoRow>}
+                  {td?.turningRadiusCm       != null && <InfoRow icon={Hash}          label={t.details.toilet.turningRadiusCm}>{td.turningRadiusCm} {t.details.units.cm}</InfoRow>}
+                  {td?.doorWidthCm           != null && <InfoRow icon={Hash}          label={t.details.toilet.doorWidthCm}>{td.doorWidthCm} {t.details.units.cm}</InfoRow>}
+                  {td?.hasEmergencyPullstring != null && <InfoRow icon={Accessibility} label={t.details.toilet.hasEmergencyPullstring}>{td.hasEmergencyPullstring ? "✓" : "✗"}</InfoRow>}
+                  {sd?.isAccessible          != null && <InfoRow icon={Accessibility} label={t.details.seating.isAccessible}>{sd.isAccessible ? "✓" : "✗"}</InfoRow>}
+                </Fragment>
+              )
+            })}
             {/* Parkplatz — innerhalb der Barrierefreiheits-Sektion */}
             <InfoRow icon={Car} label={t.criteria.parking}>
               <span className={cn("font-medium", VALUE_COLORS[parkingAttr.value])}>
