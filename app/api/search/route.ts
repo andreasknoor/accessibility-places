@@ -352,8 +352,12 @@ export async function POST(req: NextRequest) {
         // Each flag defaults to OFF: only the literal string "1" turns it on.
         // Failure of either fetch is non-fatal — main search proceeds and
         // parking/toilet values stay as the adapters reported them.
-        const nearbyParkingEnabled = process.env.ENABLE_NEARBY_PARKING === "1"
-        const nearbyToiletsEnabled = process.env.ENABLE_NEARBY_TOILETS  === "1"
+        // Outside DACH (international mode) the only available Overpass endpoint
+        // is the rate-limited public mirror. The parking/WC layers are
+        // DACH-centric and sparse abroad, so skip them there to avoid piling two
+        // extra heavy queries onto that single endpoint (a 429 amplifier).
+        const nearbyParkingEnabled = process.env.ENABLE_NEARBY_PARKING === "1" && !outsideDach
+        const nearbyToiletsEnabled = process.env.ENABLE_NEARBY_TOILETS  === "1" && !outsideDach
         // Always include the weak parking tier in the parking fetch. It is
         // display-only (never enriches/filters) and gated client-side by the
         // showWeakParking setting. SEO opts out via the function-arg default.

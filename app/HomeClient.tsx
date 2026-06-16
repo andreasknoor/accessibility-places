@@ -352,6 +352,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
               for (const id of Object.keys(prev) as SourceId[]) {
                 if (next[id]?.status === "ok") {
                   next[id] = { ...next[id]!, finalCount: finalCounts[id] ?? 0 }
+                } else if (next[id]?.status === "loading") {
+                  // The result event is sent last, after every started adapter has
+                  // already reported. A source still "loading" here was never
+                  // started server-side (e.g. skipped outside DACH) — resolve it to
+                  // an empty result so its spinner doesn't hang until the timeout.
+                  next[id] = { status: "ok", rawCount: 0, finalCount: 0, durationMs: 0 }
                 }
               }
               return next

@@ -2,7 +2,7 @@ import type { SourceId, Category } from "./types"
 
 // User-visible app version, shown in the header next to the subtitle.
 // Bump on every meaningful release.
-export const APP_VERSION = "7.0"
+export const APP_VERSION = "7.1"
 
 export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
   reisen_fuer_alle:    1.00,
@@ -59,15 +59,22 @@ export const SOURCE_LABELS: Record<SourceId, string> = {
   nominatim:           "Nominatim",
 }
 
-// Both are raced in parallel — the first successful response wins.
-// overpass.osm.ch removed: returns 0 results for any non-CH query (Swiss-only data).
-// overpass.private.coffee / overpass.kumi.systems removed: same operator/backend,
-// unreachable in live tests (2026-06-15). Replaced by the OSM-France mirror
-// (overpass.openstreetmap.fr) — EU-hosted, global coverage, reliable in testing.
+// Raced in parallel — the first successful response wins.
+// Mirror history (all verified with REAL data queries, not just `out count`):
+//   • overpass.osm.ch — Swiss-only data (0 results outside CH) → unusable as a
+//     general mirror (it would win the race with an empty response).
+//   • overpass.private.coffee / overpass.kumi.systems — same dead backend.
+//   • overpass.openstreetmap.fr — returns HTTP 403 "only available to white-listed
+//     usages" for real venue/parking queries (only trivial `out count` passes).
+//     Removed 2026-06-16; it broke OSM outside DACH (where the private server is
+//     intentionally dropped) and as the prod fallback #3.
+// overpass-api.de is the only reliably-open public mirror; outside DACH it is the
+// single available endpoint (its own per-IP fair-use limit can surface as 429).
 //
-// Set OVERPASS_ENDPOINTS (comma-separated) to point to a private Overpass server,
-// e.g. "https://overpass.example.com/api/interpreter". Multiple URLs retain the
-// parallel-race behaviour. When unset, the two public mirrors are used.
+// Set OVERPASS_ENDPOINTS (comma-separated) to put the private Overpass server
+// first, e.g. "https://overpass.example.com/api/interpreter,https://overpass-api.de/api/interpreter".
+// Multiple URLs retain the parallel-race behaviour. When unset, only the public
+// mirror is used.
 const _overpassEnv = process.env.OVERPASS_ENDPOINTS
   ?.split(",")
   .map((s) => s.trim())
@@ -77,16 +84,14 @@ export const OVERPASS_ENDPOINTS: string[] = _overpassEnv?.length
   ? _overpassEnv
   : [
       "https://overpass-api.de/api/interpreter",
-      "https://overpass.openstreetmap.fr/api/interpreter",
     ]
 
 export const OVERPASS_ENDPOINT = OVERPASS_ENDPOINTS[0]
 
-// The two well-known public Overpass mirrors — used to distinguish private
-// self-hosted endpoints from public ones in health checks and stats tracking.
+// Well-known public Overpass mirrors — used to distinguish private self-hosted
+// endpoints from public ones in health checks and stats tracking.
 export const PUBLIC_OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
-  "https://overpass.openstreetmap.fr/api/interpreter",
 ]
 
 // ─── Supported regions (DACH + opt-in international allowlist) ───────────────
