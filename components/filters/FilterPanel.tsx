@@ -93,6 +93,14 @@ const SOURCE_RELIABILITY: Partial<Record<SourceId, string>> = {
   google_places:       "bg-orange-400",
 }
 
+// Region hint shown next to region-specific sources in the data-source list,
+// e.g. "Ginto (CH)". Country codes are language-neutral. Sources without an
+// entry cover DACH/global and get no suffix.
+const SOURCE_REGION: Partial<Record<SourceId, string>> = {
+  ginto:      "CH",
+  acceslibre: "FR",
+}
+
 const SOURCE_DISABLED: Partial<Record<SourceId, true>> = {}
 
 export default function FilterPanel({ filters, sources, radiusKm, onFilters, onSources, onRadius, sourceStates, onRerun, isLoading }: Props) {
@@ -240,7 +248,7 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
                 />
                 <span className={cn("w-2 h-2 rounded-full shrink-0", SOURCE_RELIABILITY[id])} />
                 <span className="text-sm text-muted-foreground leading-snug flex items-center gap-1.5 min-w-0">
-                  <span className="truncate">{SOURCE_LABELS[id]}</span>
+                  <span className="truncate">{SOURCE_LABELS[id]}{SOURCE_REGION[id] ? ` (${SOURCE_REGION[id]})` : ""}</span>
                   {!disabled && <SourceIndicator state={sourceStates?.[id]} />}
                 </span>
               </label>
