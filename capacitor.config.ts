@@ -19,11 +19,18 @@ const config: CapacitorConfig = {
   android: {
     backgroundColor: "#ffffff",
   },
+  ios: {
+    backgroundColor: "#ffffff",
+    scheme: "Accessible Places",
+    contentInset: "automatic",
+  },
   plugins: {
     SplashScreen: {
       launchShowDuration: 600,
       backgroundColor: "#ffffff",
       androidScaleType: "CENTER_CROP",
+      iosSpinnerStyle: "small",
+      showSpinner: false,
     },
   },
 }
