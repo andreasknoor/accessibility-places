@@ -216,6 +216,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       accessibility_cloud: hasACloud,
       reisen_fuer_alle:    hasRfa,
       ginto:               false,   // off in health checks — CH-only, separate concern
+      acceslibre:          false,   // off in health checks — FR-only, separate concern
       google_places:       false,   // always off — no costs in health checks
     }
 

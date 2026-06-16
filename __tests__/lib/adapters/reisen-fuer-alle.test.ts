@@ -9,7 +9,7 @@ const BASE_PARAMS: SearchParams = {
   radiusKm: 5,
   categories: ["restaurant"],
   filters: { entrance: true, toilet: true, parking: false, parkingNearby: true, seating: false, onlyVerified: false, acceptUnknown: false, alwaysShowParking: false },
-  sources: { accessibility_cloud: false, osm: false, reisen_fuer_alle: true, google_places: false, ginto: false },
+  sources: { accessibility_cloud: false, osm: false, reisen_fuer_alle: true, google_places: false, ginto: false, acceslibre: false },
 }
 
 const ITEM = {

@@ -37,6 +37,7 @@ const SEO_SOURCES: SearchParams["sources"] = {
   accessibility_cloud: true,
   reisen_fuer_alle:    true, // silently skipped when key absent
   ginto:               true, // silently skipped when key absent
+  acceslibre:          false, // FR-only; SEO pages are DACH-scoped
   google_places:       false,
 }
 
