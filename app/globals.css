@@ -158,3 +158,8 @@ body {
    on platforms without insets, so these are no-ops on desktop and Android. */
 .safe-area-inset-bottom { padding-bottom: env(safe-area-inset-bottom); }
 .safe-area-inset-top    { padding-top:    env(safe-area-inset-top); }
+
+/* Additive top padding for scrollable static pages (FAQ, Impressum, …) whose
+   back button would otherwise sit under the status bar. Keeps the original
+   py-10 (2.5rem) spacing and adds the notch inset on top. env() = 0 elsewhere. */
+.pt-safe-10 { padding-top: calc(2.5rem + env(safe-area-inset-top)); }
