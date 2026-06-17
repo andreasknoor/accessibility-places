@@ -22,6 +22,14 @@ export default function SplashOverlay() {
 
   useEffect(() => {
     if (!show) return
+
+    // Tell the native Capacitor splash to hide as soon as our overlay is ready.
+    // Dynamic import keeps @capacitor/splash-screen out of the web bundle's
+    // critical path and avoids SSR issues.
+    import("@capacitor/splash-screen")
+      .then(({ SplashScreen }) => SplashScreen.hide())
+      .catch(() => {}) // no-op in browser / PWA
+
     const fadeTimer = setTimeout(() => setPhase("fading"), 2200)
     const doneTimer = setTimeout(() => setPhase("gone"),   2700)
     return () => { clearTimeout(fadeTimer); clearTimeout(doneTimer) }
