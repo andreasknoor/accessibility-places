@@ -22,7 +22,12 @@ const config: CapacitorConfig = {
   ios: {
     backgroundColor: "#ffffff",
     scheme: "Accessible Places",
-    contentInset: "automatic",
+    // never = the WebView fills the whole screen edge-to-edge; we handle the
+    // notch / home-indicator insets ourselves via viewport-fit=cover +
+    // env(safe-area-inset-*) padding on the header and bottom nav. With
+    // "automatic" WebKit *also* inset the content, leaving white status-bar /
+    // home-indicator gaps on top of our own padding (double inset).
+    contentInset: "never",
   },
   plugins: {
     SplashScreen: {
