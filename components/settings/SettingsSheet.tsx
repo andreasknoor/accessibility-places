@@ -110,7 +110,7 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
   return (
     <div onClick={(e) => e.stopPropagation()}>
       <div className="fixed inset-0 z-[1050] bg-black/25" onClick={onClose} />
-      <div className="fixed right-0 top-0 z-[1051] h-full w-[380px] max-w-full bg-white shadow-2xl border-l border-border flex flex-col">
+      <div className="fixed right-0 top-0 z-[1051] h-full w-[380px] max-w-full bg-white shadow-2xl border-l border-border flex flex-col safe-area-inset-top safe-area-inset-bottom">
 
         {/* Header */}
         <div className="flex items-start justify-between px-4 py-3 border-b border-border shrink-0">
