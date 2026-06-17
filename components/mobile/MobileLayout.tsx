@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import dynamic from "next/dynamic"
 import Script from "next/script"
 import Link from "next/link"
@@ -129,6 +129,16 @@ export default function MobileLayout({
   useEffect(() => {
     if (activeTab === "map") setMapMounted(true)
   }, [activeTab])
+
+  // Switch to the map tab whenever focus mode is entered from a non-focus state.
+  // Covers the programmatic entry from a native quick action (which calls the raw
+  // toggle, bypassing the tap-path tab switch) as well as the normal chip tap.
+  const prevFocusSizeRef = useRef(0)
+  useEffect(() => {
+    const size = focusLayers?.size ?? 0
+    if (size > 0 && prevFocusSizeRef.current === 0) setActiveTab("map")
+    prevFocusSizeRef.current = size
+  }, [focusLayers])
 
   const showWelcome = !!isFirstVisit && chatMode === "nearby" && !hasSearched && places.length === 0 && !isLoading
 

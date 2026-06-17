@@ -149,6 +149,13 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [hasGpsCoords,        setHasGpsCoords]        = useState(false)
   const [gpsCoords,           setGpsCoords]           = useState<{ lat: number; lon: number } | null>(null)
   const gpsCoordRef  = useRef<{ lat: number; lon: number } | null>(null)
+  // Native home-screen quick action ("Rollstuhl-Parkplatz/-WC suchen") in flight.
+  // `pendingFocusAction` holds the amenity to focus once GPS is available; the
+  // ref-mirror lets handleSearch suppress its focus-reset so a concurrent
+  // auto-search (nearby default mode) can't wipe the focus before it's applied.
+  const [pendingFocusAction, setPendingFocusAction] = useState<AmenityType | null>(null)
+  const quickActionActiveRef = useRef(false)
+  const quickActionLocateRef = useRef(false)  // guards against a duplicate self-locate
   // Tracks whether the initial localStorage prefs have been loaded into state.
   // The persist effect must skip until the load effect has fired (otherwise
   // it would overwrite the user's saved prefs with defaults on first render).
@@ -298,10 +305,15 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setToiletSpots([])
     setSelectedId(undefined)
     setFilterDebug(undefined)
-    setFocusLayers(new Set())
-    setFocusSpots([])
-    setFocusHints({})
-    setFocusLoadingLayer(null)
+    // Normally a new search exits focus mode. But while a native quick action is
+    // launching (which itself triggers a nearby auto-search in nearby-default
+    // mode), suppress the reset so the about-to-be-applied focus layer survives.
+    if (!quickActionActiveRef.current) {
+      setFocusLayers(new Set())
+      setFocusSpots([])
+      setFocusHints({})
+      setFocusLoadingLayer(null)
+    }
     // Initialise per-source loading state for each active source so the
     // FilterPanel renders spinners immediately.
     const initial: Partial<Record<SourceId, SourceState>> = {}
@@ -750,8 +762,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
   // Native bridges (iOS/Android shell):
   //  1. Quick Action — reads the action stored by AppDelegate
-  //     (UIApplicationShortcutItem) via @capacitor/preferences, then drives the
-  //     full "nearby → locate → search → focus layer" flow automatically.
+  //     (UIApplicationShortcutItem) via @capacitor/preferences. Rather than
+  //     imperatively locating + toggling here (which races the ChatPanel
+  //     auto-locate in nearby-default mode and loses the intent), it only sets
+  //     `pendingFocusAction`; a dedicated effect below applies the focus once
+  //     GPS is available. `quickActionActiveRef` keeps handleSearch from wiping
+  //     the focus while the launch is in flight.
   //  2. Universal Links — since the shell loads a remote URL, an incoming
   //     place-detail link (…?selectLat=…) does NOT auto-navigate the WebView;
   //     appUrlOpen fires instead, so we navigate to the link and let page.tsx
@@ -762,16 +778,13 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     async function checkAction() {
       const action = await consumePendingNativeAction()
       if (!action || cancelled) return
-      // Switch to nearby mode first so the UI reflects the correct state.
+      quickActionActiveRef.current = true
+      quickActionLocateRef.current = false
+      // A quick action is an explicit engagement — never let the welcome screen
+      // block the resulting map/focus view on a first-ever launch.
+      setIsFirstVisit(false)
       setChatMode("nearby")
-      // Ensure GPS is resolved before activating the focus layer.
-      // handleLocate sets gpsCoordRef.current which handleToggleFocusLayer reads.
-      if (!gpsCoordRef.current) {
-        try { await handleLocate() } catch { return /* GPS denied / unavailable */ }
-      }
-      if (cancelled) return
-      // handleToggleFocusLayer fetches nearby amenities and enters focus mode.
-      await handleToggleFocusLayer(action as "parking" | "toilet")
+      setPendingFocusAction(action)
     }
 
     checkAction()
@@ -802,7 +815,37 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       for (const c of cleanups) c()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // intentionally run once; handleToggleFocusLayer/handleLocate are stable (useCallback)
+  }, [])
+
+  // Applies a pending native quick action once GPS is available. We always
+  // resolve the position ourselves (deduped via quickActionLocateRef): HomeClient's
+  // handleLocate only sets coords — it triggers no search — so it's safe even when
+  // ChatPanel also auto-locates in nearby mode. Predicting ChatPanel's mount-time
+  // auto-locate from the (just-changed) chatMode is unreliable, so we don't rely on
+  // it. On iOS the OS permission dialog only appears once, so this is the single,
+  // necessary prompt (finding nearby parking/WC requires a position).
+  useEffect(() => {
+    if (!pendingFocusAction) return
+    const coords = gpsCoordRef.current ?? gpsCoords
+    if (!coords) {
+      if (!quickActionLocateRef.current) {
+        quickActionLocateRef.current = true
+        handleLocate().catch(() => {
+          // Locate failed/denied — abandon the quick action cleanly.
+          quickActionActiveRef.current = false
+          setPendingFocusAction(null)
+        })
+      }
+      return
+    }
+    // GPS is ready — enter focus mode for the requested amenity, then release
+    // the search-suppression guard.
+    const action = pendingFocusAction
+    setPendingFocusAction(null)
+    void handleToggleFocusLayer(action).finally(() => {
+      quickActionActiveRef.current = false
+    })
+  }, [pendingFocusAction, gpsCoords, handleLocate, handleToggleFocusLayer])
 
   const focusActive = focusLayers.size > 0
 
