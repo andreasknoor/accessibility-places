@@ -255,9 +255,9 @@ Self-hosted Overpass API for DACH at `overpass.accessible-places.org` (Hetzner C
 
 One detail that matters app-side: an overloaded Overpass daemon returns HTML with HTTP **200** (not 5xx). The OSM adapter's content-type guard detects this and rejects the endpoint so the parallel race falls through to the public mirrors.
 
-## Capacitor Android app
+## Capacitor Android & iOS apps
 
-The app ships as an Android APK (Capacitor shell wrapping the deployed web URL) in addition to the PWA. The native shell lives in `android/` (checked in to this repo); runbook at `docs/capacitor-android-setup.md`.
+The app ships as an Android APK and an iOS app (Capacitor shells wrapping the deployed web URL) in addition to the PWA. The native shells live in `android/` and `ios/` (both checked in). Runbooks: `docs/capacitor-android-setup.md` and `docs/capacitor-ios-setup.md`. Both use the same remote-URL approach, the same `appId` (`org.accessibleplaces.app`), and the same `lib/native/*` code; they diverge only in the native projects and their store pipelines. iOS is code-complete/device-polished — the open work is the App Store Connect / TestFlight release path (see the iOS runbook).
 
 **`lib/native/geolocation.ts`** — platform-aware wrapper around `@capacitor/geolocation`. Call `getCurrentPosition()` from this module instead of `navigator.geolocation` directly. On `Capacitor.isNativePlatform() === true` it checks/requests OS permissions and uses the native plugin; in the browser it falls back to `navigator.geolocation`. The plugin is dynamically imported to keep it out of the web bundle's critical path.
 
