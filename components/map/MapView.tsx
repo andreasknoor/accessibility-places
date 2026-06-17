@@ -278,9 +278,12 @@ export default function MapView({
         if (focusModeRef.current) return
         if (Date.now() - lastProgrammaticMoveRef.current < PROGRAMMATIC_MOVE_WINDOW_MS) return
         if (!onSearchHereRef.current || !searchCenterRef.current) return
-        // Guard against the final moveend that Leaflet fires during .remove()
-        // (the map is destroyed but the event listener still holds a ref to `map`).
-        if (!mapInst.current) return
+        // Guard against the final moveend Leaflet fires while tearing the map down.
+        // cancelled is set true *before* remove() runs in cleanup, so this bails
+        // even though remove() may emit moveend synchronously while mapInst.current
+        // is briefly still set (it is nulled after remove()). Checking mapInst too
+        // covers any post-cleanup async emission.
+        if (cancelled || !mapInst.current) return
         const newCenter = map.getCenter()
         const bounds    = map.getBounds()
         const minSpan   = Math.min(
@@ -334,10 +337,11 @@ export default function MapView({
 
     return () => {
       cancelled = true
-      if (mapInst.current) {
-        mapInst.current.remove()
-        mapInst.current = null
-      }
+      // Null the ref *before* remove() so the moveend handler's guard bails even
+      // if Leaflet emits a synchronous moveend during teardown.
+      const inst = mapInst.current
+      mapInst.current = null
+      inst?.remove()
       placeClusterRef.current = null
     }
   }, [])

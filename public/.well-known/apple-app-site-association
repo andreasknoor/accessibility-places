@@ -6,14 +6,8 @@
         "appIDs": ["U246MNT992.org.accessibleplaces.app"],
         "components": [
           {
-            "/": "/",
             "?": { "selectLat": "*" },
-            "comment": "Place-detail deep link (DE home) — only links carrying selectLat open the app; plain pages and SEO routes stay in the browser."
-          },
-          {
-            "/": "/en/",
-            "?": { "selectLat": "*" },
-            "comment": "Place-detail deep link (EN home)."
+            "comment": "Only place-detail deep links carry the selectLat query param (share links on / and /en/, plus SEO place links on /en without a trailing slash). Matching the param alone — path-independent — covers every variant while leaving plain pages and SEO routes (which never carry selectLat) in the browser."
           }
         ]
       }

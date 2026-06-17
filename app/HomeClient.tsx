@@ -789,6 +789,20 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
     checkAction()
 
+    // Navigate the WebView to an incoming place-detail deep link so page.tsx
+    // re-reads selectLat/selectLon/selectName. Only links carrying selectLat are
+    // place-detail links (matches the AASA scope); everything else is ignored.
+    function maybeFollowDeepLink(url: string) {
+      try {
+        const u = new URL(url)
+        if (!u.searchParams.has("selectLat")) return
+        const target = u.pathname + u.search
+        if (target !== window.location.pathname + window.location.search) {
+          window.location.href = u.href // full reload → page.tsx re-reads params
+        }
+      } catch { /* malformed URL — ignore */ }
+    }
+
     const cleanups: Array<() => void> = []
     import("@capacitor/app").then(({ App: CapApp }) => {
       if (cancelled) return
@@ -797,17 +811,15 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         if (isActive) checkAction()
       }).then((handle) => { cleanups.push(() => handle.remove()) })
 
-      // Universal Link arriving while/after the app is open.
-      CapApp.addListener("appUrlOpen", ({ url }) => {
-        try {
-          const u = new URL(url)
-          if (!u.searchParams.has("selectLat")) return // not a place-detail link
-          const target = u.pathname + u.search
-          if (target !== window.location.pathname + window.location.search) {
-            window.location.href = u.href // full reload → page.tsx re-reads params
-          }
-        } catch { /* malformed URL — ignore */ }
-      }).then((handle) => { cleanups.push(() => handle.remove()) })
+      // Universal Link arriving while/after the app is open (warm).
+      CapApp.addListener("appUrlOpen", ({ url }) => maybeFollowDeepLink(url))
+        .then((handle) => { cleanups.push(() => handle.remove()) })
+
+      // Cold launch via Universal Link: appUrlOpen may have already fired before
+      // this listener attached, so also consult the launch URL once.
+      CapApp.getLaunchUrl().then((res) => {
+        if (!cancelled && res?.url) maybeFollowDeepLink(res.url)
+      }).catch(() => {/* no launch url */})
     }).catch(() => {/* not on native */})
 
     return () => {
@@ -842,10 +854,18 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     // the search-suppression guard.
     const action = pendingFocusAction
     setPendingFocusAction(null)
+    // handleToggleFocusLayer toggles: if the requested layer is already the active
+    // one (e.g. warm-resume tapping the same shortcut), toggling would DEACTIVATE
+    // it. A quick action must only ever enter/switch, never turn off — so skip the
+    // call when it's already showing.
+    if (focusLayers.has(action)) {
+      quickActionActiveRef.current = false
+      return
+    }
     void handleToggleFocusLayer(action).finally(() => {
       quickActionActiveRef.current = false
     })
-  }, [pendingFocusAction, gpsCoords, handleLocate, handleToggleFocusLayer])
+  }, [pendingFocusAction, gpsCoords, focusLayers, handleLocate, handleToggleFocusLayer])
 
   const focusActive = focusLayers.size > 0
 
