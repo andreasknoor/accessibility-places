@@ -141,3 +141,12 @@ body {
   left: 0;
   top: 0;
 }
+
+/* ── Safe-area insets (iOS notch / home indicator) ───────────────────────────
+   Needed once viewport-fit=cover is set (layout.tsx viewport). In the standalone
+   PWA iOS auto-insets the webview, but the Capacitor WKWebView fills the whole
+   screen edge-to-edge — without these the bottom tab bar slides behind the home
+   indicator and the header tucks under the status bar / notch. env() returns 0
+   on platforms without insets, so these are no-ops on desktop and Android. */
+.safe-area-inset-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-area-inset-top    { padding-top:    env(safe-area-inset-top); }

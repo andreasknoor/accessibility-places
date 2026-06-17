@@ -154,6 +154,56 @@ export async function getBestPosition(opts?: BestPositionOptions): Promise<GeoPo
   })
 }
 
+// A watch id that works across both backends: native returns a string,
+// the browser returns a number.
+export type GeoWatchId = number | string
+
+// Native-aware watchPosition. On the Capacitor app the native plugin is used —
+// since the permission was already granted by getCurrentPosition/getBestPosition,
+// this does NOT trigger a second OS dialog. In a browser, navigator.geolocation
+// is used. Returns a Promise so both backends share one call shape; the resolved
+// id must be passed to clearWatchPosition() to stop tracking.
+export async function watchPosition(
+  onPosition: (pos: GeoPosition) => void,
+  onError?: (err: unknown) => void,
+  opts?: GeoOptions,
+): Promise<GeoWatchId> {
+  if (Capacitor.isNativePlatform()) {
+    const { Geolocation } = await import("@capacitor/geolocation")
+    return Geolocation.watchPosition(
+      {
+        enableHighAccuracy: opts?.enableHighAccuracy ?? true,
+        timeout:            opts?.timeout,
+        maximumAge:         opts?.maximumAge ?? 30_000,
+      },
+      (pos, err) => {
+        if (err) { onError?.(err); return }
+        if (pos) onPosition({ lat: pos.coords.latitude, lon: pos.coords.longitude })
+      },
+    )
+  }
+
+  return navigator.geolocation.watchPosition(
+    (pos) => onPosition({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+    (err) => onError?.(err),
+    {
+      enableHighAccuracy: opts?.enableHighAccuracy ?? true,
+      maximumAge:         opts?.maximumAge ?? 30_000,
+    },
+  )
+}
+
+export function clearWatchPosition(id: GeoWatchId): void {
+  if (typeof id === "string") {
+    // Native watch id — clear via the plugin (dynamic import, fire-and-forget).
+    import("@capacitor/geolocation")
+      .then(({ Geolocation }) => Geolocation.clearWatch({ id }))
+      .catch(() => {})
+    return
+  }
+  navigator.geolocation.clearWatch(id)
+}
+
 export class GeolocationPermissionError extends Error {
   constructor(message: string) {
     super(message)

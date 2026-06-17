@@ -155,7 +155,7 @@ export default function MobileLayout({
     <div className="flex flex-col h-svh overflow-hidden bg-background text-foreground">
 
       {/* ── Header ── */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card shrink-0">
+      <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card shrink-0 safe-area-inset-top">
         <button
           onClick={() => { onLogoTap?.(); onReset?.() }}
           className="flex items-center gap-2.5 hover:opacity-75 transition-opacity"

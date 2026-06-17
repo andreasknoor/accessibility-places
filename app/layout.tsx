@@ -54,6 +54,10 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  // cover = web content extends edge-to-edge under the notch/home indicator,
+  // making env(safe-area-inset-*) return real values. Required for the native
+  // Capacitor WKWebView (fills the whole screen); harmless in the standalone PWA.
+  viewportFit:  "cover",
 }
 
 export default function RootLayout({

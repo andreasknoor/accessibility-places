@@ -9,7 +9,7 @@ import { useIsMobile } from "@/hooks/useIsMobile"
 import { cn } from "@/lib/utils"
 import { extractQuotedName } from "@/lib/llm"
 import { loadSettings } from "@/lib/settings"
-import { getCurrentPosition, isGeolocationAvailable } from "@/lib/native/geolocation"
+import { getCurrentPosition, isGeolocationAvailable, watchPosition, clearWatchPosition, type GeoWatchId } from "@/lib/native/geolocation"
 import DevConsole from "@/components/easter-eggs/DevConsole"
 import type { AmenityType } from "@/lib/types"
 
@@ -160,7 +160,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const debounceRef          = useRef<ReturnType<typeof setTimeout>>(undefined)
   const suggestAbortRef      = useRef<AbortController>(undefined)
   const locatingRef          = useRef(false)
-  const watchIdRef           = useRef<number | null>(null)
+  const watchIdRef           = useRef<GeoWatchId | null>(null)
   // Holds the location value that was set programmatically (restore, area pick,
   // venue pick). Autocomplete is suppressed as long as location equals this
   // value — survives the locale/biasCoords re-renders that fire after a search
@@ -282,7 +282,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   useEffect(() => {
     return () => {
       if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current)
+        clearWatchPosition(watchIdRef.current)
       }
     }
   }, [])
@@ -391,7 +391,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     setShowSuggestions(false)
     if (next !== "nearby") {
       if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current)
+        clearWatchPosition(watchIdRef.current)
         watchIdRef.current = null
       }
       return
@@ -558,20 +558,19 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
         } catch {
           setNearbyPhase("error")
         }
-        // Silently track position changes after the initial fix (browser only —
-        // native foreground tracking via watchPosition is fine here)
-        if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current)
-        watchIdRef.current = navigator.geolocation.watchPosition(
-          (p) => {
+        // Silently track position changes after the initial fix. Uses the native
+        // plugin in the app (permission already granted by getCurrentPosition, so
+        // no second OS dialog) and navigator.geolocation in the browser.
+        if (watchIdRef.current !== null) clearWatchPosition(watchIdRef.current)
+        watchPosition(
+          ({ lat: wlat, lon: wlon }) => {
             setNearbyPhase((prev) =>
-              typeof prev === "object"
-                ? { ...prev, lat: p.coords.latitude, lon: p.coords.longitude }
-                : prev
+              typeof prev === "object" ? { ...prev, lat: wlat, lon: wlon } : prev
             )
           },
           () => {},
           { enableHighAccuracy: true, maximumAge: 30_000 },
-        )
+        ).then((id) => { watchIdRef.current = id })
       })
       .catch((err) => {
         locatingRef.current = false
