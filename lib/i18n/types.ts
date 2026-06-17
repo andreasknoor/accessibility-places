@@ -128,6 +128,7 @@ export interface Translations {
     showNearbyParking:    string
     copyLink:             string
     linkCopied:           string
+    linkShared:           string
   }
   a11y: {
     yes:        string

@@ -7,6 +7,7 @@ import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS } from "@/lib/config"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { openExternalUrl } from "@/lib/native/browser"
+import { hapticLight } from "@/lib/native/haptics"
 import { confidenceLabel } from "@/lib/matching/merge"
 import { haversineMetres } from "@/lib/matching/match"
 import type { Place, ParkingSpot, AmenityFeature, AmenityTier } from "@/lib/types"
@@ -875,6 +876,7 @@ export default function MapView({
             variant="secondary"
             size="icon"
             onClick={async () => {
+              hapticLight()
               setLocating(true)
               setLocateErrorVisible(false)
               try {
@@ -910,6 +912,7 @@ export default function MapView({
         <div className={`absolute top-3 left-1/2 -translate-x-1/2 z-[1000] transition-opacity ${popupOpen ? "opacity-0 pointer-events-none" : ""}`}>
           <button
             onClick={() => {
+              hapticLight()
               onSearchHere(searchHereCenter)
               setSearchHereCenter(null)
             }}

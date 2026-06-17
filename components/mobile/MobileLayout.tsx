@@ -7,6 +7,7 @@ import Link from "next/link"
 import { Map, List, SlidersHorizontal, Compass, ChevronRight, LocateFixed } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTranslations, useLocale } from "@/lib/i18n"
+import { hapticLight } from "@/lib/native/haptics"
 import ChatPanel       from "@/components/chat/ChatPanel"
 import FilterPanel     from "@/components/filters/FilterPanel"
 import ResultsList     from "@/components/results/ResultsList"
@@ -353,7 +354,7 @@ export default function MobileLayout({
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => { hapticLight(); setActiveTab(tab.id) }}
             className={cn(
               "flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors",
               activeTab === tab.id

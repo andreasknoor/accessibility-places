@@ -6,8 +6,10 @@ import {
   Utensils, Leaf, Dog, Wifi, Star, DollarSign,
   MessageSquare, ExternalLink, Accessibility,
   ShieldCheck, Award, ChevronDown, ChevronUp,
-  Truck, ShoppingBag, Link2, Car, Hash, Navigation, Copy,
+  Truck, ShoppingBag, Share2, Car, Hash, Navigation, Copy,
 } from "lucide-react"
+import { shareOrCopy } from "@/lib/native/share"
+import { hapticLight, hapticSuccess } from "@/lib/native/haptics"
 import { SOURCE_LABELS } from "@/lib/config"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { NativeLink } from "@/components/ui/native-link"
@@ -87,7 +89,7 @@ function Section({
 }
 
 export default function PlaceDebugSheet({ place, onClose }: Props) {
-  const [linkCopied,   setLinkCopied]   = useState(false)
+  const [shareFeedback, setShareFeedback] = useState<"copied" | "shared" | null>(null)
   const [copiedField,  setCopiedField]  = useState<"address" | "osm" | null>(null)
   const copyTimerRef      = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fieldTimerRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -103,7 +105,8 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
   const [placeImage,   setPlaceImage]   = useState<string | null>(null)
   const [imageLoaded,  setImageLoaded]  = useState(false)
 
-  function handleCopyLink() {
+  function handleShareLink() {
+    hapticLight()
     const homePath = window.location.pathname.startsWith("/en") ? "/en/" : "/"
     const params = new URLSearchParams({
       selectLat:  String(place.coordinates.lat),
@@ -111,10 +114,13 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
       selectName: place.name,
       cat:        place.category,
     })
-    void navigator.clipboard.writeText(`${window.location.origin}${homePath}?${params}`).then(() => {
-      setLinkCopied(true)
+    const url = `${window.location.origin}${homePath}?${params}`
+    void shareOrCopy({ title: place.name, text: place.name, url, dialogTitle: place.name }).then((outcome) => {
+      if (outcome === "failed") return // user cancelled the share sheet — no feedback
+      hapticSuccess()
+      setShareFeedback(outcome)
       if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
-      copyTimerRef.current = setTimeout(() => setLinkCopied(false), 2000)
+      copyTimerRef.current = setTimeout(() => setShareFeedback(null), 2000)
     })
   }
   const t  = useTranslations()
@@ -306,16 +312,16 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
             {addrStr && <p className="text-xs text-muted-foreground mt-0.5 truncate">{addrStr}</p>}
           </div>
           <div className="flex items-center gap-3 shrink-0 mt-0.5">
-            {linkCopied ? (
-              <span className="text-xs text-green-600 px-1">{t.results.linkCopied}</span>
+            {shareFeedback ? (
+              <span className="text-xs text-green-600 px-1">{shareFeedback === "shared" ? t.results.linkShared : t.results.linkCopied}</span>
             ) : (
               <button
-                onClick={handleCopyLink}
+                onClick={handleShareLink}
                 className="text-muted-foreground hover:text-foreground transition-colors p-1.5 -m-1.5"
                 aria-label={t.results.copyLink}
                 title={t.results.copyLink}
               >
-                <Link2 className="w-4 h-4" />
+                <Share2 className="w-4 h-4" />
               </button>
             )}
             <button

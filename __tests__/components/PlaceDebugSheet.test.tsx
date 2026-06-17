@@ -86,9 +86,12 @@ describe("PlaceDebugSheet copy link", () => {
     })
   })
 
+  // In jsdom navigator.share is unavailable, so shareOrCopy falls back to the
+  // clipboard — same observable behaviour as before. The button is now labelled
+  // "Teilen" (native share sheet on mobile, clipboard copy on desktop).
   it("copies a URL containing selectLat, selectLon, selectName, cat", async () => {
     renderSheet()
-    fireEvent.click(screen.getByLabelText(/Link kopieren/i))
+    fireEvent.click(screen.getByLabelText(/Teilen/i))
     await vi.waitFor(() =>
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
         expect.stringContaining("selectLat=52.52"),
@@ -101,11 +104,9 @@ describe("PlaceDebugSheet copy link", () => {
   })
 
   it("shows 'Link kopiert' feedback after copying", async () => {
-    vi.useFakeTimers()
     renderSheet()
-    fireEvent.click(screen.getByLabelText(/Link kopieren/i))
+    fireEvent.click(screen.getByLabelText(/Teilen/i))
     await vi.waitFor(() => expect(screen.getByText("Link kopiert")).toBeInTheDocument())
-    vi.useRealTimers()
   })
 })
 
