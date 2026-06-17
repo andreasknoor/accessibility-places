@@ -278,6 +278,9 @@ export default function MapView({
         if (focusModeRef.current) return
         if (Date.now() - lastProgrammaticMoveRef.current < PROGRAMMATIC_MOVE_WINDOW_MS) return
         if (!onSearchHereRef.current || !searchCenterRef.current) return
+        // Guard against the final moveend that Leaflet fires during .remove()
+        // (the map is destroyed but the event listener still holds a ref to `map`).
+        if (!mapInst.current) return
         const newCenter = map.getCenter()
         const bounds    = map.getBounds()
         const minSpan   = Math.min(

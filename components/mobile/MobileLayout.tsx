@@ -134,9 +134,20 @@ export default function MobileLayout({
 
   const activeFilterCount = [filters.entrance, filters.toilet, filters.parking, filters.seating, filters.onlyVerified].filter(Boolean).length
 
+  const resultCount = places.length
+
   const allTabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "results", label: t.results.title ?? "Ergebnisse", icon: <List className="w-5 h-5" /> },
-    { id: "map",     label: t.results.showMap ?? "Karte",     icon: <Map  className="w-5 h-5" /> },
+    { id: "map",     label: t.results.showMap ?? "Karte",     icon: (
+      <span className="relative">
+        <Map className="w-5 h-5" />
+        {hasSearched && !isLoading && resultCount > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 min-w-[1.125rem] h-[1.125rem] rounded-full bg-primary text-primary-foreground text-[10px] font-bold leading-none flex items-center justify-center px-1">
+            {resultCount > 99 ? "99+" : resultCount}
+          </span>
+        )}
+      </span>
+    )},
     { id: "filter",  label: t.filters?.title  ?? "Filter",    icon: (
       <span className="relative">
         <SlidersHorizontal className="w-5 h-5" />
@@ -280,7 +291,18 @@ export default function MobileLayout({
         </div>
 
         {/* Map tab — lazy-mounted so Leaflet initializes in a visible container */}
-        <div className={cn("h-full", activeTab !== "map" && "hidden")}>
+        <div className={cn("h-full relative", activeTab !== "map" && "hidden")}>
+          {/* Result count pill — top-left, tapping switches to results list */}
+          {hasSearched && !isLoading && resultCount > 0 && (
+            <button
+              onClick={() => { hapticLight(); setActiveTab("results") }}
+              className="absolute top-3 left-14 z-[1000] flex items-center gap-1.5 rounded-full bg-card/95 backdrop-blur-sm border border-border shadow-md px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+              aria-label={t.results.title}
+            >
+              <List className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span>{t.results.count(resultCount)}</span>
+            </button>
+          )}
           {mapMounted && (
             <MapView
               places={places}
