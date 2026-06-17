@@ -3,8 +3,19 @@
     "apps": [],
     "details": [
       {
-        "appID": "U246MNT992.org.accessibleplaces.app",
-        "paths": ["*"]
+        "appIDs": ["U246MNT992.org.accessibleplaces.app"],
+        "components": [
+          {
+            "/": "/",
+            "?": { "selectLat": "*" },
+            "comment": "Place-detail deep link (DE home) — only links carrying selectLat open the app; plain pages and SEO routes stay in the browser."
+          },
+          {
+            "/": "/en/",
+            "?": { "selectLat": "*" },
+            "comment": "Place-detail deep link (EN home)."
+          }
+        ]
       }
     ]
   }

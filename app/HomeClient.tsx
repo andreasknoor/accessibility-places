@@ -748,10 +748,14 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
   }, [])
 
-  // Native Quick Action handler — reads the action stored by AppDelegate
-  // (UIApplicationShortcutItem) via @capacitor/preferences, then drives the full
-  // "nearby → locate → search → focus layer" flow automatically.
-  // Runs on mount (cold start from shortcut) and whenever app resumes from background.
+  // Native bridges (iOS/Android shell):
+  //  1. Quick Action — reads the action stored by AppDelegate
+  //     (UIApplicationShortcutItem) via @capacitor/preferences, then drives the
+  //     full "nearby → locate → search → focus layer" flow automatically.
+  //  2. Universal Links — since the shell loads a remote URL, an incoming
+  //     place-detail link (…?selectLat=…) does NOT auto-navigate the WebView;
+  //     appUrlOpen fires instead, so we navigate to the link and let page.tsx
+  //     re-read the query params (which trigger the existing deep-link effect).
   useEffect(() => {
     let cancelled = false
 
@@ -772,25 +776,33 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
     checkAction()
 
-    // Also check on every app resume (app comes from background via shortcut).
-    let App: typeof import("@capacitor/app").App | null = null
-    let cleanupListener: (() => void) | null = null
+    const cleanups: Array<() => void> = []
     import("@capacitor/app").then(({ App: CapApp }) => {
       if (cancelled) return
-      App = CapApp
-      App.addListener("appStateChange", ({ isActive }) => {
+      // Re-check the pending quick action whenever the app resumes (warm launch).
+      CapApp.addListener("appStateChange", ({ isActive }) => {
         if (isActive) checkAction()
-      }).then((handle) => {
-        cleanupListener = () => handle.remove()
-      })
+      }).then((handle) => { cleanups.push(() => handle.remove()) })
+
+      // Universal Link arriving while/after the app is open.
+      CapApp.addListener("appUrlOpen", ({ url }) => {
+        try {
+          const u = new URL(url)
+          if (!u.searchParams.has("selectLat")) return // not a place-detail link
+          const target = u.pathname + u.search
+          if (target !== window.location.pathname + window.location.search) {
+            window.location.href = u.href // full reload → page.tsx re-reads params
+          }
+        } catch { /* malformed URL — ignore */ }
+      }).then((handle) => { cleanups.push(() => handle.remove()) })
     }).catch(() => {/* not on native */})
 
     return () => {
       cancelled = true
-      cleanupListener?.()
+      for (const c of cleanups) c()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // intentionally run once; handleToggleFocusLayer is stable (useCallback)
+  }, []) // intentionally run once; handleToggleFocusLayer/handleLocate are stable (useCallback)
 
   const focusActive = focusLayers.size > 0
 

@@ -6,9 +6,32 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
 
+    // Key under which the pending quick-action is stored for the web layer.
+    // MUST match the @capacitor/preferences key WITH its default group prefix
+    // ("CapacitorStorage."), otherwise Preferences.get() on the web side never
+    // sees it (the plugin reads UserDefaults key "CapacitorStorage.<key>").
+    private static let pendingActionKey = "CapacitorStorage.ap_pending_native_action"
+
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // Cold launch from a home-screen quick action: iOS passes the shortcut in
+        // launchOptions and does NOT call performActionFor. Store it so the web app
+        // can consume it once the remote site has loaded.
+        if let shortcutItem = launchOptions?[.shortcutItem] as? UIApplicationShortcutItem {
+            storePendingAction(for: shortcutItem)
+        }
         return true
+    }
+
+    private func storePendingAction(for shortcutItem: UIApplicationShortcutItem) {
+        let action: String?
+        switch shortcutItem.type {
+        case "org.accessibleplaces.app.parking": action = "parking"
+        case "org.accessibleplaces.app.toilet":  action = "toilet"
+        default:                                  action = nil
+        }
+        if let action = action {
+            UserDefaults.standard.set(action, forKey: AppDelegate.pendingActionKey)
+        }
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
@@ -46,22 +69,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
 
-    // Home screen quick actions — store pending action in UserDefaults so the
-    // web app can pick it up via @capacitor/preferences on resume or cold start.
+    // Home screen quick actions (warm launch / app already running) — store the
+    // pending action so the web app can pick it up via @capacitor/preferences on
+    // the next appStateChange(isActive) event.
     func application(_ application: UIApplication, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
-        let action: String?
-        switch shortcutItem.type {
-        case "org.accessibleplaces.app.parking":
-            action = "parking"
-        case "org.accessibleplaces.app.toilet":
-            action = "toilet"
-        default:
-            action = nil
-        }
-        if let action = action {
-            UserDefaults.standard.set(action, forKey: "ap_pending_native_action")
-        }
-        completionHandler(action != nil)
+        storePendingAction(for: shortcutItem)
+        completionHandler(true)
     }
 
 }
