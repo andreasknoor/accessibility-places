@@ -52,6 +52,30 @@
 	<string>Accessible Places nutzt deinen Standort, um Orte in deiner Nähe zu finden.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Accessible Places nutzt deinen Standort, um Orte in deiner Nähe zu finden.</string>
+	<!-- Home screen quick actions (3D touch / long press) -->
+	<key>UIApplicationShortcutItems</key>
+	<array>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>org.accessibleplaces.app.parking</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Rollstuhl-Parkplatz</string>
+			<key>UIApplicationShortcutItemSubtitle</key>
+			<string>In der Nähe suchen</string>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>parkingsign.circle</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>org.accessibleplaces.app.toilet</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Rollstuhl-WC</string>
+			<key>UIApplicationShortcutItemSubtitle</key>
+			<string>In der Nähe suchen</string>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>toilet</string>
+		</dict>
+	</array>
 	<!-- App Transport Security: allow our production host -->
 	<key>NSAppTransportSecurity</key>
 	<dict>

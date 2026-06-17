@@ -46,4 +46,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
 
+    // Home screen quick actions — store pending action in UserDefaults so the
+    // web app can pick it up via @capacitor/preferences on resume or cold start.
+    func application(_ application: UIApplication, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
+        let action: String?
+        switch shortcutItem.type {
+        case "org.accessibleplaces.app.parking":
+            action = "parking"
+        case "org.accessibleplaces.app.toilet":
+            action = "toilet"
+        default:
+            action = nil
+        }
+        if let action = action {
+            UserDefaults.standard.set(action, forKey: "ap_pending_native_action")
+        }
+        completionHandler(action != nil)
+    }
+
 }

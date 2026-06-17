@@ -23,6 +23,7 @@ import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
 import { useSettings, loadSettings, DEFAULT_APP_SETTINGS } from "@/lib/settings"
 import { getCurrentPosition, getBestPosition, isGeolocationAvailable } from "@/lib/native/geolocation"
+import { consumePendingNativeAction } from "@/lib/native/actions"
 import { cn } from "@/lib/utils"
 import type { AppSettings } from "@/lib/settings"
 import type { Place, ParkingSpot, AmenityFeature, AmenityType, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug } from "@/lib/types"
@@ -746,6 +747,50 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       window.removeEventListener("mouseup",   onUp)
     }
   }, [])
+
+  // Native Quick Action handler — reads the action stored by AppDelegate
+  // (UIApplicationShortcutItem) via @capacitor/preferences, then drives the full
+  // "nearby → locate → search → focus layer" flow automatically.
+  // Runs on mount (cold start from shortcut) and whenever app resumes from background.
+  useEffect(() => {
+    let cancelled = false
+
+    async function checkAction() {
+      const action = await consumePendingNativeAction()
+      if (!action || cancelled) return
+      // Switch to nearby mode first so the UI reflects the correct state.
+      setChatMode("nearby")
+      // Ensure GPS is resolved before activating the focus layer.
+      // handleLocate sets gpsCoordRef.current which handleToggleFocusLayer reads.
+      if (!gpsCoordRef.current) {
+        try { await handleLocate() } catch { return /* GPS denied / unavailable */ }
+      }
+      if (cancelled) return
+      // handleToggleFocusLayer fetches nearby amenities and enters focus mode.
+      await handleToggleFocusLayer(action as "parking" | "toilet")
+    }
+
+    checkAction()
+
+    // Also check on every app resume (app comes from background via shortcut).
+    let App: typeof import("@capacitor/app").App | null = null
+    let cleanupListener: (() => void) | null = null
+    import("@capacitor/app").then(({ App: CapApp }) => {
+      if (cancelled) return
+      App = CapApp
+      App.addListener("appStateChange", ({ isActive }) => {
+        if (isActive) checkAction()
+      }).then((handle) => {
+        cleanupListener = () => handle.remove()
+      })
+    }).catch(() => {/* not on native */})
+
+    return () => {
+      cancelled = true
+      cleanupListener?.()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // intentionally run once; handleToggleFocusLayer is stable (useCallback)
 
   const focusActive = focusLayers.size > 0
 

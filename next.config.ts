@@ -47,7 +47,14 @@ const nextConfig: NextConfig = {
   // the last known-good configuration.
   turbopack: {},
   async headers() {
-    return [{ source: "/(.*)", headers: securityHeaders }]
+    return [
+      { source: "/(.*)", headers: securityHeaders },
+      // Apple requires AASA to be served as application/json (no extension on file).
+      {
+        source: "/.well-known/apple-app-site-association",
+        headers: [{ key: "Content-Type", value: "application/json" }],
+      },
+    ]
   },
   async redirects() {
     return [
