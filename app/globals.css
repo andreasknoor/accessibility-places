@@ -149,13 +149,6 @@ body {
   top: 0;
 }
 
-/* Place-info popups must sit ABOVE the floating map buttons (locate, "search
-   here", fullscreen — all z-[1000]). The Leaflet container forms no stacking
-   context, so its popup pane (default z 700) competes directly with those
-   buttons and loses, hiding the popup behind them. Lift the popup pane above
-   them. Still trapped inside the map container's `isolation: isolate`, so it
-   never leaks over the ChatPanel. */
-.leaflet-popup-pane { z-index: 1100; }
 
 /* ── Safe-area insets (iOS notch / home indicator) ───────────────────────────
    Needed once viewport-fit=cover is set (layout.tsx viewport). In the standalone

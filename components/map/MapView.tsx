@@ -185,6 +185,12 @@ export default function MapView({
   // Locate button interaction state
   const [locating,          setLocating]          = useState(false)
   const [locateErrorVisible, setLocateErrorVisible] = useState(false)
+  // True while a place-info popup is open. Leaflet traps the popup inside the
+  // transformed .leaflet-map-pane (its own stacking context), so the floating
+  // buttons (z-[1000] siblings of the map container) can never be beaten by the
+  // popup via z-index alone. Instead we fade the buttons out while a popup is
+  // open so the popup is unobstructed; they return on close.
+  const [popupOpen,         setPopupOpen]         = useState(false)
   // Timestamp of the last programmatic move (setView/fitBounds/zoomToShowLayer).
   // A moveend within PROGRAMMATIC_MOVE_WINDOW_MS of this is treated as app-driven
   // and ignored; any later moveend must be a real user pan. This time-window
@@ -261,6 +267,10 @@ export default function MapView({
       // both mouse and touch, unlike dragend). Every programmatic move stamps
       // lastProgrammaticMoveRef just before it runs; a moveend within the window
       // after that stamp is app-driven and ignored. Any later moveend is a user pan.
+      // Fade the floating buttons while a popup is open (see popupOpen state).
+      map.on("popupopen",  () => setPopupOpen(true))
+      map.on("popupclose", () => setPopupOpen(false))
+
       map.on("moveend", () => {
         // No "search here" in amenity focus mode — it would re-run the venue
         // search and silently drop the parking/WC focus layers.
@@ -846,7 +856,7 @@ export default function MapView({
           size="icon"
           variant="secondary"
           onClick={onToggleFullscreen}
-          className="absolute top-3 right-3 z-[1000] shadow-md"
+          className={`absolute top-3 right-3 z-[1000] shadow-md transition-opacity ${popupOpen ? "opacity-0 pointer-events-none" : ""}`}
           title={isFullscreen ? t.map.exitFullscreen : t.map.fullscreen}
         >
           {isFullscreen
@@ -860,7 +870,7 @@ export default function MapView({
           Sits left of the fullscreen toggle on desktop; on mobile (no toggle) it
           takes the top-right corner itself. */}
       {onLocate && !focusMode && (
-        <div className={`absolute top-3 z-[1000] flex flex-col items-end gap-1 ${showFullscreenToggle ? "right-14" : "right-3"}`}>
+        <div className={`absolute top-3 z-[1000] flex flex-col items-end gap-1 transition-opacity ${showFullscreenToggle ? "right-14" : "right-3"} ${popupOpen ? "opacity-0 pointer-events-none" : ""}`}>
           <Button
             variant="secondary"
             size="icon"
@@ -897,7 +907,7 @@ export default function MapView({
       {/* Hidden in amenity focus mode: "search here" re-runs the venue search and
           resets the focus layers, which would silently exit the parking/WC view. */}
       {searchHereCenter && onSearchHere && !focusMode && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000]">
+        <div className={`absolute top-3 left-1/2 -translate-x-1/2 z-[1000] transition-opacity ${popupOpen ? "opacity-0 pointer-events-none" : ""}`}>
           <button
             onClick={() => {
               onSearchHere(searchHereCenter)
