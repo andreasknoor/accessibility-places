@@ -120,6 +120,13 @@
   --radius: var(--radius);
 }
 
+html {
+  /* Suppress iOS WKWebView rubber-band / scroll-chaining overscroll. The home
+     route additionally hard-locks body scroll (see HomeClient) — this covers
+     scrollable inner regions and other routes on iOS 16+. No-op elsewhere. */
+  overscroll-behavior: none;
+}
+
 body {
   background: hsl(var(--background));
   color: hsl(var(--foreground));

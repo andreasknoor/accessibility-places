@@ -245,6 +245,35 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setRadiusKm(prefs.radiusKm)
   }, [])
 
+  // Lock the document scroll for the home route only (the app is a fixed-height
+  // shell with its own internal scroll regions). Without this the native iOS
+  // WKWebView rubber-bands the whole page, dragging the header/footer half off
+  // screen and — unlike Safari/PWA — not snapping back. Scoped here so the long
+  // scrolling routes (FAQ, Impressum, SEO pages) keep normal body scroll.
+  useEffect(() => {
+    const html = document.documentElement
+    const body = document.body
+    const prev = {
+      htmlOverflow: html.style.overflow,
+      bodyOverflow: body.style.overflow,
+      bodyPosition: body.style.position,
+      bodyWidth:    body.style.width,
+      bodyHeight:   body.style.height,
+    }
+    html.style.overflow = "hidden"
+    body.style.overflow = "hidden"
+    body.style.position = "fixed"
+    body.style.width    = "100%"
+    body.style.height   = "100%"
+    return () => {
+      html.style.overflow = prev.htmlOverflow
+      body.style.overflow = prev.bodyOverflow
+      body.style.position = prev.bodyPosition
+      body.style.width    = prev.bodyWidth
+      body.style.height   = prev.bodyHeight
+    }
+  }, [])
+
   const handleSearch = useCallback(async (query: string, radiusKmOverride?: number, coords?: { lat: number; lon: number }, nameHint?: string, filtersOverride?: Partial<SearchFilters>, sourcesOverride?: Partial<ActiveSources>, placeSearch?: boolean) => {
     // Cancel any in-flight search so its NDJSON stream cannot overwrite this one's state.
     searchAbortRef.current?.abort()
