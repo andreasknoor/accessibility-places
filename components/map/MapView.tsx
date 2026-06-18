@@ -945,7 +945,7 @@ export default function MapView({
               ${showParking ? "bg-blue-600 text-white border-blue-600" : "bg-background/95 border-border text-muted-foreground hover:text-foreground hover:bg-muted"}`}
           >
             <span aria-hidden>🅿</span>
-            <span>Parkplätze</span>
+            <span>{t.chat.focusChipParking}</span>
           </button>
           {hasToiletData && (
             <button
@@ -955,7 +955,7 @@ export default function MapView({
                 ${showToilets ? "bg-green-700 text-white border-green-700" : "bg-background/95 border-border text-muted-foreground hover:text-foreground hover:bg-muted"}`}
             >
               <span aria-hidden>🚻</span>
-              <span>WCs</span>
+              <span>{t.chat.focusChipToilet}</span>
             </button>
           )}
         </div>

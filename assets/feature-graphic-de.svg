@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <!-- white background -->
+  <rect width="1024" height="500" fill="#ffffff"/>
+
+  <!-- blue frame -->
+  <rect x="9" y="9" width="1006" height="482" rx="28" fill="none" stroke="#2563eb" stroke-width="18"/>
+
+  <!-- subtle map grid (very light) -->
+  <g stroke="#2563eb" stroke-opacity="0.05" stroke-width="2">
+    <path d="M40 170 H700 M40 300 H700"/>
+    <path d="M250 40 V460 M470 40 V460"/>
+  </g>
+
+  <!-- Left: text block -->
+  <g>
+    <text x="72" y="190" fill="#1d4ed8" font-size="74" font-weight="800" letter-spacing="-1">Accessible</text>
+    <text x="72" y="270" fill="#1d4ed8" font-size="74" font-weight="800" letter-spacing="-1">Places</text>
+    <text x="74" y="332" fill="#475569" font-size="30" font-weight="500">Barrierefreie Orte in</text>
+    <text x="74" y="372" fill="#475569" font-size="30" font-weight="500">deiner Nähe finden.</text>
+
+    <!-- highlight checkmarks -->
+    <g transform="translate(74,418)" font-size="22" font-weight="600" fill="#334155">
+      <g transform="translate(0,0)">
+        <circle cx="11" cy="-1" r="13" fill="#22c55e"/>
+        <path d="M5 -1 l4 5 l8 -10" fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="32" y="7">Verlässlich</text>
+      </g>
+      <g transform="translate(190,0)">
+        <circle cx="11" cy="-1" r="13" fill="#22c55e"/>
+        <path d="M5 -1 l4 5 l8 -10" fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="32" y="7">Kostenlos</text>
+      </g>
+      <g transform="translate(370,0)">
+        <circle cx="11" cy="-1" r="13" fill="#22c55e"/>
+        <path d="M5 -1 l4 5 l8 -10" fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="32" y="7">Ohne Anmeldung</text>
+      </g>
+    </g>
+  </g>
+</svg>
