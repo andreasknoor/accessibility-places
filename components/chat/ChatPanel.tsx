@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, Fragment } from "react"
 import { Send, Loader2, LocateFixed, Search, X, Coffee, UtensilsCrossed, Beer, BookOpen, Hotel, Landmark, Film, Library, GalleryHorizontal, Star, IceCream, MapPin } from "lucide-react"
-import { track } from "@vercel/analytics"
+import { track } from "@/lib/analytics"
 import { Button } from "@/components/ui/button"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { useIsMobile } from "@/hooks/useIsMobile"

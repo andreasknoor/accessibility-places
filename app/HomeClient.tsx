@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react"
-import { track } from "@vercel/analytics"
+import { track } from "@/lib/analytics"
 import * as Sentry from "@sentry/nextjs"
 import { SlidersHorizontal, ChevronRight, ChevronLeft } from "lucide-react"
 import dynamic from "next/dynamic"
