@@ -24,7 +24,8 @@ const serwist = new Serwist({
       matcher: ({ url: { pathname }, sameOrigin }) =>
         sameOrigin && (
           pathname === "/api/nearby-parking" ||
-          pathname === "/api/search"
+          pathname === "/api/search" ||
+          pathname === "/api/raw"
         ),
       handler: new NetworkOnly(),
     },

@@ -284,6 +284,8 @@ export interface Translations {
     externalLinks:  string
     showRawData:    string
     hideRawData:    string
+    rawDataLoading:     string
+    rawDataUnavailable: string
   }
   impressum: {
     title:      string

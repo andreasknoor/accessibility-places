@@ -126,6 +126,39 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
   const t  = useTranslations()
   const ti = t.info
   const [showRaw, setShowRaw] = useState(false)
+  // Lazily-fetched full raw data, keyed by source record index. In production
+  // the search payload ships no `raw` (only a whitelisted `metadata` slice), so
+  // the raw block fetches the complete upstream object on demand from /api/raw.
+  const [lazyRaw, setLazyRaw] = useState<Record<number, { state: "loading" | "error" | "done"; data?: unknown }>>({})
+
+  useEffect(() => {
+    if (!showRaw) return
+    const controller = new AbortController()
+    place.sourceRecords.forEach((rec, i) => {
+      // Skip records that already carry inline raw (dev) or are already loading/loaded.
+      if (rec.raw != null || lazyRaw[i]) return
+      setLazyRaw((m) => ({ ...m, [i]: { state: "loading" } }))
+      const qs = new URLSearchParams({
+        source: rec.sourceId,
+        id:     rec.externalId,
+        lat:    String(place.coordinates.lat),
+        lon:    String(place.coordinates.lon),
+        cat:    place.category,
+      })
+      fetch(`/api/raw?${qs}`, { signal: controller.signal })
+        .then(async (res) => {
+          if (!res.ok) throw new Error(String(res.status))
+          const json = await res.json()
+          setLazyRaw((m) => ({ ...m, [i]: { state: "done", data: json.raw } }))
+        })
+        .catch((err) => {
+          if (err?.name === "AbortError") return
+          setLazyRaw((m) => ({ ...m, [i]: { state: "error" } }))
+        })
+    })
+    return () => controller.abort()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showRaw, place])
 
   const osm    = getMeta(place, "osm")
   const google = getMeta(place, "google_places")
@@ -603,9 +636,15 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
                     <pre className="font-mono text-[10px] leading-relaxed whitespace-pre-wrap break-all p-2 max-h-48 overflow-y-auto text-muted-foreground">
                       {rec.raw != null
                         ? JSON.stringify(rec.raw, null, 2)
-                        : rec.metadata != null
-                          ? JSON.stringify(rec.metadata, null, 2)
-                          : "(no data)"}
+                        : lazyRaw[i]?.state === "done" && lazyRaw[i]?.data != null
+                          ? JSON.stringify(lazyRaw[i].data, null, 2)
+                          : lazyRaw[i]?.state === "loading"
+                            ? ti.rawDataLoading
+                            : lazyRaw[i]?.state === "error"
+                              ? ti.rawDataUnavailable
+                              : rec.metadata != null && Object.keys(rec.metadata).length > 0
+                                ? JSON.stringify(rec.metadata, null, 2)
+                                : ti.rawDataUnavailable}
                     </pre>
                   </div>
                 ))}

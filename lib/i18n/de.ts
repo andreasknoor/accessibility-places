@@ -310,6 +310,8 @@ const de: Translations = {
     externalLinks:  "Externe Links",
     showRawData:    "Rohdaten anzeigen",
     hideRawData:    "Rohdaten ausblenden",
+    rawDataLoading:     "Rohdaten werden geladen …",
+    rawDataUnavailable: "(Rohdaten nicht verfügbar)",
   },
   faq: {
     title:         "Häufige Fragen",

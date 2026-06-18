@@ -20,6 +20,11 @@ Sentry.init({
     "ResizeObserver loop completed with undelivered notifications.",
     "Non-Error promise rejection captured",
     "AbortError",               // aborted in-flight search/fetch requests
+    // Firefox for iOS injects a `__firefox__` content script (reader-mode
+    // detection) into every page; on article-like pages such as /faq it throws
+    // "Can't find variable: __firefox__" / "window.__firefox__.reader" from the
+    // browser's own script, not ours. Pure third-party noise — drop it.
+    /__firefox__/,
   ],
 })
 

@@ -310,6 +310,8 @@ const en: Translations = {
     externalLinks:  "External links",
     showRawData:    "Show raw data",
     hideRawData:    "Hide raw data",
+    rawDataLoading:     "Loading raw data …",
+    rawDataUnavailable: "(raw data unavailable)",
   },
   faq: {
     title:         "Frequently Asked Questions",

@@ -31,7 +31,7 @@ const CATEGORY_HINTS: Record<Category, string[]> = {
   zoo:         ["zoo", "tierpark", "tierpark", "aquarium", "zoopark", "wildpark", "vogelpark", "wildgehege"],
 }
 
-const ALL_CATEGORIES: Category[] = [
+export const ALL_CATEGORIES: Category[] = [
   "cafe","restaurant","bar","pub","biergarten","fast_food",
   "hotel","hostel","apartment",
   "museum","theater","cinema","library","gallery","attraction","ice_cream",
