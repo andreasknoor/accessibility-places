@@ -84,7 +84,7 @@ export default function UeberUnsPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">Nicht suchen, sondern finden: Drei Wege ans Ziel</h2>
+            <h2 className="text-lg font-bold mb-3">Nicht suchen, sondern finden: Zwei Wege ans Ziel</h2>
             <p className="text-muted-foreground mb-4">
               Das oberste Ziel von Accessible Places ist es, je nach Situation den kürzesten Weg zur gewünschten Information bereitzustellen. Dafür bietet das Tool zwei intuitive Suchmodi:
             </p>

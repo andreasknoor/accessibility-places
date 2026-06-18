@@ -84,7 +84,7 @@ export default function AboutPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">Three Ways to Find What You're Looking For</h2>
+            <h2 className="text-lg font-bold mb-3">Two Ways to Find What You're Looking For</h2>
             <p className="text-muted-foreground mb-4">
               The primary goal of Accessible Places is to provide the shortest path to the right information, whatever the situation. The app offers two intuitive search modes:
             </p>
