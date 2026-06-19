@@ -107,6 +107,7 @@ export interface Translations {
     vegan:             string
     showOnMap:         string
     mapHint:           string
+    placeSearchBanner: (name: string) => string
     scoreCalculation:     string
     scorePrefix:          string
     scoreDataQualityNote: string

@@ -116,6 +116,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [lastQuery,     setLastQuery]    = useState<string | undefined>()
   const [lastCoords,    setLastCoords]   = useState<{ lat: number; lon: number } | undefined>()
   const [lastNameHint,  setLastNameHint] = useState<string | undefined>()
+  // Venue name when the last search was a specific-venue lookup (placeSearch).
+  // Drives the "Results for <name>" banner; undefined for area searches.
+  const [placeSearchName, setPlaceSearchName] = useState<string | undefined>()
   // Category-only query mirroring ChatPanel's chip selection. Lets "search here"
   // run before any search exists (text mode, no location yet), respecting the chip.
   const [categoryQuery, setCategoryQuery] = useState<string>("")
@@ -298,6 +301,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setLastQuery(query)
     setLastCoords(coords)
     setLastNameHint(nameHint)
+    setPlaceSearchName(placeSearch ? nameHint : undefined)
     setIsLoading(true)
     setError(undefined)
     setPlaces([])
@@ -478,6 +482,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setScrollToId(undefined)
     setLastQuery(undefined)
     setLastNameHint(undefined)
+    setPlaceSearchName(undefined)
     setFilterDebug(undefined)
     setError(undefined)
     setSourceStates({})
@@ -511,6 +516,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setLastQuery(undefined)
     setLastCoords(undefined)
     setLastNameHint(undefined)
+    setPlaceSearchName(undefined)
     setSearchCenter(undefined)
     setFilterDebug(undefined)
     setError(undefined)
@@ -974,6 +980,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onSelect={(p) => setSelectedId(p.id)}
         isLoading={isLoading}
         intlNotice={intlNotice}
+        placeSearchName={placeSearchName}
         filters={filters}
         sources={sources}
         radiusKm={radiusKm}
@@ -1161,6 +1168,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             filterDebug={filterDebug}
             intlNotice={intlNotice}
             searchCenter={chatMode === "nearby" ? searchCenter : undefined}
+            placeSearchName={placeSearchName}
             parkingSpotCount={parkingSpots.length > 0 ? parkingSpots.length : undefined}
             sortBy={sortBy}
             onSortChange={(s) => { setSortBy(s); updateSettings({ sortOrder: s }) }}

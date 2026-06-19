@@ -410,14 +410,32 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     const label = chipLabel(idx)
     if (mode === "nearby" && typeof nearbyPhase === "object") {
       onSearch(nearbyQuery(label, nearbyPhase.district), { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
-    } else if (mode === "text" && !venuePicked && activeSearchCoords) {
+      return
+    }
+    // Picking a category while a specific venue is active exits the venue lookup
+    // and runs a category search around the venue's coordinates ("cafés near the
+    // Philharmonie"). We deliberately do NOT call clearPickState(): leaving
+    // programmaticLocRef === location keeps the autocomplete dropdown suppressed
+    // until the user actually edits the field. If we have no coordinates (e.g. the
+    // venue search 404'd), fall through to the location-based branches below.
+    if (mode === "text" && venuePicked) {
+      pickedVenueRef.current = null
+      setVenuePicked(false)
+      setSuggestions([])
+      setShowSuggestions(false)
+      if (activeSearchCoords) {
+        onSearch(categoryQuery(label), activeSearchCoords)
+        return
+      }
+    }
+    if (mode === "text" && !pickedVenueRef.current && activeSearchCoords) {
       // Current results came from a coordinate-based search ("search here" /
       // nearby) — refine THIS area with the new category instead of jumping to
       // the location textbox, which may show an unrelated, stale place.
       setSuggestions([])
       setShowSuggestions(false)
       onSearch(categoryQuery(label), activeSearchCoords)
-    } else if (mode === "text" && !venuePicked && locationPart(location)) {
+    } else if (mode === "text" && !pickedVenueRef.current && locationPart(location)) {
       setSuggestions([])
       setShowSuggestions(false)
       const quoted = extractQuotedName(location)
@@ -657,6 +675,12 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                 aria-hidden
               />
             )}
+            {venuePicked && (
+              <MapPin
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-primary pointer-events-none"
+                aria-hidden
+              />
+            )}
             <input
               ref={inputRef}
               value={location}
@@ -678,6 +702,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                 "focus-visible:ring-ring disabled:opacity-50",
                 isMobile ? "border-primary" : "border-input",
                 location ? "pr-7" : "",
+                venuePicked ? "pl-8" : "",
               )}
             />
             {location && (
@@ -881,7 +906,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           <button
             key="all"
             onClick={() => selectChip(null)}
-            disabled={isLoading || venuePicked}
+            disabled={isLoading}
             className={cn(
               "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
               selectedIdx === null
@@ -895,7 +920,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             <button
               key={chip.de}
               onClick={() => selectChip(idx)}
-              disabled={isLoading || venuePicked}
+              disabled={isLoading}
               className={cn(
                 "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
                 idx === selectedIdx

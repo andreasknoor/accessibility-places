@@ -39,9 +39,13 @@ interface Props {
   // Shown as a thin banner above the list when the active search centre is
   // outside DACH in international mode (data coverage caveat). Undefined = hidden.
   intlNotice?:          string
+  // Set to the venue name when the current results came from a specific-venue
+  // lookup (place search). Shows a "Results for <name>" banner so the user knows
+  // the category chips did not scope this search. Undefined for area searches.
+  placeSearchName?:     string
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToText, isFirstVisit, onDismissWelcome, onStartNearby, intlNotice }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToText, isFirstVisit, onDismissWelcome, onStartNearby, intlNotice, placeSearchName }: Props) {
   const t = useTranslations()
   const [mapHintSeen, setMapHintSeen] = useState(() =>
     typeof window !== "undefined" && !!localStorage.getItem("ap_map_hint_seen")
@@ -200,6 +204,14 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
           >
             {t.results.sortByDistance}
           </button>
+        </div>
+      )}
+
+      {/* Place-search context banner — the chips did not scope this search */}
+      {placeSearchName && places.length > 0 && !isLoading && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 border-b border-border text-xs text-foreground shrink-0">
+          <MapPin className="w-3 h-3 shrink-0 text-primary" />
+          <span className="flex-1">{t.results.placeSearchBanner(placeSearchName)}</span>
         </div>
       )}
 

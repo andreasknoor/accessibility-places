@@ -333,18 +333,34 @@ describe("ChatPanel autocomplete — selection", () => {
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
   })
 
-  it("greys out category chips after a venue pick and re-enables them on edit", async () => {
+  it("keeps category chips clickable after a venue pick; a chip click exits venue mode and runs a category search around the venue", async () => {
+    const onSearch = vi.fn()
+    const onPlaceSearch = vi.fn()
     mockFetch([venue("Bierpumpe", "Bierpumpe, Issum (DE)")])
-    renderPanel()
+    // activeSearchCoords mirrors what the parent sets to the venue coords after a place search.
+    render(
+      <ChatPanel
+        onSearch={onSearch}
+        onPlaceSearch={onPlaceSearch}
+        isLoading={false}
+        initialMode="text"
+        activeSearchCoords={{ lat: 51.54, lon: 6.42 }}
+      />,
+    )
     fireEvent.change(getInput(), { target: { value: "Bierpumpe" } })
     await act(() => vi.runAllTimersAsync())
     fireEvent.mouseDown(screen.getByRole("option", { name: /Bierpumpe/ }))
+    expect(onPlaceSearch).toHaveBeenCalledWith("Bierpumpe", { lat: 51.54, lon: 6.42 })
 
-    const chip = screen.getAllByRole("button").find((b) => b.textContent?.includes("Restaurants"))
-    expect(chip).toBeDisabled()
-
-    fireEvent.change(getInput(), { target: { value: "Bierpump" } })
+    const chip = screen.getAllByRole("button").find((b) => b.textContent?.includes("Restaurants"))!
+    // Chips stay enabled — they are the escape hatch out of the venue lookup.
     expect(chip).not.toBeDisabled()
+
+    fireEvent.click(chip)
+    // Clicking the chip runs a coordinate-based category search at the venue location…
+    expect(onSearch).toHaveBeenCalledWith(expect.stringMatching(/Restaurant/), { lat: 51.54, lon: 6.42 })
+    // …and does NOT re-open the autocomplete dropdown.
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
   })
 })
 

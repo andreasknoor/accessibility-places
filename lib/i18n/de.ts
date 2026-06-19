@@ -133,6 +133,7 @@ const de: Translations = {
     vegan:      "Vegan",
     showOnMap:  "Zur Karte",
     mapHint:    "Tipp: Eintrag antippen → Detailinfos öffnen",
+    placeSearchBanner: (name: string) => `Treffer für „${name}“`,
     scoreCalculation:      "Score-Berechnung",
     scorePrefix:           "Daten: ",
     scoreDataQualityNote:  "Wie verlässlich sind die zugrunde liegenden Quelldaten?",

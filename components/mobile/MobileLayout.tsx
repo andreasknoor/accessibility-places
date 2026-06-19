@@ -83,6 +83,7 @@ interface Props {
   onCategoryQueryChange?: (query: string) => void
   activeSearchCoords?:  { lat: number; lon: number }
   intlNotice?:          string
+  placeSearchName?:     string
 }
 
 export default function MobileLayout({
@@ -94,7 +95,7 @@ export default function MobileLayout({
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
   onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, onStartNearby, hasGpsCoords, locateTrigger, onSwitchToText,
   chatMode, onChatModeChange, biasCoords, onSearchHere, onLocate, locatePanTrigger, gpsCoords, onCategoryQueryChange, activeSearchCoords,
-  focusLayers, onToggleFocusLayer, focusLoadingLayer, focusHints, intlNotice,
+  focusLayers, onToggleFocusLayer, focusLoadingLayer, focusHints, intlNotice, placeSearchName,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -281,6 +282,7 @@ export default function MobileLayout({
             onSelect={(p) => { onSelect(p); setPanTrigger((n) => n + 1); setActiveTab("map") }}
             isLoading={isLoading}
             intlNotice={intlNotice}
+            placeSearchName={placeSearchName}
             scrollToId={scrollToId ?? externalScrollToId}
             onRerun={handleRerun}
             hasSourceError={hasSourceError}

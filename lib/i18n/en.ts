@@ -133,6 +133,7 @@ const en: Translations = {
     vegan:      "Vegan",
     showOnMap:  "To map",
     mapHint:    "Tip: tap an entry to open details",
+    placeSearchBanner: (name: string) => `Results for “${name}”`,
     scoreCalculation:      "Score calculation",
     scorePrefix:           "Data: ",
     scoreDataQualityNote:  "How reliable is the underlying source data?",
