@@ -212,6 +212,7 @@ const en: Translations = {
     },
   },
   map: {
+    regionLabel:   "Map of search results. All results are also available in the results list.",
     fullscreen:    "Fullscreen",
     exitFullscreen:"Exit fullscreen",
     source:        "Source",

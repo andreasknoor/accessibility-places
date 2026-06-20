@@ -212,6 +212,7 @@ const de: Translations = {
     },
   },
   map: {
+    regionLabel:   "Karte der Suchergebnisse. Alle Treffer sind auch in der Ergebnisliste verfügbar.",
     fullscreen:    "Vollbild",
     exitFullscreen:"Vollbild beenden",
     source:        "Quelle",

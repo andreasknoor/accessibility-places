@@ -146,13 +146,18 @@ unsere Phase-1/2-Semantik wirkt nativ automatisch). Native-spezifisch:
     Inhaltsverlust — braucht echtes Browser-Rendering.
 - **Verifikation:** Browser-Tool (axe/Lighthouse im echten Rendering) + Augenschein.
 
-### Phase 4 — Karte (Sonderfall, hohes Risiko)
-- Leaflet-Karten sind notorisch schwer barrierefrei. Optionen prüfen:
-  textbasierte Alternative zur Kartenansicht (Ergebnisliste deckt das großteils
-  ab), Tastatur-Navigation der Marker, ARIA für Popups.
-- **Realistische Erwartung:** vollständige AA-Karte ist evtl. nicht erreichbar;
-  dann dokumentierte, gleichwertige Alternative (Liste) als Konformitätsweg.
-- **Verifikation:** Mensch + AT.
+### Phase 4 — Karte — ✅ umgesetzt (gleichwertige-Alternative-Ansatz) (Branch `feat/a11y-wcag`)
+- ✅ **Benannte Region (1.1.1/1.3.1):** Karten-Container `role="region"` +
+  `aria-label` (i18n `map.regionLabel`), das ausdrücklich auf die Ergebnisliste
+  als gleichwertige Text-Alternative verweist.
+- ✅ **Controls benannt:** Vollbild (`aria-label` ergänzt), Standort, Legende,
+  Schließen mit `aria-label`; „Hier suchen" + Parking/WC-Toggles haben sichtbare
+  Text-Labels (`aria-pressed` an den Toggles), Emojis `aria-hidden`.
+- ⚠️ **Marker nicht einzeln tastaturfokussierbar** (Leaflet-Grenze). Eine
+  vollständige AA-Karte ist damit nicht erreichbar — der **konforme Weg ist die
+  gleichwertige Alternative**: die Ergebnisliste enthält alle Treffer voll
+  tastatur-/AT-bedienbar (Phase 1/2). Bewusste, dokumentierte Entscheidung.
+- **Verifikation:** Mensch + AT (Karte ist supplementär; Liste ist der Pfad).
 
 ### Phase 5 — Inhalt & Prozess
 - **Sinnhaftigkeit (menschlich):** `alt`-Texte, Fehlermeldungen (3.3.3),

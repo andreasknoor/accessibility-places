@@ -186,6 +186,7 @@ export interface Translations {
     }
   }
   map: {
+    regionLabel:            string
     fullscreen:             string
     exitFullscreen:         string
     source:                 string
