@@ -112,6 +112,21 @@ Noch offen in Phase 1 / Übergabe an Phase 2–3:
 - ✅ Tests: Sheet-Fokus + Esc; axe-Suite weiterhin grün.
 - **Verifikation:** weiterhin ausstehend: **manueller Tastatur-/Screenreader-Test** (Mensch).
 
+### Native Apps (Capacitor iOS/Android) — 🟡 teilweise umgesetzt
+A11y wird zu ~95 % vom Web vererbt (VoiceOver/TalkBack lesen den WebView-Inhalt;
+unsere Phase-1/2-Semantik wirkt nativ automatisch). Native-spezifisch:
+- ✅ **Pinch-Zoom (1.4.4):** `userScalable: false`/`maximumScale: 1` entfernt
+  (`app/layout.tsx`). Native WebViews befolgen `user-scalable=no` (anders als
+  mobiles Safari) — hätte sehbehinderte native Nutzer ausgesperrt.
+- ✅ **Standort-Berechtigung EN+DE:** beide `Info.plist`-Usage-Strings zweisprachig
+  (sicher ohne pbxproj-Eingriff; saubere `.lproj`-Lokalisierung wäre Xcode-Aufgabe).
+- ✅ `prefers-reduced-motion` wird vom OS an den WebView durchgereicht (→ Phase 3 CSS deckt nativ ab).
+- ⚠️ **iOS Dynamic Type:** WKWebView skaliert Web-Text nicht mit „Größerer Text";
+  WKWebView-inhärent, Pinch-Zoom ist die Abmilderung. Android-WebView respektiert
+  System-Schriftgröße (kein `textZoom`-Override).
+- ⚠️ **Nicht KI-verifizierbar:** echtes VoiceOver/TalkBack-Verhalten in der
+  gebauten App → Geräte-Test (Mensch).
+
 ### Phase 3 — Mensch/Tool nötig: Wahrnehmung
 - **Kontrast (1.4.3/1.4.11):** Theme-Tokens in `globals.css` rechnerisch prüfen;
   **kritisch & nur visuell prüfbar:** Ampel-Pins (grün/gelb/rot) auf Kartenkacheln,

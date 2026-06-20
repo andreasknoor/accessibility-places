@@ -53,8 +53,11 @@ export const viewport: Viewport = {
   themeColor:   "#2563eb",
   width:        "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Pinch-to-zoom must stay enabled for low-vision users (WCAG 1.4.4 Resize Text).
+  // Mobile Safari ignores user-scalable=no, but the native WKWebView/Android
+  // WebView honour it — disabling zoom locks out exactly the native-app users who
+  // need it. No maximumScale cap; userScalable defaults to true.
+  userScalable: true,
   // cover = web content extends edge-to-edge under the notch/home indicator,
   // making env(safe-area-inset-*) return real values. Required for the native
   // Capacitor WKWebView (fills the whole screen); harmless in the standalone PWA.

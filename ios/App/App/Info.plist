@@ -49,9 +49,9 @@
 	<true/>
 	<!-- Geolocation permission — required by @capacitor/geolocation -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Accessible Places nutzt deinen Standort, um Orte in deiner Nähe zu finden.</string>
+	<string>Accessible Places uses your location to find accessible places near you. — Accessible Places nutzt deinen Standort, um barrierefreie Orte in deiner Nähe zu finden.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Accessible Places nutzt deinen Standort, um Orte in deiner Nähe zu finden.</string>
+	<string>Accessible Places uses your location to find accessible places near you. — Accessible Places nutzt deinen Standort, um barrierefreie Orte in deiner Nähe zu finden.</string>
 	<!-- Home screen quick actions (3D touch / long press) -->
 	<key>UIApplicationShortcutItems</key>
 	<array>
