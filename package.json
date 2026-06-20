@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:a11y": "vitest run __tests__/a11y",
+    "check:contrast": "node scripts/check-contrast.mjs",
     "prepare": "git config core.hooksPath .githooks || true",
     "check:seo": "tsx scripts/check-seo-validity.ts",
     "warm:seo": "tsx scripts/warm-seo.ts"

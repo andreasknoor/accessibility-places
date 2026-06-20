@@ -127,15 +127,24 @@ unsere Phase-1/2-Semantik wirkt nativ automatisch). Native-spezifisch:
 - ⚠️ **Nicht KI-verifizierbar:** echtes VoiceOver/TalkBack-Verhalten in der
   gebauten App → Geräte-Test (Mensch).
 
-### Phase 3 — Mensch/Tool nötig: Wahrnehmung
-- **Kontrast (1.4.3/1.4.11):** Theme-Tokens in `globals.css` rechnerisch prüfen;
-  **kritisch & nur visuell prüfbar:** Ampel-Pins (grün/gelb/rot) auf Kartenkacheln,
-  Confidence-Badges, Text auf Orts-Fotos, Cluster-Icons.
-- **Reflow/Zoom (1.4.10), Textabstände (1.4.12):** bei 320 px CSS-Breite und
-  400 % Zoom kein Inhaltsverlust/horizontales Scrollen.
-- **Bewegung (2.3.3, `prefers-reduced-motion`):** Splash, NavigationProgress,
-  Marker-Animationen, Easter-Eggs (WheelchairRace) respektieren die Einstellung.
-- **Verifikation:** **Mensch** (Kontrast-Tool + Augenschein + Zoom-Test).
+### Phase 3 — Wahrnehmung — 🟡 teilweise umgesetzt (Branch `feat/a11y-wcag`)
+- ✅ **Kontrast (1.4.3) — Token-basiert maschinell:** `scripts/check-contrast.mjs`
+  parst die `:root`-HSL-Tokens, berechnet das WCAG-Verhältnis je fg/bg-Paar und
+  gated CI (`npm run check:contrast`, in `accessibility.yml`). 3 Token-Verstöße
+  behoben: `muted-foreground` 46.9→44.9 % L; `destructive` 60.2→49.5 % L;
+  `destructive-foreground` → reines Weiß. Alle 13 gatenden Paare bestehen.
+  `border` (1.23:1) ist **review-only** (dekorative Divider sind von 1.4.11
+  ausgenommen; nur sole-indicator-Component-Boundaries müssen 3:1 — Design-Review).
+- ✅ **Bewegung (2.3.3, `prefers-reduced-motion`):** zusätzlich zum vorhandenen
+  Handling (loading-bar, wheelchair-race/once) globaler Safety-Net in `globals.css`
+  (`*` animation/transition-duration → 0.01ms), deckt Tailwind-`animate-*`,
+  Marker-Scale, Input-Pulse, Route-Progress, Hover-Transitions ab.
+- ⚠️ **Nur Tool/Mensch (nicht KI):**
+  - Kontrast komponierter Farben: Ampel-Pins auf Kartenkacheln, Cluster-Icons,
+    Text auf Orts-Fotos (Hintergrund variabel/unbekannt → nicht berechenbar).
+  - **Reflow/Zoom (1.4.10), Textabstände (1.4.12):** 320 px / 400 % Zoom ohne
+    Inhaltsverlust — braucht echtes Browser-Rendering.
+- **Verifikation:** Browser-Tool (axe/Lighthouse im echten Rendering) + Augenschein.
 
 ### Phase 4 — Karte (Sonderfall, hohes Risiko)
 - Leaflet-Karten sind notorisch schwer barrierefrei. Optionen prüfen:
