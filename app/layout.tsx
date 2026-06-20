@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import AnalyticsProvider from "@/components/AnalyticsProvider"
+import UmamiScript from "@/components/UmamiScript"
 import CapacitorInit from "@/components/CapacitorInit"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -93,6 +94,7 @@ export default function RootLayout({
           <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
         </LocaleProvider>
         <AnalyticsProvider />
+        <UmamiScript />
         <CapacitorInit />
         <SpeedInsights />
       </body>

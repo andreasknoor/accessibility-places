@@ -22,11 +22,25 @@ function platform(): string {
   return cached
 }
 
+// Umami's global, injected by the Umami script when NEXT_PUBLIC_UMAMI_WEBSITE_ID
+// is set (see components/UmamiScript.tsx). Absent when Umami is not configured or
+// the script has not loaded yet — every call is guarded.
+type UmamiGlobal = { track: (event: string, data?: Record<string, unknown>) => void }
+
 /**
  * Drop-in replacement for @vercel/analytics' `track` that always attaches the
  * `platform` dimension. Import `track` from here instead of from the Vercel
  * package so every custom event is filterable by native platform.
+ *
+ * Dual-emit: while Umami runs in parallel for evaluation, the same event +
+ * platform dimension is also sent to Umami if its script is present. Both sinks
+ * are independent — failure or absence of one never affects the other.
  */
 export function track(event: string, props?: Props): void {
-  vercelTrack(event, { ...props, platform: platform() })
+  const enriched = { ...props, platform: platform() }
+  vercelTrack(event, enriched)
+  try {
+    const umami = (globalThis as unknown as { umami?: UmamiGlobal }).umami
+    umami?.track(event, enriched)
+  } catch { /* Umami not loaded / disabled — Vercel still recorded the event */ }
 }
