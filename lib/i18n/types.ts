@@ -61,6 +61,7 @@ export interface Translations {
     criteria:            string
     radius:              string
     radiusLabel:         (km: number) => string
+    radiusSliderLabel:   string
     acceptUnknown:       string
     displayOptions:      string
     alwaysShowParking:   string

@@ -65,6 +65,7 @@ const de: Translations = {
     criteria: "Barrierefreiheits-Kriterien",
     radius: "Suchradius",
     radiusLabel: (km: number) => `${km} km`,
+    radiusSliderLabel: "Suchradius in Kilometern",
     acceptUnknown: "Orte mit unklaren Informationen anzeigen",
     displayOptions: "Anzeigeoptionen",
     alwaysShowParking: "Rollstuhlparkplätze immer in Karte anzeigen",

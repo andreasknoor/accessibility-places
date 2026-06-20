@@ -65,6 +65,7 @@ const en: Translations = {
     criteria: "Accessibility Criteria",
     radius: "Search Radius",
     radiusLabel: (km: number) => `${km} km`,
+    radiusSliderLabel: "Search radius in kilometres",
     acceptUnknown: "Show places with unclear information",
     displayOptions: "Display options",
     alwaysShowParking: "Always show wheelchair parking on map",

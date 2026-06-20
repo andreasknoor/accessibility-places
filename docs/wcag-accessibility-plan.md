@@ -77,19 +77,23 @@ Bisher umgesetzt:
   (`results.openDetails(name)`); öffnet das Info-Sheet. Karten-Klick bleibt für Maus.
 - ✅ Test: `PlaceCard`-Tastaturtest + axe-Baseline grün.
 
-Noch offen in Phase 1:
-- **Landmarks & Headings (1.3.1, 2.4.1):** `header`/`main`/`nav`/`footer`,
-  „Skip to content"-Link, konsistente h1→hN-Hierarchie pro Seite.
-- **Zugängliche Namen (4.1.2):** alle Icon-Buttons (Karte, Filter, Settings,
-  Schließen, Sortierung, Sprache) mit `aria-label`/`aria-labelledby` prüfen
-  (16× `aria-label` vorhanden — auf Vollständigkeit prüfen).
-- **Bilder (1.1.1):** `alt` für Orts-Fotos (`PlaceDebugSheet`), dekorative SVGs
-  `aria-hidden`, informative SVGs mit Namen (6× `<img>`, 2× `<svg>`-Dateien).
-- **Formulare/Filter (3.3.2, 1.3.1):** Checkbox-/Radio-Labels in `FilterPanel`,
-  `SettingsSheet`, Suchfeld-Label in `ChatPanel`.
-- **Sprache (3.1.1/3.1.2):** `lang` am `<html>` (DE/EN-Layouts; bereits via
-  `LangSetter` — verifizieren), inline-Sprachwechsel markieren.
-- **Verifikation:** KI + axe; danach 1 manueller Screenreader-Durchlauf.
+Weiter umgesetzt:
+- ✅ **Zugängliche Namen (4.1.2):** Radius-Slider (`ui/slider` `thumbAriaLabel`,
+  i18n `filters.radiusSliderLabel`); alle `SettingsSheet`-Controls (Toggle/Select/
+  Slider) via `Row`-`aria-labelledby` (`useId` + `cloneElement`, kein Textduplikat);
+  Settings-Panel als `role="dialog"` + `aria-labelledby`. Icon-Buttons (Schließen/
+  Karte/Filter/Settings/Sprache) bereits mit `aria-label`.
+- ✅ **Bilder (1.1.1):** Orts-Foto `alt={place.name}`; alle Logo-`<img>` dekorativ
+  (`alt=""` `aria-hidden`); Kategorie-Emojis `aria-hidden`. Verifiziert.
+- ✅ **Formulare/Filter:** axe gegen `FilterPanel`/`ResultsList`/`SettingsSheet`
+  (offen) grün → Checkboxen/Controls korrekt benannt.
+- ✅ **Sprache (3.1.1):** `lang` am `<html>` (root „de", `/en` via `LangSetter`).
+- ✅ **axe-Suite erweitert:** ConfidenceBadge, PlaceCard, FilterPanel, ResultsList,
+  SettingsSheet (geöffnet) — alle 0 strukturelle Verstöße.
+
+Noch offen in Phase 1 / Übergabe an Phase 2–3:
+- `ChatPanel`, `PlaceDebugSheet`, `MapView` noch nicht in der axe-Suite.
+- **Verifikation:** weiterhin 1 manueller Screenreader-Durchlauf ausstehend (Mensch).
 
 ### Phase 2 — KI-machbar mit Laufzeit-Risiko: dynamische Zustände
 - **Live-Regionen (4.1.3) — derzeit 0:** Suchstatus/Ergebnisanzahl/Ladezustand/

@@ -155,6 +155,7 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
             step={1}
             value={[radiusKm]}
             onValueChange={([v]) => onRadius(v)}
+            thumbAriaLabel={t.filters.radiusSliderLabel}
             className="w-full"
           />
         </div>
