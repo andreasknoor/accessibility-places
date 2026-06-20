@@ -15,6 +15,7 @@ export interface Translations {
     loading:     string
     dismissHint: string
     copied:      string
+    skipToContent: string
   }
   chat: {
     unifiedPlaceholder: string
@@ -126,6 +127,7 @@ export interface Translations {
     adjustFilters:        string
     adjustFiltersHint:    string
     distanceFromHere:     (m: number) => string
+    openDetails:          (name: string) => string
     showNearbyParking:    string
     copyLink:             string
     linkCopied:           string

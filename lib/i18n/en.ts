@@ -19,6 +19,7 @@ const en: Translations = {
     loading:     "Loading …",
     dismissHint: "Dismiss hint",
     copied:      "Copied to clipboard",
+    skipToContent: "Skip to content",
   },
   chat: {
     unifiedPlaceholder: 'Place or name, e.g. "Restaurants in Berlin" or "Hotel Adlon"',
@@ -152,6 +153,7 @@ const en: Translations = {
     adjustFilters:         "Adjust filters",
     adjustFiltersHint:     "Adjust the filter criteria on the left to see more results.",
     distanceFromHere:      (m: number) => m < 1000 ? `${m} m away` : `${(m / 1000).toFixed(1)} km away`,
+    openDetails:           (name: string) => `Open details for ${name}`,
     showNearbyParking:     "Parking nearby",
     copyLink:              "Share",
     linkCopied:            "Link copied",

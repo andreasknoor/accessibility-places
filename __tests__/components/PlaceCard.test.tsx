@@ -66,6 +66,15 @@ describe("PlaceCard", () => {
     expect(await screen.findByText(/Grunddaten|Basic information/i)).toBeInTheDocument()
   })
 
+  it("exposes the place name as a keyboard-operable button that opens the info sheet (WCAG 2.1.1)", async () => {
+    renderWithProvider(<PlaceCard place={makePlace()} onClick={vi.fn()} />)
+    // The name is a real <button> → focusable + Enter/Space operable natively,
+    // with an accessible name describing the action.
+    const nameButton = screen.getByRole("button", { name: /Details (zu|for).*Café Barrierefrei/i })
+    fireEvent.click(nameButton)
+    expect(await screen.findByText(/Grunddaten|Basic information/i)).toBeInTheDocument()
+  })
+
   it("calls onClick when map button is clicked", () => {
     const onClick = vi.fn()
     renderWithProvider(<PlaceCard place={makePlace()} onClick={onClick} />)

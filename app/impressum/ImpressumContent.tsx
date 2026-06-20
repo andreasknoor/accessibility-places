@@ -43,7 +43,7 @@ export default function ImpressumContent({ lang }: Props) {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-lg mx-auto px-6 pt-safe-10 pb-10">
+      <main className="max-w-lg mx-auto px-6 pt-safe-10 pb-10">
         <Link
           href={lang === "en" ? "/en" : "/"}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
@@ -95,7 +95,7 @@ export default function ImpressumContent({ lang }: Props) {
             {s.disclaimer}
           </p>
         </section>
-      </div>
+      </main>
     </div>
   )
 }

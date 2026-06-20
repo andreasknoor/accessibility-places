@@ -65,7 +65,19 @@ Ziel: Konformität zu **WCAG 2.2 Level AA** (= Basis für EN 301 549 / BFSG).
 - **Verifikation:** ✅ Tooling grün in lokaler Suite; CI-Workflow eingecheckt.
   Offen: erster manueller Screenreader-Baseline-Durchlauf (Mensch).
 
-### Phase 1 — KI-machbar: Semantik & Struktur (hohe Sicherheit)
+### Phase 1 — KI-machbar: Semantik & Struktur — 🟡 IN ARBEIT (Branch `feat/a11y-wcag`)
+Bisher umgesetzt:
+- ✅ **Landmarks + Skip-Link**: `<main id="main-content">` in Desktop- (`HomeClient`)
+  und Mobile-Shell (`MobileLayout`, Welcome- **und** Tab-Content-Region) sowie in
+  allen statischen Seiten (FAQ/Impressum/Datenschutz/Über/EN-Pendants). „Zum Inhalt
+  springen"-Link (i18n `common.skipToContent`) als erstes fokussierbares Element.
+- ✅ **Tastatur (2.1.1, vorgezogen aus Phase 2):** Treffer­karten waren per Tastatur
+  nicht bedienbar (`<div onClick>` ohne Fokus/Enter). Der Ortsname ist jetzt ein
+  echter `<button>` (fokussierbar, Enter/Space nativ) mit zugänglichem Namen
+  (`results.openDetails(name)`); öffnet das Info-Sheet. Karten-Klick bleibt für Maus.
+- ✅ Test: `PlaceCard`-Tastaturtest + axe-Baseline grün.
+
+Noch offen in Phase 1:
 - **Landmarks & Headings (1.3.1, 2.4.1):** `header`/`main`/`nav`/`footer`,
   „Skip to content"-Link, konsistente h1→hN-Hierarchie pro Seite.
 - **Zugängliche Namen (4.1.2):** alle Icon-Buttons (Karte, Filter, Settings,

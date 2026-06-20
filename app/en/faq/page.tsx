@@ -198,7 +198,7 @@ export default function FaqPageEn() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
-      <div className="max-w-3xl mx-auto px-6 pt-safe-10 pb-10">
+      <main className="max-w-3xl mx-auto px-6 pt-safe-10 pb-10">
         <Link
           href="/en"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
@@ -213,7 +213,7 @@ export default function FaqPageEn() {
         </p>
 
         <FaqAccordion categories={FAQ_CATEGORIES_EN} />
-      </div>
+      </main>
     </div>
   )
 }

@@ -19,6 +19,7 @@ const de: Translations = {
     loading:     "Lädt …",
     dismissHint: "Hinweis schließen",
     copied:      "In die Zwischenablage kopiert",
+    skipToContent: "Zum Inhalt springen",
   },
   chat: {
     unifiedPlaceholder: 'Ort oder Name, z. B. „Restaurants in Berlin" oder „Hotel Adlon"',
@@ -152,6 +153,7 @@ const de: Translations = {
     adjustFilters:         "Filter anpassen",
     adjustFiltersHint:     "Passe die Filterkriterien links an, um mehr Ergebnisse zu sehen.",
     distanceFromHere:      (m: number) => m < 1000 ? `${m} m entfernt` : `${(m / 1000).toFixed(1).replace(".", ",")} km entfernt`,
+    openDetails:           (name: string) => `Details zu ${name} öffnen`,
     showNearbyParking:     "Parkplätze in der Nähe",
     copyLink:              "Teilen",
     linkCopied:            "Link kopiert",

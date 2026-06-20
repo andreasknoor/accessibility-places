@@ -82,7 +82,14 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
             </span>
             <div className="min-w-0 flex-1">
               <h3 className="font-semibold text-sm leading-snug line-clamp-2 break-words">
-                {place.name}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setShowDebug(true); track("detail_sheet_open", { category: place.category }) }}
+                  aria-label={t.results.openDetails(place.name)}
+                  className="text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                >
+                  {place.name}
+                </button>
               </h3>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {(t.categories as Record<string, string>)[place.category] ?? place.category}
