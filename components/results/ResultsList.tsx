@@ -98,6 +98,15 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
 
   return (
     <div className="flex flex-col h-full min-h-0">
+      {/* Screen-reader live region: announces search progress and outcome so AT
+          users learn a search ran and how many results it produced (WCAG 4.1.3). */}
+      <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {isLoading
+          ? t.chat.thinking
+          : hasSearched
+            ? (places.length > 0 ? t.results.resultsAnnounce(places.length) : t.chat.noResults)
+            : ""}
+      </div>
       {intlNotice && (
         <div className="px-4 py-2 text-xs text-amber-800 bg-amber-50 border-b border-amber-200 shrink-0">
           {intlNotice}

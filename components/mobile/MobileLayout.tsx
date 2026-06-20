@@ -217,7 +217,7 @@ export default function MobileLayout({
 
       {/* ── Error banner ── */}
       {error && (
-        <div className="px-4 py-2 bg-destructive/10 text-destructive text-sm border-b border-destructive/20 shrink-0">
+        <div role="alert" className="px-4 py-2 bg-destructive/10 text-destructive text-sm border-b border-destructive/20 shrink-0">
           {error}
         </div>
       )}

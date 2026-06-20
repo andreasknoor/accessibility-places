@@ -1114,7 +1114,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
       {/* ── Error banner ── */}
       {error && (
-        <div className={cn("px-4 py-2 bg-destructive/10 text-destructive text-sm border-b border-destructive/20 shrink-0", isFullscreen && "hidden")}>
+        <div role="alert" className={cn("px-4 py-2 bg-destructive/10 text-destructive text-sm border-b border-destructive/20 shrink-0", isFullscreen && "hidden")}>
           {error}
         </div>
       )}

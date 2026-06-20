@@ -95,18 +95,22 @@ Noch offen in Phase 1 / Übergabe an Phase 2–3:
 - `ChatPanel`, `PlaceDebugSheet`, `MapView` noch nicht in der axe-Suite.
 - **Verifikation:** weiterhin 1 manueller Screenreader-Durchlauf ausstehend (Mensch).
 
-### Phase 2 — KI-machbar mit Laufzeit-Risiko: dynamische Zustände
-- **Live-Regionen (4.1.3) — derzeit 0:** Suchstatus/Ergebnisanzahl/Ladezustand/
-  Fehler als `aria-live="polite"` ansagen (NDJSON-Stream, „Keine Treffer",
-  Radius-Erweiterung, „Treffer für <Name>"-Banner).
-- **Fokus-Management (2.4.3, 2.1.2):** Sheets/Popovers (`PlaceDebugSheet`,
-  `SettingsSheet`, `bottom-sheet`, `popover`) — Fokus fangen, bei Schließen
-  zurückgeben, Esc schließt, keine Fokusfalle.
-- **Tastaturbedienung (2.1.1):** Chips, Karten-Marker-Auswahl, Mobile-Tabbar,
-  Autocomplete-Dropdown (Pfeile/Enter/Esc — `aria-activedescendant` vorhanden,
-  prüfen) voll per Tastatur.
-- **Verifikation:** zwingend **manueller Tastatur- + Screenreader-Test** (KI kann
-  Markup setzen, aber das Erlebnis nicht prüfen).
+### Phase 2 — Dynamische Zustände — ✅ UMGESETZT (Branch `feat/a11y-wcag`)
+- ✅ **Live-Regionen (4.1.3):** sr-only `role="status" aria-live="polite"` in
+  `ResultsList` sagt Suchstatus an (lädt → „N Orte gefunden" / „keine Treffer",
+  i18n `results.resultsAnnounce`). Mobile-Ladebalken bereits `role="status"`.
+- ✅ **Fehler (4.1.3):** Fehler-Banner (Desktop + Mobile) als `role="alert"`.
+- ✅ **Fokus-Management (2.4.3, 2.1.2):** gemeinsamer Hook `hooks/useFocusTrap`
+  (Fokus rein beim Öffnen, Tab-Trap, Esc schließt, Fokus zurück zum Auslöser)
+  in `PlaceDebugSheet`, `SettingsSheet` **und** `bottom-sheet`; alle drei jetzt
+  `role="dialog" aria-modal aria-labelledby` + `tabIndex=-1`. Behebt den gemeldeten
+  Bug „Tab bleibt nach Enter in der Trefferliste statt im Detail-Sheet".
+- ✅ **Tastaturbedienung (2.1.1):** Trefferkarten (Phase 1), Chips (native
+  `<button>`), Mobile-Tabbar (`<button>` + `aria-current`), Autocomplete-Dropdown
+  (`role="combobox"`/`option`, Pfeile/Enter/Esc, `aria-activedescendant`) — alle
+  per Tastatur bedienbar. **Karten-Marker → Phase 4.**
+- ✅ Tests: Sheet-Fokus + Esc; axe-Suite weiterhin grün.
+- **Verifikation:** weiterhin ausstehend: **manueller Tastatur-/Screenreader-Test** (Mensch).
 
 ### Phase 3 — Mensch/Tool nötig: Wahrnehmung
 - **Kontrast (1.4.3/1.4.11):** Theme-Tokens in `globals.css` rechnerisch prüfen;

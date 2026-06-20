@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useRef } from "react"
+import { useFocusTrap } from "@/hooks/useFocusTrap"
 import { createPortal } from "react-dom"
 import { Settings, Check, Search, Map, SlidersHorizontal } from "lucide-react"
 import { useTranslations, useLocale } from "@/lib/i18n"
@@ -117,15 +118,19 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
   const { locale } = useLocale()
   const [resetDone, setResetDone] = useState(false)
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Focus in on open, trap Tab, Escape to close, restore focus on close.
+  const panelRef = useFocusTrap<HTMLDivElement>(onClose)
 
   return (
     <div onClick={(e) => e.stopPropagation()}>
       <div className="fixed inset-0 z-[1050] bg-black/25" onClick={onClose} />
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="settings-panel-title"
-        className="fixed right-0 top-0 z-[1051] h-full w-[380px] max-w-full bg-white shadow-2xl border-l border-border flex flex-col safe-area-inset-top safe-area-inset-bottom"
+        tabIndex={-1}
+        className="fixed right-0 top-0 z-[1051] h-full w-[380px] max-w-full bg-white shadow-2xl border-l border-border flex flex-col safe-area-inset-top safe-area-inset-bottom focus:outline-none"
       >
 
         {/* Header */}
