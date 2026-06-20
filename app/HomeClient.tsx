@@ -95,6 +95,13 @@ interface Props {
 export default function HomeClient({ initialCity, initialCategory, initialSelectLat, initialSelectLon, initialSelectName }: Props) {
   const t        = useTranslations()
   const { locale } = useLocale()
+  // Arriving via an app-generated place deep-link (…?selectLat=…&selectLon=…, no
+  // city). Like an SEO city link, this must start in "text" mode and must NOT fall
+  // back to the user's default search mode: a "nearby" default would otherwise show
+  // the wrong mode on desktop and, on mobile, auto-locate and run a GPS search that
+  // races/overrides the deep-link place lookup (the linked place then only appears
+  // when the device happens to be near it).
+  const isPlaceDeepLink = !initialCity && initialSelectLat != null && initialSelectLon != null
   const isMobile = useIsMobile()
 
   const [settings, updateSettings] = useSettings()
@@ -127,7 +134,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // applied post-hydration in the useLayoutEffect below to avoid a server/client
   // mismatch (React #418). initialCity is a prop → deterministic, safe here.
   const [chatMode,      setChatMode]     = useState<"text" | "nearby">(
-    initialCity ? "text" : (DEFAULT_APP_SETTINGS.defaultSearchMode ?? "nearby"),
+    initialCity || isPlaceDeepLink ? "text" : (DEFAULT_APP_SETTINGS.defaultSearchMode ?? "nearby"),
   )
   const [filterCollapsed, setFilterCollapsed] = useState(true)
   const [sortBy,        setSortBy]       = useState<"confidence" | "distance">(() => loadSettings().sortOrder)
@@ -210,8 +217,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     try {
       setIsFirstVisit(!localStorage.getItem("ap_visited") && !localStorage.getItem("ap_welcome_dismissed"))
     } catch { /* localStorage unavailable */ }
-    if (!initialCity) setChatMode(loadSettings().defaultSearchMode ?? "nearby")
-  }, [initialCity])
+    if (!initialCity && !isPlaceDeepLink) setChatMode(loadSettings().defaultSearchMode ?? "nearby")
+  }, [initialCity, isPlaceDeepLink])
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // Re-apply the default search mode once the async settings resolve. The
@@ -224,12 +231,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // non-null preference acts (null = no preference / not yet loaded); guarded by
   // modeResolvedRef so it never overrides a manual mode switch.
   useEffect(() => {
-    if (modeResolvedRef.current || initialCity) return
+    if (modeResolvedRef.current || initialCity || isPlaceDeepLink) return
     const pref = settings.defaultSearchMode
     if (pref == null) return
     setChatMode(pref)
     modeResolvedRef.current = true
-  }, [settings.defaultSearchMode, initialCity])
+  }, [settings.defaultSearchMode, initialCity, isPlaceDeepLink])
 
   // Persist filter/source/radius preferences across sessions.
   // alwaysShowParking + alwaysShowToilets are intentionally excluded — persisted via AppSettings.
