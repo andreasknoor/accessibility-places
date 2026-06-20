@@ -113,6 +113,15 @@ export default function DatenschutzPage() {
                 personenbezogenen Daten erhoben. Betreiber: Vercel Inc.
               </li>
               <li>
+                <strong className="text-foreground">Umami</strong> —
+                Anonyme, cookielose Nutzungsstatistik. Es werden keine Cookies
+                gesetzt und keine personenbezogenen Daten gespeichert; zur
+                Wiedererkennung wird ein täglich wechselnder Hash verwendet, eine
+                IP-Adresse wird nicht dauerhaft gespeichert. Betreiber: Umami
+                Software, Inc.{" "}
+                <a href="https://umami.is/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Datenschutzerklärung</a>
+              </li>
+              <li>
                 <strong className="text-foreground">Tally</strong> —
                 Feedback-Formular. Betreiber: Tally BV, Belgien.{" "}
                 <a href="https://tally.so/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Datenschutzerklärung</a>

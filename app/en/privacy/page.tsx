@@ -113,6 +113,14 @@ export default function PrivacyPage() {
                 collected. Operator: Vercel Inc.
               </li>
               <li>
+                <strong className="text-foreground">Umami</strong> —
+                anonymous, cookieless usage statistics. No cookies are set and no
+                personal data is stored; visitors are recognised via a hash that
+                rotates daily, and IP addresses are not stored permanently.
+                Operator: Umami Software, Inc.{" "}
+                <a href="https://umami.is/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Privacy policy</a>
+              </li>
+              <li>
                 <strong className="text-foreground">Tally</strong> —
                 feedback form. Operator: Tally BV, Belgium.{" "}
                 <a href="https://tally.so/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Privacy policy</a>
