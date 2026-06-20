@@ -177,6 +177,52 @@ const FAQ_CATEGORIES_EN: FaqCategory[] = [
       },
     ],
   },
+  {
+    id: "accessibility-of-app",
+    icon: "♿",
+    label: "Accessibility of this app",
+    items: [
+      {
+        id: "a11y-statement",
+        q: "How accessible is the app itself?",
+        a: "Accessible Places is built to target WCAG 2.1/2.2 Level AA. The interface is keyboard-operable, works with screen readers (VoiceOver, TalkBack), labels controls with accessible names, announces search results, and respects the \"Reduce Motion\" system setting. Interface colour contrast meets the WCAG AA thresholds. A full formal conformance audit by an external body is still outstanding — this statement is based on self-assessment and automated testing.",
+      },
+      {
+        id: "a11y-limitations",
+        q: "What are the known limitations?",
+        a: (
+          <>
+            <p>Despite careful work, some areas are not yet fully accessible:</p>
+            <ul className="list-disc pl-5 mt-2 flex flex-col gap-1.5">
+              <li>
+                <strong className="font-semibold text-foreground">Map view:</strong> Individual markers on the
+                map cannot be reached by keyboard (a limitation of the map library). As an equivalent
+                alternative, the <strong className="font-semibold text-foreground">results list</strong> contains
+                every result and is fully operable by keyboard and screen reader.
+              </li>
+              <li>
+                <strong className="font-semibold text-foreground">Contrast on the map:</strong> Coloured markers
+                and text over photos sit on varying backgrounds, where contrast may in some cases fall below the
+                target values.
+              </li>
+              <li>
+                <strong className="font-semibold text-foreground">Text size in the iOS app:</strong> The native
+                iOS app does not automatically follow the &ldquo;Larger Text&rdquo; setting; pinch-to-zoom is
+                available instead.
+              </li>
+            </ul>
+          </>
+        ),
+        schemaText:
+          "Known limitations: map markers cannot be reached by keyboard — the results list is the equivalent, fully operable alternative. Contrast of markers/text over maps and photos may in some cases fall below target values. The native iOS app does not automatically follow the \"Larger Text\" setting; pinch-to-zoom is available.",
+      },
+      {
+        id: "a11y-feedback",
+        q: "How do I report an accessibility problem?",
+        a: "If you come across a barrier, we'd be grateful for a note via the \"Feedback\" link at the bottom of the page — no account or registration needed. We aim to fix reported issues promptly.",
+      },
+    ],
+  },
 ]
 
 const allItems = FAQ_CATEGORIES_EN.flatMap((c) => c.items)

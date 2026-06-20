@@ -159,13 +159,28 @@ unsere Phase-1/2-Semantik wirkt nativ automatisch). Native-spezifisch:
   tastatur-/AT-bedienbar (Phase 1/2). Bewusste, dokumentierte Entscheidung.
 - **Verifikation:** Mensch + AT (Karte ist supplementär; Liste ist der Pfad).
 
-### Phase 5 — Inhalt & Prozess
-- **Sinnhaftigkeit (menschlich):** `alt`-Texte, Fehlermeldungen (3.3.3),
-  Verständlichkeit der Texte review-en.
-- **Barrierefreiheitserklärung** (BFSG-Pflicht für betroffene Anbieter)
-  erstellen — inkl. ehrlicher Liste bekannter Einschränkungen (z. B. Karte).
-- **Regression:** axe in CI als Dauerschutz; a11y-Checkliste in PR-Template.
+### Phase 5 — Inhalt & Prozess — ✅ umgesetzt (Branch `feat/a11y-wcag`)
+- ✅ **Barrierefreiheitserklärung:** als eigener FAQ-Abschnitt „Barrierefreiheit
+  dieser App" / „Accessibility of this app" (DE `app/faq`, EN `app/en/faq`) —
+  Konformitätsstatus (AA-Ziel, Eigenbewertung), ehrliche Liste bekannter
+  Einschränkungen (Karte/Marker, komponierter Kontrast, iOS Dynamic Type) und
+  Feedback-Weg. Platzierung bewusst in der FAQ gewählt (kein neuer Footer-Link).
+- ✅ **Regression/Prozess:** axe + Kontrast in CI (`accessibility.yml`);
+  a11y-Checkliste im neuen `.github/pull_request_template.md`.
+- 🟡 **Sinnhaftigkeit (menschlich):** `alt`-Texte/Fehlermeldungen sind gesetzt und
+  i18n-isiert; finale inhaltliche Bewertung (3.3.3, Verständlichkeit) bleibt
+  menschliche Aufgabe.
 - **Verifikation:** Mensch + CI.
+
+---
+
+## Gesamtstatus (Stand v8.40, Branch `feat/a11y-wcag`)
+KI-machbarer Teil von Phase 0–5 + Native umgesetzt und in CI abgesichert
+(axe-Strukturtests, Token-Kontrast-Gate). **Noch offen — nur durch Menschen
+leistbar:** echter Tastatur-/Screenreader-Durchlauf (VoiceOver/TalkBack),
+Reflow/Zoom bei 320 px/400 %, visuelle Kontrastprüfung komponierter Flächen
+(Karten-Pins, Text auf Fotos), inhaltliche Text-Verständlichkeit, sowie eine
+externe formale AA-Konformitätsprüfung für eine rechtsverbindliche Aussage.
 
 ---
 

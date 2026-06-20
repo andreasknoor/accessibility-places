@@ -202,6 +202,52 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
       },
     ],
   },
+  {
+    id: "barrierefreiheit-app",
+    icon: "♿",
+    label: "Barrierefreiheit dieser App",
+    items: [
+      {
+        id: "a11y-statement",
+        q: "Wie barrierefrei ist die App selbst?",
+        a: "Accessible Places ist mit dem Ziel WCAG 2.1/2.2 Stufe AA entwickelt. Die Oberfläche ist per Tastatur bedienbar, mit Screenreadern (VoiceOver, TalkBack) nutzbar, kennzeichnet Bedienelemente mit zugänglichen Namen, sagt Suchergebnisse aktiv an und respektiert die Systemeinstellung „Bewegung reduzieren\". Farbkontraste der Bedienoberfläche erfüllen die WCAG-AA-Schwellen. Eine vollständige formale Konformitätsprüfung durch eine externe Stelle steht noch aus — die Erklärung beruht auf Eigenbewertung und automatisierten Tests.",
+      },
+      {
+        id: "a11y-limitations",
+        q: "Welche bekannten Einschränkungen gibt es?",
+        a: (
+          <>
+            <p>Trotz sorgfältiger Umsetzung sind einige Bereiche noch nicht vollständig barrierefrei:</p>
+            <ul className="list-disc pl-5 mt-2 flex flex-col gap-1.5">
+              <li>
+                <strong className="font-semibold text-foreground">Kartenansicht:</strong> Die einzelnen
+                Markierungen auf der Karte lassen sich nicht per Tastatur ansteuern (technische Grenze der
+                Kartenbibliothek). Als gleichwertige Alternative enthält die <strong className="font-semibold text-foreground">Ergebnisliste</strong> alle
+                Treffer und ist vollständig per Tastatur und Screenreader bedienbar.
+              </li>
+              <li>
+                <strong className="font-semibold text-foreground">Kontrast auf der Karte:</strong> Farbige
+                Markierungen und Text auf Fotos liegen über wechselnden Hintergründen; der Kontrast kann dort
+                im Einzelfall unter den Zielwerten liegen.
+              </li>
+              <li>
+                <strong className="font-semibold text-foreground">Schriftgröße in der iOS-App:</strong> Die
+                native iOS-App folgt der Einstellung &bdquo;Größerer Text&ldquo; nicht automatisch; Zwei-Finger-Zoom
+                ist jedoch möglich.
+              </li>
+            </ul>
+          </>
+        ),
+        schemaText:
+          "Bekannte Einschränkungen: Kartenmarkierungen sind nicht per Tastatur ansteuerbar — die Ergebnisliste ist die gleichwertige, voll bedienbare Alternative. Kontrast von Markierungen/Text über Karten und Fotos kann im Einzelfall unter den Zielwerten liegen. Die native iOS-App folgt der Einstellung „Größerer Text\" nicht automatisch, Zwei-Finger-Zoom ist möglich.",
+      },
+      {
+        id: "a11y-feedback",
+        q: "Wie melde ich ein Barrierefreiheitsproblem?",
+        a: 'Wenn dir eine Barriere auffällt, freuen wir uns über einen Hinweis über den „Feedback\"-Link am unteren Seitenrand — ohne Account oder Registrierung. Wir bemühen uns, gemeldete Probleme zeitnah zu beheben.',
+      },
+    ],
+  },
 ]
 
 const allItems = FAQ_CATEGORIES_DE.flatMap((c) => c.items)
