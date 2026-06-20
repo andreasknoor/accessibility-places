@@ -48,14 +48,22 @@ Ziel: Konformität zu **WCAG 2.2 Level AA** (= Basis für EN 301 549 / BFSG).
 > dann die Bereiche, die menschliche Verifikation brauchen. Jede Phase nennt,
 > WER verifiziert.
 
-### Phase 0 — Grundlagen & Audit-Infrastruktur (Voraussetzung)
-- WCAG-2.2-AA als verbindliches Ziel festlegen; Scope klären (App-Shell `/`+`/en`,
-  SEO-Seiten, statische Seiten, native WebView).
-- Automatisiertes Testing einrichten: `@axe-core/playwright` oder `vitest-axe`
-  für Kernseiten; Lighthouse-a11y in CI als Schwellwert.
-- Manuelles Test-Setup dokumentieren: VoiceOver (macOS/iOS), NVDA (Win),
-  Nur-Tastatur, 400 % Zoom, `prefers-reduced-motion`.
-- **Verifikation:** Tooling läuft in CI; Baseline-Report erstellt.
+### Phase 0 — Grundlagen & Audit-Infrastruktur (Voraussetzung) — ✅ UMGESETZT (Branch `feat/a11y-phase0-audit`)
+- ✅ Ziel = WCAG 2.2 AA. Scope: App-Shell `/`+`/en`, SEO-Seiten, statische Seiten, native WebView.
+- ✅ Automatisiertes Testing: `vitest-axe` in die bestehende vitest/jsdom-Suite
+  integriert. Matcher in `vitest.setup.ts` registriert; Tests unter
+  `__tests__/a11y/`; npm-Script `test:a11y`; CI-Workflow
+  `.github/workflows/accessibility.yml` (läuft auf jedem Push/PR).
+- ✅ Baseline: `ConfidenceBadge` und `PlaceCard` — **0 strukturelle Verstöße**.
+- ⚠️ **Bewusste Grenze:** jsdom hat kein Layout/Paint → axe prüft hier NUR die
+  strukturelle Teilmenge (Namen/Rollen/Labels/ARIA), **nicht** Kontrast/Reflow/
+  Fokus-Sichtbarkeit. Dafür: manuelle/AT-Tests (Phase 3) + ggf. späteres
+  Playwright+axe-Setup für echtes Browser-Rendering.
+- **Manuelles Test-Setup** (zu nutzen ab Phase 1): VoiceOver (macOS: ⌘F5;
+  iOS: Einst.→Bedienungshilfen), NVDA (Win), Nur-Tastatur (Tab/Shift-Tab/Enter/
+  Esc/Pfeile), Browser-Zoom 400 %, `prefers-reduced-motion` (OS-Einstellung).
+- **Verifikation:** ✅ Tooling grün in lokaler Suite; CI-Workflow eingecheckt.
+  Offen: erster manueller Screenreader-Baseline-Durchlauf (Mensch).
 
 ### Phase 1 — KI-machbar: Semantik & Struktur (hohe Sicherheit)
 - **Landmarks & Headings (1.3.1, 2.4.1):** `header`/`main`/`nav`/`footer`,
