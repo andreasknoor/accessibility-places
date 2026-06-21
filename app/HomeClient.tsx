@@ -1054,6 +1054,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // ResultsList are hidden via `display: none` so their internal state survives.
   return (
     <>
+    <a
+      href="#main-content"
+      className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-2 focus-visible:left-2 focus-visible:z-50 focus-visible:px-4 focus-visible:py-2 focus-visible:rounded-md focus-visible:bg-primary focus-visible:text-primary-foreground focus-visible:shadow-lg"
+    >
+      {t.common.skipToContent}
+    </a>
     <SplashOverlay />
     {showRace && <WheelchairRace onDone={() => setShowRace(false)} />}
     <Script src="https://tally.so/widgets/embed.js" strategy="lazyOnload" />
@@ -1108,13 +1114,13 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
       {/* ── Error banner ── */}
       {error && (
-        <div className={cn("px-4 py-2 bg-destructive/10 text-destructive text-sm border-b border-destructive/20 shrink-0", isFullscreen && "hidden")}>
+        <div role="alert" className={cn("px-4 py-2 bg-destructive/10 text-destructive text-sm border-b border-destructive/20 shrink-0", isFullscreen && "hidden")}>
           {error}
         </div>
       )}
 
       {/* ── Main: filter | results | divider | map ── */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <main id="main-content" className="flex flex-1 min-h-0 overflow-hidden">
         {filterCollapsed ? (
             <button
               onClick={() => setFilterCollapsed(false)}
@@ -1242,7 +1248,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             locatePanTrigger={locatePanTrigger}
           />
         </div>
-      </div>
+      </main>
     </div>
     </>
   )

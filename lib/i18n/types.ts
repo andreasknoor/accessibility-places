@@ -15,6 +15,7 @@ export interface Translations {
     loading:     string
     dismissHint: string
     copied:      string
+    skipToContent: string
   }
   chat: {
     unifiedPlaceholder: string
@@ -60,6 +61,7 @@ export interface Translations {
     criteria:            string
     radius:              string
     radiusLabel:         (km: number) => string
+    radiusSliderLabel:   string
     acceptUnknown:       string
     displayOptions:      string
     alwaysShowParking:   string
@@ -78,6 +80,7 @@ export interface Translations {
     titleRadius:        (km: number) => string
     radiusPickerLabel:  string
     count:              (n: number) => string
+    resultsAnnounce:    (n: number) => string
     parkingCount:       (n: number) => string
     showMap:     string
     confidence: {
@@ -126,6 +129,7 @@ export interface Translations {
     adjustFilters:        string
     adjustFiltersHint:    string
     distanceFromHere:     (m: number) => string
+    openDetails:          (name: string) => string
     showNearbyParking:    string
     copyLink:             string
     linkCopied:           string
@@ -182,6 +186,7 @@ export interface Translations {
     }
   }
   map: {
+    regionLabel:            string
     fullscreen:             string
     exitFullscreen:         string
     source:                 string

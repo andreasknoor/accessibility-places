@@ -11,6 +11,8 @@ npm run start        # serve the built production output
 npm run lint         # ESLint
 npm test             # run all tests once (required before every commit/push)
 npm run test:watch   # watch mode
+npm run test:a11y    # axe structural accessibility tests (__tests__/a11y/)
+npm run check:contrast  # WCAG contrast of globals.css design tokens (CI-gated)
 
 # Run a single test file
 npx vitest run __tests__/lib/llm.test.ts

@@ -1,10 +1,11 @@
 "use client"
 
-import { useEffect } from "react"
+import { useId } from "react"
 import { createPortal } from "react-dom"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTranslations } from "@/lib/i18n"
+import { useFocusTrap } from "@/hooks/useFocusTrap"
 
 interface Props {
   open:     boolean
@@ -16,12 +17,9 @@ interface Props {
 
 export function BottomSheet({ open, onClose, title, children, className }: Props) {
   const t = useTranslations()
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
-    document.addEventListener("keydown", onKey)
-    return () => document.removeEventListener("keydown", onKey)
-  }, [open, onClose])
+  const titleId = useId()
+  // Focus in on open, trap Tab, Escape to close, restore focus on close.
+  const sheetRef = useFocusTrap<HTMLDivElement>(onClose, open)
 
   if (!open) return null
 
@@ -36,15 +34,18 @@ export function BottomSheet({ open, onClose, title, children, className }: Props
         aria-hidden
       />
       <div
+        ref={sheetRef}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
+        tabIndex={-1}
         className={cn(
-          "fixed bottom-0 left-0 right-0 z-[1061] bg-white rounded-t-2xl shadow-xl p-4 pb-8 max-h-[80vh] overflow-y-auto",
+          "fixed bottom-0 left-0 right-0 z-[1061] bg-white rounded-t-2xl shadow-xl p-4 pb-8 max-h-[80vh] overflow-y-auto focus:outline-none",
           className,
         )}
       >
         <div className="flex items-center justify-between mb-3">
-          {title && <p className="font-semibold text-sm">{title}</p>}
+          {title && <p id={titleId} className="font-semibold text-sm">{title}</p>}
           <button
             onClick={onClose}
             onTouchEnd={(e) => { e.preventDefault(); onClose() }}

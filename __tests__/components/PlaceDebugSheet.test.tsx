@@ -67,6 +67,22 @@ describe("PlaceDebugSheet header", () => {
     expect(onClose).toHaveBeenCalled()
   })
 
+  it("is a labelled modal dialog and moves focus inside on open (WCAG 2.4.3)", () => {
+    renderSheet()
+    const dialog = screen.getByRole("dialog")
+    expect(dialog).toHaveAttribute("aria-modal", "true")
+    expect(dialog).toHaveAttribute("aria-labelledby", "place-sheet-title")
+    // Focus moved into the dialog rather than staying behind it.
+    expect(dialog.contains(document.activeElement)).toBe(true)
+  })
+
+  it("closes on Escape (WCAG 2.1.2)", () => {
+    const onClose = vi.fn()
+    renderSheet(makePlace(), onClose)
+    fireEvent.keyDown(document, { key: "Escape" })
+    expect(onClose).toHaveBeenCalled()
+  })
+
   it("calls onClose when backdrop is clicked", () => {
     const onClose = vi.fn()
     const { container } = renderSheet(makePlace(), onClose)

@@ -19,6 +19,7 @@ const de: Translations = {
     loading:     "Lädt …",
     dismissHint: "Hinweis schließen",
     copied:      "In die Zwischenablage kopiert",
+    skipToContent: "Zum Inhalt springen",
   },
   chat: {
     unifiedPlaceholder: 'Ort oder Name, z. B. „Restaurants in Berlin" oder „Hotel Adlon"',
@@ -64,6 +65,7 @@ const de: Translations = {
     criteria: "Barrierefreiheits-Kriterien",
     radius: "Suchradius",
     radiusLabel: (km: number) => `${km} km`,
+    radiusSliderLabel: "Suchradius in Kilometern",
     acceptUnknown: "Orte mit unklaren Informationen anzeigen",
     displayOptions: "Anzeigeoptionen",
     alwaysShowParking: "Rollstuhlparkplätze immer in Karte anzeigen",
@@ -82,6 +84,7 @@ const de: Translations = {
     titleRadius: (km: number) => `${km} km`,
     radiusPickerLabel: "Suchradius ändern",
     count:        (n: number) => `${n} Ort${n !== 1 ? "e" : ""}`,
+    resultsAnnounce: (n: number) => `${n} Ort${n !== 1 ? "e" : ""} gefunden`,
     parkingCount: (n: number) => `(${n}x Parken)`,
     showMap: "Karte anzeigen",
     confidence: {
@@ -152,6 +155,7 @@ const de: Translations = {
     adjustFilters:         "Filter anpassen",
     adjustFiltersHint:     "Passe die Filterkriterien links an, um mehr Ergebnisse zu sehen.",
     distanceFromHere:      (m: number) => m < 1000 ? `${m} m entfernt` : `${(m / 1000).toFixed(1).replace(".", ",")} km entfernt`,
+    openDetails:           (name: string) => `Details zu ${name} öffnen`,
     showNearbyParking:     "Parkplätze in der Nähe",
     copyLink:              "Teilen",
     linkCopied:            "Link kopiert",
@@ -208,6 +212,7 @@ const de: Translations = {
     },
   },
   map: {
+    regionLabel:   "Karte der Suchergebnisse. Alle Treffer sind auch in der Ergebnisliste verfügbar.",
     fullscreen:    "Vollbild",
     exitFullscreen:"Vollbild beenden",
     source:        "Quelle",

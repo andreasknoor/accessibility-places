@@ -19,6 +19,7 @@ const en: Translations = {
     loading:     "Loading …",
     dismissHint: "Dismiss hint",
     copied:      "Copied to clipboard",
+    skipToContent: "Skip to content",
   },
   chat: {
     unifiedPlaceholder: 'Place or name, e.g. "Restaurants in Berlin" or "Hotel Adlon"',
@@ -64,6 +65,7 @@ const en: Translations = {
     criteria: "Accessibility Criteria",
     radius: "Search Radius",
     radiusLabel: (km: number) => `${km} km`,
+    radiusSliderLabel: "Search radius in kilometres",
     acceptUnknown: "Show places with unclear information",
     displayOptions: "Display options",
     alwaysShowParking: "Always show wheelchair parking on map",
@@ -82,6 +84,7 @@ const en: Translations = {
     titleRadius: (km: number) => `${km} km`,
     radiusPickerLabel: "Change search radius",
     count:        (n: number) => `${n} place${n !== 1 ? "s" : ""}`,
+    resultsAnnounce: (n: number) => `${n} place${n !== 1 ? "s" : ""} found`,
     parkingCount: (n: number) => `(${n}x parking)`,
     showMap: "Show map",
     confidence: {
@@ -152,6 +155,7 @@ const en: Translations = {
     adjustFilters:         "Adjust filters",
     adjustFiltersHint:     "Adjust the filter criteria on the left to see more results.",
     distanceFromHere:      (m: number) => m < 1000 ? `${m} m away` : `${(m / 1000).toFixed(1)} km away`,
+    openDetails:           (name: string) => `Open details for ${name}`,
     showNearbyParking:     "Parking nearby",
     copyLink:              "Share",
     linkCopied:            "Link copied",
@@ -208,6 +212,7 @@ const en: Translations = {
     },
   },
   map: {
+    regionLabel:   "Map of search results. All results are also available in the results list.",
     fullscreen:    "Fullscreen",
     exitFullscreen:"Exit fullscreen",
     source:        "Source",

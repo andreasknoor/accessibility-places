@@ -176,6 +176,12 @@ export default function MobileLayout({
     <>
     <Script src="https://tally.so/widgets/embed.js" strategy="lazyOnload" />
     <div className="flex flex-col h-svh overflow-hidden bg-background text-foreground">
+      <a
+        href="#main-content"
+        className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-2 focus-visible:left-2 focus-visible:z-50 focus-visible:px-4 focus-visible:py-2 focus-visible:rounded-md focus-visible:bg-primary focus-visible:text-primary-foreground focus-visible:shadow-lg"
+      >
+        {t.common.skipToContent}
+      </a>
 
       {/* ── Header ── */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card shrink-0 safe-area-inset-top">
@@ -211,7 +217,7 @@ export default function MobileLayout({
 
       {/* ── Error banner ── */}
       {error && (
-        <div className="px-4 py-2 bg-destructive/10 text-destructive text-sm border-b border-destructive/20 shrink-0">
+        <div role="alert" className="px-4 py-2 bg-destructive/10 text-destructive text-sm border-b border-destructive/20 shrink-0">
           {error}
         </div>
       )}
@@ -220,7 +226,7 @@ export default function MobileLayout({
            Rendered outside the overflow-hidden tab wrapper so iOS WebKit
            pointer events reach the buttons without a stacking-context dead zone. */}
       {showWelcome && (
-        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 flex flex-col items-center gap-3 text-center">
+        <main id="main-content" className="flex-1 min-h-0 overflow-y-auto px-5 py-4 flex flex-col items-center gap-3 text-center">
           <img src="/icons/icon-preview.svg" className="w-12 h-12 rounded-xl" alt="" aria-hidden />
           <div className="flex flex-col gap-1">
             <p className="font-semibold text-foreground">{t.chat.welcomeTitle}</p>
@@ -267,11 +273,11 @@ export default function MobileLayout({
               {t.chat.welcomeDismiss}
             </button>
           )}
-        </div>
+        </main>
       )}
 
       {/* ── Tab content ── */}
-      {!showWelcome && <div className="flex-1 min-h-0 overflow-hidden isolate">
+      {!showWelcome && <main id="main-content" className="flex-1 min-h-0 overflow-hidden isolate">
 
         {/* Results tab */}
         <div className={cn("h-full", activeTab !== "results" && "hidden")}>
@@ -360,7 +366,7 @@ export default function MobileLayout({
           />
         </div>
 
-      </div>}
+      </main>}
 
       {/* ── Footer links ── */}
       <div className="flex justify-center gap-5 border-t border-border bg-card px-4 py-1.5 shrink-0">

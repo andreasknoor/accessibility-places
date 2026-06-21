@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, Fragment } from "react"
+import { useFocusTrap } from "@/hooks/useFocusTrap"
 import {
   X, MapPin, Phone, Globe, Tag, Clock, Mail,
   Utensils, Leaf, Dog, Wifi, Star, DollarSign,
@@ -93,6 +94,9 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
   const [copiedField,  setCopiedField]  = useState<"address" | "osm" | null>(null)
   const copyTimerRef      = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fieldTimerRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Focus management for the modal info sheet (WCAG 2.1.2 / 2.4.3): focus in on
+  // open, trap Tab, close on Escape, restore focus to the trigger on close.
+  const panelRef = useFocusTrap<HTMLDivElement>(onClose)
 
   function handleCopyField(text: string, field: "address" | "osm") {
     void navigator.clipboard.writeText(text).then(() => {
@@ -332,12 +336,19 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
         onClick={onClose}
         onTouchEnd={(e) => { e.preventDefault(); onClose() }}
       />
-      <div className="fixed right-0 top-0 z-[1051] h-full w-[520px] max-w-full bg-white shadow-2xl border-l border-border flex flex-col safe-area-inset-top safe-area-inset-bottom">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="place-sheet-title"
+        tabIndex={-1}
+        className="fixed right-0 top-0 z-[1051] h-full w-[520px] max-w-full bg-white shadow-2xl border-l border-border flex flex-col safe-area-inset-top safe-area-inset-bottom focus:outline-none"
+      >
 
         {/* Header */}
         <div className="flex items-start justify-between gap-3 px-4 py-3 border-b border-border shrink-0">
           <div className="min-w-0">
-            <p className="font-semibold text-sm truncate">{place.name}</p>
+            <p id="place-sheet-title" className="font-semibold text-sm truncate">{place.name}</p>
             <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
               <span aria-hidden>{CATEGORY_ICONS[place.category] ?? "📍"}</span>
               <span>{(t.categories as Record<string, string>)[place.category] ?? place.category}</span>

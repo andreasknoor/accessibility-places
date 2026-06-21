@@ -9,6 +9,15 @@ process.env.OVERPASS_ENDPOINTS =
 
 import "@testing-library/jest-dom"
 
+// Accessibility (WCAG) testing — register the axe matcher so a11y test files can
+// call `expect(await axe(container)).toHaveNoViolations()`. jsdom has no layout
+// engine, so axe here catches the *structural* subset (names, roles, labels,
+// attributes) — NOT contrast/reflow/focus-visibility, which need a real browser
+// and human/AT verification (see docs/wcag-accessibility-plan.md). Phase 0.
+import { expect } from "vitest"
+import * as axeMatchers from "vitest-axe/matchers"
+expect.extend(axeMatchers)
+
 // Radix UI Slider uses ResizeObserver — mock it for jsdom
 global.ResizeObserver = class ResizeObserver {
   observe() {}

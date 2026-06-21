@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useRef } from "react"
+import React, { useState, useRef } from "react"
+import { useFocusTrap } from "@/hooks/useFocusTrap"
 import { createPortal } from "react-dom"
 import { Settings, Check, Search, Map, SlidersHorizontal } from "lucide-react"
 import { useTranslations, useLocale } from "@/lib/i18n"
@@ -14,12 +15,13 @@ interface Props {
   onResetOnboarding?: () => void
 }
 
-function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+function Toggle({ value, onChange, ...aria }: { value: boolean; onChange: (v: boolean) => void } & React.AriaAttributes) {
   return (
     <button
       role="switch"
       aria-checked={value}
       onClick={() => onChange(!value)}
+      {...aria}
       className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
         value ? "bg-primary" : "bg-muted-foreground/40"
       }`}
@@ -32,13 +34,21 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
 }
 
 function Row({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  // Associate the visible row label with the interactive control inside it
+  // (Toggle/SelectInput/SliderInput) via aria-labelledby, so each control has an
+  // accessible name without duplicating the label text (WCAG 1.3.1 / 4.1.2).
+  const labelId = React.useId()
   return (
     <div className="flex items-center justify-between gap-4 py-2.5">
       <div className="min-w-0 flex-1">
-        <p className="text-sm">{label}</p>
+        <p id={labelId} className="text-sm">{label}</p>
         {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
       </div>
-      <div className="shrink-0">{children}</div>
+      <div className="shrink-0">
+        {React.isValidElement(children)
+          ? React.cloneElement(children as React.ReactElement<React.AriaAttributes>, { "aria-labelledby": labelId })
+          : children}
+      </div>
     </div>
   )
 }
@@ -60,30 +70,31 @@ function SectionTitle({
   )
 }
 
-function SelectInput({ value, onChange, children }: {
+function SelectInput({ value, onChange, children, ...aria }: {
   value: string | number
   onChange: (v: string) => void
   children: React.ReactNode
-}) {
+} & React.AriaAttributes) {
   return (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className="text-sm border border-border rounded-md px-2 py-1 bg-background max-w-[160px]"
+      {...aria}
     >
       {children}
     </select>
   )
 }
 
-function SliderInput({ value, min, max, step, onChange, displayLabel }: {
+function SliderInput({ value, min, max, step, onChange, displayLabel, ...aria }: {
   value: number
   min: number
   max: number
   step: number
   onChange: (v: number) => void
   displayLabel: string
-}) {
+} & React.AriaAttributes) {
   return (
     <div className="flex items-center gap-2 min-w-[160px]">
       <input
@@ -94,6 +105,7 @@ function SliderInput({ value, min, max, step, onChange, displayLabel }: {
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
         className="flex-1 h-1.5 accent-primary cursor-pointer"
+        {...aria}
       />
       <span className="text-xs text-muted-foreground tabular-nums w-12 text-right shrink-0">{displayLabel}</span>
     </div>
@@ -106,16 +118,25 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
   const { locale } = useLocale()
   const [resetDone, setResetDone] = useState(false)
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Focus in on open, trap Tab, Escape to close, restore focus on close.
+  const panelRef = useFocusTrap<HTMLDivElement>(onClose)
 
   return (
     <div onClick={(e) => e.stopPropagation()}>
       <div className="fixed inset-0 z-[1050] bg-black/25" onClick={onClose} />
-      <div className="fixed right-0 top-0 z-[1051] h-full w-[380px] max-w-full bg-white shadow-2xl border-l border-border flex flex-col safe-area-inset-top safe-area-inset-bottom">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-panel-title"
+        tabIndex={-1}
+        className="fixed right-0 top-0 z-[1051] h-full w-[380px] max-w-full bg-white shadow-2xl border-l border-border flex flex-col safe-area-inset-top safe-area-inset-bottom focus:outline-none"
+      >
 
         {/* Header */}
         <div className="flex items-start justify-between px-4 py-3 border-b border-border shrink-0">
           <div>
-            <p className="font-semibold text-sm">{ts.title}</p>
+            <p id="settings-panel-title" className="font-semibold text-sm">{ts.title}</p>
             <p className="text-xs text-muted-foreground mt-0.5">{ts.autoSaveHint}</p>
           </div>
           <button

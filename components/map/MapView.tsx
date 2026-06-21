@@ -857,7 +857,11 @@ export default function MapView({
 
   return (
     <div className="relative w-full h-full">
-      <div ref={mapRef} className="w-full h-full" />
+      {/* Named region so AT announces the map and points to the equivalent text
+          alternative (the results list) — WCAG 1.1.1 / 1.3.1. Leaflet makes the
+          container keyboard-pannable (tabindex) but markers are not individually
+          focusable; the list is the conformant equivalent. */}
+      <div ref={mapRef} role="region" aria-label={t.map.regionLabel} className="w-full h-full" />
 
       {showFullscreenToggle && (
         <Button
@@ -866,6 +870,7 @@ export default function MapView({
           onClick={onToggleFullscreen}
           className={`absolute top-3 right-3 z-[1000] shadow-md transition-opacity ${popupOpen ? "opacity-0 pointer-events-none" : ""}`}
           title={isFullscreen ? t.map.exitFullscreen : t.map.fullscreen}
+          aria-label={isFullscreen ? t.map.exitFullscreen : t.map.fullscreen}
         >
           {isFullscreen
             ? <Minimize2 className="w-4 h-4" />

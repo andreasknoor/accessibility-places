@@ -48,67 +48,139 @@ Ziel: Konformität zu **WCAG 2.2 Level AA** (= Basis für EN 301 549 / BFSG).
 > dann die Bereiche, die menschliche Verifikation brauchen. Jede Phase nennt,
 > WER verifiziert.
 
-### Phase 0 — Grundlagen & Audit-Infrastruktur (Voraussetzung)
-- WCAG-2.2-AA als verbindliches Ziel festlegen; Scope klären (App-Shell `/`+`/en`,
-  SEO-Seiten, statische Seiten, native WebView).
-- Automatisiertes Testing einrichten: `@axe-core/playwright` oder `vitest-axe`
-  für Kernseiten; Lighthouse-a11y in CI als Schwellwert.
-- Manuelles Test-Setup dokumentieren: VoiceOver (macOS/iOS), NVDA (Win),
-  Nur-Tastatur, 400 % Zoom, `prefers-reduced-motion`.
-- **Verifikation:** Tooling läuft in CI; Baseline-Report erstellt.
+### Phase 0 — Grundlagen & Audit-Infrastruktur (Voraussetzung) — ✅ UMGESETZT (Branch `feat/a11y-phase0-audit`)
+- ✅ Ziel = WCAG 2.2 AA. Scope: App-Shell `/`+`/en`, SEO-Seiten, statische Seiten, native WebView.
+- ✅ Automatisiertes Testing: `vitest-axe` in die bestehende vitest/jsdom-Suite
+  integriert. Matcher in `vitest.setup.ts` registriert; Tests unter
+  `__tests__/a11y/`; npm-Script `test:a11y`; CI-Workflow
+  `.github/workflows/accessibility.yml` (läuft auf jedem Push/PR).
+- ✅ Baseline: `ConfidenceBadge` und `PlaceCard` — **0 strukturelle Verstöße**.
+- ⚠️ **Bewusste Grenze:** jsdom hat kein Layout/Paint → axe prüft hier NUR die
+  strukturelle Teilmenge (Namen/Rollen/Labels/ARIA), **nicht** Kontrast/Reflow/
+  Fokus-Sichtbarkeit. Dafür: manuelle/AT-Tests (Phase 3) + ggf. späteres
+  Playwright+axe-Setup für echtes Browser-Rendering.
+- **Manuelles Test-Setup** (zu nutzen ab Phase 1): VoiceOver (macOS: ⌘F5;
+  iOS: Einst.→Bedienungshilfen), NVDA (Win), Nur-Tastatur (Tab/Shift-Tab/Enter/
+  Esc/Pfeile), Browser-Zoom 400 %, `prefers-reduced-motion` (OS-Einstellung).
+- **Verifikation:** ✅ Tooling grün in lokaler Suite; CI-Workflow eingecheckt.
+  Offen: erster manueller Screenreader-Baseline-Durchlauf (Mensch).
 
-### Phase 1 — KI-machbar: Semantik & Struktur (hohe Sicherheit)
-- **Landmarks & Headings (1.3.1, 2.4.1):** `header`/`main`/`nav`/`footer`,
-  „Skip to content"-Link, konsistente h1→hN-Hierarchie pro Seite.
-- **Zugängliche Namen (4.1.2):** alle Icon-Buttons (Karte, Filter, Settings,
-  Schließen, Sortierung, Sprache) mit `aria-label`/`aria-labelledby` prüfen
-  (16× `aria-label` vorhanden — auf Vollständigkeit prüfen).
-- **Bilder (1.1.1):** `alt` für Orts-Fotos (`PlaceDebugSheet`), dekorative SVGs
-  `aria-hidden`, informative SVGs mit Namen (6× `<img>`, 2× `<svg>`-Dateien).
-- **Formulare/Filter (3.3.2, 1.3.1):** Checkbox-/Radio-Labels in `FilterPanel`,
-  `SettingsSheet`, Suchfeld-Label in `ChatPanel`.
-- **Sprache (3.1.1/3.1.2):** `lang` am `<html>` (DE/EN-Layouts; bereits via
-  `LangSetter` — verifizieren), inline-Sprachwechsel markieren.
-- **Verifikation:** KI + axe; danach 1 manueller Screenreader-Durchlauf.
+### Phase 1 — KI-machbar: Semantik & Struktur — 🟡 IN ARBEIT (Branch `feat/a11y-wcag`)
+Bisher umgesetzt:
+- ✅ **Landmarks + Skip-Link**: `<main id="main-content">` in Desktop- (`HomeClient`)
+  und Mobile-Shell (`MobileLayout`, Welcome- **und** Tab-Content-Region) sowie in
+  allen statischen Seiten (FAQ/Impressum/Datenschutz/Über/EN-Pendants). „Zum Inhalt
+  springen"-Link (i18n `common.skipToContent`) als erstes fokussierbares Element.
+- ✅ **Tastatur (2.1.1, vorgezogen aus Phase 2):** Treffer­karten waren per Tastatur
+  nicht bedienbar (`<div onClick>` ohne Fokus/Enter). Der Ortsname ist jetzt ein
+  echter `<button>` (fokussierbar, Enter/Space nativ) mit zugänglichem Namen
+  (`results.openDetails(name)`); öffnet das Info-Sheet. Karten-Klick bleibt für Maus.
+- ✅ Test: `PlaceCard`-Tastaturtest + axe-Baseline grün.
 
-### Phase 2 — KI-machbar mit Laufzeit-Risiko: dynamische Zustände
-- **Live-Regionen (4.1.3) — derzeit 0:** Suchstatus/Ergebnisanzahl/Ladezustand/
-  Fehler als `aria-live="polite"` ansagen (NDJSON-Stream, „Keine Treffer",
-  Radius-Erweiterung, „Treffer für <Name>"-Banner).
-- **Fokus-Management (2.4.3, 2.1.2):** Sheets/Popovers (`PlaceDebugSheet`,
-  `SettingsSheet`, `bottom-sheet`, `popover`) — Fokus fangen, bei Schließen
-  zurückgeben, Esc schließt, keine Fokusfalle.
-- **Tastaturbedienung (2.1.1):** Chips, Karten-Marker-Auswahl, Mobile-Tabbar,
-  Autocomplete-Dropdown (Pfeile/Enter/Esc — `aria-activedescendant` vorhanden,
-  prüfen) voll per Tastatur.
-- **Verifikation:** zwingend **manueller Tastatur- + Screenreader-Test** (KI kann
-  Markup setzen, aber das Erlebnis nicht prüfen).
+Weiter umgesetzt:
+- ✅ **Zugängliche Namen (4.1.2):** Radius-Slider (`ui/slider` `thumbAriaLabel`,
+  i18n `filters.radiusSliderLabel`); alle `SettingsSheet`-Controls (Toggle/Select/
+  Slider) via `Row`-`aria-labelledby` (`useId` + `cloneElement`, kein Textduplikat);
+  Settings-Panel als `role="dialog"` + `aria-labelledby`. Icon-Buttons (Schließen/
+  Karte/Filter/Settings/Sprache) bereits mit `aria-label`.
+- ✅ **Bilder (1.1.1):** Orts-Foto `alt={place.name}`; alle Logo-`<img>` dekorativ
+  (`alt=""` `aria-hidden`); Kategorie-Emojis `aria-hidden`. Verifiziert.
+- ✅ **Formulare/Filter:** axe gegen `FilterPanel`/`ResultsList`/`SettingsSheet`
+  (offen) grün → Checkboxen/Controls korrekt benannt.
+- ✅ **Sprache (3.1.1):** `lang` am `<html>` (root „de", `/en` via `LangSetter`).
+- ✅ **axe-Suite erweitert:** ConfidenceBadge, PlaceCard, FilterPanel, ResultsList,
+  SettingsSheet (geöffnet) — alle 0 strukturelle Verstöße.
 
-### Phase 3 — Mensch/Tool nötig: Wahrnehmung
-- **Kontrast (1.4.3/1.4.11):** Theme-Tokens in `globals.css` rechnerisch prüfen;
-  **kritisch & nur visuell prüfbar:** Ampel-Pins (grün/gelb/rot) auf Kartenkacheln,
-  Confidence-Badges, Text auf Orts-Fotos, Cluster-Icons.
-- **Reflow/Zoom (1.4.10), Textabstände (1.4.12):** bei 320 px CSS-Breite und
-  400 % Zoom kein Inhaltsverlust/horizontales Scrollen.
-- **Bewegung (2.3.3, `prefers-reduced-motion`):** Splash, NavigationProgress,
-  Marker-Animationen, Easter-Eggs (WheelchairRace) respektieren die Einstellung.
-- **Verifikation:** **Mensch** (Kontrast-Tool + Augenschein + Zoom-Test).
+Noch offen in Phase 1 / Übergabe an Phase 2–3:
+- `ChatPanel`, `PlaceDebugSheet`, `MapView` noch nicht in der axe-Suite.
+- **Verifikation:** weiterhin 1 manueller Screenreader-Durchlauf ausstehend (Mensch).
 
-### Phase 4 — Karte (Sonderfall, hohes Risiko)
-- Leaflet-Karten sind notorisch schwer barrierefrei. Optionen prüfen:
-  textbasierte Alternative zur Kartenansicht (Ergebnisliste deckt das großteils
-  ab), Tastatur-Navigation der Marker, ARIA für Popups.
-- **Realistische Erwartung:** vollständige AA-Karte ist evtl. nicht erreichbar;
-  dann dokumentierte, gleichwertige Alternative (Liste) als Konformitätsweg.
-- **Verifikation:** Mensch + AT.
+### Phase 2 — Dynamische Zustände — ✅ UMGESETZT (Branch `feat/a11y-wcag`)
+- ✅ **Live-Regionen (4.1.3):** sr-only `role="status" aria-live="polite"` in
+  `ResultsList` sagt Suchstatus an (lädt → „N Orte gefunden" / „keine Treffer",
+  i18n `results.resultsAnnounce`). Mobile-Ladebalken bereits `role="status"`.
+- ✅ **Fehler (4.1.3):** Fehler-Banner (Desktop + Mobile) als `role="alert"`.
+- ✅ **Fokus-Management (2.4.3, 2.1.2):** gemeinsamer Hook `hooks/useFocusTrap`
+  (Fokus rein beim Öffnen, Tab-Trap, Esc schließt, Fokus zurück zum Auslöser)
+  in `PlaceDebugSheet`, `SettingsSheet` **und** `bottom-sheet`; alle drei jetzt
+  `role="dialog" aria-modal aria-labelledby` + `tabIndex=-1`. Behebt den gemeldeten
+  Bug „Tab bleibt nach Enter in der Trefferliste statt im Detail-Sheet".
+- ✅ **Tastaturbedienung (2.1.1):** Trefferkarten (Phase 1), Chips (native
+  `<button>`), Mobile-Tabbar (`<button>` + `aria-current`), Autocomplete-Dropdown
+  (`role="combobox"`/`option`, Pfeile/Enter/Esc, `aria-activedescendant`) — alle
+  per Tastatur bedienbar. **Karten-Marker → Phase 4.**
+- ✅ Tests: Sheet-Fokus + Esc; axe-Suite weiterhin grün.
+- **Verifikation:** weiterhin ausstehend: **manueller Tastatur-/Screenreader-Test** (Mensch).
 
-### Phase 5 — Inhalt & Prozess
-- **Sinnhaftigkeit (menschlich):** `alt`-Texte, Fehlermeldungen (3.3.3),
-  Verständlichkeit der Texte review-en.
-- **Barrierefreiheitserklärung** (BFSG-Pflicht für betroffene Anbieter)
-  erstellen — inkl. ehrlicher Liste bekannter Einschränkungen (z. B. Karte).
-- **Regression:** axe in CI als Dauerschutz; a11y-Checkliste in PR-Template.
+### Native Apps (Capacitor iOS/Android) — 🟡 teilweise umgesetzt
+A11y wird zu ~95 % vom Web vererbt (VoiceOver/TalkBack lesen den WebView-Inhalt;
+unsere Phase-1/2-Semantik wirkt nativ automatisch). Native-spezifisch:
+- ✅ **Pinch-Zoom (1.4.4):** `userScalable: false`/`maximumScale: 1` entfernt
+  (`app/layout.tsx`). Native WebViews befolgen `user-scalable=no` (anders als
+  mobiles Safari) — hätte sehbehinderte native Nutzer ausgesperrt.
+- ✅ **Standort-Berechtigung EN+DE:** beide `Info.plist`-Usage-Strings zweisprachig
+  (sicher ohne pbxproj-Eingriff; saubere `.lproj`-Lokalisierung wäre Xcode-Aufgabe).
+- ✅ `prefers-reduced-motion` wird vom OS an den WebView durchgereicht (→ Phase 3 CSS deckt nativ ab).
+- ⚠️ **iOS Dynamic Type:** WKWebView skaliert Web-Text nicht mit „Größerer Text";
+  WKWebView-inhärent, Pinch-Zoom ist die Abmilderung. Android-WebView respektiert
+  System-Schriftgröße (kein `textZoom`-Override).
+- ⚠️ **Nicht KI-verifizierbar:** echtes VoiceOver/TalkBack-Verhalten in der
+  gebauten App → Geräte-Test (Mensch).
+
+### Phase 3 — Wahrnehmung — 🟡 teilweise umgesetzt (Branch `feat/a11y-wcag`)
+- ✅ **Kontrast (1.4.3) — Token-basiert maschinell:** `scripts/check-contrast.mjs`
+  parst die `:root`-HSL-Tokens, berechnet das WCAG-Verhältnis je fg/bg-Paar und
+  gated CI (`npm run check:contrast`, in `accessibility.yml`). 3 Token-Verstöße
+  behoben: `muted-foreground` 46.9→44.9 % L; `destructive` 60.2→49.5 % L;
+  `destructive-foreground` → reines Weiß. Alle 13 gatenden Paare bestehen.
+  `border` (1.23:1) ist **review-only** (dekorative Divider sind von 1.4.11
+  ausgenommen; nur sole-indicator-Component-Boundaries müssen 3:1 — Design-Review).
+- ✅ **Bewegung (2.3.3, `prefers-reduced-motion`):** zusätzlich zum vorhandenen
+  Handling (loading-bar, wheelchair-race/once) globaler Safety-Net in `globals.css`
+  (`*` animation/transition-duration → 0.01ms), deckt Tailwind-`animate-*`,
+  Marker-Scale, Input-Pulse, Route-Progress, Hover-Transitions ab.
+- ⚠️ **Nur Tool/Mensch (nicht KI):**
+  - Kontrast komponierter Farben: Ampel-Pins auf Kartenkacheln, Cluster-Icons,
+    Text auf Orts-Fotos (Hintergrund variabel/unbekannt → nicht berechenbar).
+  - **Reflow/Zoom (1.4.10), Textabstände (1.4.12):** 320 px / 400 % Zoom ohne
+    Inhaltsverlust — braucht echtes Browser-Rendering.
+- **Verifikation:** Browser-Tool (axe/Lighthouse im echten Rendering) + Augenschein.
+
+### Phase 4 — Karte — ✅ umgesetzt (gleichwertige-Alternative-Ansatz) (Branch `feat/a11y-wcag`)
+- ✅ **Benannte Region (1.1.1/1.3.1):** Karten-Container `role="region"` +
+  `aria-label` (i18n `map.regionLabel`), das ausdrücklich auf die Ergebnisliste
+  als gleichwertige Text-Alternative verweist.
+- ✅ **Controls benannt:** Vollbild (`aria-label` ergänzt), Standort, Legende,
+  Schließen mit `aria-label`; „Hier suchen" + Parking/WC-Toggles haben sichtbare
+  Text-Labels (`aria-pressed` an den Toggles), Emojis `aria-hidden`.
+- ⚠️ **Marker nicht einzeln tastaturfokussierbar** (Leaflet-Grenze). Eine
+  vollständige AA-Karte ist damit nicht erreichbar — der **konforme Weg ist die
+  gleichwertige Alternative**: die Ergebnisliste enthält alle Treffer voll
+  tastatur-/AT-bedienbar (Phase 1/2). Bewusste, dokumentierte Entscheidung.
+- **Verifikation:** Mensch + AT (Karte ist supplementär; Liste ist der Pfad).
+
+### Phase 5 — Inhalt & Prozess — ✅ umgesetzt (Branch `feat/a11y-wcag`)
+- ✅ **Barrierefreiheitserklärung:** als eigener FAQ-Abschnitt „Barrierefreiheit
+  dieser App" / „Accessibility of this app" (DE `app/faq`, EN `app/en/faq`) —
+  Konformitätsstatus (AA-Ziel, Eigenbewertung), ehrliche Liste bekannter
+  Einschränkungen (Karte/Marker, komponierter Kontrast, iOS Dynamic Type) und
+  Feedback-Weg. Platzierung bewusst in der FAQ gewählt (kein neuer Footer-Link).
+- ✅ **Regression/Prozess:** axe + Kontrast in CI (`accessibility.yml`);
+  a11y-Checkliste im neuen `.github/pull_request_template.md`.
+- 🟡 **Sinnhaftigkeit (menschlich):** `alt`-Texte/Fehlermeldungen sind gesetzt und
+  i18n-isiert; finale inhaltliche Bewertung (3.3.3, Verständlichkeit) bleibt
+  menschliche Aufgabe.
 - **Verifikation:** Mensch + CI.
+
+---
+
+## Gesamtstatus (Stand v8.40, Branch `feat/a11y-wcag`)
+KI-machbarer Teil von Phase 0–5 + Native umgesetzt und in CI abgesichert
+(axe-Strukturtests, Token-Kontrast-Gate). **Noch offen — nur durch Menschen
+leistbar:** echter Tastatur-/Screenreader-Durchlauf (VoiceOver/TalkBack),
+Reflow/Zoom bei 320 px/400 %, visuelle Kontrastprüfung komponierter Flächen
+(Karten-Pins, Text auf Fotos), inhaltliche Text-Verständlichkeit, sowie eine
+externe formale AA-Konformitätsprüfung für eine rechtsverbindliche Aussage.
 
 ---
 

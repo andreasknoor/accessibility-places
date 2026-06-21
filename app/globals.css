@@ -71,6 +71,20 @@
   .animate-wheelchair-once { animation: none; }
 }
 
+/* Global reduced-motion safety net (WCAG 2.3.3). Covers every animation/transition
+   not handled by a specific rule above — Tailwind utilities (animate-pulse,
+   animate-spin, animate-bounce), marker scaling, the input pulse, route-change
+   progress, hover transitions, etc. Uses a near-zero duration rather than `none`
+   so JS that waits for transition/animation end still fires (avoids hangs). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* shadcn/ui CSS variables */
 :root {
   color-scheme: light;
@@ -85,11 +99,11 @@
   --secondary: 210 40% 96.1%;
   --secondary-foreground: 222.2 47.4% 11.2%;
   --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
+  --muted-foreground: 215.4 16.3% 44.9%;
   --accent: 210 40% 96.1%;
   --accent-foreground: 222.2 47.4% 11.2%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive: 0 84.2% 49.5%;
+  --destructive-foreground: 0 0% 100%;
   --border: 214.3 31.8% 91.4%;
   --input: 214.3 31.8% 91.4%;
   --ring: 221.2 83.2% 53.3%;

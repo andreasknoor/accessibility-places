@@ -9,6 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:a11y": "vitest run __tests__/a11y",
+    "check:contrast": "node scripts/check-contrast.mjs",
     "prepare": "git config core.hooksPath .githooks || true",
     "check:seo": "tsx scripts/check-seo-validity.ts",
     "warm:seo": "tsx scripts/warm-seo.ts"
@@ -69,6 +71,7 @@
     "tsx": "^4.21.1",
     "typescript": "^5",
     "vite-tsconfig-paths": "^6.1.1",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.5",
+    "vitest-axe": "^0.1.0"
   }
 }
