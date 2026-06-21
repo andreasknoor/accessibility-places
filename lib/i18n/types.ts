@@ -35,7 +35,6 @@ export interface Translations {
     modeNearbySub: string
     locateButton:  string
     locationError: string
-    nearbyIn:        (district: string) => string
     parkingModeToggle:    string
     parkingNoneFound:     string
     toiletModeToggle:     string

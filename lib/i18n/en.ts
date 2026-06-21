@@ -39,7 +39,6 @@ const en: Translations = {
     modeNearbySub: "GPS location",
     locateButton:  "Detect location",
     locationError: "Location could not be determined.",
-    nearbyIn:        (d: string) => `Near ${d}`,
     parkingModeToggle:    "Wheelchair parking nearby",
     parkingNoneFound:     "No parking spots found nearby",
     toiletModeToggle:     "Wheelchair toilets nearby",

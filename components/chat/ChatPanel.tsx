@@ -841,7 +841,9 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
               {district !== null && (
                 <p className="text-xs text-muted-foreground flex items-center gap-1 min-w-0">
                   <LocateFixed className="w-3 h-3 shrink-0 text-primary" />
-                  <span className="text-primary font-medium truncate">{t.chat.nearbyIn(district)}</span>
+                  {/* Compact: just the district name (confirms geolocation) — the
+                      crosshair icon already conveys "you are here". */}
+                  <span className="text-primary font-medium truncate">{district}</span>
                 </p>
               )}
               {typeof nearbyPhase === "object" && onToggleFocusLayer && (
