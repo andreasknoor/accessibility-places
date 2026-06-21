@@ -66,6 +66,8 @@ interface Props {
   onToggleFocusLayer?:  (type: AmenityType) => void
   focusLoadingLayer?:   AmenityType | null
   focusHints?:          Partial<Record<AmenityType, string>>
+  focusSearchCenter?:   { lat: number; lon: number } | null
+  onFocusSearchHere?:   (center: { lat: number; lon: number }) => void
   isFirstVisit?:        boolean
   onResetOnboarding?:   () => void
   onDismissWelcome?:    () => void
@@ -95,7 +97,7 @@ export default function MobileLayout({
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
   onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, onStartNearby, hasGpsCoords, locateTrigger, onSwitchToText,
   chatMode, onChatModeChange, biasCoords, onSearchHere, onLocate, locatePanTrigger, gpsCoords, onCategoryQueryChange, activeSearchCoords,
-  focusLayers, onToggleFocusLayer, focusLoadingLayer, focusHints, intlNotice, placeSearchName,
+  focusLayers, onToggleFocusLayer, focusLoadingLayer, focusHints, focusSearchCenter, onFocusSearchHere, intlNotice, placeSearchName,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -344,6 +346,8 @@ export default function MobileLayout({
               isLoading={isLoading}
               autoZoom={settings.autoZoom}
               focusMode={focusActive}
+              focusSearchCenter={focusSearchCenter}
+              onFocusSearchHere={onFocusSearchHere}
               showWeakParking={settings.showWeakParking}
               onSearchHere={onSearchHere}
               onLocate={onLocate}

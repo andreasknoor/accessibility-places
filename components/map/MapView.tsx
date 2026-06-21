@@ -45,6 +45,13 @@ interface Props {
   // layer chips in nearby mode. The caller decides which layers are active and
   // passes the already-filtered spots — MapView only needs the boolean.
   focusMode?:              boolean
+  // Non-null when focus results came from "search this area" (a panned centre,
+  // not GPS). Drives whether the focus map-fit includes the GPS dot — when the
+  // user searched far away, forcing the dot into view would zoom the map out.
+  focusSearchCenter?:      { lat: number; lon: number } | null
+  // Called when the user clicks "Search this area" in focus mode. Receives the
+  // current map centre; caller re-fetches the active amenity layers there.
+  onFocusSearchHere?:      (center: { lat: number; lon: number }) => void
   // Whether the weak "accessible" parking tier is enabled — drives the legend
   // (the yellow entry is only relevant when those markers can appear).
   showWeakParking?:        boolean
@@ -143,6 +150,8 @@ export default function MapView({
   isLoading = false,
   autoZoom = true,
   focusMode = false,
+  focusSearchCenter = null,
+  onFocusSearchHere,
   showWeakParking = false,
   onSearchHere,
   onLocate,
@@ -780,8 +789,11 @@ export default function MapView({
     const amenities = [...(parkingSpots ?? []), ...(toiletSpots ?? [])]
     if (amenities.length > 0) {
       const latlngs: [number, number][] = amenities.map((s) => [s.lat, s.lon])
+      // Include the GPS dot only for GPS-anchored focus. After "search this area"
+      // (focusSearchCenter set) the spots are around a panned centre, so forcing
+      // the far-away dot into the fit would zoom the map right out.
       const ul = userLocationRef.current
-      if (ul) latlngs.push([ul.lat, ul.lon])
+      if (ul && !focusSearchCenter) latlngs.push([ul.lat, ul.lon])
       lastProgrammaticMoveRef.current = Date.now()
       mapInst.current.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 16 })
       return
@@ -794,7 +806,7 @@ export default function MapView({
     lastProgrammaticMoveRef.current = Date.now()
     mapInst.current.setView([center.lat, center.lon], 13)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [center, parkingSpots, toiletSpots, mapReady, focusMode, isLoading])
+  }, [center, parkingSpots, toiletSpots, mapReady, focusMode, isLoading, focusSearchCenter])
 
   // ESC exits fullscreen. Parkplatz-Modus has its own explicit toggle in the
   // ChatPanel, so no keyboard shortcut is needed for it.
@@ -941,6 +953,26 @@ export default function MapView({
           >
             <Search className="w-3.5 h-3.5" aria-hidden />
             {t.map.searchHere}
+          </button>
+        </div>
+      )}
+
+      {/* Focus-mode "search this area": always available while focus layers are
+          active. Re-fetches the amenity layers at the current map centre, so the
+          user can look beyond their GPS radius without leaving focus mode. */}
+      {focusMode && onFocusSearchHere && (
+        <div className={`absolute top-3 left-1/2 -translate-x-1/2 z-[1000] transition-opacity ${popupOpen ? "opacity-0 pointer-events-none" : ""}`}>
+          <button
+            onClick={() => {
+              const c = mapInst.current?.getCenter()
+              if (!c) return
+              hapticLight()
+              onFocusSearchHere({ lat: c.lat, lon: c.lng })
+            }}
+            className="flex items-center gap-1.5 rounded-full border border-border bg-background/95 backdrop-blur-sm px-3 py-1.5 text-sm font-medium shadow-md hover:bg-muted transition-colors"
+          >
+            <Search className="w-3.5 h-3.5" aria-hidden />
+            {t.map.searchHereFocus}
           </button>
         </div>
       )}

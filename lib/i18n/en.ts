@@ -250,6 +250,7 @@ const en: Translations = {
     toiletDesignatedValue:  "Designated",
     toiletAccessLabel:      "Access",
     searchHere:             "Search here",
+    searchHereFocus:        "Search this area",
     locate:                 "My location",
     locateError:            "Location unavailable",
   },

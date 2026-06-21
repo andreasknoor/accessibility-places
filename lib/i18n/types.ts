@@ -187,6 +187,7 @@ export interface Translations {
   }
   map: {
     regionLabel:            string
+    searchHereFocus:        string
     fullscreen:             string
     exitFullscreen:         string
     source:                 string
