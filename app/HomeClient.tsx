@@ -147,6 +147,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // result-nearby parkingSpots/toiletSpots so no backup/restore dance is needed.
   const [focusLayers,         setFocusLayers]         = useState<Set<AmenityType>>(new Set())
   const [focusSpots,          setFocusSpots]          = useState<AmenityFeature[]>([])
+  // Non-null when the user ran "search this area" in focus mode (panned centre).
+  // null = GPS-anchored focus. Drives whether the map fit includes the GPS dot.
+  const [focusSearchCenter,   setFocusSearchCenter]   = useState<{ lat: number; lon: number } | null>(null)
   const [focusHints,          setFocusHints]          = useState<Partial<Record<AmenityType, string>>>({})
   const [focusLoadingLayer,   setFocusLoadingLayer]   = useState<AmenityType | null>(null)
   const [isFirstVisit,        setIsFirstVisit]        = useState(false)  // SSR-safe; real value read post-hydration (React #418)
@@ -322,6 +325,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     if (!quickActionActiveRef.current) {
       setFocusLayers(new Set())
       setFocusSpots([])
+      setFocusSearchCenter(null)
       setFocusHints({})
       setFocusLoadingLayer(null)
     }
@@ -495,6 +499,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setSourceStates({})
     setFocusLayers(new Set())
     setFocusSpots([])
+    setFocusSearchCenter(null)
     setFocusHints({})
     setFocusLoadingLayer(null)
   }, [])
@@ -531,6 +536,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setIsLoading(false)
     setFocusLayers(new Set())
     setFocusSpots([])
+    setFocusSearchCenter(null)
     setFocusHints({})
     setFocusLoadingLayer(null)
     const dismissed = (() => { try { return !!localStorage.getItem("ap_welcome_dismissed") } catch { return false } })()
@@ -701,35 +707,23 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     [t.chat.parkingNoneFound, t.chat.toiletsNoneFound],
   )
 
-  const handleToggleFocusLayer = useCallback(async (type: AmenityType) => {
-    const coords = gpsCoordRef.current ?? gpsCoords
-    if (!coords) return
-
-    // Abort any in-flight focus fetch so a stale response can't win setFocusSpots
-    // when the user rapidly switches between the parking and toilet chips.
+  // Shared focus fetch: loads amenity spots (parking/WC) around `coords` for the
+  // given layers and updates focus state. Used both by the GPS-origin toggle and
+  // by "search this area" (panned-centre re-fetch). Aborts any in-flight fetch so
+  // a stale response can't win setFocusSpots.
+  const fetchFocusSpotsAt = useCallback(async (
+    coords: { lat: number; lon: number },
+    layers: AmenityType[],
+    primaryLayer: AmenityType,
+    radiusKm: number = settings.parkingRadiusKm,
+  ) => {
     focusAbortRef.current?.abort()
-
-    // Single-select: clicking an active layer deactivates; clicking the other switches.
-    const next = new Set<AmenityType>()
-    if (!focusLayers.has(type)) next.add(type)
-    setFocusLayers(next)
-
-    // Removing the last layer exits focus mode — clear the focus state.
-    if (next.size === 0) {
-      setFocusSpots([])
-      setFocusHints({})
-      setFocusLoadingLayer(null)
-      return
-    }
-
     const controller = new AbortController()
     focusAbortRef.current = controller
-    const layers = [...next]
-    track("amenity_focus_enter", { layers: layers.join(",") })
-    setFocusLoadingLayer(type)
+    setFocusLoadingLayer(primaryLayer)
     try {
       const res = await fetch(
-        `/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=${settings.parkingRadiusKm}&types=${layers.join(",")}${settings.internationalMode ? "&intl=1" : ""}`,
+        `/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=${radiusKm}&types=${layers.join(",")}${settings.internationalMode ? "&intl=1" : ""}`,
         { signal: controller.signal },
       )
       const spots: AmenityFeature[] = res.ok ? await res.json() : []
@@ -740,7 +734,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       }
       setFocusHints(hints)
     } catch (err) {
-      // Aborted fetch: a newer toggle superseded this one — leave its state alone.
+      // Aborted fetch: a newer request superseded this one — leave its state alone.
       if (err instanceof DOMException && err.name === "AbortError") return
       const hints: Partial<Record<AmenityType, string>> = {}
       for (const layer of layers) hints[layer] = noneFoundFor(layer)
@@ -749,7 +743,43 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       // Only the latest request clears the spinner; a superseded one must not.
       if (focusAbortRef.current === controller) setFocusLoadingLayer(null)
     }
-  }, [focusLayers, gpsCoords, settings.parkingRadiusKm, settings.internationalMode, noneFoundFor])
+  }, [settings.parkingRadiusKm, settings.internationalMode, noneFoundFor])
+
+  const handleToggleFocusLayer = useCallback(async (type: AmenityType) => {
+    const coords = gpsCoordRef.current ?? gpsCoords
+    if (!coords) return
+
+    // Single-select: clicking an active layer deactivates; clicking the other switches.
+    const next = new Set<AmenityType>()
+    if (!focusLayers.has(type)) next.add(type)
+    setFocusLayers(next)
+    // Toggling a layer re-anchors the focus search at the GPS location.
+    setFocusSearchCenter(null)
+
+    // Removing the last layer exits focus mode — clear the focus state.
+    if (next.size === 0) {
+      focusAbortRef.current?.abort()
+      setFocusSpots([])
+      setFocusSearchCenter(null)
+      setFocusHints({})
+      setFocusLoadingLayer(null)
+      return
+    }
+
+    track("amenity_focus_enter", { layers: [...next].join(",") })
+    await fetchFocusSpotsAt(coords, [...next], type)
+  }, [focusLayers, gpsCoords, fetchFocusSpotsAt])
+
+  // "Search this area" in amenity focus mode: re-fetch the active focus layers at
+  // the panned map centre instead of GPS. Keeps focus mode active; the panned
+  // centre is recorded so the map fit no longer forces the GPS dot into view.
+  const handleFocusSearchHere = useCallback((center: { lat: number; lon: number }, radiusKm: number) => {
+    const layers = [...focusLayers]
+    if (layers.length === 0) return
+    setFocusSearchCenter(center)
+    track("amenity_focus_search_here", { layers: layers.join(",") })
+    void fetchFocusSpotsAt(center, layers, layers[0], radiusKm)
+  }, [focusLayers, fetchFocusSpotsAt])
 
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     isDragging.current = true
@@ -1034,6 +1064,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onToggleFocusLayer={canEnterFocus ? handleToggleFocusLayer : undefined}
         focusLoadingLayer={focusLoadingLayer}
         focusHints={focusHints}
+        focusSearchCenter={focusSearchCenter}
+        onFocusSearchHere={handleFocusSearchHere}
         showToilets={filters.alwaysShowToilets}
         onSetMapLayers={hasParkingToggle || toiletSpots.length > 0 ? handleSetMapLayers : undefined}
         hasToiletData={toiletSpots.length > 0}
@@ -1241,6 +1273,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             isLoading={isLoading}
             autoZoom={settings.autoZoom}
             focusMode={focusActive}
+            focusSearchCenter={focusSearchCenter}
+            onFocusSearchHere={handleFocusSearchHere}
             showWeakParking={settings.showWeakParking}
             onSearchHere={handleSearchHere}
             onLocate={isGeolocationAvailable() ? handleLocate : undefined}
