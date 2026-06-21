@@ -78,9 +78,17 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
 
   useEffect(() => {
     if (!scrollToId) return
-    requestAnimationFrame(() => {
-      itemRefs.current.get(scrollToId)?.scrollIntoView({ behavior: "smooth", block: "nearest" })
-    })
+    // block:"center" (not "nearest") so the entry always jumps into view — with
+    // "nearest" scrollIntoView does nothing when the item is already marginally
+    // within the scrollport, which read as "the list doesn't move". Double rAF: the
+    // results tab may have just switched from display:none (mobile "show in
+    // results"), so one frame isn't always enough for layout before scrolling.
+    const id = requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        itemRefs.current.get(scrollToId)?.scrollIntoView({ behavior: "smooth", block: "center" })
+      }),
+    )
+    return () => cancelAnimationFrame(id)
   }, [scrollToId])
 
   function handleSelect(place: Place) {
