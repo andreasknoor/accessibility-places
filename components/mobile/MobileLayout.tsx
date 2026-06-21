@@ -313,8 +313,9 @@ export default function MobileLayout({
 
         {/* Map tab — lazy-mounted so Leaflet initializes in a visible container */}
         <div className={cn("h-full relative", activeTab !== "map" && "hidden")}>
-          {/* Result count pill — top-left, tapping switches to results list */}
-          {hasSearched && !isLoading && resultCount > 0 && (
+          {/* Result count pill — top-left, tapping switches to results list.
+              Hidden in focus mode: it points at the (now irrelevant) venue results. */}
+          {hasSearched && !isLoading && resultCount > 0 && !focusActive && (
             <button
               onClick={() => { hapticLight(); setActiveTab("results") }}
               className="absolute top-3 left-14 z-[1000] flex items-center gap-1.5 rounded-full bg-card/95 backdrop-blur-sm border border-border shadow-md px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
@@ -396,22 +397,30 @@ export default function MobileLayout({
 
       {/* ── Bottom tab bar ── */}
       <nav className="flex border-t border-border bg-card shrink-0 safe-area-inset-bottom">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => { hapticLight(); setActiveTab(tab.id) }}
-            className={cn(
-              "flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors",
-              activeTab === tab.id
-                ? "text-primary font-medium"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-            aria-current={activeTab === tab.id ? "page" : undefined}
-          >
-            {tab.icon}
-            {tab.label}
-          </button>
-        ))}
+        {tabs.map((tab) => {
+          // In amenity focus mode only the map is meaningful; the venue results and
+          // filters don't apply, so disable those tabs. Exit is always possible via
+          // the focus chips in the (always-visible) search bar, so this is no trap.
+          const disabled = focusActive && tab.id !== "map"
+          return (
+            <button
+              key={tab.id}
+              onClick={() => { hapticLight(); setActiveTab(tab.id) }}
+              disabled={disabled}
+              className={cn(
+                "flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors",
+                disabled && "opacity-40 pointer-events-none",
+                activeTab === tab.id
+                  ? "text-primary font-medium"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              aria-current={activeTab === tab.id ? "page" : undefined}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          )
+        })}
       </nav>
 
     </div>
