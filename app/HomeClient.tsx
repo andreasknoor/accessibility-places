@@ -715,6 +715,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     coords: { lat: number; lon: number },
     layers: AmenityType[],
     primaryLayer: AmenityType,
+    radiusKm: number = settings.parkingRadiusKm,
   ) => {
     focusAbortRef.current?.abort()
     const controller = new AbortController()
@@ -722,7 +723,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setFocusLoadingLayer(primaryLayer)
     try {
       const res = await fetch(
-        `/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=${settings.parkingRadiusKm}&types=${layers.join(",")}${settings.internationalMode ? "&intl=1" : ""}`,
+        `/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=${radiusKm}&types=${layers.join(",")}${settings.internationalMode ? "&intl=1" : ""}`,
         { signal: controller.signal },
       )
       const spots: AmenityFeature[] = res.ok ? await res.json() : []
@@ -772,12 +773,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // "Search this area" in amenity focus mode: re-fetch the active focus layers at
   // the panned map centre instead of GPS. Keeps focus mode active; the panned
   // centre is recorded so the map fit no longer forces the GPS dot into view.
-  const handleFocusSearchHere = useCallback((center: { lat: number; lon: number }) => {
+  const handleFocusSearchHere = useCallback((center: { lat: number; lon: number }, radiusKm: number) => {
     const layers = [...focusLayers]
     if (layers.length === 0) return
     setFocusSearchCenter(center)
     track("amenity_focus_search_here", { layers: layers.join(",") })
-    void fetchFocusSpotsAt(center, layers, layers[0])
+    void fetchFocusSpotsAt(center, layers, layers[0], radiusKm)
   }, [focusLayers, fetchFocusSpotsAt])
 
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {

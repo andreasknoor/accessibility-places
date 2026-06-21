@@ -67,7 +67,7 @@ interface Props {
   focusLoadingLayer?:   AmenityType | null
   focusHints?:          Partial<Record<AmenityType, string>>
   focusSearchCenter?:   { lat: number; lon: number } | null
-  onFocusSearchHere?:   (center: { lat: number; lon: number }) => void
+  onFocusSearchHere?:   (center: { lat: number; lon: number }, radiusKm: number) => void
   isFirstVisit?:        boolean
   onResetOnboarding?:   () => void
   onDismissWelcome?:    () => void

@@ -5,7 +5,10 @@ import { ipFromRequest, isRateLimited, rateLimitResponse } from "@/lib/rate-limi
 import type { AmenityType } from "@/lib/types"
 
 const RADIUS_MIN_KM = 0.05
-const RADIUS_MAX_KM = 5.0
+// Upper bound matches the OSM helper's NEARBY_PARKING_MAX_RADIUS_KM. Raised from
+// 5 km so focus-mode "search this area" can cover a zoomed-out map viewport; the
+// helper's timeout + payload caps keep large queries bounded.
+const RADIUS_MAX_KM = 25.0
 
 // Generic nearby-amenity endpoint. Despite the legacy path name, it serves both
 // parking and toilet features via ?types=parking,toilet (default: parking).

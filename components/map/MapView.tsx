@@ -50,8 +50,9 @@ interface Props {
   // user searched far away, forcing the dot into view would zoom the map out.
   focusSearchCenter?:      { lat: number; lon: number } | null
   // Called when the user clicks "Search this area" in focus mode. Receives the
-  // current map centre; caller re-fetches the active amenity layers there.
-  onFocusSearchHere?:      (center: { lat: number; lon: number }) => void
+  // current map centre and a radius (km) derived from the visible viewport, so the
+  // search covers exactly what's on screen. Caller re-fetches the active layers.
+  onFocusSearchHere?:      (center: { lat: number; lon: number }, radiusKm: number) => void
   // Whether the weak "accessible" parking tier is enabled — drives the legend
   // (the yellow entry is only relevant when those markers can appear).
   showWeakParking?:        boolean
@@ -785,15 +786,16 @@ export default function MapView({
       || center?.lat !== prevCenterRef.current.lat
       || center?.lon !== prevCenterRef.current.lon
     prevCenterRef.current = center ?? null
+    // "Search this area": the user already chose the view — leave the map exactly
+    // where it is and only refresh the markers. No fit (avoids the jump to the old
+    // spots, then to the new ones).
+    if (focusSearchCenter) return
     if (!focusMode && places.length > 0) return
     const amenities = [...(parkingSpots ?? []), ...(toiletSpots ?? [])]
     if (amenities.length > 0) {
       const latlngs: [number, number][] = amenities.map((s) => [s.lat, s.lon])
-      // Include the GPS dot only for GPS-anchored focus. After "search this area"
-      // (focusSearchCenter set) the spots are around a panned centre, so forcing
-      // the far-away dot into the fit would zoom the map right out.
       const ul = userLocationRef.current
-      if (ul && !focusSearchCenter) latlngs.push([ul.lat, ul.lon])
+      if (ul) latlngs.push([ul.lat, ul.lon])
       lastProgrammaticMoveRef.current = Date.now()
       mapInst.current.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 16 })
       return
@@ -964,10 +966,15 @@ export default function MapView({
         <div className={`absolute top-3 left-1/2 -translate-x-1/2 z-[1000] transition-opacity ${popupOpen ? "opacity-0 pointer-events-none" : ""}`}>
           <button
             onClick={() => {
-              const c = mapInst.current?.getCenter()
-              if (!c) return
+              const map = mapInst.current
+              if (!map) return
+              const c = map.getCenter()
+              // Radius = centre → viewport corner, so the search circle covers the
+              // visible rectangle. The map is NOT recentred (see the focus fit
+              // effect) — results refresh for exactly the current view.
+              const radiusKm = c.distanceTo(map.getBounds().getNorthEast()) / 1000
               hapticLight()
-              onFocusSearchHere({ lat: c.lat, lon: c.lng })
+              onFocusSearchHere({ lat: c.lat, lon: c.lng }, radiusKm)
             }}
             className="flex items-center gap-1.5 rounded-full border border-border bg-background/95 backdrop-blur-sm px-3 py-1.5 text-sm font-medium shadow-md hover:bg-muted transition-colors"
           >
