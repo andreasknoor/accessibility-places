@@ -163,6 +163,22 @@ body {
   top: 0;
 }
 
+/* Accessibility: keep the map attribution legible over any tile. Leaflet's default
+   0.7-alpha background lets dark tiles bleed through and drop the link/text contrast
+   below 3:1. A near-opaque background + a high-contrast, underlined link keeps it
+   readable on any basemap and makes the link distinguishable without relying on
+   colour alone (WCAG 1.4.1 / 1.4.3). */
+.leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.92) !important;
+}
+.leaflet-control-attribution,
+.leaflet-control-attribution a {
+  color: hsl(var(--muted-foreground)) !important;
+}
+.leaflet-control-attribution a {
+  text-decoration: underline;
+}
+
 
 /* ── Safe-area insets (iOS notch / home indicator) ───────────────────────────
    Needed once viewport-fit=cover is set (layout.tsx viewport). In the standalone
