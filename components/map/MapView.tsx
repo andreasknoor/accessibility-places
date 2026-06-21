@@ -341,6 +341,9 @@ export default function MapView({
       // if Leaflet emits a synchronous moveend during teardown.
       const inst = mapInst.current
       mapInst.current = null
+      // Stop in-flight animations first so no zoom/pan transition-end fires against
+      // the cluster group after teardown (markercluster hasLayer crash).
+      inst?.stop()
       inst?.remove()
       placeClusterRef.current = null
     }
@@ -608,6 +611,12 @@ export default function MapView({
   // cleared so only amenity spots and the user dot remain visible.
   useEffect(() => {
     if (!mapInst.current || !L || !placeClusterRef.current) return
+
+    // Cancel any in-flight pan/zoom (e.g. a zoomToShowLayer animation) before
+    // mutating cluster layers. Otherwise markercluster's transition-end handler
+    // fires after clearLayers/removeLayer and calls hasLayer() on gutted internals
+    // → "Cannot use 'in' operator to search for '_leaflet_id' in undefined".
+    mapInst.current.stop()
 
     if (focusMode) {
       placeClusterRef.current.clearLayers()
