@@ -68,8 +68,8 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
   return (
     <Card
       className={cn(
-        "cursor-pointer transition-all hover:shadow-md border overflow-hidden",
-        isSelected ? "border-primary ring-1 ring-primary" : "border-border",
+        "cursor-pointer transition-all shadow-sm hover:shadow-md border overflow-hidden",
+        isSelected ? "border-primary ring-1 ring-primary" : "border-card-border",
       )}
       onClick={() => { setShowDebug(true); track("detail_sheet_open", { category: place.category }) }}
     >
