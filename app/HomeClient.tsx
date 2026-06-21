@@ -1081,12 +1081,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           <SettingsSheet settings={settings} onUpdate={handleUpdateSettings} onResetOnboarding={() => { try { localStorage.removeItem("ap_visited"); localStorage.removeItem("ap_welcome_dismissed") } catch { /* ignore */ }; setIsFirstVisit(true) }} />
           <LanguageSwitcher />
         </div>
+        <h1 className="sr-only">{t.app.srHeading}</h1>
       </header>
 
-      <h1 className="sr-only">{t.app.srHeading}</h1>
-
       {/* ── Chat / search bar ── */}
-      <div className={cn(isFullscreen && "hidden")}>
+      <div role="search" className={cn(isFullscreen && "hidden")}>
         <ChatPanel
           key={resetKey}
           onSearch={(query, coords, nameHint) => handleSearch(query, undefined, coords, nameHint)}
@@ -1191,7 +1190,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             onDismissWelcome={handleDismissWelcome}
             onStartNearby={handleStartNearby}
           />
-          <div className="shrink-0 border-t border-border px-4 py-2 flex justify-end gap-4">
+          <footer className="shrink-0 border-t border-border px-4 py-2 flex justify-end gap-4">
             <Link href={locale === "en" ? "/en/faq" : "/faq"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
               {t.faq.linkLabel}
             </Link>
@@ -1212,7 +1211,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             >
               {t.faq.feedbackLabel}
             </button>
-          </div>
+          </footer>
         </div>
 
         {/* Draggable divider */}

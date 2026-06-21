@@ -123,7 +123,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
                   <PopoverTrigger asChild>
                     <button
                       type="button"
-                      aria-label={t.results.radiusPickerLabel}
+                      aria-label={t.results.radiusPickerLabel(radiusKm)}
                       className="flex items-center gap-0.5 text-xs font-normal text-muted-foreground hover:text-foreground transition-colors rounded-sm px-1 -mx-1 py-0.5 hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
                     >
                       {t.results.titleRadius(radiusKm)}
@@ -258,7 +258,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
               </span>
               <span className="flex-1 min-w-0">
                 <span className="block text-sm font-semibold">{t.chat.welcomeNearbyCard}</span>
-                <span className="block text-xs text-primary-foreground/80 mt-0.5">{t.chat.welcomeNearbyCardHint}</span>
+                <span className="block text-xs text-primary-foreground mt-0.5">{t.chat.welcomeNearbyCardHint}</span>
               </span>
               <ChevronRight className="w-4 h-4 shrink-0" />
             </button>

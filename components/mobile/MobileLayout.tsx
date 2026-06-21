@@ -200,12 +200,13 @@ export default function MobileLayout({
           <SettingsSheet settings={settings} onUpdate={onUpdateSettings} onResetOnboarding={onResetOnboarding} />
           <LanguageSwitcher />
         </div>
+        <h1 className="sr-only">{t.app.srHeading}</h1>
       </header>
 
-      <h1 className="sr-only">{t.app.srHeading}</h1>
-
       {/* ── Search bar (always visible) ── */}
-      <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} locateTrigger={locateTrigger} biasCoords={biasCoords} focusLayers={focusLayers} onToggleFocusLayer={handleToggleFocusLayer} focusLoadingLayer={focusLoadingLayer} focusHints={focusHints} onCategoryQueryChange={onCategoryQueryChange} activeSearchCoords={activeSearchCoords} international={settings.internationalMode} />
+      <div role="search">
+        <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} locateTrigger={locateTrigger} biasCoords={biasCoords} focusLayers={focusLayers} onToggleFocusLayer={handleToggleFocusLayer} focusLoadingLayer={focusLoadingLayer} focusHints={focusHints} onCategoryQueryChange={onCategoryQueryChange} activeSearchCoords={activeSearchCoords} international={settings.internationalMode} />
+      </div>
 
       {/* Global search progress — covers every trigger (search here, filter, radius,
           tab switch), since the ChatPanel's button spinner isn't visible on the map tab. */}
@@ -242,7 +243,7 @@ export default function MobileLayout({
               </span>
               <span className="flex-1 min-w-0">
                 <span className="block text-sm font-semibold">{t.chat.welcomeNearbyCard}</span>
-                <span className="block text-xs text-primary-foreground/80 mt-0.5">{t.chat.welcomeNearbyCardHint}</span>
+                <span className="block text-xs text-primary-foreground mt-0.5">{t.chat.welcomeNearbyCardHint}</span>
               </span>
               <ChevronRight className="w-4 h-4 shrink-0" />
             </button>
@@ -369,7 +370,7 @@ export default function MobileLayout({
       </main>}
 
       {/* ── Footer links ── */}
-      <div className="flex justify-center gap-5 border-t border-border bg-card px-4 py-1.5 shrink-0">
+      <footer className="flex justify-center gap-5 border-t border-border bg-card px-4 py-1.5 shrink-0">
         <Link href={locale === "en" ? "/en/faq" : "/faq"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
           {t.faq.linkLabel}
         </Link>
@@ -387,7 +388,7 @@ export default function MobileLayout({
         >
           {t.faq.feedbackLabel}
         </button>
-      </div>
+      </footer>
 
       {/* ── Bottom tab bar ── */}
       <nav className="flex border-t border-border bg-card shrink-0 safe-area-inset-bottom">

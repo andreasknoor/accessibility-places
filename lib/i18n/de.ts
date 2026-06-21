@@ -82,7 +82,7 @@ const de: Translations = {
   results: {
     title: "Ergebnisse",
     titleRadius: (km: number) => `${km} km`,
-    radiusPickerLabel: "Suchradius ändern",
+    radiusPickerLabel: (km: number) => `${km} km – Suchradius ändern`,
     count:        (n: number) => `${n} Ort${n !== 1 ? "e" : ""}`,
     resultsAnnounce: (n: number) => `${n} Ort${n !== 1 ? "e" : ""} gefunden`,
     parkingCount: (n: number) => `(${n}x Parken)`,

@@ -78,7 +78,7 @@ export interface Translations {
   results: {
     title:              string
     titleRadius:        (km: number) => string
-    radiusPickerLabel:  string
+    radiusPickerLabel:  (km: number) => string
     count:              (n: number) => string
     resultsAnnounce:    (n: number) => string
     parkingCount:       (n: number) => string
