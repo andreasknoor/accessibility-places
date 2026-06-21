@@ -617,7 +617,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
               className={cn(
                 "flex-1 flex flex-col items-center gap-1 py-2.5 relative transition-colors border-r border-border last:border-r-0 cursor-pointer",
                 mode === m
-                  ? "bg-primary/10 text-primary"
+                  ? "bg-primary/10 text-primary-strong"
                   : "bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >

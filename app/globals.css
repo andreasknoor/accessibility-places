@@ -96,6 +96,10 @@
   --popover-foreground: 222.2 84% 4.9%;
   --primary: 221.2 83.2% 53.3%;
   --primary-foreground: 210 40% 98%;
+  /* Darker brand blue for primary-coloured TEXT on light/tinted backgrounds
+     (e.g. the active mode toggle on bg-primary/10), where the standard --primary
+     only reaches 4.50:1. At 42% L it clears AA with margin (~6.5:1). */
+  --primary-strong: 221.2 83.2% 42%;
   --secondary: 210 40% 96.1%;
   --secondary-foreground: 222.2 47.4% 11.2%;
   --muted: 210 40% 96.1%;
@@ -119,6 +123,7 @@
   --color-popover-foreground: hsl(var(--popover-foreground));
   --color-primary: hsl(var(--primary));
   --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-primary-strong: hsl(var(--primary-strong));
   --color-secondary: hsl(var(--secondary));
   --color-secondary-foreground: hsl(var(--secondary-foreground));
   --color-muted: hsl(var(--muted));
