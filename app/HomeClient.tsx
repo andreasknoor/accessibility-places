@@ -22,6 +22,7 @@ import { SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
 import { useSettings, loadSettings, DEFAULT_APP_SETTINGS } from "@/lib/settings"
+import { markMountAndIsReturning, loadActiveMode, saveActiveMode, loadSearchRun, saveSearchRun, clearSearchRun, clearSessionSearch } from "@/lib/session-restore"
 import { getCurrentPosition, getBestPosition, isGeolocationAvailable } from "@/lib/native/geolocation"
 import { consumePendingNativeAction } from "@/lib/native/actions"
 import { cn } from "@/lib/utils"
@@ -177,6 +178,13 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // the async default-mode effect so a late-resolving setting can't override a
   // manual mode switch (see the effect below for the iOS cold-start rationale).
   const modeResolvedRef = useRef(false)
+  // Session restore (per-tab): true when home was remounted after navigating away
+  // (e.g. FAQ → "Zurück"). Drives suppression of splash/auto-locate and the re-run
+  // of the last search. sessionRestoreDoneRef gates the one-shot re-run; the
+  // session-persist effects skip until sessionPersistReadyRef is set on mount.
+  const sessionReturningRef   = useRef(false)
+  const sessionRestoreDoneRef = useRef(false)
+  const sessionPersistReadyRef = useRef(false)
   const isDragging   = useRef(false)
   const dragStart    = useRef({ x: 0, width: 0 })
   const selectTarget = useRef(
@@ -220,7 +228,21 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     try {
       setIsFirstVisit(!localStorage.getItem("ap_visited") && !localStorage.getItem("ap_welcome_dismissed"))
     } catch { /* localStorage unavailable */ }
-    if (!initialCity && !isPlaceDeepLink) setChatMode(loadSettings().defaultSearchMode ?? "nearby")
+    // Session restore: detect a return mount (and record it for ChatPanel's
+    // auto-locate effect, which runs after this layout-effect). On a return, restore
+    // the active mode instead of the default, and let modeResolvedRef pin it so the
+    // async-settings effect can't reset it. SEO/deep-links keep their forced "text".
+    const returning = !initialCity && !isPlaceDeepLink && markMountAndIsReturning()
+    sessionReturningRef.current = returning
+    if (initialCity || isPlaceDeepLink) { sessionPersistReadyRef.current = true; return }
+    const restoredMode = returning ? loadActiveMode() : null
+    if (restoredMode) {
+      setChatMode(restoredMode)
+      modeResolvedRef.current = true
+    } else {
+      setChatMode(loadSettings().defaultSearchMode ?? "nearby")
+    }
+    sessionPersistReadyRef.current = true
   }, [initialCity, isPlaceDeepLink])
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -265,6 +287,27 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setSources(prefs.sources)
     setRadiusKm(prefs.radiusKm)
   }, [])
+
+  // Session restore — persist the active mode so a return mount restores it.
+  useEffect(() => {
+    if (!sessionPersistReadyRef.current || initialCity || isPlaceDeepLink) return
+    saveActiveMode(chatMode)
+  }, [chatMode, initialCity, isPlaceDeepLink])
+
+  // Session restore — persist just enough to replay the last search (no results
+  // array). Only records a real search (a query or a place lookup).
+  useEffect(() => {
+    if (!sessionPersistReadyRef.current || initialCity || isPlaceDeepLink) return
+    const placeSearch = placeSearchName != null
+    if (!lastQuery && !placeSearch) return
+    saveSearchRun({
+      chatMode,
+      query:       lastQuery ?? "",
+      coords:      lastCoords ?? null,
+      nameHint:    lastNameHint ?? null,
+      placeSearch,
+    })
+  }, [lastQuery, lastCoords, lastNameHint, placeSearchName, chatMode, initialCity, isPlaceDeepLink])
 
   // Lock the document scroll for the home route only (the app is a fixed-height
   // shell with its own internal scroll regions). Without this the native iOS
@@ -502,6 +545,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setFocusSearchCenter(null)
     setFocusHints({})
     setFocusLoadingLayer(null)
+    // Drop the restorable last-search: it no longer applies once the results/mode
+    // change, so a later return mustn't replay a stale search. Keep the active mode.
+    clearSearchRun()
   }, [])
 
   const handleSwitchMode = useCallback((mode: "text" | "nearby") => {
@@ -546,6 +592,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setFilterCollapsed(true)
     try { localStorage.removeItem("ap_last_search") } catch { /* ignore */ }
     try { localStorage.removeItem("ap_visited") } catch { /* ignore */ }
+    clearSessionSearch()  // full reset: drop restorable mode + last search
     // Clean up any deep-link or SEO params from the URL without a page reload
     window.history.replaceState({}, "", locale === "en" ? "/en/" : "/")
     setResetKey((k) => k + 1)
@@ -638,6 +685,30 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       { osm: true, accessibility_cloud: true, reisen_fuer_alle: true, ginto: true, acceslibre: true, google_places: true },
     )
   // Only run once on mount — URL params are stable
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Session restore — on a return mount (home remounted after a static page), replay
+  // the last search at the stored coordinates. Reuses handleSearch (no new logic);
+  // stored coords mean a nearby search does NOT re-locate. ChatPanel's auto-locate is
+  // suppressed for this mount (isReturningNow), so only this re-run executes. SEO/
+  // deep-links take precedence (handled by their own effects above).
+  useEffect(() => {
+    if (sessionRestoreDoneRef.current || autoSearchFiredRef.current) return
+    if (initialCity || isPlaceDeepLink || !sessionReturningRef.current) return
+    const run = loadSearchRun()
+    if (!run || (!run.query && !run.placeSearch)) return
+    sessionRestoreDoneRef.current = true
+    handleSearch(
+      run.query,
+      undefined,
+      run.coords ?? undefined,
+      run.nameHint ?? undefined,
+      undefined,
+      undefined,
+      run.placeSearch || undefined,
+    )
+  // Run once on mount — restore inputs are read from sessionStorage.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

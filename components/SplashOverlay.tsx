@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useLayoutEffect } from "react"
+import { splashAlreadyShownThisSession } from "@/lib/session-restore"
 
 // Full-screen overlay shown on every app start — mobile/touch only.
 // On native (Capacitor): the 600 ms native splash hands off to this overlay
@@ -15,6 +16,10 @@ export default function SplashOverlay() {
   // SSR and initial client render both produce nothing (show=false); mobile
   // devices flip show=true before the browser paints the first frame.
   useLayoutEffect(() => {
+    // Only on the FIRST home mount of this tab session — not when returning from a
+    // static page (FAQ/Impressum → "Zurück" remounts HomeClient). Otherwise the
+    // splash replays on every in-app return.
+    if (splashAlreadyShownThisSession()) return
     if (window.innerWidth < 768 || window.matchMedia("(pointer: coarse)").matches) {
       setShow(true)
     }

@@ -9,6 +9,7 @@ import { useIsMobile } from "@/hooks/useIsMobile"
 import { cn } from "@/lib/utils"
 import { extractQuotedName } from "@/lib/llm"
 import { loadSettings } from "@/lib/settings"
+import { isReturningNow } from "@/lib/session-restore"
 import { getCurrentPosition, isGeolocationAvailable, watchPosition, clearWatchPosition, type GeoWatchId } from "@/lib/native/geolocation"
 import DevConsole from "@/components/easter-eggs/DevConsole"
 import type { AmenityType } from "@/lib/types"
@@ -255,6 +256,11 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // stale `false`. localStorage is the ground truth, client-side and timing-
   // independent. (Invisible on web with slow browser GPS; obvious on native.)
   useEffect(() => {
+    // On a session return (home remounted after visiting a static page), HomeClient
+    // restores the mode and re-runs the last search itself — do NOT also auto-locate
+    // (would fire a second, unwanted nearby search). Set by HomeClient's mount
+    // layout-effect, which runs before this passive effect. See lib/session-restore.
+    if (isReturningNow()) return
     const isFirstVisit = (() => {
       try { return !localStorage.getItem("ap_visited") && !localStorage.getItem("ap_welcome_dismissed") }
       catch { return false }
