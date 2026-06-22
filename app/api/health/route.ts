@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import type { Place, SearchParams, SourceId } from "@/lib/types"
 import { OVERPASS_ENDPOINTS, PUBLIC_OVERPASS_ENDPOINTS } from "@/lib/config"
 import { startAdapterTasks } from "@/lib/adapters"
+import { overpassHeaders } from "@/lib/adapters/osm"
 import { findMatch } from "@/lib/matching/match"
 import {
   mergePlaces,
@@ -153,7 +154,9 @@ async function probeOverpassEndpoint(endpoint: string): Promise<OverpassProbeRes
   try {
     const res = await fetch(endpoint, {
       method:  "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      // Sends X-AP-Key to the private endpoint when OVERPASS_PRIVATE_KEY is set, so
+      // the health probe isn't 403'd once the server enforces the shared secret.
+      headers: overpassHeaders(endpoint),
       body:    "data=[out:json][timeout:5];out+0;",
       signal:  AbortSignal.timeout(10_000),
     })

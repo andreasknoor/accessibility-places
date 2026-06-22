@@ -24,7 +24,7 @@ const OVERPASS_BASE_HEADERS: Record<string, string> = {
 // which would leak the secret to a third party. Inert unless OVERPASS_PRIVATE_KEY
 // is set, so the change is a no-op until the server enforces it (see
 // docs/overpass-server.md for the lockout-free rollout order).
-function overpassHeaders(endpoint: string): Record<string, string> {
+export function overpassHeaders(endpoint: string): Record<string, string> {
   const key = process.env.OVERPASS_PRIVATE_KEY
   if (key && !PUBLIC_OVERPASS_ENDPOINTS.includes(endpoint)) {
     return { ...OVERPASS_BASE_HEADERS, "X-AP-Key": key }
