@@ -50,6 +50,13 @@ export function isReturningNow(): boolean {
   try { return s?.getItem(K_RETURNING) === "1" } catch { return false }
 }
 
+/** Clears the one-shot return signal once HomeClient's mount has consumed it, so a
+ *  later ChatPanel-only remount (reset / mode switch via resetKey, which does NOT
+ *  remount HomeClient) isn't wrongly treated as a return. */
+export function clearReturningFlag(): void {
+  try { ss()?.removeItem(K_RETURNING) } catch { /* ignore */ }
+}
+
 export function saveActiveMode(mode: "text" | "nearby"): void {
   try { ss()?.setItem(K_MODE, mode) } catch { /* ignore */ }
 }

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest"
 import {
   markMountAndIsReturning,
   isReturningNow,
+  clearReturningFlag,
   saveActiveMode,
   loadActiveMode,
   saveSearchRun,
@@ -24,6 +25,14 @@ describe("session-restore — mount / return detection", () => {
     expect(isReturningNow()).toBe(false)
     expect(markMountAndIsReturning()).toBe(true)  // remount = return
     expect(isReturningNow()).toBe(true)
+  })
+
+  it("clearReturningFlag makes the one-shot return signal false (for ChatPanel-only remounts)", () => {
+    markMountAndIsReturning() // first mount, sets session
+    markMountAndIsReturning() // return → returning now "1"
+    expect(isReturningNow()).toBe(true)
+    clearReturningFlag()
+    expect(isReturningNow()).toBe(false)
   })
 })
 

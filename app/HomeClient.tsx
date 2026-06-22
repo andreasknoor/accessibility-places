@@ -22,7 +22,7 @@ import { SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
 import { useSettings, loadSettings, DEFAULT_APP_SETTINGS } from "@/lib/settings"
-import { markMountAndIsReturning, loadActiveMode, saveActiveMode, loadSearchRun, saveSearchRun, clearSearchRun, clearSessionSearch } from "@/lib/session-restore"
+import { markMountAndIsReturning, clearReturningFlag, loadActiveMode, saveActiveMode, loadSearchRun, saveSearchRun, clearSearchRun, clearSessionSearch } from "@/lib/session-restore"
 import { getCurrentPosition, getBestPosition, isGeolocationAvailable } from "@/lib/native/geolocation"
 import { consumePendingNativeAction } from "@/lib/native/actions"
 import { cn } from "@/lib/utils"
@@ -715,6 +715,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // Run once on mount — restore inputs are read from sessionStorage.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Clear the one-shot return signal after this mount has consumed it. This passive
+  // effect runs after ChatPanel's auto-locate (child) passive effect, so a later
+  // ChatPanel-only remount (reset / mode switch via resetKey, which does not remount
+  // HomeClient) is correctly treated as a fresh start, not a return.
+  useEffect(() => { clearReturningFlag() }, [])
 
   // Primary welcome CTA: start the nearby search (triggers ChatPanel locate) and
   // leave the welcome screen.
