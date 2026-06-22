@@ -11,8 +11,26 @@ import type {
   ParkingDetails,
 } from "../types"
 import { buildAttribute, emptyAttribute } from "../matching/merge"
-import { CATEGORY_OSM_TAGS, endpointsForCoordinates } from "../config"
+import { CATEGORY_OSM_TAGS, endpointsForCoordinates, PUBLIC_OVERPASS_ENDPOINTS } from "../config"
 import { nanoid } from "../utils"
+
+const OVERPASS_BASE_HEADERS: Record<string, string> = {
+  "Content-Type": "application/x-www-form-urlencoded",
+  "User-Agent":   "AccessibleSpaces/1.0 (accessibility search; mailto:andreas.knoor@gmail.com)",
+}
+
+// Per-endpoint headers for the parallel Overpass race. Attaches the shared-secret
+// `X-AP-Key` ONLY to the private (self-hosted) endpoint — never to public mirrors,
+// which would leak the secret to a third party. Inert unless OVERPASS_PRIVATE_KEY
+// is set, so the change is a no-op until the server enforces it (see
+// docs/overpass-server.md for the lockout-free rollout order).
+function overpassHeaders(endpoint: string): Record<string, string> {
+  const key = process.env.OVERPASS_PRIVATE_KEY
+  if (key && !PUBLIC_OVERPASS_ENDPOINTS.includes(endpoint)) {
+    return { ...OVERPASS_BASE_HEADERS, "X-AP-Key": key }
+  }
+  return OVERPASS_BASE_HEADERS
+}
 
 // ─── Overpass query builder ────────────────────────────────────────────────
 
@@ -322,10 +340,6 @@ export async function fetchOsm(params: SearchParams): Promise<{ places: Place[];
   const query = buildOverpassQuery(params)
   if (!query) return { places: [], winnerEndpoint: "" }
 
-  const headers = {
-    "Content-Type": "application/x-www-form-urlencoded",
-    "User-Agent":   "AccessibleSpaces/1.0 (accessibility search; mailto:andreas.knoor@gmail.com)",
-  }
   const body = `data=${encodeURIComponent(query)}`
 
   // Race all endpoints in parallel — the first successful response wins and
@@ -344,7 +358,7 @@ export async function fetchOsm(params: SearchParams): Promise<{ places: Place[];
           ? AbortSignal.any([params.signal, cancelRace.signal, AbortSignal.timeout(20_000)])
           : AbortSignal.any([cancelRace.signal, AbortSignal.timeout(20_000)])
 
-        const res = await fetch(endpoint, { method: "POST", body, headers, signal })
+        const res = await fetch(endpoint, { method: "POST", body, headers: overpassHeaders(endpoint), signal })
 
         // Treat rate-limit and server errors as rejection so another endpoint
         // can win the race. Hard client errors (4xx other than 429) propagate.
@@ -446,10 +460,6 @@ export async function fetchOsmDisabledParking(
     accessibleClause +
     `);out 2000 center tags;`
 
-  const headers = {
-    "Content-Type": "application/x-www-form-urlencoded",
-    "User-Agent":   "AccessibleSpaces/1.0 (accessibility search; mailto:andreas.knoor@gmail.com)",
-  }
   const body = `data=${encodeURIComponent(query)}`
 
   function parseFeatures(json: { elements?: unknown[] }): AmenityFeature[] {
@@ -499,7 +509,7 @@ export async function fetchOsmDisabledParking(
 
     const { features: rawFeatures, winner: parkingWinner } = await Promise.any(
       endpointsForCoordinates(lat, lon, international).map(async (endpoint) => {
-        const res = await fetch(endpoint, { method: "POST", body, headers, signal: sig(endpoint) })
+        const res = await fetch(endpoint, { method: "POST", body, headers: overpassHeaders(endpoint), signal: sig(endpoint) })
         if (!res.ok) throw new Error(`[parking] ${endpoint} → HTTP ${res.status}`)
         const ct = res.headers?.get("content-type") ?? ""
         if (ct && !ct.includes("json")) throw new Error(`[parking] ${endpoint} returned non-JSON content-type: ${ct}`)
@@ -546,11 +556,6 @@ export async function fetchOsmAccessibleAmenities(
   const r = Math.min(radiusKm + 0.5, NEARBY_PARKING_MAX_RADIUS_KM) * 1000
   const { lat, lon } = location
   const { signal, includeWeakTier = false, international = false } = opts ?? {}
-
-  const headers = {
-    "Content-Type": "application/x-www-form-urlencoded",
-    "User-Agent":   "AccessibleSpaces/1.0 (accessibility search; mailto:andreas.knoor@gmail.com)",
-  }
 
   const parkingClauses = types.includes("parking") ? [
     `way(around:${r},${lat},${lon})[amenity=parking]["capacity:disabled"];`,
@@ -660,7 +665,7 @@ export async function fetchOsmAccessibleAmenities(
 
     const { features, winner } = await Promise.any(
       endpointsForCoordinates(lat, lon, international).map(async (endpoint) => {
-        const res = await fetch(endpoint, { method: "POST", body, headers, signal: sig() })
+        const res = await fetch(endpoint, { method: "POST", body, headers: overpassHeaders(endpoint), signal: sig() })
         if (!res.ok) throw new Error(`[amenities] ${endpoint} → HTTP ${res.status}`)
         const ct = res.headers?.get("content-type") ?? ""
         if (ct && !ct.includes("json")) throw new Error(`[amenities] ${endpoint} returned non-JSON: ${ct}`)
