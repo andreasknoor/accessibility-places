@@ -235,7 +235,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     const returning = !initialCity && !isPlaceDeepLink && markMountAndIsReturning()
     sessionReturningRef.current = returning
     if (initialCity || isPlaceDeepLink) { sessionPersistReadyRef.current = true; return }
-    const restoredMode = returning ? loadActiveMode() : null
+    // Prefer the mode from the replayable search record — it was saved atomically
+    // with the search, so it always matches the results we're about to restore
+    // (avoids any K_MODE/K_SEARCH desync). Fall back to the standalone active mode
+    // (mode switched but not searched), then to the user's default.
+    const restoredMode = returning ? (loadSearchRun()?.chatMode ?? loadActiveMode()) : null
     if (restoredMode) {
       setChatMode(restoredMode)
       modeResolvedRef.current = true
