@@ -27,7 +27,7 @@ function isExpectedAdapterError(errStr: string): boolean {
 // deployments a shared store (Redis/Upstash) would be required.
 
 const RATE_LIMIT_WINDOW_MS      = 60_000  // 1 minute
-const RATE_LIMIT_MAX_REQUESTS   = 10      // general: max 10 searches/min per IP
+const RATE_LIMIT_MAX_REQUESTS   = 30      // general: max 30 searches/min per IP
 const RATE_LIMIT_GP_MAX         = 3       // Google Places: max 3 searches/min per IP
                                           // (each search fans out to N category calls)
 

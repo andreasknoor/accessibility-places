@@ -505,18 +505,17 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       // it surfaces an error and clears loading below.
       if (controller.signal.aborted && !timedOut) return
       setError(timedOut ? t.chat.errorTimeout : t.chat.errorGeneric)
-      if (timedOut) {
-        // Sources still "loading" never answered before the deadline — mark them
-        // as errored so the FilterPanel shows the warning and the results-header
-        // retry button appears (gated on hasSourceError).
-        setSourceStates((prev) => {
-          const next: Partial<Record<SourceId, SourceState>> = { ...prev }
-          for (const id of Object.keys(next) as SourceId[]) {
-            if (next[id]?.status === "loading") next[id] = { status: "error", error: t.results.networkError }
-          }
-          return next
-        })
-      }
+      // Sources still "loading" never answered (timeout, 429, network error, …) —
+      // mark them as errored so the FilterPanel shows the warning and the
+      // results-header retry button appears (gated on hasSourceError), instead of
+      // spinning forever.
+      setSourceStates((prev) => {
+        const next: Partial<Record<SourceId, SourceState>> = { ...prev }
+        for (const id of Object.keys(next) as SourceId[]) {
+          if (next[id]?.status === "loading") next[id] = { status: "error", error: t.results.networkError }
+        }
+        return next
+      })
       console.error(err)
       const e = err instanceof Error ? err : new Error(String(err))
       // Report to GlitchTip (caught here, so it would not be picked up by the
