@@ -11,6 +11,7 @@ const K_SESSION   = "ap_home_session"   // set once per tab once HomeClient has 
 const K_RETURNING = "ap_returning_now"  // ephemeral: "1" when THIS mount is a return
 const K_MODE      = "ap_active_mode"    // last active chatMode ("text" | "nearby")
 const K_SEARCH    = "ap_last_search_run" // enough to replay handleSearch(...)
+const K_NEARBY    = "ap_nearby_location" // located district + coords (nearby mode UI)
 const K_SPLASH    = "ap_splash_shown"   // SplashOverlay: shown once per tab session
 
 function ss(): Storage | null {
@@ -72,15 +73,36 @@ export function loadSearchRun(): SearchRun | null {
   } catch { return null }
 }
 
-/** Drops only the replayable last search (keeps the active mode). Used on a mode
- *  switch / results clear, so a later return doesn't replay a now-stale search. */
+export type NearbyLocation = { district: string; lat: number; lon: number }
+
+/** The located nearby state (district label + coords). Lets a return mount restore
+ *  the "located" nearby UI (district label + focus chips, no "locate" button)
+ *  instead of dropping back to the idle locate prompt. */
+export function saveNearbyLocation(loc: NearbyLocation): void {
+  try { ss()?.setItem(K_NEARBY, JSON.stringify(loc)) } catch { /* ignore */ }
+}
+export function loadNearbyLocation(): NearbyLocation | null {
+  try {
+    const raw = ss()?.getItem(K_NEARBY)
+    if (!raw) return null
+    const r = JSON.parse(raw) as NearbyLocation
+    if (r && typeof r.lat === "number" && typeof r.lon === "number") {
+      return { district: typeof r.district === "string" ? r.district : "", lat: r.lat, lon: r.lon }
+    }
+    return null
+  } catch { return null }
+}
+
+/** Drops only the replayable last search (keeps the active mode + nearby location).
+ *  Used on a mode switch / results clear, so a later return doesn't replay a stale
+ *  search. */
 export function clearSearchRun(): void {
   try { ss()?.removeItem(K_SEARCH) } catch { /* ignore */ }
 }
 
-/** Clears the full restorable state (mode + last run). Used on explicit reset. */
+/** Clears the full restorable state. Used on explicit reset. */
 export function clearSessionSearch(): void {
-  try { const s = ss(); s?.removeItem(K_MODE); s?.removeItem(K_SEARCH) } catch { /* ignore */ }
+  try { const s = ss(); s?.removeItem(K_MODE); s?.removeItem(K_SEARCH); s?.removeItem(K_NEARBY) } catch { /* ignore */ }
 }
 
 /** SplashOverlay: returns true if the splash was already shown this tab session,

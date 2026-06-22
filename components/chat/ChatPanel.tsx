@@ -9,7 +9,7 @@ import { useIsMobile } from "@/hooks/useIsMobile"
 import { cn } from "@/lib/utils"
 import { extractQuotedName } from "@/lib/llm"
 import { loadSettings } from "@/lib/settings"
-import { isReturningNow } from "@/lib/session-restore"
+import { isReturningNow, loadSearchRun, loadActiveMode, saveNearbyLocation, loadNearbyLocation } from "@/lib/session-restore"
 import { getCurrentPosition, isGeolocationAvailable, watchPosition, clearWatchPosition, type GeoWatchId } from "@/lib/native/geolocation"
 import DevConsole from "@/components/easter-eggs/DevConsole"
 import type { AmenityType } from "@/lib/types"
@@ -258,9 +258,20 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   useEffect(() => {
     // On a session return (home remounted after visiting a static page), HomeClient
     // restores the mode and re-runs the last search itself — do NOT also auto-locate
-    // (would fire a second, unwanted nearby search). Set by HomeClient's mount
-    // layout-effect, which runs before this passive effect. See lib/session-restore.
-    if (isReturningNow()) return
+    // (would fire a second, unwanted nearby search). Instead, restore the located
+    // nearby UI (district label + focus chips, no "locate" button) from the saved
+    // location, and sync the coords up so focus mode / "search here" keep working.
+    if (isReturningNow()) {
+      const restoredMode = loadSearchRun()?.chatMode ?? loadActiveMode()
+      if (restoredMode === "nearby") {
+        const loc = loadNearbyLocation()
+        if (loc) {
+          setNearbyPhase({ district: loc.district, lat: loc.lat, lon: loc.lon })
+          onGpsResolved?.({ lat: loc.lat, lon: loc.lon })
+        }
+      }
+      return
+    }
     const isFirstVisit = (() => {
       try { return !localStorage.getItem("ap_visited") && !localStorage.getItem("ap_welcome_dismissed") }
       catch { return false }
@@ -574,6 +585,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
         try {
           const d = await reverseGeocode(lat, lon)
           setNearbyPhase({ district: d, lat, lon })
+          saveNearbyLocation({ district: d, lat, lon }) // restore the located UI on a session return
           onGpsResolved?.({ lat, lon })
           // Read locale from a ref so a fix that arrives after the user switched
           // language still uses the current value.

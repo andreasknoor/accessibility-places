@@ -8,6 +8,8 @@ import {
   loadSearchRun,
   clearSearchRun,
   clearSessionSearch,
+  saveNearbyLocation,
+  loadNearbyLocation,
   splashAlreadyShownThisSession,
   type SearchRun,
 } from "@/lib/session-restore"
@@ -69,12 +71,28 @@ describe("session-restore — search run", () => {
     expect(loadActiveMode()).toBe("nearby")
   })
 
-  it("clearSessionSearch drops both mode and run", () => {
+  it("clearSessionSearch drops mode, run and nearby location", () => {
     saveActiveMode("nearby")
     saveSearchRun(run)
+    saveNearbyLocation({ district: "Berlin Mitte", lat: 52.5, lon: 13.4 })
     clearSessionSearch()
     expect(loadSearchRun()).toBeNull()
     expect(loadActiveMode()).toBeNull()
+    expect(loadNearbyLocation()).toBeNull()
+  })
+})
+
+describe("session-restore — nearby location", () => {
+  it("round-trips the located district + coords", () => {
+    expect(loadNearbyLocation()).toBeNull()
+    saveNearbyLocation({ district: "Wien Landstraße", lat: 48.2, lon: 16.4 })
+    expect(loadNearbyLocation()).toEqual({ district: "Wien Landstraße", lat: 48.2, lon: 16.4 })
+  })
+
+  it("survives a mode switch (clearSearchRun keeps it)", () => {
+    saveNearbyLocation({ district: "X", lat: 1, lon: 2 })
+    clearSearchRun()
+    expect(loadNearbyLocation()).toEqual({ district: "X", lat: 1, lon: 2 })
   })
 })
 
