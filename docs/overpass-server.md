@@ -68,3 +68,42 @@ where `<TIMESTAMP>` is the OSM base timestamp from `/api/status`.
 ## Overpass HTML 200 responses
 
 When the daemon is overloaded it returns `Content-Type: text/html` with HTTP 200 (not 5xx). The OSM adapter guard (`res.headers?.get("content-type")`) detects this and rejects the endpoint so the parallel race falls through to the public mirrors.
+
+## Restricting access with a shared-secret header (optional)
+
+By default the Overpass API has **no authentication** — anyone who knows the URL
+(`overpass.accessible-places.org`) can POST queries and consume the server. To lock
+it to this app only, the OSM adapter can send a shared-secret header
+(`X-AP-Key`) that Caddy enforces. The adapter attaches it **only** to the private
+endpoint (never to public mirrors — that would leak the secret) and **only** when
+`OVERPASS_PRIVATE_KEY` is set (`overpassHeaders()` in `lib/adapters/osm.ts`), so the
+app code is inert until you opt in.
+
+**Lockout-free rollout order** (never reject what the app already sends):
+
+1. App code is deployed (header sending is inert while `OVERPASS_PRIVATE_KEY` is unset).
+2. Set `OVERPASS_PRIVATE_KEY` in Vercel **Production** → redeploy. Every prod request
+   now carries `X-AP-Key`; Caddy still ignores it → no change yet.
+3. **Only then** add the Caddy rule below. Outsiders (no header) get 403; the app
+   passes. Rollback = remove the rule (server is open again).
+
+Safety net: even if step 3 is misconfigured, the OSM adapter's `Promise.any` race
+falls through to the public mirror (`overpass-api.de`) — the app degrades to slower,
+never down.
+
+**Testing on a branch without touching live:** set `OVERPASS_PRIVATE_KEY` (and
+optionally `OVERPASS_ENDPOINTS`) in Vercel's **Preview** scope only, so only branch
+previews send the header. To test enforcement, add a *separate* Caddy block on a test
+subdomain proxying the same container, and point the preview's `OVERPASS_ENDPOINTS` at
+it — the live `overpass.accessible-places.org` path stays open until you migrate the
+rule there.
+
+Caddy (enforce on the live host, step 3):
+
+```
+overpass.accessible-places.org {
+  @noauth not header X-AP-Key "DEIN_SECRET"
+  respond @noauth 403
+  reverse_proxy localhost:8080
+}
+```
