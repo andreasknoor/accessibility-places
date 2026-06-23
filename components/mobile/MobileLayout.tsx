@@ -78,7 +78,7 @@ interface Props {
   chatMode:             "text" | "nearby"
   onChatModeChange:     (mode: "text" | "nearby") => void
   biasCoords?:          { lat: number; lon: number }
-  onSearchHere?:        (center: { lat: number; lon: number }) => void
+  onSearchHere?:        (center: { lat: number; lon: number }, radiusKm: number) => void
   onLocate?:            () => Promise<void>
   locatePanTrigger?:    number
   gpsCoords?:           { lat: number; lon: number } | null

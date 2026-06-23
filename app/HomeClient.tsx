@@ -18,7 +18,7 @@ import MobileLayout from "@/components/mobile/MobileLayout"
 import SettingsSheet from "@/components/settings/SettingsSheet"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { useTranslations, useLocale } from "@/lib/i18n"
-import { DEFAULT_RADIUS_KM, RADIUS_MAX_KM, regionForCoordinates, accessTierForCountry } from "@/lib/config"
+import { DEFAULT_RADIUS_KM, RADIUS_MIN_KM, RADIUS_MAX_KM, regionForCoordinates, accessTierForCountry } from "@/lib/config"
 import { SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
@@ -636,14 +636,14 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
   }, [searchCenter, t, handleSearch, settings.internationalMode])
 
-  const handleSearchHere = useCallback((coords: { lat: number; lon: number }) => {
-    // Re-run the last search if there is one; otherwise (text mode, nothing
-    // searched yet) run a fresh search at the panned point using the current
-    // chip category. lastNameHint only applies to the re-run case.
+  const handleSearchHere = useCallback((coords: { lat: number; lon: number }, viewportRadiusKm: number) => {
+    // Use the viewport-derived radius so the search covers exactly what the user
+    // sees, not the last user-setting radius.
+    const clampedRadius = Math.min(Math.max(viewportRadiusKm, RADIUS_MIN_KM), RADIUS_MAX_KM)
     if (lastQuery) {
-      handleSearch(lastQuery, undefined, coords, lastNameHint)
+      handleSearch(lastQuery, clampedRadius, coords, lastNameHint)
     } else if (categoryQuery) {
-      handleSearch(categoryQuery, undefined, coords)
+      handleSearch(categoryQuery, clampedRadius, coords)
     }
   }, [lastQuery, lastNameHint, categoryQuery, handleSearch])
 

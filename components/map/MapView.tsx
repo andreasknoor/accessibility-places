@@ -58,7 +58,7 @@ interface Props {
   showWeakParking?:        boolean
   // Called when the user pans the map and clicks "Search here". Receives the
   // new map centre; caller should re-run the last search at that location.
-  onSearchHere?:           (center: { lat: number; lon: number }) => void
+  onSearchHere?:           (center: { lat: number; lon: number }, radiusKm: number) => void
   // Called when the user taps the locate button. Should resolve with GPS coords
   // or reject on permission denial / timeout. MapView tracks loading + error state.
   onLocate?:               () => Promise<void>
@@ -948,7 +948,11 @@ export default function MapView({
           <button
             onClick={() => {
               hapticLight()
-              onSearchHere(searchHereCenter)
+              const map = mapInst.current
+              const viewportRadiusKm = map
+                ? map.getCenter().distanceTo(map.getBounds().getNorthEast()) / 1000
+                : 5
+              onSearchHere(searchHereCenter, viewportRadiusKm)
               setSearchHereCenter(null)
             }}
             className="flex items-center gap-1.5 rounded-full border border-border bg-background/95 backdrop-blur-sm px-3 py-1.5 text-sm font-medium shadow-md hover:bg-muted transition-colors"
