@@ -6,7 +6,7 @@ import { findMatch, filterByNameHint }  from "@/lib/matching/match"
 import { mergePlaces, passesFilters, finalisePlaceConfidence, computeFilteredConfidence, countLimited } from "@/lib/matching/merge"
 import { fetchOsmDisabledParking, fetchOsmAccessibleAmenities } from "@/lib/adapters/osm"
 import type { AmenityFeature } from "@/lib/types"
-import { enrichWithNearbyParking, haversineMeters, NEARBY_PARKING_DISPLAY_RADIUS_M, dedupeToiletFeatures, TOILET_DISPLAY_CAP } from "@/lib/matching/nearby-parking"
+import { enrichWithNearbyParking, haversineMeters, NEARBY_PARKING_DISPLAY_RADIUS_M, dedupeToiletFeatures, TOILET_DISPLAY_CAP, dedupeParkingFeatures } from "@/lib/matching/nearby-parking"
 import { parseQuery } from "@/lib/llm"
 import { NOMINATIM_ENDPOINT, RADIUS_MIN_KM, RADIUS_MAX_KM, PUBLIC_OVERPASS_ENDPOINTS, countryCodesParam, regionForCoordinates, INTL_COUNTRIES } from "@/lib/config"
 import * as Sentry from "@sentry/nextjs"
@@ -246,8 +246,13 @@ export async function POST(req: NextRequest) {
       // unaffected; telemetry must never block the response, hence the catch.
       const flushAndClose = async () => {
         try { await Sentry.flush(2000) } catch { /* ignore */ }
-        controller.close()
+        try { controller.close() } catch { /* already closed/cancelled */ }
       }
+
+      // Once the `result` event is on the wire, a later throw (e.g. flushAndClose
+      // racing a cancel) must NOT emit a `fatal` — that would overwrite good
+      // results on the client with an error banner. Guards the catch below.
+      let resultEmitted = false
 
       try {
         // ── 1. Parse query (deterministic, no LLM) ───────────────────────────
@@ -517,7 +522,8 @@ export async function POST(req: NextRequest) {
                 nearbyOnlyPlaces.some((p) => haversineMeters(p.coordinates, f) <= NEARBY_PARKING_DISPLAY_RADIUS_M)
               )
               const weakSpots = parkingFeatures.filter((f) => f.tier === "weak")
-              return [...strongSpots, ...weakSpots]
+              // Dedup stacked OSM node+way duplicates and cap the payload before mapping.
+              return dedupeParkingFeatures([...strongSpots, ...weakSpots])
                 .map((f) => ({
                   lat:      f.lat,
                   lon:      f.lon,
@@ -534,15 +540,18 @@ export async function POST(req: NextRequest) {
             amenitySpots: toiletFeatures.length > 0 ? toiletFeatures : undefined,
           },
         })
+        resultEmitted = true
         // Flush before close: #2/#3 captures may have fired during this run.
         await flushAndClose()
       } catch (err) {
-        if (signal.aborted) { controller.close(); return }
+        if (signal.aborted) { try { controller.close() } catch { /* ignore */ }; return }
         console.error("[search] unhandled error:", err)
         // #1: a genuine pipeline crash (not a handled adapter failure) — always
         // report to GlitchTip with the real stack.
         Sentry.captureException(err, { level: "error", tags: { area: "search-pipeline", kind: "unhandled" } })
-        emit({ type: "fatal", error: "An unexpected error occurred. Please try again." })
+        // Only surface a fatal if the result never made it out — otherwise the
+        // client already has good data and must not be clobbered (M24).
+        if (!resultEmitted) emit({ type: "fatal", error: "An unexpected error occurred. Please try again." })
         await flushAndClose()
       }
     },

@@ -5,6 +5,8 @@ import {
   NEARBY_PARKING_CONFIDENCE,
   DEFAULT_MAX_NEARBY_PARKING_M,
   dedupeToiletFeatures,
+  dedupeParkingFeatures,
+  PARKING_DISPLAY_CAP,
 } from "@/lib/matching/nearby-parking"
 import type { Place, ParkingDetails, AmenityFeature } from "@/lib/types"
 
@@ -81,6 +83,56 @@ describe("dedupeToiletFeatures", () => {
     const out = dedupeToiletFeatures(fs)
     expect(out.filter((f) => f.amenityType === "parking")).toHaveLength(1)
     expect(out.filter((f) => f.amenityType === "toilet")).toHaveLength(1)
+  })
+})
+
+describe("dedupeParkingFeatures", () => {
+  const parking = (over: Partial<AmenityFeature> = {}): AmenityFeature => ({
+    amenityType: "parking", lat: 50.8021, lon: 8.7666, tier: "strong", ...over,
+  })
+
+  it("keeps a single parking feature untouched", () => {
+    expect(dedupeParkingFeatures([parking()])).toHaveLength(1)
+  })
+
+  it("collapses a stacked node+way at the same coordinates", () => {
+    const fs = [parking(), parking()]
+    expect(dedupeParkingFeatures(fs)).toHaveLength(1)
+  })
+
+  it("prefers the strong tier when collapsing a duplicate", () => {
+    const out = dedupeParkingFeatures([parking({ tier: "weak" }), parking({ tier: "strong" })])
+    expect(out).toHaveLength(1)
+    expect(out[0].tier).toBe("strong")
+  })
+
+  it("prefers higher reserved capacity at equal tier", () => {
+    const out = dedupeParkingFeatures([parking({ capacity: 1 }), parking({ capacity: 5 })])
+    expect(out).toHaveLength(1)
+    expect(out[0].capacity).toBe(5)
+  })
+
+  it("keeps parking features that are far apart", () => {
+    const fs = [parking({ lat: 50.8021 }), parking({ lat: 50.8061 })] // ~440 m
+    expect(dedupeParkingFeatures(fs)).toHaveLength(2)
+  })
+
+  it("caps the number of features", () => {
+    // Spread far enough apart that none are deduped, exceeding the cap.
+    const fs: AmenityFeature[] = Array.from({ length: PARKING_DISPLAY_CAP + 25 }, (_, i) =>
+      parking({ lat: 50.8021 + i * 0.001 }),
+    )
+    expect(dedupeParkingFeatures(fs)).toHaveLength(PARKING_DISPLAY_CAP)
+  })
+
+  it("passes non-parking features through untouched (and uncapped)", () => {
+    const fs: AmenityFeature[] = [
+      { amenityType: "toilet", lat: 50.8021, lon: 8.7666, tier: "strong" },
+      parking(),
+    ]
+    const out = dedupeParkingFeatures(fs)
+    expect(out.filter((f) => f.amenityType === "toilet")).toHaveLength(1)
+    expect(out.filter((f) => f.amenityType === "parking")).toHaveLength(1)
   })
 })
 

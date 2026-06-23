@@ -175,6 +175,28 @@ const FAQ_CATEGORIES_EN: FaqCategory[] = [
         q: "How can I give feedback or report a bug?",
         a: "Use the \"Feedback\" link at the bottom of the page to open a short form. No account or registration required.",
       },
+      {
+        id: "contribute-data",
+        q: "How can I add or change accessibility information for places myself?",
+        a: (
+          <>
+            The easiest way: open the place on Wheelmap.org and enter the accessibility information
+            directly there — free of charge and no prior knowledge required. The{" "}
+            <a
+              href="https://news.wheelmap.org/en/faq/#:~:text=Edit%20place%20details"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline hover:opacity-80"
+            >
+              Wheelmap FAQ
+            </a>{" "}
+            explains how to do this step by step. Since Accessible Places fetches Wheelmap data
+            regularly, new or corrected entries usually become available here too after about 24 hours.
+          </>
+        ),
+        schemaText:
+          "The easiest way: open the place on Wheelmap.org and enter the accessibility information directly there — free of charge and no prior knowledge required. The Wheelmap FAQ at https://news.wheelmap.org/en/faq/ explains how to do this step by step. Since Accessible Places fetches Wheelmap data regularly, new or corrected entries usually become available here too after about 24 hours.",
+      },
     ],
   },
   {

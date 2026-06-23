@@ -112,3 +112,39 @@ export function dedupeToiletFeatures(
   }
   return [...others, ...kept]
 }
+
+// Radius within which two parking features are treated as the same physical lot.
+// OSM routinely tags a parking area as BOTH a node and a way (plus occasional
+// overlapping capacity:disabled nodes) — Overpass returns each, producing
+// stacked map pins. 20 m collapses these without merging genuinely separate bays.
+export const PARKING_DEDUP_RADIUS_M = 20
+
+// Upper bound on parking features shipped in the /api/search payload, mirroring
+// TOILET_DISPLAY_CAP. Bounds payload size in dense areas (markers are display-only).
+export const PARKING_DISPLAY_CAP = 200
+
+// Collapse duplicate parking features that point at the same physical lot, then
+// cap the count. Preference order when two collide: strong tier over weak, then
+// higher reserved capacity (the richer, more useful record survives).
+// Non-parking features pass through untouched.
+export function dedupeParkingFeatures(
+  features: AmenityFeature[],
+  radiusM: number = PARKING_DEDUP_RADIUS_M,
+  cap: number = PARKING_DISPLAY_CAP,
+): AmenityFeature[] {
+  const parking = features.filter((f) => f.amenityType === "parking")
+  const others  = features.filter((f) => f.amenityType !== "parking")
+  if (parking.length <= 1) return features
+
+  const rank = (f: AmenityFeature) =>
+    (f.tier === "strong" ? 1000 : 0) + (f.capacity ?? 0)
+  // Sort preferred-first so the kept feature is always the better one.
+  const sorted = [...parking].sort((a, b) => rank(b) - rank(a))
+
+  const kept: AmenityFeature[] = []
+  for (const p of sorted) {
+    const dup = kept.some((k) => haversineMeters(k, p) <= radiusM)
+    if (!dup) kept.push(p)
+  }
+  return [...others, ...kept.slice(0, cap)]
+}
