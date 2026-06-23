@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { headers } from "next/headers"
 import HomeClient from "@/app/HomeClient"
 
 const BASE = "https://accessible-places.org"
@@ -36,6 +37,9 @@ export default async function EnPage({
   searchParams: Promise<{ q?: string; cat?: string; selectLat?: string; selectLon?: string; selectName?: string }>
 }) {
   const { q, cat, selectLat, selectLon, selectName } = await searchParams
+  // Access-location country from Vercel's edge geo header (absent locally → null).
+  // Drives the international-search hint (see HomeClient). Page is already dynamic.
+  const country = (await headers()).get("x-vercel-ip-country")
   return (
     <HomeClient
       initialCity={q}
@@ -43,6 +47,7 @@ export default async function EnPage({
       initialSelectLat={parseCoord(selectLat, 90)}
       initialSelectLon={parseCoord(selectLon, 180)}
       initialSelectName={selectName}
+      initialCountry={country}
     />
   )
 }

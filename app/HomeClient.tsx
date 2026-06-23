@@ -8,6 +8,7 @@ import dynamic from "next/dynamic"
 import Script from "next/script"
 import Link from "next/link"
 import SplashOverlay   from "@/components/SplashOverlay"
+import IntlHintBanner  from "@/components/IntlHintBanner"
 import WheelchairRace  from "@/components/easter-eggs/WheelchairRace"
 import ChatPanel       from "@/components/chat/ChatPanel"
 import FilterPanel  from "@/components/filters/FilterPanel"
@@ -17,7 +18,7 @@ import MobileLayout from "@/components/mobile/MobileLayout"
 import SettingsSheet from "@/components/settings/SettingsSheet"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { useTranslations, useLocale } from "@/lib/i18n"
-import { DEFAULT_RADIUS_KM, RADIUS_MAX_KM, regionForCoordinates } from "@/lib/config"
+import { DEFAULT_RADIUS_KM, RADIUS_MAX_KM, regionForCoordinates, accessTierForCountry } from "@/lib/config"
 import { SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
@@ -91,9 +92,10 @@ interface Props {
   initialSelectLat?:  number
   initialSelectLon?:  number
   initialSelectName?: string
+  initialCountry?:    string | null
 }
 
-export default function HomeClient({ initialCity, initialCategory, initialSelectLat, initialSelectLon, initialSelectName }: Props) {
+export default function HomeClient({ initialCity, initialCategory, initialSelectLat, initialSelectLon, initialSelectName, initialCountry }: Props) {
   const t        = useTranslations()
   const { locale } = useLocale()
   // Arriving via an app-generated place deep-link (…?selectLat=…&selectLon=…, no
@@ -1064,6 +1066,39 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
   }, [updateSettings])
 
+  // ── International-search hint (access-location based) ──────────────────────
+  // Tier from Vercel's edge geo header: "intl" = in the opt-in allowlist (full
+  // support), "outside" = beyond it (nearby works, name search doesn't). DACH and
+  // unknown → no hint. SSR-safe: dismissed defaults to true (hidden) and the
+  // persisted flag is read in an effect to avoid a hydration mismatch.
+  const intlTier = accessTierForCountry(initialCountry)
+  const [intlHintDismissed, setIntlHintDismissed] = useState(true)
+  useEffect(() => {
+    try { setIntlHintDismissed(localStorage.getItem("ap_intl_hint_dismissed") === "1") } catch { /* ignore */ }
+  }, [])
+  const showIntlHint = !settings.internationalMode
+    && (intlTier === "intl" || intlTier === "outside")
+    && !intlHintDismissed
+
+  const dismissIntlHint = useCallback((remember: boolean) => {
+    setIntlHintDismissed(true)
+    if (remember) { try { localStorage.setItem("ap_intl_hint_dismissed", "1") } catch { /* ignore */ } }
+  }, [])
+
+  const activateIntlFromHint = useCallback(() => {
+    if (intlTier === "outside") {
+      // Not in the allowlist: enable international mode + AccèsLibre, but NOT
+      // Google Places (cost-conscious — name search isn't supported there anyway).
+      updateSettings({ internationalMode: true })
+      setSources((s) => ({ ...s, acceslibre: true }))
+    } else {
+      // In the allowlist: full activation (incl. Google Places) via the wrapper.
+      handleUpdateSettings({ internationalMode: true })
+    }
+    setIntlHintDismissed(true)
+    try { localStorage.setItem("ap_intl_hint_dismissed", "1") } catch { /* ignore */ }
+  }, [intlTier, updateSettings, handleUpdateSettings])
+
   // Show the parking toggle whenever the server returned spots OR any result
   // has parking enriched from a nearby OSM node (nearbyOnly flag). Both signal
   // that disabled-parking data exists for this search area.
@@ -1089,6 +1124,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           Otherwise it unmounts mid-animation and never plays on mobile. */}
       <SplashOverlay />
       {showRace && <WheelchairRace onDone={() => setShowRace(false)} />}
+      {showIntlHint && intlTier && (
+        <IntlHintBanner tier={intlTier} onActivate={activateIntlFromHint} onClose={dismissIntlHint} />
+      )}
       <MobileLayout
         places={places}
         parkingSpots={visibleParkingSpots}
@@ -1174,6 +1212,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     </a>
     <SplashOverlay />
     {showRace && <WheelchairRace onDone={() => setShowRace(false)} />}
+    {showIntlHint && intlTier && (
+      <IntlHintBanner tier={intlTier} onActivate={activateIntlFromHint} onClose={dismissIntlHint} />
+    )}
     <Script src="https://tally.so/widgets/embed.js" strategy="lazyOnload" />
     <div className="flex flex-col h-screen overflow-hidden bg-background text-foreground">
       {/* ── Top bar ── */}

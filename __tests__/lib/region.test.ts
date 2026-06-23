@@ -4,9 +4,35 @@ import {
   regionForCoordinates,
   endpointsForCoordinates,
   countryCodesParam,
+  accessTierForCountry,
   PUBLIC_OVERPASS_ENDPOINTS,
   OVERPASS_ENDPOINTS,
 } from "@/lib/config"
+
+describe("accessTierForCountry", () => {
+  it("classifies DACH country codes as 'dach' (case-insensitive)", () => {
+    expect(accessTierForCountry("DE")).toBe("dach")
+    expect(accessTierForCountry("at")).toBe("dach")
+    expect(accessTierForCountry("CH")).toBe("dach")
+  })
+
+  it("classifies allowlist country codes as 'intl'", () => {
+    expect(accessTierForCountry("FR")).toBe("intl")
+    expect(accessTierForCountry("GB")).toBe("intl")
+    expect(accessTierForCountry("us")).toBe("intl")
+  })
+
+  it("classifies unsupported country codes as 'outside'", () => {
+    expect(accessTierForCountry("JP")).toBe("outside")
+    expect(accessTierForCountry("BR")).toBe("outside")
+  })
+
+  it("returns null for missing/empty input", () => {
+    expect(accessTierForCountry(null)).toBeNull()
+    expect(accessTierForCountry(undefined)).toBeNull()
+    expect(accessTierForCountry("")).toBeNull()
+  })
+})
 
 describe("regionForCoordinates", () => {
   it("classifies DACH cities as 'dach'", () => {

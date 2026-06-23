@@ -314,6 +314,14 @@ export interface Translations {
   privacy: {
     linkLabel: string
   }
+  intlHint: {
+    titleFull:      string
+    bodyFull:       string
+    titleLimited:   string
+    bodyLimited:    string
+    activate:       string
+    dontShowAgain:  string
+  }
   settings: {
     title:             string
     autoSaveHint:      string

@@ -331,6 +331,14 @@ const en: Translations = {
   privacy: {
     linkLabel: "Privacy",
   },
+  intlHint: {
+    titleFull:     "Enable international search",
+    bodyFull:      "You appear to be outside the DACH region. Enable international search to find places in your country.",
+    titleLimited:  "International search (limited)",
+    bodyLimited:   "Your country isn't fully supported yet. Searching nearby by location works, but searching by place name does not yet.",
+    activate:      "Enable",
+    dontShowAgain: "Don't show again",
+  },
   impressum: {
     title:      "Legal Notice",
     back:       "Back",

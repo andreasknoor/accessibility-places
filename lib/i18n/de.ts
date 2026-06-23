@@ -331,6 +331,14 @@ const de: Translations = {
   privacy: {
     linkLabel: "Datenschutz",
   },
+  intlHint: {
+    titleFull:     "Internationale Suche aktivieren",
+    bodyFull:      "Du scheinst außerhalb der DACH-Region zu sein. Aktiviere die internationale Suche, um Orte in deinem Land zu finden.",
+    titleLimited:  "Internationale Suche (eingeschränkt)",
+    bodyLimited:   "Dein Land wird noch nicht vollständig unterstützt. Die Umgebungssuche per Standort funktioniert, die Suche nach Ortsnamen jedoch noch nicht.",
+    activate:      "Aktivieren",
+    dontShowAgain: "Nicht mehr anzeigen",
+  },
   impressum: {
     title:      "Impressum",
     back:       "Zurück",

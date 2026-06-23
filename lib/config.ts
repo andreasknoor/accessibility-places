@@ -153,6 +153,22 @@ export function regionForCoordinates(lat: number, lon: number): Region {
   return "outside"
 }
 
+/**
+ * Classifies an ISO-3166 alpha-2 country code (e.g. Vercel's x-vercel-ip-country)
+ * into the same three tiers, for the access-location-based international hint:
+ *   "dach"    → fully supported, no hint
+ *   "intl"    → in the opt-in allowlist (full support once enabled)
+ *   "outside" → not in the allowlist (nearby works, name search does not)
+ *   null      → unknown country (no header) → no hint
+ */
+export function accessTierForCountry(country: string | null | undefined): Region | null {
+  if (!country) return null
+  const c = country.toUpperCase()
+  if ((DACH_CODES as readonly string[]).includes(c)) return "dach"
+  if (INTL_COUNTRIES.some((x) => x.code === c)) return "intl"
+  return "outside"
+}
+
 /** Nominatim `countrycodes` value (lowercase, comma-separated) for the active mode. */
 export function countryCodesParam(international: boolean): string {
   const codes = international ? SUPPORTED_COUNTRY_CODES : DACH_CODES
