@@ -22,6 +22,9 @@ export interface Translations {
     suggestGroupAreas:  string
     suggestGroupVenues: string
     chipAll:            string
+    // Amenity search chips (single-select, at the front of the chip strip).
+    chipParking:        string
+    chipToilet:         string
     send:          string
     thinking:      string
     noResults:        string
@@ -128,6 +131,10 @@ export interface Translations {
     adjustFilters:        string
     adjustFiltersHint:    string
     distanceFromHere:     (m: number) => string
+    amenityParkingLabel:  string
+    amenityToiletLabel:   string
+    amenityCapacity:      (n: number) => string
+    amenityCount:         (n: number) => string
     openDetails:          (name: string) => string
     showNearbyParking:    string
     copyLink:             string

@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useTranslations } from "@/lib/i18n"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { SOURCE_LABELS } from "@/lib/config"
-import type { SearchFilters, ActiveSources, SourceId, SourceState } from "@/lib/types"
+import type { SearchFilters, ActiveSources, SourceId, SourceState, AmenityType } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 interface Props {
@@ -21,6 +21,13 @@ interface Props {
   sourceStates?: Partial<Record<SourceId, SourceState>>
   onRerun?:      () => void
   isLoading?:    boolean
+  // Amenity search (parking / WC): when set, the panel shows amenity-specific
+  // options (radius + weak-parking / public-toilets) instead of the venue
+  // accessibility criteria and data sources, which don't apply to point features.
+  amenityType?:       AmenityType | null
+  showWeakParking?:   boolean
+  publicToiletsOnly?: boolean
+  onUpdateSettings?:  (patch: { showWeakParking?: boolean; publicToiletsOnly?: boolean }) => void
 }
 
 function SourceIndicator({ state }: { state?: SourceState }) {
@@ -103,9 +110,10 @@ const SOURCE_REGION: Partial<Record<SourceId, string>> = {
 
 const SOURCE_DISABLED: Partial<Record<SourceId, true>> = {}
 
-export default function FilterPanel({ filters, sources, radiusKm, onFilters, onSources, onRadius, sourceStates, onRerun, isLoading }: Props) {
+export default function FilterPanel({ filters, sources, radiusKm, onFilters, onSources, onRadius, sourceStates, onRerun, isLoading, amenityType, showWeakParking, publicToiletsOnly, onUpdateSettings }: Props) {
   const t = useTranslations()
   const isMobile = useIsMobile()
+  const amenityMode = amenityType != null
 
   function toggleSource(id: keyof ActiveSources) {
     onSources({ ...sources, [id]: !sources[id] })
@@ -161,6 +169,49 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
         </div>
       </section>
 
+      {/* ── Amenity options (parking / WC search) ── */}
+      {amenityMode && (
+        <>
+          <Separator />
+          <section>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+              {amenityType === "parking" ? t.chat.chipParking : t.chat.chipToilet}
+            </h2>
+            <div className="flex flex-col gap-2.5">
+              {amenityType === "parking" && (
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <Checkbox
+                    checked={!!showWeakParking}
+                    onCheckedChange={() => onUpdateSettings?.({ showWeakParking: !showWeakParking })}
+                    id="amenity-weak-parking"
+                    className="mt-0.5"
+                  />
+                  <span className="text-sm text-muted-foreground leading-snug">
+                    {t.settings.showWeakParking}
+                    <span className="block text-xs text-muted-foreground/70">{t.settings.showWeakParkingHint}</span>
+                  </span>
+                </label>
+              )}
+              {amenityType === "toilet" && (
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <Checkbox
+                    checked={!!publicToiletsOnly}
+                    onCheckedChange={() => onUpdateSettings?.({ publicToiletsOnly: !publicToiletsOnly })}
+                    id="amenity-public-toilets"
+                    className="mt-0.5"
+                  />
+                  <span className="text-sm text-muted-foreground leading-snug">
+                    {t.settings.publicToiletsOnly}
+                    <span className="block text-xs text-muted-foreground/70">{t.settings.publicToiletsOnlyHint}</span>
+                  </span>
+                </label>
+              )}
+            </div>
+          </section>
+        </>
+      )}
+
+      {!amenityMode && (<>
       <Separator />
 
       {/* ── Criteria ── */}
@@ -279,6 +330,7 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
           </label>
         </div>
       </section>
+      </>)}
     </aside>
   )
 }

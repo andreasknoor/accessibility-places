@@ -62,12 +62,14 @@ interface Props {
   onSortChange:         (s: "confidence" | "distance") => void
   defaultMobileView:    "results" | "map"
   onGpsResolved?:       (coords: { lat: number; lon: number }) => void
-  focusLayers?:         Set<AmenityType>
-  onToggleFocusLayer?:  (type: AmenityType) => void
-  focusLoadingLayer?:   AmenityType | null
-  focusHints?:          Partial<Record<AmenityType, string>>
-  focusSearchCenter?:   { lat: number; lon: number } | null
-  onFocusSearchHere?:   (center: { lat: number; lon: number }, radiusKm: number) => void
+  amenityActive?:       AmenityType | null
+  onAmenitySearch?:     (type: AmenityType, coords?: { lat: number; lon: number }) => void
+  onExitAmenity?:       () => void
+  amenityResults?:      AmenityFeature[]
+  amenityHint?:         string
+  amenitySearchCenter?: { lat: number; lon: number } | null
+  onAmenitySearchHere?: (center: { lat: number; lon: number }, radiusKm: number) => void
+  onAmenityRadius?:     (km: number) => void
   isFirstVisit?:        boolean
   onResetOnboarding?:   () => void
   onDismissWelcome?:    () => void
@@ -97,7 +99,7 @@ export default function MobileLayout({
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
   onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, onStartNearby, hasGpsCoords, locateTrigger, onSwitchToText,
   chatMode, onChatModeChange, biasCoords, onSearchHere, onLocate, locatePanTrigger, gpsCoords, onCategoryQueryChange, activeSearchCoords,
-  focusLayers, onToggleFocusLayer, focusLoadingLayer, focusHints, focusSearchCenter, onFocusSearchHere, intlNotice, placeSearchName,
+  amenityActive, onAmenitySearch, onExitAmenity, amenityResults, amenityHint, amenitySearchCenter, onAmenitySearchHere, onAmenityRadius, intlNotice, placeSearchName,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -114,14 +116,13 @@ export default function MobileLayout({
   const handleSearch = (query: string, coords?: { lat: number; lon: number }, nameHint?: string) => { setActiveTab(defaultMobileView ?? "results"); onSearch(query, coords, nameHint) }
   const handleRerun = onRerun ? () => { setActiveTab(defaultMobileView ?? "results"); onRerun() } : undefined
   const handleExpandRadius = onExpandRadius ? () => { setActiveTab(defaultMobileView ?? "results"); onExpandRadius() } : undefined
-  const focusActive = (focusLayers?.size ?? 0) > 0
-  // When the user activates an amenity focus layer on mobile, jump to the map tab
-  // so the effect is visible immediately. Turning a layer off stays on the tab.
-  const handleToggleFocusLayer = onToggleFocusLayer
-    ? (type: AmenityType) => {
-        const wasActive = focusLayers?.has(type) ?? false
-        if (!wasActive) setActiveTab("map")
-        onToggleFocusLayer(type)
+  const amenityActiveBool = amenityActive != null
+  // An amenity chip search switches to the configured default view (its results
+  // appear as list cards AND map markers), like any other search.
+  const handleAmenitySearch = onAmenitySearch
+    ? (type: AmenityType, coords?: { lat: number; lon: number }) => {
+        setActiveTab(defaultMobileView ?? "results")
+        onAmenitySearch(type, coords)
       }
     : undefined
   const t = useTranslations()
@@ -133,15 +134,13 @@ export default function MobileLayout({
     if (activeTab === "map") setMapMounted(true)
   }, [activeTab])
 
-  // Switch to the map tab whenever focus mode is entered from a non-focus state.
-  // Covers the programmatic entry from a native quick action (which calls the raw
-  // toggle, bypassing the tap-path tab switch) as well as the normal chip tap.
-  const prevFocusSizeRef = useRef(0)
+  // Switch to the map tab when an amenity search is entered programmatically (a
+  // native quick action bypasses the chip-tap path's tab switch).
+  const prevAmenityRef = useRef(false)
   useEffect(() => {
-    const size = focusLayers?.size ?? 0
-    if (size > 0 && prevFocusSizeRef.current === 0) setActiveTab("map")
-    prevFocusSizeRef.current = size
-  }, [focusLayers])
+    if (amenityActiveBool && !prevAmenityRef.current) setActiveTab(defaultMobileView ?? "results")
+    prevAmenityRef.current = amenityActiveBool
+  }, [amenityActiveBool, defaultMobileView])
 
   const showWelcome = !!isFirstVisit && chatMode === "nearby" && !hasSearched && places.length === 0 && !isLoading
 
@@ -207,7 +206,7 @@ export default function MobileLayout({
 
       {/* ── Search bar (always visible) ── */}
       <div role="search">
-        <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} locateTrigger={locateTrigger} biasCoords={biasCoords} focusLayers={focusLayers} onToggleFocusLayer={handleToggleFocusLayer} focusLoadingLayer={focusLoadingLayer} focusHints={focusHints} onCategoryQueryChange={onCategoryQueryChange} activeSearchCoords={activeSearchCoords} international={settings.internationalMode} />
+        <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} locateTrigger={locateTrigger} biasCoords={biasCoords} onAmenitySearch={handleAmenitySearch} amenityActive={amenityActive} onExitAmenity={onExitAmenity} onCategoryQueryChange={onCategoryQueryChange} activeSearchCoords={activeSearchCoords} international={settings.internationalMode} />
       </div>
 
       {/* Global search progress — covers every trigger (search here, filter, radius,
@@ -298,7 +297,7 @@ export default function MobileLayout({
             onExpandRadius={handleExpandRadius}
             onAdjustFilters={() => setActiveTab("filter")}
             radiusKm={radiusKm}
-            onRadiusChange={onRadiusChange}
+            onRadiusChange={amenityActiveBool && onAmenityRadius ? onAmenityRadius : onRadiusChange}
             hasSearched={hasSearched}
             filterDebug={filterDebug}
             searchCenter={searchCenter}
@@ -308,6 +307,9 @@ export default function MobileLayout({
             chatMode={chatMode}
             onSwitchToText={onSwitchToText}
             isFirstVisit={isFirstVisit}
+            amenityType={amenityActive}
+            amenityResults={amenityResults}
+            amenityHint={amenityHint}
           />
         </div>
 
@@ -315,7 +317,7 @@ export default function MobileLayout({
         <div className={cn("h-full relative", activeTab !== "map" && "hidden")}>
           {/* Result count pill — top-left, tapping switches to results list.
               Hidden in focus mode: it points at the (now irrelevant) venue results. */}
-          {hasSearched && !isLoading && resultCount > 0 && !focusActive && (
+          {hasSearched && !isLoading && resultCount > 0 && !amenityActiveBool && (
             <button
               onClick={() => { hapticLight(); setActiveTab("results") }}
               className="absolute top-3 left-14 z-[1000] flex items-center gap-1.5 rounded-full bg-card/95 backdrop-blur-sm border border-border shadow-md px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
@@ -346,9 +348,9 @@ export default function MobileLayout({
               hasToiletData={hasToiletData}
               isLoading={isLoading}
               autoZoom={settings.autoZoom}
-              focusMode={focusActive}
-              focusSearchCenter={focusSearchCenter}
-              onFocusSearchHere={onFocusSearchHere}
+              focusMode={amenityActiveBool}
+              focusSearchCenter={amenitySearchCenter}
+              onFocusSearchHere={onAmenitySearchHere}
               showWeakParking={settings.showWeakParking}
               onSearchHere={onSearchHere}
               onLocate={onLocate}
@@ -365,10 +367,14 @@ export default function MobileLayout({
             radiusKm={radiusKm}
             onFilters={onFilters}
             onSources={onSources}
-            onRadius={onRadius}
+            onRadius={amenityActiveBool && onAmenityRadius ? onAmenityRadius : onRadius}
             sourceStates={sourceStates}
             onRerun={chatMode === "nearby" ? handleRerun : undefined}
             isLoading={isLoading}
+            amenityType={amenityActive}
+            showWeakParking={settings.showWeakParking}
+            publicToiletsOnly={settings.publicToiletsOnly}
+            onUpdateSettings={onUpdateSettings}
           />
         </div>
 
@@ -398,10 +404,9 @@ export default function MobileLayout({
       {/* ── Bottom tab bar ── */}
       <nav className="flex border-t border-border bg-card shrink-0 safe-area-inset-bottom">
         {tabs.map((tab) => {
-          // In amenity focus mode only the map is meaningful; the venue results and
-          // filters don't apply, so disable those tabs. Exit is always possible via
-          // the focus chips in the (always-visible) search bar, so this is no trap.
-          const disabled = focusActive && tab.id !== "map"
+          // Amenity search shows real results (list cards + map markers), so all
+          // tabs stay usable — no special gating.
+          const disabled = false
           return (
             <button
               key={tab.id}

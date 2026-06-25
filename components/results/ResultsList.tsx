@@ -7,7 +7,7 @@ import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { Popover, PopoverTrigger, PopoverContent, PopoverClose } from "@/components/ui/popover"
 import { haversineMetres } from "@/lib/matching/match"
-import type { Place, SearchFilters, FilterDebug } from "@/lib/types"
+import type { Place, SearchFilters, FilterDebug, AmenityFeature, AmenityType } from "@/lib/types"
 
 const RADIUS_PRESETS_KM = [1, 2, 5, 10, 25, 50] as const
 
@@ -43,15 +43,21 @@ interface Props {
   // lookup (place search). Shows a "Results for <name>" banner so the user knows
   // the category chips did not scope this search. Undefined for area searches.
   placeSearchName?:     string
+  // Amenity search (parking / WC). When set, the list renders amenity result cards
+  // (label + distance) instead of place cards; `places` is empty in this mode.
+  amenityType?:         AmenityType | null
+  amenityResults?:      AmenityFeature[]
+  amenityHint?:         string
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToText, isFirstVisit, onDismissWelcome, onStartNearby, intlNotice, placeSearchName }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToText, isFirstVisit, onDismissWelcome, onStartNearby, intlNotice, placeSearchName, amenityType, amenityResults, amenityHint }: Props) {
   const t = useTranslations()
+  const amenityMode = amenityType != null
   const [mapHintSeen, setMapHintSeen] = useState(() =>
     typeof window !== "undefined" && !!localStorage.getItem("ap_map_hint_seen")
   )
   const [localSortBy, setLocalSortBy] = useState<"confidence" | "distance">("confidence")
-  const showWelcome = !isLoading && places.length === 0 && !hasSearched && chatMode === "nearby" && isFirstVisit
+  const showWelcome = !isLoading && places.length === 0 && !hasSearched && chatMode === "nearby" && isFirstVisit && !amenityMode
   const sortBy = sortByProp ?? localSortBy
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -75,6 +81,16 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
     }
     return places
   }, [places, sortBy, searchCenter])
+
+  // Amenity results, always sorted by distance (the only meaningful order for
+  // "nearest parking / toilet").
+  const displayedAmenities = useMemo(() => {
+    const list = amenityResults ?? []
+    if (!searchCenter) return list
+    return [...list].sort((a, b) =>
+      haversineMetres(searchCenter, a) - haversineMetres(searchCenter, b)
+    )
+  }, [amenityResults, searchCenter])
 
   useEffect(() => {
     if (!scrollToId) return
@@ -173,7 +189,12 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
             )}
           </h2>
           <div className="flex items-center gap-2">
-            {!isLoading && places.length > 0 && (
+            {!isLoading && amenityMode && displayedAmenities.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {t.results.amenityCount(displayedAmenities.length)}
+              </span>
+            )}
+            {!isLoading && !amenityMode && places.length > 0 && (
               <span className="text-xs text-muted-foreground">
                 {t.results.count(places.length)}
                 {parkingSpotCount != null && parkingSpotCount > 0 && (
@@ -314,7 +335,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
             </div>
           )}
 
-          {!isLoading && places.length === 0 && !hasSearched && chatMode !== "nearby" && (
+          {!isLoading && !amenityMode && places.length === 0 && !hasSearched && chatMode !== "nearby" && (
             <div className="flex flex-col items-center gap-4 py-14 px-6 text-center">
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
                 <MapPin className="w-8 h-8 text-muted-foreground" />
@@ -326,7 +347,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
             </div>
           )}
 
-          {!isLoading && places.length === 0 && hasSearched && (
+          {!isLoading && !amenityMode && places.length === 0 && hasSearched && (
             <div className="flex flex-col items-center gap-3 py-8 px-4">
               {filterDebug && filterDebug.total > 0 ? (
                 <>
@@ -380,7 +401,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
             </div>
           )}
 
-          {!isLoading && displayedPlaces.map((place) => (
+          {!isLoading && !amenityMode && displayedPlaces.map((place) => (
             <div
               key={place.id}
               ref={(el) => { if (el) itemRefs.current.set(place.id, el); else itemRefs.current.delete(place.id) }}
@@ -393,6 +414,47 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
                 />
             </div>
           ))}
+
+          {/* Amenity (parking / WC) results — simple distance-sorted cards */}
+          {!isLoading && amenityMode && displayedAmenities.length === 0 && (
+            <div className="flex flex-col items-center gap-3 py-8 px-4">
+              <p className="text-sm text-muted-foreground text-center">
+                {amenityHint ?? t.chat.noResults}
+              </p>
+              {onExpandRadius && (
+                <button
+                  onClick={onExpandRadius}
+                  className="px-3 py-1.5 rounded-md border border-border bg-card text-sm font-medium hover:bg-muted transition-colors"
+                >
+                  {t.results.expandRadius}
+                </button>
+              )}
+            </div>
+          )}
+
+          {!isLoading && amenityMode && displayedAmenities.map((spot, i) => {
+            const label = amenityType === "parking" ? t.results.amenityParkingLabel : t.results.amenityToiletLabel
+            const distanceM = searchCenter ? haversineMetres(searchCenter, spot) : undefined
+            return (
+              <div
+                key={spot.osmId ?? `${spot.lat},${spot.lon}-${i}`}
+                className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5"
+              >
+                <span className="text-xl shrink-0" aria-hidden>{amenityType === "parking" ? "🅿" : "🚻"}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {spot.host?.name ?? label}
+                    {spot.capacity != null && spot.capacity > 0 && (
+                      <span className="font-normal text-muted-foreground"> · {t.results.amenityCapacity(spot.capacity)}</span>
+                    )}
+                  </p>
+                  {distanceM != null && (
+                    <p className="text-xs text-muted-foreground">{t.results.distanceFromHere(Math.round(distanceM))}</p>
+                  )}
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>}
     </div>

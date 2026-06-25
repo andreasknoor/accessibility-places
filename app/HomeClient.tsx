@@ -143,18 +143,17 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [sortBy,        setSortBy]       = useState<"confidence" | "distance">(() => loadSettings().sortOrder)
   const [resetKey,            setResetKey]            = useState(0)
   const [scrollToId,          setScrollToId]          = useState<string | undefined>()
-  // Amenity focus mode: focus the map on GPS-radius amenity spots (parking
-  // and/or WCs) within parkingRadiusKm of the user's GPS coords. Per-session.
-  // `focusLayers` is the set of active layers — empty Set = not in focus mode.
-  // `focusSpots` holds the GPS-radius fetch result, kept separate from the
-  // result-nearby parkingSpots/toiletSpots so no backup/restore dance is needed.
-  const [focusLayers,         setFocusLayers]         = useState<Set<AmenityType>>(new Set())
-  const [focusSpots,          setFocusSpots]          = useState<AmenityFeature[]>([])
-  // Non-null when the user ran "search this area" in focus mode (panned centre).
-  // null = GPS-anchored focus. Drives whether the map fit includes the GPS dot.
-  const [focusSearchCenter,   setFocusSearchCenter]   = useState<{ lat: number; lon: number } | null>(null)
-  const [focusHints,          setFocusHints]          = useState<Partial<Record<AmenityType, string>>>({})
-  const [focusLoadingLayer,   setFocusLoadingLayer]   = useState<AmenityType | null>(null)
+  // Amenity search: parking / WC as a first-class search (single-select, driven by
+  // the front chips), not a hidden focus mode. `amenitySearch` is the active type
+  // (null = normal venue search). `amenitySpots` holds the fetched results, shown
+  // both as map markers (via the parking/toilet sources below) and as list cards.
+  const [amenitySearch,       setAmenitySearch]       = useState<AmenityType | null>(null)
+  const [amenitySpots,        setAmenitySpots]        = useState<AmenityFeature[]>([])
+  // Non-null when the user ran "search this area" (panned centre) during an amenity
+  // search. null = anchored at the origin coords. Drives whether the map re-fits.
+  const [amenityPanned,       setAmenityPanned]       = useState<{ lat: number; lon: number } | null>(null)
+  // "None found" hint for the active amenity search (empty result).
+  const [amenityHint,         setAmenityHint]         = useState<string | null>(null)
   const [isFirstVisit,        setIsFirstVisit]        = useState(false)  // SSR-safe; real value read post-hydration (React #418)
   const [locateTriggerKey,    setLocateTriggerKey]    = useState(0)
   const [locatePanTrigger,    setLocatePanTrigger]    = useState(0)
@@ -198,9 +197,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // Tracks the in-flight /api/search request so rapid re-fires (filter toggle, source
   // toggle, radius change) abort the previous stream instead of racing it to setState.
   const searchAbortRef  = useRef<AbortController | null>(null)
-  // Tracks the in-flight amenity-focus fetch so rapid chip toggling aborts the
-  // previous request instead of letting a stale response win setFocusSpots.
-  const focusAbortRef   = useRef<AbortController | null>(null)
+  // Tracks the in-flight amenity fetch so rapid chip switching aborts the previous
+  // request instead of letting a stale response win setAmenitySpots.
+  const amenityAbortRef = useRef<AbortController | null>(null)
 
   // ── Easter Egg #2: logo tap counter ────────────────────────────────────────
   function handleLogoTap() {
@@ -368,15 +367,15 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setToiletSpots([])
     setSelectedId(undefined)
     setFilterDebug(undefined)
-    // Normally a new search exits focus mode. But while a native quick action is
+    // A venue search exits amenity mode. But while a native quick action is
     // launching (which itself triggers a nearby auto-search in nearby-default
-    // mode), suppress the reset so the about-to-be-applied focus layer survives.
+    // mode), suppress the reset so the about-to-be-applied amenity search survives.
     if (!quickActionActiveRef.current) {
-      setFocusLayers(new Set())
-      setFocusSpots([])
-      setFocusSearchCenter(null)
-      setFocusHints({})
-      setFocusLoadingLayer(null)
+      amenityAbortRef.current?.abort()
+      setAmenitySearch(null)
+      setAmenitySpots([])
+      setAmenityPanned(null)
+      setAmenityHint(null)
     }
     // Initialise per-source loading state for each active source so the
     // FilterPanel renders spinners immediately.
@@ -545,11 +544,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setFilterDebug(undefined)
     setError(undefined)
     setSourceStates({})
-    setFocusLayers(new Set())
-    setFocusSpots([])
-    setFocusSearchCenter(null)
-    setFocusHints({})
-    setFocusLoadingLayer(null)
+    amenityAbortRef.current?.abort()
+    setAmenitySearch(null)
+    setAmenitySpots([])
+    setAmenityPanned(null)
+    setAmenityHint(null)
     // Drop the restorable last-search: it no longer applies once the results/mode
     // change, so a later return mustn't replay a stale search. Keep the active mode.
     clearSearchRun()
@@ -585,11 +584,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setError(undefined)
     setSourceStates({})
     setIsLoading(false)
-    setFocusLayers(new Set())
-    setFocusSpots([])
-    setFocusSearchCenter(null)
-    setFocusHints({})
-    setFocusLoadingLayer(null)
+    amenityAbortRef.current?.abort()
+    setAmenitySearch(null)
+    setAmenitySpots([])
+    setAmenityPanned(null)
+    setAmenityHint(null)
     const dismissed = (() => { try { return !!localStorage.getItem("ap_welcome_dismissed") } catch { return false } })()
     if (!dismissed) setIsFirstVisit(true)
     setChatMode(settings.defaultSearchMode ?? "nearby")
@@ -638,7 +637,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
   const handleSearchHere = useCallback((coords: { lat: number; lon: number }, viewportRadiusKm: number) => {
     // Use the viewport-derived radius so the search covers exactly what the user
-    // sees, not the last user-setting radius.
+    // sees, not the last user-setting radius. (Amenity "search here" is wired
+    // separately via MapView's onFocusSearchHere → handleAmenitySearchHere.)
     const clampedRadius = Math.min(Math.max(viewportRadiusKm, RADIUS_MIN_KM), RADIUS_MAX_KM)
     if (lastQuery) {
       handleSearch(lastQuery, clampedRadius, coords, lastNameHint)
@@ -778,90 +778,82 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setLocatePanTrigger((k) => k + 1)
   }, [])
 
-  // Amenity focus mode: toggle a layer (parking / WC) on or off. Adding the
-  // first layer enters focus mode; removing the last exits it. Each toggle
-  // re-fetches the GPS-radius amenities for the resulting layer set so a
-  // combined "parking + WCs" view stays in sync. The fetch result lives in
-  // `focusSpots` — result-nearby parkingSpots/toiletSpots are never touched, so
-  // exiting focus mode restores the original view with no backup bookkeeping.
   const noneFoundFor = useCallback(
     (type: AmenityType) => type === "parking" ? t.chat.parkingNoneFound : t.chat.toiletsNoneFound,
     [t.chat.parkingNoneFound, t.chat.toiletsNoneFound],
   )
 
-  // Shared focus fetch: loads amenity spots (parking/WC) around `coords` for the
-  // given layers and updates focus state. Used both by the GPS-origin toggle and
-  // by "search this area" (panned-centre re-fetch). Aborts any in-flight fetch so
-  // a stale response can't win setFocusSpots.
-  const fetchFocusSpotsAt = useCallback(async (
-    coords: { lat: number; lon: number },
-    layers: AmenityType[],
-    primaryLayer: AmenityType,
-    radiusKm: number = settings.parkingRadiusKm,
+  // Amenity search: parking / WC as a first-class search. Fetches the amenity spots
+  // (via the existing /api/nearby-parking endpoint) around `coords` and shows them
+  // as the primary results — list cards + map markers. Replaces venue results
+  // (single-select). `panned` is set when re-run via "search this area" so the map
+  // does not re-fit. Aborts any in-flight fetch so a stale response can't win.
+  const handleAmenitySearch = useCallback(async (
+    type: AmenityType,
+    coords?: { lat: number; lon: number },
+    radiusKmOverride?: number,
+    panned?: { lat: number; lon: number },
   ) => {
-    focusAbortRef.current?.abort()
+    const center = coords ?? gpsCoordRef.current ?? gpsCoords
+    if (!center) return  // ChatPanel handles the locate-first case
+    amenityAbortRef.current?.abort()
     const controller = new AbortController()
-    focusAbortRef.current = controller
-    setFocusLoadingLayer(primaryLayer)
+    amenityAbortRef.current = controller
+
+    markVisited()
+    searchAbortRef.current?.abort()  // cancel any in-flight venue search
+    setAmenitySearch(type)
+    setPlaces([])
+    setParkingSpots([])
+    setToiletSpots([])
+    setSelectedId(undefined)
+    setPlaceSearchName(undefined)
+    setError(undefined)
+    setFilterDebug(undefined)
+    setSourceStates({})
+    setSearchCenter(center)        // enables distance display + sorting
+    setAmenityPanned(panned ?? null)
+    setAmenityHint(null)
+    setIsLoading(true)
+    track("amenity_search", { type })
+
+    const radius = radiusKmOverride ?? radiusKm
     try {
       const res = await fetch(
-        `/api/nearby-parking?lat=${coords.lat}&lon=${coords.lon}&radius=${radiusKm}&types=${layers.join(",")}${settings.internationalMode ? "&intl=1" : ""}`,
+        `/api/nearby-parking?lat=${center.lat}&lon=${center.lon}&radius=${radius}&types=${type}${settings.internationalMode ? "&intl=1" : ""}`,
         { signal: controller.signal },
       )
       const spots: AmenityFeature[] = res.ok ? await res.json() : []
-      setFocusSpots(spots)
-      const hints: Partial<Record<AmenityType, string>> = {}
-      for (const layer of layers) {
-        if (!spots.some((s) => s.amenityType === layer)) hints[layer] = noneFoundFor(layer)
-      }
-      setFocusHints(hints)
+      if (controller.signal.aborted) return
+      setAmenitySpots(spots)
+      if (spots.length === 0) setAmenityHint(noneFoundFor(type))
     } catch (err) {
-      // Aborted fetch: a newer request superseded this one — leave its state alone.
       if (err instanceof DOMException && err.name === "AbortError") return
-      const hints: Partial<Record<AmenityType, string>> = {}
-      for (const layer of layers) hints[layer] = noneFoundFor(layer)
-      setFocusHints(hints)
+      setAmenitySpots([])
+      setAmenityHint(noneFoundFor(type))
     } finally {
-      // Only the latest request clears the spinner; a superseded one must not.
-      if (focusAbortRef.current === controller) setFocusLoadingLayer(null)
+      if (amenityAbortRef.current === controller) setIsLoading(false)
     }
-  }, [settings.parkingRadiusKm, settings.internationalMode, noneFoundFor])
+  }, [gpsCoords, radiusKm, settings.internationalMode, noneFoundFor])
 
-  const handleToggleFocusLayer = useCallback(async (type: AmenityType) => {
-    const coords = gpsCoordRef.current ?? gpsCoords
-    if (!coords) return
+  // "Search this area" during an amenity search: re-fetch the active amenity type
+  // at the panned map centre. Recorded as `panned` so the map fit no longer forces
+  // the origin into view.
+  const handleAmenitySearchHere = useCallback((center: { lat: number; lon: number }, viewportRadiusKm: number) => {
+    if (!amenitySearch) return
+    const clamped = Math.min(Math.max(viewportRadiusKm, RADIUS_MIN_KM), RADIUS_MAX_KM)
+    void handleAmenitySearch(amenitySearch, center, clamped, center)
+  }, [amenitySearch, handleAmenitySearch])
 
-    // Single-select: clicking an active layer deactivates; clicking the other switches.
-    const next = new Set<AmenityType>()
-    if (!focusLayers.has(type)) next.add(type)
-    setFocusLayers(next)
-    // Toggling a layer re-anchors the focus search at the GPS location.
-    setFocusSearchCenter(null)
-
-    // Removing the last layer exits focus mode — clear the focus state.
-    if (next.size === 0) {
-      focusAbortRef.current?.abort()
-      setFocusSpots([])
-      setFocusSearchCenter(null)
-      setFocusHints({})
-      setFocusLoadingLayer(null)
-      return
-    }
-
-    track("amenity_focus_enter", { layers: [...next].join(",") })
-    await fetchFocusSpotsAt(coords, [...next], type)
-  }, [focusLayers, gpsCoords, fetchFocusSpotsAt])
-
-  // "Search this area" in amenity focus mode: re-fetch the active focus layers at
-  // the panned map centre instead of GPS. Keeps focus mode active; the panned
-  // centre is recorded so the map fit no longer forces the GPS dot into view.
-  const handleFocusSearchHere = useCallback((center: { lat: number; lon: number }, radiusKm: number) => {
-    const layers = [...focusLayers]
-    if (layers.length === 0) return
-    setFocusSearchCenter(center)
-    track("amenity_focus_search_here", { layers: layers.join(",") })
-    void fetchFocusSpotsAt(center, layers, layers[0], radiusKm)
-  }, [focusLayers, fetchFocusSpotsAt])
+  // Leave amenity mode without running a search (e.g. tapping "Alle" while no
+  // location is set, so no venue search fires to clear it).
+  const handleExitAmenity = useCallback(() => {
+    amenityAbortRef.current?.abort()
+    setAmenitySearch(null)
+    setAmenitySpots([])
+    setAmenityPanned(null)
+    setAmenityHint(null)
+  }, [])
 
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     isDragging.current = true
@@ -975,44 +967,36 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       }
       return
     }
-    // GPS is ready — enter focus mode for the requested amenity, then release
-    // the search-suppression guard.
+    // GPS is ready — run the requested amenity search, then release the
+    // search-suppression guard. A warm-resume tap of the same shortcut simply
+    // re-runs it (idempotent), so no already-active guard is needed.
     const action = pendingFocusAction
     setPendingFocusAction(null)
-    // handleToggleFocusLayer toggles: if the requested layer is already the active
-    // one (e.g. warm-resume tapping the same shortcut), toggling would DEACTIVATE
-    // it. A quick action must only ever enter/switch, never turn off — so skip the
-    // call when it's already showing.
-    if (focusLayers.has(action)) {
-      quickActionActiveRef.current = false
-      return
-    }
-    void handleToggleFocusLayer(action).finally(() => {
+    void handleAmenitySearch(action, coords).finally(() => {
       quickActionActiveRef.current = false
     })
-  }, [pendingFocusAction, gpsCoords, focusLayers, handleLocate, handleToggleFocusLayer])
+  }, [pendingFocusAction, gpsCoords, handleLocate, handleAmenitySearch])
 
-  const focusActive = focusLayers.size > 0
+  const amenityActive = amenitySearch !== null
 
-  // Parking markers. In focus mode: the GPS-radius focusSpots, only if the
-  // parking layer is active. Passively: the result-nearby parkingSpots, gated by
-  // the alwaysShowParking display toggle. The weak "accessible" tier (yellow
-  // markers) is additionally gated by showWeakParking in both modes, so a "find
-  // disabled parking now" view never shows unreserved lots unasked.
-  const parkingSource: ParkingSpot[] = focusActive
-    ? (focusLayers.has("parking") ? focusSpots.filter((s) => s.amenityType === "parking") : [])
-    : (filters.alwaysShowParking ? parkingSpots : [])
+  // Parking markers. During a parking search: the fetched amenitySpots (parking).
+  // Otherwise the passive result-nearby parkingSpots, gated by the alwaysShowParking
+  // display toggle. The weak "accessible" tier (yellow markers) is additionally
+  // gated by showWeakParking in both cases, so a "find disabled parking now" view
+  // never shows unreserved lots unasked.
+  const parkingSource: ParkingSpot[] = amenitySearch === "parking"
+    ? amenitySpots.filter((s) => s.amenityType === "parking")
+    : (!amenityActive && filters.alwaysShowParking ? parkingSpots : [])
   const visibleParkingSpots = settings.showWeakParking
     ? parkingSource
     : parkingSource.filter((s) => s.tier !== "weak")
 
-  // WC markers. Both the focus search and the passive map layer show ALL WCs
-  // (standalone + venue) so a venue WC that appears as part of a found place
-  // doesn't vanish when the WC layer is toggled. The publicToiletsOnly setting
+  // WC markers. During a WC search: the fetched amenitySpots (toilets). Otherwise
+  // the passive map layer, gated by alwaysShowToilets. The publicToiletsOnly setting
   // is the single switch that restricts either view to standalone public WCs.
-  const toiletSource: AmenityFeature[] = focusActive
-    ? (focusLayers.has("toilet") ? focusSpots.filter((s) => s.amenityType === "toilet") : [])
-    : (filters.alwaysShowToilets ? toiletSpots : [])
+  const toiletSource: AmenityFeature[] = amenitySearch === "toilet"
+    ? amenitySpots.filter((s) => s.amenityType === "toilet")
+    : (!amenityActive && filters.alwaysShowToilets ? toiletSpots : [])
   const visibleToiletSpots = settings.publicToiletsOnly
     ? toiletSource.filter((s) => s.host?.kind === "standalone")
     : toiletSource
@@ -1106,9 +1090,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     (p) => (p.accessibility.parking.details as { nearbyOnly?: boolean } | undefined)?.nearbyOnly === true,
   )
 
-  // Amenity focus mode is only meaningful in Nearby mode with resolved GPS coords.
-  const canEnterFocus = chatMode === "nearby" && (hasGpsCoords || gpsCoords !== null)
-
   // True when at least one source errored/timed out — gates the results-header
   // retry button so it only appears when retrying is actually useful (frees the
   // header width in the normal all-OK case).
@@ -1178,12 +1159,14 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onSwitchToText={() => handleSwitchMode("text")}
         chatMode={chatMode}
         onChatModeChange={handleModeChange}
-        focusLayers={focusLayers}
-        onToggleFocusLayer={canEnterFocus ? handleToggleFocusLayer : undefined}
-        focusLoadingLayer={focusLoadingLayer}
-        focusHints={focusHints}
-        focusSearchCenter={focusSearchCenter}
-        onFocusSearchHere={handleFocusSearchHere}
+        amenityActive={amenitySearch}
+        onAmenitySearch={handleAmenitySearch}
+        onExitAmenity={handleExitAmenity}
+        amenityResults={amenitySpots}
+        amenityHint={amenityHint ?? undefined}
+        amenitySearchCenter={amenityPanned}
+        onAmenitySearchHere={handleAmenitySearchHere}
+        onAmenityRadius={(km: number) => searchCenter && amenitySearch && handleAmenitySearch(amenitySearch, searchCenter, km)}
         showToilets={filters.alwaysShowToilets}
         onSetMapLayers={hasParkingToggle || toiletSpots.length > 0 ? handleSetMapLayers : undefined}
         hasToiletData={toiletSpots.length > 0}
@@ -1255,10 +1238,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           hasGpsCoords={hasGpsCoords}
           locateTrigger={locateTriggerKey}
           biasCoords={searchCenter ?? gpsCoords ?? undefined}
-          focusLayers={focusLayers}
-          onToggleFocusLayer={canEnterFocus ? handleToggleFocusLayer : undefined}
-          focusLoadingLayer={focusLoadingLayer}
-          focusHints={focusHints}
+          onAmenitySearch={handleAmenitySearch}
+          amenityActive={amenitySearch}
+          onExitAmenity={handleExitAmenity}
           onCategoryQueryChange={setCategoryQuery}
           activeSearchCoords={lastCoords}
         />
@@ -1298,10 +1280,14 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
                 radiusKm={radiusKm}
                 onFilters={handleFilters}
                 onSources={setSources}
-                onRadius={setRadiusKm}
+                onRadius={amenityActive && amenitySearch && searchCenter ? (km) => { setRadiusKm(km); handleAmenitySearch(amenitySearch, searchCenter, km) } : setRadiusKm}
                 sourceStates={sourceStates}
                 onRerun={chatMode === "nearby" && lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords, lastNameHint) : undefined}
                 isLoading={isLoading}
+                amenityType={amenitySearch}
+                showWeakParking={settings.showWeakParking}
+                publicToiletsOnly={settings.publicToiletsOnly}
+                onUpdateSettings={handleUpdateSettings}
               />
               <button
                 onClick={() => setFilterCollapsed(true)}
@@ -1327,13 +1313,16 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             hasSourceError={hasSourceError}
             onExpandRadius={lastQuery && radiusKm < RADIUS_MAX_KM ? handleExpandRadius : undefined}
             radiusKm={radiusKm}
-            onRadiusChange={handleRadiusChange}
-            hasSearched={!!(lastQuery || lastNameHint)}
+            onRadiusChange={amenityActive && amenitySearch && searchCenter ? (km) => handleAmenitySearch(amenitySearch, searchCenter, km) : handleRadiusChange}
+            hasSearched={!!(lastQuery || lastNameHint || amenityActive)}
             scrollToId={scrollToId}
             filterDebug={filterDebug}
             intlNotice={intlNotice}
-            searchCenter={chatMode === "nearby" ? searchCenter : undefined}
+            searchCenter={chatMode === "nearby" || amenityActive ? searchCenter : undefined}
             placeSearchName={placeSearchName}
+            amenityType={amenitySearch}
+            amenityResults={amenitySpots}
+            amenityHint={amenityHint ?? undefined}
             parkingSpotCount={parkingSpots.length > 0 ? parkingSpots.length : undefined}
             sortBy={sortBy}
             onSortChange={(s) => { setSortBy(s); updateSettings({ sortOrder: s }) }}
@@ -1393,9 +1382,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             hasToiletData={toiletSpots.length > 0}
             isLoading={isLoading}
             autoZoom={settings.autoZoom}
-            focusMode={focusActive}
-            focusSearchCenter={focusSearchCenter}
-            onFocusSearchHere={handleFocusSearchHere}
+            focusMode={amenityActive}
+            focusSearchCenter={amenityPanned}
+            onFocusSearchHere={handleAmenitySearchHere}
             showWeakParking={settings.showWeakParking}
             onSearchHere={handleSearchHere}
             onLocate={isGeolocationAvailable() ? handleLocate : undefined}

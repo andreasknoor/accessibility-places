@@ -692,45 +692,39 @@ describe("ChatPanel single-field UI", () => {
 
 // ─── Amenity focus mode — chip strip ────────────────────────────────────────
 
-describe("ChatPanel focus mode — chip strip", () => {
-  it("shows chips in text mode without focus layers", () => {
+describe("ChatPanel amenity chips", () => {
+  it("renders the parking and WC chips alongside the venue chips", () => {
+    render(<ChatPanel onSearch={vi.fn()} onAmenitySearch={vi.fn()} isLoading={false} initialMode="text" />)
+    expect(screen.getByText(/🍽 Restaurants/)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /🅿/ })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /🚻/ })).toBeInTheDocument()
+  })
+
+  it("does not render amenity chips when onAmenitySearch is absent", () => {
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
-    expect(screen.getByText(/🍽 Restaurants/)).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /🅿/ })).not.toBeInTheDocument()
   })
 
-  it("hides chips when focusLayers has parking", () => {
+  it("marks the active amenity chip as pressed", () => {
+    render(
+      <ChatPanel onSearch={vi.fn()} onAmenitySearch={vi.fn()} isLoading={false} initialMode="text" amenityActive="parking" />,
+    )
+    expect(screen.getByRole("button", { name: /🅿/ })).toHaveAttribute("aria-pressed", "true")
+    expect(screen.getByRole("button", { name: /🚻/ })).toHaveAttribute("aria-pressed", "false")
+  })
+
+  it("runs an amenity search at the active area coordinates", () => {
+    const onAmenitySearch = vi.fn()
     render(
       <ChatPanel
         onSearch={vi.fn()}
+        onAmenitySearch={onAmenitySearch}
         isLoading={false}
         initialMode="text"
-        focusLayers={new Set(["parking"] as const)}
+        activeSearchCoords={{ lat: 52.5, lon: 13.4 }}
       />,
     )
-    expect(screen.queryByText(/🍽 Restaurants/)).not.toBeInTheDocument()
-  })
-
-  it("hides chips when focusLayers has toilet", () => {
-    render(
-      <ChatPanel
-        onSearch={vi.fn()}
-        isLoading={false}
-        initialMode="text"
-        focusLayers={new Set(["toilet"] as const)}
-      />,
-    )
-    expect(screen.queryByText(/🍽 Restaurants/)).not.toBeInTheDocument()
-  })
-
-  it("shows chips again when focusLayers is empty", () => {
-    render(
-      <ChatPanel
-        onSearch={vi.fn()}
-        isLoading={false}
-        initialMode="text"
-        focusLayers={new Set()}
-      />,
-    )
-    expect(screen.getByText(/🍽 Restaurants/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: /🅿/ }))
+    expect(onAmenitySearch).toHaveBeenCalledWith("parking", { lat: 52.5, lon: 13.4 })
   })
 })
