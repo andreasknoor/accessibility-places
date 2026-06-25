@@ -8,6 +8,7 @@ import { Map, List, SlidersHorizontal, Compass, ChevronRight, LocateFixed } from
 import { cn } from "@/lib/utils"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { hapticLight } from "@/lib/native/haptics"
+import { amenitySpotKey } from "@/lib/search-ui"
 import ChatPanel       from "@/components/chat/ChatPanel"
 import FilterPanel     from "@/components/filters/FilterPanel"
 import ResultsList     from "@/components/results/ResultsList"
@@ -40,6 +41,7 @@ interface Props {
   onRerun?:         () => void
   hasSourceError?:  boolean
   onExpandRadius?:  () => void
+  onAmenityExpandRadius?: () => void
   onRadiusChange?:  (km: number) => void
   hasSearched?:     boolean
   error?:           string
@@ -70,6 +72,12 @@ interface Props {
   amenitySearchCenter?: { lat: number; lon: number } | null
   onAmenitySearchHere?: (center: { lat: number; lon: number }, radiusKm: number) => void
   onAmenityRadius?:     (km: number) => void
+  amenityRadiusKm?:     number
+  onAmenitySelect?:     (spot: AmenityFeature) => void
+  selectedAmenityKey?:  string
+  onAmenityMarkerClick?: (spot: { osmId?: string; lat: number; lon: number }) => void
+  amenityPanTarget?:    { lat: number; lon: number } | null
+  amenityPanTrigger?:   number
   isFirstVisit?:        boolean
   onResetOnboarding?:   () => void
   onDismissWelcome?:    () => void
@@ -93,13 +101,14 @@ interface Props {
 export default function MobileLayout({
   places, parkingSpots, toiletSpots, selectedId, onSelect, isLoading,
   filters, sources, radiusKm, onFilters, onSources, onRadius,
-  sourceStates, searchCenter, onSearch, onPlaceSearch, onRerun, hasSourceError, onExpandRadius, onRadiusChange, hasSearched, error,
+  sourceStates, searchCenter, onSearch, onPlaceSearch, onRerun, hasSourceError, onExpandRadius, onAmenityExpandRadius, onRadiusChange, hasSearched, error,
   onReset, onLogoTap, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
   showParking, showToilets, onSetMapLayers, hasToiletData, onToggleParking, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
   onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, onStartNearby, hasGpsCoords, locateTrigger, onSwitchToText,
   chatMode, onChatModeChange, biasCoords, onSearchHere, onLocate, locatePanTrigger, gpsCoords, onCategoryQueryChange, activeSearchCoords,
-  amenityActive, onAmenitySearch, onExitAmenity, amenityResults, amenityHint, amenitySearchCenter, onAmenitySearchHere, onAmenityRadius, intlNotice, placeSearchName,
+  amenityActive, onAmenitySearch, onExitAmenity, amenityResults, amenityHint, amenitySearchCenter, onAmenitySearchHere, onAmenityRadius, amenityRadiusKm, intlNotice, placeSearchName,
+  onAmenitySelect, selectedAmenityKey, onAmenityMarkerClick, amenityPanTarget, amenityPanTrigger,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   const [mapMounted,  setMapMounted]  = useState(false)
@@ -116,6 +125,21 @@ export default function MobileLayout({
   const handleSearch = (query: string, coords?: { lat: number; lon: number }, nameHint?: string) => { setActiveTab(defaultMobileView ?? "results"); onSearch(query, coords, nameHint) }
   const handleRerun = onRerun ? () => { setActiveTab(defaultMobileView ?? "results"); onRerun() } : undefined
   const handleExpandRadius = onExpandRadius ? () => { setActiveTab(defaultMobileView ?? "results"); onExpandRadius() } : undefined
+  const handleAmenityExpandRadius = onAmenityExpandRadius ? () => { setActiveTab(defaultMobileView ?? "results"); onAmenityExpandRadius() } : undefined
+  // "Zur Karte" on an amenity card: switch to the map tab (mirrors handleShowInResults
+  // for places) and forward the spot so MapView pans/zooms to it.
+  const handleAmenitySelect = onAmenitySelect
+    ? (spot: AmenityFeature) => { onAmenitySelect(spot); setActiveTab("map") }
+    : undefined
+  // "Springe zu Ergebnissen" inside a parking/WC popup: mirror handleShowInResults
+  // for venues — highlight the matching card and switch to the results tab.
+  const handleShowAmenityInResults = onAmenityMarkerClick
+    ? (spot: { osmId?: string; lat: number; lon: number }) => {
+        onAmenityMarkerClick(spot)
+        setActiveTab("results")
+        setScrollToId(amenitySpotKey(spot))
+      }
+    : undefined
   const amenityActiveBool = amenityActive != null
   // An amenity chip search switches to the configured default view (its results
   // appear as list cards AND map markers), like any other search.
@@ -206,7 +230,7 @@ export default function MobileLayout({
 
       {/* ── Search bar (always visible) ── */}
       <div role="search">
-        <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} locateTrigger={locateTrigger} biasCoords={biasCoords} onAmenitySearch={handleAmenitySearch} amenityActive={amenityActive} onExitAmenity={onExitAmenity} onCategoryQueryChange={onCategoryQueryChange} activeSearchCoords={activeSearchCoords} international={settings.internationalMode} />
+        <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} skipAutoLocate={isFirstVisit} hasGpsCoords={hasGpsCoords} locateTrigger={locateTrigger} biasCoords={biasCoords} onAmenitySearch={handleAmenitySearch} amenityActive={amenityActive} onExitAmenity={onExitAmenity} onCategoryQueryChange={onCategoryQueryChange} activeSearchCoords={activeSearchCoords} searchCenter={searchCenter} international={settings.internationalMode} />
       </div>
 
       {/* Global search progress — covers every trigger (search here, filter, radius,
@@ -295,9 +319,10 @@ export default function MobileLayout({
             onRerun={handleRerun}
             hasSourceError={hasSourceError}
             onExpandRadius={handleExpandRadius}
+            onAmenityExpandRadius={handleAmenityExpandRadius}
             onAdjustFilters={() => setActiveTab("filter")}
             radiusKm={radiusKm}
-            onRadiusChange={amenityActiveBool && onAmenityRadius ? onAmenityRadius : onRadiusChange}
+            onRadiusChange={onRadiusChange}
             hasSearched={hasSearched}
             filterDebug={filterDebug}
             searchCenter={searchCenter}
@@ -310,6 +335,8 @@ export default function MobileLayout({
             amenityType={amenityActive}
             amenityResults={amenityResults}
             amenityHint={amenityHint}
+            onAmenitySelect={handleAmenitySelect}
+            selectedAmenityKey={selectedAmenityKey}
           />
         </div>
 
@@ -325,6 +352,18 @@ export default function MobileLayout({
             >
               <List className="w-3.5 h-3.5 text-primary shrink-0" />
               <span>{t.results.count(resultCount)}</span>
+            </button>
+          )}
+          {/* Amenity count pill — same affordance during a WC/parking search, so
+              the distance-sorted spot list is one tap (and one Tab-stop) away.
+              The visible "N Parkplätze/WCs" text is the button's accessible name. */}
+          {amenityActiveBool && !isLoading && (amenityResults?.length ?? 0) > 0 && (
+            <button
+              onClick={() => { hapticLight(); setActiveTab("results") }}
+              className="absolute top-3 left-14 z-[1000] flex items-center gap-1.5 rounded-full bg-card/95 backdrop-blur-sm border border-border shadow-md px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+            >
+              <List className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span>{t.results.amenityCount(amenityResults!.length)}</span>
             </button>
           )}
           {mapMounted && (
@@ -355,6 +394,10 @@ export default function MobileLayout({
               onSearchHere={onSearchHere}
               onLocate={onLocate}
               locatePanTrigger={locatePanTrigger}
+              amenityPanTarget={amenityPanTarget}
+              amenityPanTrigger={amenityPanTrigger}
+              onAmenityMarkerClick={onAmenityMarkerClick}
+              onShowAmenityInResults={handleShowAmenityInResults}
             />
           )}
         </div>
@@ -367,9 +410,11 @@ export default function MobileLayout({
             radiusKm={radiusKm}
             onFilters={onFilters}
             onSources={onSources}
-            onRadius={amenityActiveBool && onAmenityRadius ? onAmenityRadius : onRadius}
+            onRadius={onRadius}
+            amenityRadiusKm={amenityRadiusKm}
+            onAmenityRadius={onAmenityRadius}
             sourceStates={sourceStates}
-            onRerun={chatMode === "nearby" ? handleRerun : undefined}
+            onRerun={handleRerun}
             isLoading={isLoading}
             amenityType={amenityActive}
             showWeakParking={settings.showWeakParking}
