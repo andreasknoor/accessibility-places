@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { render, screen, fireEvent, act } from "@testing-library/react"
+import { render, screen, fireEvent, act, within } from "@testing-library/react"
 import ChatPanel from "@/components/chat/ChatPanel"
 
 vi.mock("@/lib/i18n", async (importOriginal) => {
@@ -352,7 +352,7 @@ describe("ChatPanel autocomplete — selection", () => {
     fireEvent.mouseDown(screen.getByRole("option", { name: /Bierpumpe/ }))
     expect(onPlaceSearch).toHaveBeenCalledWith("Bierpumpe", { lat: 51.54, lon: 6.42 })
 
-    const chip = screen.getAllByRole("button").find((b) => b.textContent?.includes("Restaurants"))!
+    const chip = screen.getAllByRole("radio").find((b) => b.textContent?.includes("Restaurants"))!
     // Chips stay enabled — they are the escape hatch out of the venue lookup.
     expect(chip).not.toBeDisabled()
 
@@ -458,7 +458,7 @@ describe("ChatPanel initialChipIdx restore", () => {
     localStorage.clear()
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" initialChipIdx={2} />)
     // chip index 2 = Hotels
-    const buttons = screen.getAllByRole("button")
+    const buttons = screen.getAllByRole("radio")
     const hotelChip = buttons.find((b) => b.textContent?.includes("Hotels"))
     expect(hotelChip).toBeDefined()
     expect(hotelChip).toHaveClass("bg-primary")
@@ -467,7 +467,7 @@ describe("ChatPanel initialChipIdx restore", () => {
   it("saved last-search chip overrides initialChipIdx", () => {
     localStorage.setItem("ap_last_search", JSON.stringify({ idx: 1, loc: "Berlin" }))
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" initialChipIdx={2} />)
-    const buttons = screen.getAllByRole("button")
+    const buttons = screen.getAllByRole("radio")
     const cafeChip  = buttons.find((b) => b.textContent?.includes("Cafés"))
     const hotelChip = buttons.find((b) => b.textContent?.includes("Hotels"))
     expect(cafeChip).toHaveClass("bg-primary")
@@ -477,7 +477,7 @@ describe("ChatPanel initialChipIdx restore", () => {
   it("falls back to initialChipIdx when saved idx is invalid", () => {
     localStorage.setItem("ap_last_search", JSON.stringify({ idx: 999, loc: "Berlin" }))
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" initialChipIdx={3} />)
-    const buttons = screen.getAllByRole("button")
+    const buttons = screen.getAllByRole("radio")
     // chip index 3 = Biergärten
     const biergartChip = buttons.find((b) => b.textContent?.includes("Biergärten"))
     expect(biergartChip).toHaveClass("bg-primary")
@@ -486,7 +486,7 @@ describe("ChatPanel initialChipIdx restore", () => {
   it("defaults to the 'Alle' chip (all categories) when neither saved search nor initialChipIdx exist", () => {
     localStorage.clear()
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
-    const buttons = screen.getAllByRole("button")
+    const buttons = screen.getAllByRole("radio")
     const alleChip       = buttons.find((b) => b.textContent?.includes("Alle"))
     const restaurantChip = buttons.find((b) => b.textContent?.includes("Restaurants"))
     expect(alleChip).toHaveClass("bg-primary")
@@ -496,7 +496,7 @@ describe("ChatPanel initialChipIdx restore", () => {
   it("restores a saved null chip ('Alle') without falling back to a category", () => {
     localStorage.setItem("ap_last_search", JSON.stringify({ idx: null, loc: "Berlin" }))
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" initialChipIdx={2} />)
-    const buttons = screen.getAllByRole("button")
+    const buttons = screen.getAllByRole("radio")
     const alleChip = buttons.find((b) => b.textContent?.includes("Alle"))
     expect(alleChip).toHaveClass("bg-primary")
   })
@@ -507,7 +507,7 @@ describe("ChatPanel initialChipIdx restore", () => {
 describe("ChatPanel all-categories chip", () => {
   it("clicking a category chip and then 'Alle' returns to the all-categories state", () => {
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
-    const buttons = screen.getAllByRole("button")
+    const buttons = screen.getAllByRole("radio")
     const hotelChip = buttons.find((b) => b.textContent?.includes("Hotels"))!
     const alleChip  = buttons.find((b) => b.textContent?.includes("Alle"))!
 
@@ -531,7 +531,7 @@ describe("ChatPanel all-categories chip", () => {
   it("submit with a selected chip prefixes the chip label", () => {
     const onSearch = vi.fn()
     render(<ChatPanel onSearch={onSearch} isLoading={false} initialMode="text" />)
-    const hotelChip = screen.getAllByRole("button").find((b) => b.textContent?.includes("Hotels"))!
+    const hotelChip = screen.getAllByRole("radio").find((b) => b.textContent?.includes("Hotels"))!
     fireEvent.click(hotelChip)
     fireEvent.change(getInput(), { target: { value: "Berlin" } })
     fireEvent.keyDown(getInput(), { key: "Enter" })
@@ -553,7 +553,7 @@ describe("ChatPanel all-categories chip", () => {
     const onSearch = vi.fn()
     render(<ChatPanel onSearch={onSearch} isLoading={false} initialMode="text" />)
     fireEvent.change(getInput(), { target: { value: "Berlin" } })
-    const alleChip = screen.getAllByRole("button").find((b) => b.textContent?.includes("Alle"))!
+    const alleChip = screen.getAllByRole("radio").find((b) => b.textContent?.includes("Alle"))!
     fireEvent.click(alleChip)
     expect(onSearch).toHaveBeenCalledWith("in Berlin", undefined, undefined)
   })
@@ -696,21 +696,13 @@ describe("ChatPanel amenity chips", () => {
   it("renders the parking and WC chips alongside the venue chips", () => {
     render(<ChatPanel onSearch={vi.fn()} onAmenitySearch={vi.fn()} isLoading={false} initialMode="text" />)
     expect(screen.getByText(/🍽 Restaurants/)).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /🅿/ })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /🚻/ })).toBeInTheDocument()
+    expect(screen.getByRole("radio", { name: /🅿/ })).toBeInTheDocument()
+    expect(screen.getByRole("radio", { name: /🚻/ })).toBeInTheDocument()
   })
 
   it("does not render amenity chips when onAmenitySearch is absent", () => {
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
-    expect(screen.queryByRole("button", { name: /🅿/ })).not.toBeInTheDocument()
-  })
-
-  it("marks the active amenity chip as pressed", () => {
-    render(
-      <ChatPanel onSearch={vi.fn()} onAmenitySearch={vi.fn()} isLoading={false} initialMode="text" amenityActive="parking" />,
-    )
-    expect(screen.getByRole("button", { name: /🅿/ })).toHaveAttribute("aria-pressed", "true")
-    expect(screen.getByRole("button", { name: /🚻/ })).toHaveAttribute("aria-pressed", "false")
+    expect(screen.queryByRole("radio", { name: /🅿/ })).not.toBeInTheDocument()
   })
 
   it("runs an amenity search at the active area coordinates", () => {
@@ -724,7 +716,206 @@ describe("ChatPanel amenity chips", () => {
         activeSearchCoords={{ lat: 52.5, lon: 13.4 }}
       />,
     )
-    fireEvent.click(screen.getByRole("button", { name: /🅿/ }))
+    fireEvent.click(screen.getByRole("radio", { name: /🅿/ }))
     expect(onAmenitySearch).toHaveBeenCalledWith("parking", { lat: 52.5, lon: 13.4 })
+  })
+})
+
+// ─── Finding F5 (a11y): chips form a single radiogroup with consistent aria-checked ─
+
+describe("ChatPanel amenity chips — accessibility (finding F5)", () => {
+  it("wraps all chips (amenity + Alle + venue) in a single radiogroup", () => {
+    render(<ChatPanel onSearch={vi.fn()} onAmenitySearch={vi.fn()} isLoading={false} initialMode="text" />)
+    const group = screen.getByRole("radiogroup")
+    expect(within(group).getByRole("radio", { name: /🅿/ })).toBeInTheDocument()
+    expect(within(group).getByRole("radio", { name: /🚻/ })).toBeInTheDocument()
+    expect(within(group).getByRole("radio", { name: new RegExp(`^${"Alle"}`) })).toBeInTheDocument()
+    expect(within(group).getByRole("radio", { name: /Restaurants/ })).toBeInTheDocument()
+  })
+
+  it("marks exactly the active amenity chip as checked, all others unchecked", () => {
+    render(
+      <ChatPanel onSearch={vi.fn()} onAmenitySearch={vi.fn()} isLoading={false} initialMode="text" amenityActive="parking" />,
+    )
+    expect(screen.getByRole("radio", { name: /🅿/ })).toHaveAttribute("aria-checked", "true")
+    expect(screen.getByRole("radio", { name: /🚻/ })).toHaveAttribute("aria-checked", "false")
+    expect(screen.getByRole("radio", { name: /Restaurants/ })).toHaveAttribute("aria-checked", "false")
+  })
+
+  it("marks 'Alle' as checked and both amenity chips as unchecked when no amenity is active and no category is selected", () => {
+    render(<ChatPanel onSearch={vi.fn()} onAmenitySearch={vi.fn()} isLoading={false} initialMode="text" />)
+    expect(screen.getByRole("radio", { name: /🅿/ })).toHaveAttribute("aria-checked", "false")
+    expect(screen.getByRole("radio", { name: /🚻/ })).toHaveAttribute("aria-checked", "false")
+  })
+})
+
+// ─── Finding F1 (critical): amenity chip must use the resolved search location
+// for ANY prior search (not just a coordinate-known one), and must never hijack
+// the legacy Überall/In-der-Nähe mode or clear search state while locating ──────
+
+describe("ChatPanel amenity chips — location resolution & no mode-hijack (finding F1)", () => {
+  it("uses the resolved search center from a plain typed-area search (e.g. \"Cafés in Hamburg\"), which never carries client-side coordinates", () => {
+    // This is the exact real-world gap: ChatPanel.submit() always passes
+    // coords=undefined for a typed area search, so HomeClient's `lastCoords`
+    // (activeSearchCoords) stays undefined even though the area IS resolved and
+    // its centre is known via `searchCenter` (set from the server's response).
+    const onAmenitySearch = vi.fn()
+    const onModeChange = vi.fn()
+    const onSearch = vi.fn()
+    render(
+      <ChatPanel
+        onSearch={onSearch}
+        onModeChange={onModeChange}
+        onAmenitySearch={onAmenitySearch}
+        isLoading={false}
+        initialMode="text"
+        searchCenter={{ lat: 53.55, lon: 9.99 }}
+      />,
+    )
+    fireEvent.click(screen.getByRole("radio", { name: /🅿/ }))
+    expect(onAmenitySearch).toHaveBeenCalledWith("parking", { lat: 53.55, lon: 9.99 })
+    expect(onModeChange).not.toHaveBeenCalled()
+    expect(onSearch).not.toHaveBeenCalled()
+  })
+
+  it("auto-locates without switching mode or clearing search state when no location is known at all", async () => {
+    const onAmenitySearch = vi.fn()
+    const onModeChange = vi.fn()
+    const onSearch = vi.fn()
+    vi.stubGlobal("navigator", {
+      clipboard: navigator.clipboard,
+      geolocation: {
+        getCurrentPosition: (success: PositionCallback) =>
+          success({ coords: { latitude: 48.2, longitude: 16.37 } } as GeolocationPosition),
+      },
+    })
+    render(
+      <ChatPanel
+        onSearch={onSearch}
+        onModeChange={onModeChange}
+        onAmenitySearch={onAmenitySearch}
+        isLoading={false}
+        initialMode="text"
+      />,
+    )
+    fireEvent.click(screen.getByRole("radio", { name: /🚻/ }))
+    await act(() => vi.runAllTimersAsync())
+    expect(onAmenitySearch).toHaveBeenCalledWith("toilet", { lat: 48.2, lon: 16.37 })
+    // The critical bug: tapping the chip used to flip the legacy mode toggle and
+    // synchronously wipe any on-screen venue results via clearSearchState —
+    // before the GPS fix even resolved. Neither must happen for the amenity flow.
+    expect(onModeChange).not.toHaveBeenCalled()
+    expect(onSearch).not.toHaveBeenCalled()
+  })
+
+  it("shows an error and never searches when locating fails, without switching mode", async () => {
+    const onAmenitySearch = vi.fn()
+    const onModeChange = vi.fn()
+    vi.stubGlobal("navigator", {
+      clipboard: navigator.clipboard,
+      geolocation: {
+        getCurrentPosition: (_success: PositionCallback, error: PositionErrorCallback) =>
+          error({ code: 1, message: "denied" } as GeolocationPositionError),
+      },
+    })
+    render(
+      <ChatPanel
+        onSearch={vi.fn()}
+        onModeChange={onModeChange}
+        onAmenitySearch={onAmenitySearch}
+        isLoading={false}
+        initialMode="text"
+      />,
+    )
+    fireEvent.click(screen.getByRole("radio", { name: /🅿/ }))
+    await act(() => vi.runAllTimersAsync())
+    expect(screen.getByText(/Standort konnte nicht ermittelt werden/)).toBeInTheDocument()
+    expect(onAmenitySearch).not.toHaveBeenCalled()
+    expect(onModeChange).not.toHaveBeenCalled()
+  })
+
+  it("prefers an active nearby GPS fix over a stale searchCenter prop", async () => {
+    simulateGpsSuccess(52.52, 13.405, "Mitte")
+    const onAmenitySearch = vi.fn()
+    render(
+      <ChatPanel
+        onSearch={vi.fn()}
+        onAmenitySearch={onAmenitySearch}
+        isLoading={false}
+        searchCenter={{ lat: 1, lon: 1 }}
+      />,
+    )
+    // Resolve a real GPS fix via the normal "In der Nähe" flow first.
+    fireEvent.click(screen.getByText(/In der Nähe/))
+    await act(() => vi.runAllTimersAsync())
+    onAmenitySearch.mockClear()
+
+    fireEvent.click(screen.getByRole("radio", { name: /🅿/ }))
+    expect(onAmenitySearch).toHaveBeenCalledWith("parking", { lat: 52.52, lon: 13.405 })
+  })
+})
+
+// ─── Regression: tapping an amenity chip immediately after "In der Nähe" must
+// not race a second, independent geolocation request against the one already
+// in flight — it must reuse that fix and route it into the amenity search,
+// never the venue nearby-search ─────────────────────────────────────────────
+
+describe("ChatPanel amenity chips — racing an in-flight 'In der Nähe' locate (regression)", () => {
+  it("does not start a second geolocation request and routes the fix to the amenity search, not a venue search", async () => {
+    let resolveGps: (() => void) | undefined
+    const getCurrentPosition = vi.fn((success: PositionCallback) => {
+      resolveGps = () => success({ coords: { latitude: 52.52, longitude: 13.405 } } as GeolocationPosition)
+    })
+    vi.stubGlobal("navigator", {
+      clipboard: navigator.clipboard,
+      geolocation: { getCurrentPosition, watchPosition: vi.fn().mockReturnValue(1), clearWatch: vi.fn() },
+    })
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ district: "Mitte" }), { status: 200 }),
+    ))
+    const onSearch = vi.fn()
+    const onAmenitySearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} onAmenitySearch={onAmenitySearch} isLoading={false} initialMode="text" />)
+
+    fireEvent.click(screen.getByText(/In der Nähe/))
+    // GPS hasn't resolved yet — tap WC immediately, before the fix lands.
+    fireEvent.click(screen.getByRole("radio", { name: /🚻/ }))
+
+    expect(getCurrentPosition).toHaveBeenCalledTimes(1)
+
+    resolveGps?.()
+    await act(() => vi.runAllTimersAsync())
+
+    expect(onAmenitySearch).toHaveBeenCalledWith("toilet", { lat: 52.52, lon: 13.405 })
+    expect(onSearch).not.toHaveBeenCalled()
+  })
+
+  it("falls back to the normal venue nearby-search when no amenity chip was tapped while locating", async () => {
+    simulateGpsSuccess(52.52, 13.405, "Mitte")
+    const onSearch = vi.fn()
+    const onAmenitySearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} onAmenitySearch={onAmenitySearch} isLoading={false} initialMode="text" />)
+    fireEvent.click(screen.getByText(/In der Nähe/))
+    await act(() => vi.runAllTimersAsync())
+    expect(onSearch).toHaveBeenCalled()
+    expect(onAmenitySearch).not.toHaveBeenCalled()
+  })
+})
+
+// ─── Finding F6b (low): the tapped chip should show its own loading indicator
+// while acquiring a GPS fix, since the old per-chip spinner was dropped ────────
+
+describe("ChatPanel amenity chips — loading indicator while locating (finding F6b)", () => {
+  it("marks the tapped chip aria-busy while a GPS fix is being acquired", async () => {
+    vi.stubGlobal("navigator", {
+      clipboard: navigator.clipboard,
+      // Never resolves — simulates a slow/in-flight GPS fix.
+      geolocation: { getCurrentPosition: () => {} },
+    })
+    render(<ChatPanel onSearch={vi.fn()} onAmenitySearch={vi.fn()} isLoading={false} initialMode="text" />)
+    const chip = screen.getByRole("radio", { name: /🅿/ })
+    fireEvent.click(chip)
+    expect(chip).toHaveAttribute("aria-busy", "true")
+    expect(screen.getByRole("radio", { name: /🚻/ })).toHaveAttribute("aria-busy", "false")
   })
 })

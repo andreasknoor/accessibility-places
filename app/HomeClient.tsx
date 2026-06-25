@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react"
+import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from "react"
 import { track } from "@/lib/analytics"
 import * as Sentry from "@sentry/nextjs"
 import { SlidersHorizontal, ChevronRight, ChevronLeft } from "lucide-react"
@@ -19,6 +19,7 @@ import SettingsSheet from "@/components/settings/SettingsSheet"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { DEFAULT_RADIUS_KM, RADIUS_MIN_KM, RADIUS_MAX_KM, regionForCoordinates, accessTierForCountry } from "@/lib/config"
+import { clampAmenityRadiusKm, snapAmenityRadiusKm, rerunTarget, expandRadiusTarget, canShowResultsRadiusPicker, amenitySpotKey } from "@/lib/search-ui"
 import { SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
@@ -154,6 +155,35 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [amenityPanned,       setAmenityPanned]       = useState<{ lat: number; lon: number } | null>(null)
   // "None found" hint for the active amenity search (empty result).
   const [amenityHint,         setAmenityHint]         = useState<string | null>(null)
+  // Dedicated small-scale radius for the amenity search (parking/WC), distinct
+  // from the venue radiusKm (1-50km) — sharing one radius value meant any chip
+  // switch silently reverted to whatever radiusKm happened to be (finding F3/F4).
+  // Seeded from the persisted parkingRadiusKm setting (mirrors the `sortBy`
+  // pattern above: loadSettings() is SSR-safe and returns defaults on the
+  // server, so no hydration-mismatch dance is needed for this value).
+  const [amenityRadiusKm,     setAmenityRadiusKm]     = useState<number>(() => clampAmenityRadiusKm(loadSettings().parkingRadiusKm))
+  // "Zur Karte" on an amenity result card: pan/zoom target for MapView, distinct
+  // from selectedId/panTrigger (which only track Place markers).
+  const [amenityPanTarget,    setAmenityPanTarget]    = useState<{ lat: number; lon: number } | null>(null)
+  const [amenityPanTrigger,   setAmenityPanTrigger]   = useState(0)
+  // Selected amenity spot (amenitySpotKey) — the single source of truth shared by
+  // the result list (highlight) and the map. Mirrors `selectedId` for places.
+  const [selectedAmenityKey,  setSelectedAmenityKey]  = useState<string | undefined>()
+  // "Zur Karte" on a result card: highlight it + pan/zoom the map to the spot.
+  const handleAmenitySelect = useCallback((spot: AmenityFeature) => {
+    setSelectedAmenityKey(amenitySpotKey(spot))
+    setAmenityPanTarget({ lat: spot.lat, lon: spot.lon })
+    setAmenityPanTrigger((n) => n + 1)
+  }, [])
+  // Reverse direction: clicking a parking/WC marker on the map highlights the
+  // matching list card and scrolls it into view (reusing scrollToId — amenity
+  // keys and place ids never coexist). Does NOT re-pan the map: the user is
+  // already looking at the marker they tapped.
+  const handleAmenityMarkerSelect = useCallback((spot: { osmId?: string; lat: number; lon: number }) => {
+    const key = amenitySpotKey(spot)
+    setSelectedAmenityKey(key)
+    setScrollToId(key)
+  }, [])
   const [isFirstVisit,        setIsFirstVisit]        = useState(false)  // SSR-safe; real value read post-hydration (React #418)
   const [locateTriggerKey,    setLocateTriggerKey]    = useState(0)
   const [locatePanTrigger,    setLocatePanTrigger]    = useState(0)
@@ -374,6 +404,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       amenityAbortRef.current?.abort()
       setAmenitySearch(null)
       setAmenitySpots([])
+      setSelectedAmenityKey(undefined)
       setAmenityPanned(null)
       setAmenityHint(null)
     }
@@ -547,6 +578,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     amenityAbortRef.current?.abort()
     setAmenitySearch(null)
     setAmenitySpots([])
+    setSelectedAmenityKey(undefined)
     setAmenityPanned(null)
     setAmenityHint(null)
     // Drop the restorable last-search: it no longer applies once the results/mode
@@ -587,6 +619,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     amenityAbortRef.current?.abort()
     setAmenitySearch(null)
     setAmenitySpots([])
+    setSelectedAmenityKey(undefined)
     setAmenityPanned(null)
     setAmenityHint(null)
     const dismissed = (() => { try { return !!localStorage.getItem("ap_welcome_dismissed") } catch { return false } })()
@@ -807,6 +840,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setParkingSpots([])
     setToiletSpots([])
     setSelectedId(undefined)
+    setSelectedAmenityKey(undefined)
     setPlaceSearchName(undefined)
     setError(undefined)
     setFilterDebug(undefined)
@@ -817,7 +851,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setIsLoading(true)
     track("amenity_search", { type })
 
-    const radius = radiusKmOverride ?? radiusKm
+    // Falls back to the dedicated amenity radius (0.05-5km, seeded from the
+    // parkingRadiusKm setting) — NOT the venue radiusKm (1-50km). Sharing the
+    // venue radius meant any chip switch silently re-ran at whatever radiusKm
+    // happened to be, ignoring a radius the user had just chosen (finding F4).
+    const radius = radiusKmOverride ?? amenityRadiusKm
     try {
       const res = await fetch(
         `/api/nearby-parking?lat=${center.lat}&lon=${center.lon}&radius=${radius}&types=${type}${settings.internationalMode ? "&intl=1" : ""}`,
@@ -834,16 +872,44 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     } finally {
       if (amenityAbortRef.current === controller) setIsLoading(false)
     }
-  }, [gpsCoords, radiusKm, settings.internationalMode, noneFoundFor])
+  }, [gpsCoords, amenityRadiusKm, settings.internationalMode, noneFoundFor])
 
   // "Search this area" during an amenity search: re-fetch the active amenity type
   // at the panned map centre. Recorded as `panned` so the map fit no longer forces
-  // the origin into view.
+  // the origin into view. The viewport-derived radius is clamped to the amenity
+  // (not venue) bounds and persisted, so the FilterPanel slider/settings stay in
+  // sync with whatever radius the map pan actually searched.
   const handleAmenitySearchHere = useCallback((center: { lat: number; lon: number }, viewportRadiusKm: number) => {
     if (!amenitySearch) return
-    const clamped = Math.min(Math.max(viewportRadiusKm, RADIUS_MIN_KM), RADIUS_MAX_KM)
-    void handleAmenitySearch(amenitySearch, center, clamped, center)
-  }, [amenitySearch, handleAmenitySearch])
+    // Snap to 0.1 km so the results-list radius reads cleanly ("0.3 km", not the
+    // raw centre→corner float with 10+ decimals).
+    const snapped = snapAmenityRadiusKm(viewportRadiusKm)
+    setAmenityRadiusKm(snapped)
+    updateSettings({ parkingRadiusKm: snapped })
+    void handleAmenitySearch(amenitySearch, center, snapped, center)
+  }, [amenitySearch, handleAmenitySearch, updateSettings])
+
+  // Committed from FilterPanel's amenity radius slider (fires once, on release —
+  // never per drag tick, finding F3). Persists to settings.parkingRadiusKm so the
+  // dedicated radius setting actually drives the search again (finding F4).
+  const handleAmenityRadiusCommit = useCallback((km: number) => {
+    const clamped = clampAmenityRadiusKm(km)
+    setAmenityRadiusKm(clamped)
+    updateSettings({ parkingRadiusKm: clamped })
+    if (amenitySearch && searchCenter) void handleAmenitySearch(amenitySearch, searchCenter, clamped)
+  }, [amenitySearch, searchCenter, handleAmenitySearch, updateSettings])
+
+  // Dedicated "expand radius" for the amenity empty state — always available
+  // whenever an amenity search is active, independent of any leftover venue
+  // `lastQuery` (finding F6a: previously this either re-ran a stale venue search
+  // or never appeared at all for a first-ever amenity search).
+  const handleAmenityExpandRadius = useCallback(() => {
+    if (!amenitySearch || !searchCenter) return
+    const next = clampAmenityRadiusKm(amenityRadiusKm * 2)
+    setAmenityRadiusKm(next)
+    updateSettings({ parkingRadiusKm: next })
+    void handleAmenitySearch(amenitySearch, searchCenter, next)
+  }, [amenitySearch, searchCenter, amenityRadiusKm, handleAmenitySearch, updateSettings])
 
   // Leave amenity mode without running a search (e.g. tapping "Alle" while no
   // location is set, so no venue search fires to clear it).
@@ -851,6 +917,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     amenityAbortRef.current?.abort()
     setAmenitySearch(null)
     setAmenitySpots([])
+    setSelectedAmenityKey(undefined)
     setAmenityPanned(null)
     setAmenityHint(null)
   }, [])
@@ -984,22 +1051,31 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // display toggle. The weak "accessible" tier (yellow markers) is additionally
   // gated by showWeakParking in both cases, so a "find disabled parking now" view
   // never shows unreserved lots unasked.
-  const parkingSource: ParkingSpot[] = amenitySearch === "parking"
+  // Memoised so their array identity is stable across renders that don't change
+  // the inputs. MapView's marker effects key off these arrays; an unstable
+  // reference makes every unrelated re-render (e.g. selecting an amenity in the
+  // list) tear down and rebuild all markers — which closed the popup of the very
+  // marker just clicked, requiring a second click to see it.
+  const parkingSource: ParkingSpot[] = useMemo(() => amenitySearch === "parking"
     ? amenitySpots.filter((s) => s.amenityType === "parking")
-    : (!amenityActive && filters.alwaysShowParking ? parkingSpots : [])
-  const visibleParkingSpots = settings.showWeakParking
+    : (!amenityActive && filters.alwaysShowParking ? parkingSpots : []),
+    [amenitySearch, amenityActive, amenitySpots, filters.alwaysShowParking, parkingSpots])
+  const visibleParkingSpots = useMemo(() => settings.showWeakParking
     ? parkingSource
-    : parkingSource.filter((s) => s.tier !== "weak")
+    : parkingSource.filter((s) => s.tier !== "weak"),
+    [settings.showWeakParking, parkingSource])
 
   // WC markers. During a WC search: the fetched amenitySpots (toilets). Otherwise
   // the passive map layer, gated by alwaysShowToilets. The publicToiletsOnly setting
   // is the single switch that restricts either view to standalone public WCs.
-  const toiletSource: AmenityFeature[] = amenitySearch === "toilet"
+  const toiletSource: AmenityFeature[] = useMemo(() => amenitySearch === "toilet"
     ? amenitySpots.filter((s) => s.amenityType === "toilet")
-    : (!amenityActive && filters.alwaysShowToilets ? toiletSpots : [])
-  const visibleToiletSpots = settings.publicToiletsOnly
+    : (!amenityActive && filters.alwaysShowToilets ? toiletSpots : []),
+    [amenitySearch, amenityActive, amenitySpots, filters.alwaysShowToilets, toiletSpots])
+  const visibleToiletSpots = useMemo(() => settings.publicToiletsOnly
     ? toiletSource.filter((s) => s.host?.kind === "standalone")
-    : toiletSource
+    : toiletSource,
+    [settings.publicToiletsOnly, toiletSource])
 
   // Data-coverage caveat banner: only when international mode is on AND the
   // resolved search centre is outside DACH. DACH searches never show it.
@@ -1095,6 +1171,26 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // header width in the normal all-OK case).
   const hasSourceError = Object.values(sourceStates).some((s) => s?.status === "error")
 
+  // ── Rerun / expand-radius / radius-picker wiring (findings F2/F3/F6a) ──────
+  // Resolved ONCE here (not duplicated per desktop/mobile JSX branch) so both
+  // layouts always agree on which search "Rerun"/"Suchradius erweitern" repeats
+  // — an amenity search active never resurfaces a stale venue query, and a
+  // first-ever amenity search with zero results still gets an expand action.
+  const rerun = rerunTarget({ amenityActive, amenitySearch, amenitySearchCenter: searchCenter, chatMode, lastQuery })
+  const resolvedOnRerun = rerun === "amenity"
+    ? () => { if (amenitySearch && searchCenter) handleAmenitySearch(amenitySearch, searchCenter, amenityRadiusKm) }
+    : rerun === "venue"
+      ? () => handleSearch(lastQuery!, undefined, lastCoords, lastNameHint)
+      : undefined
+
+  const expand = expandRadiusTarget({ amenityActive, amenitySearch, amenitySearchCenter: searchCenter, amenityRadiusKm, lastQuery, radiusKm })
+  const resolvedOnExpandRadius        = expand === "venue"   ? handleExpandRadius        : undefined
+  const resolvedOnAmenityExpandRadius = expand === "amenity" ? handleAmenityExpandRadius  : undefined
+
+  const showResultsRadiusPicker = canShowResultsRadiusPicker(amenityActive)
+  const resolvedOnRadiusChange  = showResultsRadiusPicker ? handleRadiusChange : undefined
+  const displayedRadiusKm       = amenityActive ? amenityRadiusKm : radiusKm
+
   // Mobile layout
   if (isMobile) {
     return (
@@ -1119,18 +1215,20 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         placeSearchName={placeSearchName}
         filters={filters}
         sources={sources}
-        radiusKm={radiusKm}
+        radiusKm={displayedRadiusKm}
         onFilters={handleFilters}
         onSources={setSources}
         onRadius={setRadiusKm}
+        amenityRadiusKm={amenityRadiusKm}
         sourceStates={sourceStates}
         searchCenter={searchCenter}
         onSearch={(query, coords, nameHint) => handleSearch(query, undefined, coords, nameHint)}
         onPlaceSearch={handlePlaceSearch}
-        onRerun={lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords, lastNameHint) : undefined}
+        onRerun={resolvedOnRerun}
         hasSourceError={hasSourceError}
-        onExpandRadius={lastQuery && radiusKm < RADIUS_MAX_KM ? handleExpandRadius : undefined}
-        onRadiusChange={handleRadiusChange}
+        onExpandRadius={resolvedOnExpandRadius}
+        onAmenityExpandRadius={resolvedOnAmenityExpandRadius}
+        onRadiusChange={resolvedOnRadiusChange}
         hasSearched={!!(lastQuery || lastNameHint)}
         error={error}
         onReset={handleReset}
@@ -1166,7 +1264,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         amenityHint={amenityHint ?? undefined}
         amenitySearchCenter={amenityPanned}
         onAmenitySearchHere={handleAmenitySearchHere}
-        onAmenityRadius={(km: number) => searchCenter && amenitySearch && handleAmenitySearch(amenitySearch, searchCenter, km)}
+        onAmenityRadius={handleAmenityRadiusCommit}
+        onAmenitySelect={handleAmenitySelect}
+        selectedAmenityKey={selectedAmenityKey}
+        onAmenityMarkerClick={handleAmenityMarkerSelect}
+        amenityPanTarget={amenityPanTarget}
+        amenityPanTrigger={amenityPanTrigger}
         showToilets={filters.alwaysShowToilets}
         onSetMapLayers={hasParkingToggle || toiletSpots.length > 0 ? handleSetMapLayers : undefined}
         hasToiletData={toiletSpots.length > 0}
@@ -1243,6 +1346,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           onExitAmenity={handleExitAmenity}
           onCategoryQueryChange={setCategoryQuery}
           activeSearchCoords={lastCoords}
+          searchCenter={searchCenter}
         />
       </div>
 
@@ -1280,9 +1384,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
                 radiusKm={radiusKm}
                 onFilters={handleFilters}
                 onSources={setSources}
-                onRadius={amenityActive && amenitySearch && searchCenter ? (km) => { setRadiusKm(km); handleAmenitySearch(amenitySearch, searchCenter, km) } : setRadiusKm}
+                onRadius={setRadiusKm}
+                amenityRadiusKm={amenityRadiusKm}
+                onAmenityRadius={handleAmenityRadiusCommit}
                 sourceStates={sourceStates}
-                onRerun={chatMode === "nearby" && lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords, lastNameHint) : undefined}
+                onRerun={resolvedOnRerun}
                 isLoading={isLoading}
                 amenityType={amenitySearch}
                 showWeakParking={settings.showWeakParking}
@@ -1309,11 +1415,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             selectedId={selectedId}
             onSelect={(p) => setSelectedId(p.id)}
             isLoading={isLoading}
-            onRerun={lastQuery ? () => handleSearch(lastQuery, undefined, lastCoords, lastNameHint) : undefined}
+            onRerun={resolvedOnRerun}
             hasSourceError={hasSourceError}
-            onExpandRadius={lastQuery && radiusKm < RADIUS_MAX_KM ? handleExpandRadius : undefined}
-            radiusKm={radiusKm}
-            onRadiusChange={amenityActive && amenitySearch && searchCenter ? (km) => handleAmenitySearch(amenitySearch, searchCenter, km) : handleRadiusChange}
+            onExpandRadius={resolvedOnExpandRadius}
+            onAmenityExpandRadius={resolvedOnAmenityExpandRadius}
+            radiusKm={displayedRadiusKm}
+            onRadiusChange={resolvedOnRadiusChange}
             hasSearched={!!(lastQuery || lastNameHint || amenityActive)}
             scrollToId={scrollToId}
             filterDebug={filterDebug}
@@ -1323,6 +1430,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             amenityType={amenitySearch}
             amenityResults={amenitySpots}
             amenityHint={amenityHint ?? undefined}
+            onAmenitySelect={handleAmenitySelect}
+            selectedAmenityKey={selectedAmenityKey}
             parkingSpotCount={parkingSpots.length > 0 ? parkingSpots.length : undefined}
             sortBy={sortBy}
             onSortChange={(s) => { setSortBy(s); updateSettings({ sortOrder: s }) }}
@@ -1389,6 +1498,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             onSearchHere={handleSearchHere}
             onLocate={isGeolocationAvailable() ? handleLocate : undefined}
             locatePanTrigger={locatePanTrigger}
+            amenityPanTarget={amenityPanTarget}
+            amenityPanTrigger={amenityPanTrigger}
+            onAmenityMarkerClick={handleAmenityMarkerSelect}
           />
         </div>
       </main>

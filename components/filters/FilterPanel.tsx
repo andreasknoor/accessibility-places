@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Loader2, AlertTriangle, RefreshCw } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Slider }   from "@/components/ui/slider"
@@ -8,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useTranslations } from "@/lib/i18n"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { SOURCE_LABELS } from "@/lib/config"
+import { AMENITY_RADIUS_MIN_KM, AMENITY_RADIUS_MAX_KM } from "@/lib/search-ui"
 import type { SearchFilters, ActiveSources, SourceId, SourceState, AmenityType } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -24,7 +26,12 @@ interface Props {
   // Amenity search (parking / WC): when set, the panel shows amenity-specific
   // options (radius + weak-parking / public-toilets) instead of the venue
   // accessibility criteria and data sources, which don't apply to point features.
+  // The radius slider also switches to a dedicated amenityRadiusKm/onAmenityRadius
+  // pair with a small-scale 0.05–5 km range — sharing the venue radiusKm (1–50 km)
+  // led to it being silently overridden on the very next chip switch (finding F4).
   amenityType?:       AmenityType | null
+  amenityRadiusKm?:   number
+  onAmenityRadius?:   (r: number) => void
   showWeakParking?:   boolean
   publicToiletsOnly?: boolean
   onUpdateSettings?:  (patch: { showWeakParking?: boolean; publicToiletsOnly?: boolean }) => void
@@ -110,10 +117,33 @@ const SOURCE_REGION: Partial<Record<SourceId, string>> = {
 
 const SOURCE_DISABLED: Partial<Record<SourceId, true>> = {}
 
-export default function FilterPanel({ filters, sources, radiusKm, onFilters, onSources, onRadius, sourceStates, onRerun, isLoading, amenityType, showWeakParking, publicToiletsOnly, onUpdateSettings }: Props) {
+export default function FilterPanel({ filters, sources, radiusKm, onFilters, onSources, onRadius, sourceStates, onRerun, isLoading, amenityType, amenityRadiusKm, onAmenityRadius, showWeakParking, publicToiletsOnly, onUpdateSettings }: Props) {
   const t = useTranslations()
   const isMobile = useIsMobile()
   const amenityMode = amenityType != null
+
+  // Radix's Slider fires onValueChange continuously during a pointer drag (one
+  // event per pointer-move). Calling the parent's callback on every tick used to
+  // fire a real network request per tick for the amenity radius (rate-limit risk
+  // — finding F3) and silently desynced the venue radius display from the actual
+  // searched radius. Track the live value locally for instant visual feedback;
+  // only forward to the parent once, on release/commit.
+  const effectiveRadius = amenityMode ? (amenityRadiusKm ?? AMENITY_RADIUS_MIN_KM) : radiusKm
+  const [localRadius, setLocalRadius] = useState(effectiveRadius)
+  useEffect(() => { setLocalRadius(effectiveRadius) }, [effectiveRadius])
+
+  const radiusMin  = amenityMode ? AMENITY_RADIUS_MIN_KM : 1
+  const radiusMax  = amenityMode ? AMENITY_RADIUS_MAX_KM : 50
+  const radiusStep = amenityMode ? 0.05 : 1
+
+  function formatRadius(km: number): string {
+    return km < 1 ? `${Math.round(km * 1000)} m` : t.filters.radiusLabel(km)
+  }
+
+  function commitRadius(km: number) {
+    if (amenityMode) onAmenityRadius?.(km)
+    else onRadius(km)
+  }
 
   function toggleSource(id: keyof ActiveSources) {
     onSources({ ...sources, [id]: !sources[id] })
@@ -153,16 +183,17 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
         </h2>
         <div className="flex flex-col gap-3">
           <div className="flex justify-between text-sm text-muted-foreground">
-            <span>1 km</span>
-            <span className="font-medium text-foreground">{t.filters.radiusLabel(radiusKm)}</span>
-            <span>50 km</span>
+            <span>{formatRadius(radiusMin)}</span>
+            <span className="font-medium text-foreground">{formatRadius(localRadius)}</span>
+            <span>{formatRadius(radiusMax)}</span>
           </div>
           <Slider
-            min={1}
-            max={50}
-            step={1}
-            value={[radiusKm]}
-            onValueChange={([v]) => onRadius(v)}
+            min={radiusMin}
+            max={radiusMax}
+            step={radiusStep}
+            value={[localRadius]}
+            onValueChange={([v]) => setLocalRadius(v)}
+            onValueCommit={([v]) => commitRadius(v)}
             thumbAriaLabel={t.filters.radiusSliderLabel}
             className="w-full"
           />
