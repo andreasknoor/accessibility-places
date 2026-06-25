@@ -128,3 +128,82 @@ describe("ResultsList – sort behaviour", () => {
     expect(screen.queryByRole("button", { name: /Entfernung|Distance/i })).toBeNull()
   })
 })
+
+describe("ResultsList — amenity empty state uses its own expand-radius action (finding F6a)", () => {
+  it("calls onAmenityExpandRadius, never the stale venue onExpandRadius, when clicked", () => {
+    const onExpandRadius = vi.fn()
+    const onAmenityExpandRadius = vi.fn()
+    renderList({
+      places: [],
+      onSelect: vi.fn(),
+      isLoading: false,
+      hasSearched: true,
+      amenityType: "parking",
+      amenityResults: [],
+      onExpandRadius,
+      onAmenityExpandRadius,
+    })
+    fireEvent.click(screen.getByText("Suchradius vergrößern?"))
+    expect(onAmenityExpandRadius).toHaveBeenCalledTimes(1)
+    expect(onExpandRadius).not.toHaveBeenCalled()
+  })
+
+  it("shows the expand-radius action for a first-ever amenity search with no prior venue query at all", () => {
+    // Finding F6a: previously this button only appeared when a stale `lastQuery`
+    // from an earlier VENUE search happened to be set — a first-time amenity
+    // search with zero results had no way to expand the radius at all.
+    renderList({
+      places: [],
+      onSelect: vi.fn(),
+      isLoading: false,
+      hasSearched: true,
+      amenityType: "toilet",
+      amenityResults: [],
+      onExpandRadius: undefined,
+      onAmenityExpandRadius: vi.fn(),
+    })
+    expect(screen.getByText("Suchradius vergrößern?")).toBeInTheDocument()
+  })
+})
+
+describe("ResultsList — selectedAmenityKey highlights the matching card (map→list reverse direction)", () => {
+  const spots = [
+    { osmId: "node/1", lat: 52.521, lon: 13.405, amenityType: "parking" as const, tier: "strong" as const, capacity: 2 },
+    { osmId: "node/2", lat: 52.522, lon: 13.405, amenityType: "parking" as const, tier: "strong" as const, capacity: 5 },
+  ]
+
+  it("marks exactly the card whose amenitySpotKey matches (and none when unset)", () => {
+    const { container, rerender } = render(
+      <TooltipProvider>
+        <ResultsList
+          places={[]}
+          onSelect={vi.fn()}
+          isLoading={false}
+          hasSearched
+          amenityType="parking"
+          amenityResults={spots}
+          searchCenter={center}
+        />
+      </TooltipProvider>,
+    )
+    // Nothing selected → no card carries the selection ring.
+    expect(container.querySelectorAll(".ring-primary")).toHaveLength(0)
+
+    // Selecting node/2 (as a map-marker click would) highlights exactly one card.
+    rerender(
+      <TooltipProvider>
+        <ResultsList
+          places={[]}
+          onSelect={vi.fn()}
+          isLoading={false}
+          hasSearched
+          amenityType="parking"
+          amenityResults={spots}
+          searchCenter={center}
+          selectedAmenityKey="node/2"
+        />
+      </TooltipProvider>,
+    )
+    expect(container.querySelectorAll(".ring-primary")).toHaveLength(1)
+  })
+})

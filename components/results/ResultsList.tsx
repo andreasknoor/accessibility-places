@@ -1,12 +1,14 @@
 "use client"
 
-import { useState, useRef, useEffect, useMemo } from "react"
+import { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import { Loader2, RefreshCw, MapPin, X, ChevronDown, ChevronRight, ArrowUpDown, SlidersHorizontal, Compass, LocateFixed } from "lucide-react"
 import PlaceCard from "./PlaceCard"
+import AmenityCard from "./AmenityCard"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { Popover, PopoverTrigger, PopoverContent, PopoverClose } from "@/components/ui/popover"
 import { haversineMetres } from "@/lib/matching/match"
+import { amenitySpotKey } from "@/lib/search-ui"
 import type { Place, SearchFilters, FilterDebug, AmenityFeature, AmenityType } from "@/lib/types"
 
 const RADIUS_PRESETS_KM = [1, 2, 5, 10, 25, 50] as const
@@ -48,9 +50,22 @@ interface Props {
   amenityType?:         AmenityType | null
   amenityResults?:      AmenityFeature[]
   amenityHint?:         string
+  // Dedicated expand-radius action for the amenity empty state — distinct from
+  // onExpandRadius (which only ever re-runs the venue search) so an active
+  // amenity search never resurfaces a stale venue query (finding F6a).
+  onAmenityExpandRadius?: () => void
+  // "Zur Karte" on an amenity result card — pans/zooms MapView to that spot
+  // (mirrors onSelect for places; amenity spots have no stable Place id, so the
+  // spot itself is passed instead of an id).
+  onAmenitySelect?: (spot: AmenityFeature) => void
+  // Currently-selected amenity spot (amenitySpotKey), controlled by HomeClient so
+  // a map-marker click can highlight the matching card. Mirrors selectedId for
+  // places. Scrolling reuses the shared scrollToId mechanism (amenity keys and
+  // place ids never coexist).
+  selectedAmenityKey?: string
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToText, isFirstVisit, onDismissWelcome, onStartNearby, intlNotice, placeSearchName, amenityType, amenityResults, amenityHint }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToText, isFirstVisit, onDismissWelcome, onStartNearby, intlNotice, placeSearchName, amenityType, amenityResults, amenityHint, onAmenityExpandRadius, onAmenitySelect, selectedAmenityKey }: Props) {
   const t = useTranslations()
   const amenityMode = amenityType != null
   const [mapHintSeen, setMapHintSeen] = useState(() =>
@@ -92,20 +107,40 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
     )
   }, [amenityResults, searchCenter])
 
+  // Scroll the target entry into view *within the results scroll container*.
+  // We compute scrollTop manually rather than using Element.scrollIntoView so
+  // that (a) only the list scrolls — never the page or a parent — and (b) the
+  // result is clamped to leave the entry *fully* visible (centered when there's
+  // room, flush to the nearest edge otherwise). scrollIntoView({block:"center"})
+  // could leave the selected entry partly cut off when it sits near the list
+  // ends or when its height changed after selection.
+  const scrollTargetIntoView = useCallback((id: string, smooth: boolean) => {
+    const container = scrollContainerRef.current
+    const el = itemRefs.current.get(id)
+    if (!container || !el) return
+    const cRect = container.getBoundingClientRect()
+    const eRect = el.getBoundingClientRect()
+    if (eRect.top >= cRect.top && eRect.bottom <= cRect.bottom) return // already fully visible
+    const center = (eRect.top - cRect.top) - (container.clientHeight - eRect.height) / 2
+    const max = container.scrollHeight - container.clientHeight
+    const top = Math.max(0, Math.min(container.scrollTop + center, max))
+    container.scrollTo({ top, behavior: smooth ? "smooth" : "auto" })
+  }, [])
+
   useEffect(() => {
     if (!scrollToId) return
-    // block:"center" (not "nearest") so the entry always jumps into view — with
-    // "nearest" scrollIntoView does nothing when the item is already marginally
-    // within the scrollport, which read as "the list doesn't move". Double rAF: the
-    // results tab may have just switched from display:none (mobile "show in
-    // results"), so one frame isn't always enough for layout before scrolling.
-    const id = requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        itemRefs.current.get(scrollToId)?.scrollIntoView({ behavior: "smooth", block: "center" })
-      }),
+    // Double rAF: the results tab may have just switched from display:none
+    // (mobile "show in results"), so one frame isn't enough for layout first.
+    const raf = requestAnimationFrame(() =>
+      requestAnimationFrame(() => scrollTargetIntoView(scrollToId, true)),
     )
-    return () => cancelAnimationFrame(id)
-  }, [scrollToId])
+    // Correction pass once layout has settled: the now-selected card can grow
+    // (ring/expanded details) or images can load and shift offsets after the
+    // initial scroll, leaving the entry partly out of view. Re-check and nudge
+    // (instant) only if it is no longer fully visible.
+    const timer = setTimeout(() => scrollTargetIntoView(scrollToId, false), 450)
+    return () => { cancelAnimationFrame(raf); clearTimeout(timer) }
+  }, [scrollToId, scrollTargetIntoView])
 
   function handleSelect(place: Place) {
     if (!mapHintSeen) {
@@ -421,9 +456,9 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
               <p className="text-sm text-muted-foreground text-center">
                 {amenityHint ?? t.chat.noResults}
               </p>
-              {onExpandRadius && (
+              {onAmenityExpandRadius && (
                 <button
-                  onClick={onExpandRadius}
+                  onClick={onAmenityExpandRadius}
                   className="px-3 py-1.5 rounded-md border border-border bg-card text-sm font-medium hover:bg-muted transition-colors"
                 >
                   {t.results.expandRadius}
@@ -433,25 +468,23 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
           )}
 
           {!isLoading && amenityMode && displayedAmenities.map((spot, i) => {
-            const label = amenityType === "parking" ? t.results.amenityParkingLabel : t.results.amenityToiletLabel
+            // Render key may need the index to stay unique; the selection/scroll
+            // key must NOT (the map marker has no list index) — see amenitySpotKey.
+            const renderKey = spot.osmId ?? `${spot.lat},${spot.lon}-${i}`
+            const selKey = amenitySpotKey(spot)
             const distanceM = searchCenter ? haversineMetres(searchCenter, spot) : undefined
             return (
               <div
-                key={spot.osmId ?? `${spot.lat},${spot.lon}-${i}`}
-                className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5"
+                key={renderKey}
+                ref={(el) => { if (el) itemRefs.current.set(selKey, el); else itemRefs.current.delete(selKey) }}
               >
-                <span className="text-xl shrink-0" aria-hidden>{amenityType === "parking" ? "🅿" : "🚻"}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {spot.host?.name ?? label}
-                    {spot.capacity != null && spot.capacity > 0 && (
-                      <span className="font-normal text-muted-foreground"> · {t.results.amenityCapacity(spot.capacity)}</span>
-                    )}
-                  </p>
-                  {distanceM != null && (
-                    <p className="text-xs text-muted-foreground">{t.results.distanceFromHere(Math.round(distanceM))}</p>
-                  )}
-                </div>
+                <AmenityCard
+                  spot={spot}
+                  amenityType={amenityType}
+                  isSelected={selKey === selectedAmenityKey}
+                  distanceM={distanceM}
+                  onClick={onAmenitySelect ? () => onAmenitySelect(spot) : undefined}
+                />
               </div>
             )
           })}
