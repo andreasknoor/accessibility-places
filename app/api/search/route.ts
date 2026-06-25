@@ -6,7 +6,7 @@ import { findMatch, filterByNameHint }  from "@/lib/matching/match"
 import { mergePlaces, passesFilters, finalisePlaceConfidence, computeFilteredConfidence, countLimited } from "@/lib/matching/merge"
 import { fetchOsmDisabledParking, fetchOsmAccessibleAmenities } from "@/lib/adapters/osm"
 import type { AmenityFeature } from "@/lib/types"
-import { enrichWithNearbyParking, haversineMeters, NEARBY_PARKING_DISPLAY_RADIUS_M, dedupeToiletFeatures, TOILET_DISPLAY_CAP, dedupeParkingFeatures } from "@/lib/matching/nearby-parking"
+import { enrichWithNearbyParking, haversineMeters, PARKING_DISPLAY_MAX_M, PARKING_STRONG_DISPLAY_CAP, PARKING_WEAK_DISPLAY_CAP, dedupeToiletFeatures, TOILET_DISPLAY_CAP, dedupeParkingFeatures } from "@/lib/matching/nearby-parking"
 import { parseQuery } from "@/lib/llm"
 import { NOMINATIM_ENDPOINT, RADIUS_MIN_KM, RADIUS_MAX_KM, PUBLIC_OVERPASS_ENDPOINTS, countryCodesParam, regionForCoordinates, INTL_COUNTRIES } from "@/lib/config"
 import * as Sentry from "@sentry/nextjs"
@@ -503,27 +503,27 @@ export async function POST(req: NextRequest) {
             location:      { lat: geo.lat, lon: geo.lon },
             locationLabel: geo.label,
             filterDebug,
-            // Parking markers sent to the client. Two tiers:
-            //  • "strong" (was "disabled"): only spots within NEARBY_PARKING_DISPLAY_RADIUS_M
-            //    of a result whose parking was auto-enriched (nearbyOnly: true) —
-            //    anchored to displayed venues, as before.
-            //  • "weak" (was "accessible"): ALL fetched weak-tier lots in the area,
-            //    independent of any anchor. Needed so the tier shows in Parkplatz-Modus
-            //    too, where there are no venue anchors.
-            // The client's showWeakParking setting controls visibility of the weak
-            // tier; the server always sends the same set (mirrors alwaysShowParking).
+            // Parking markers sent to the client. Both tiers ("strong" = reserved
+            // disabled bays, "weak" = wheelchair=yes lot) are shipped for every spot
+            // within the search radius of the centre — NO venue anchor required.
+            // Disabled parking is independently useful, so a valid spot is no longer
+            // hidden just because no enriched result sits next to it. The display
+            // distance equals the search radius (so everything the search covered can
+            // surface), capped at PARKING_DISPLAY_MAX_M so only a very wide search is
+            // trimmed. Per-tier caps stop a dense strong layer from crowding the weak
+            // tier out of the payload. The client's showWeakParking setting still
+            // controls weak-tier visibility; alwaysShowParking gates the whole layer.
             parkingSpots:  (() => {
-              const nearbyOnlyPlaces = filtered.filter((p) => {
-                const det = p.accessibility.parking.details as { nearbyOnly?: boolean } | undefined
-                return det?.nearbyOnly === true
-              })
-              const strongSpots = parkingFeatures.filter((f) =>
-                f.tier !== "weak" &&
-                nearbyOnlyPlaces.some((p) => haversineMeters(p.coordinates, f) <= NEARBY_PARKING_DISPLAY_RADIUS_M)
+              const displayMaxM = Math.min(radiusKm * 1000, PARKING_DISPLAY_MAX_M)
+              const inRange = parkingFeatures.filter(
+                (f) => haversineMeters({ lat: geo.lat, lon: geo.lon }, f) <= displayMaxM,
               )
-              const weakSpots = parkingFeatures.filter((f) => f.tier === "weak")
-              // Dedup stacked OSM node+way duplicates and cap the payload before mapping.
-              return dedupeParkingFeatures([...strongSpots, ...weakSpots])
+              // Dedup stacked OSM node+way duplicates (strong preferred for the same
+              // lot); pass Infinity so capping is done per-tier below, not combined.
+              const deduped = dedupeParkingFeatures(inRange, undefined, Infinity)
+              const strongSpots = deduped.filter((f) => f.tier !== "weak").slice(0, PARKING_STRONG_DISPLAY_CAP)
+              const weakSpots   = deduped.filter((f) => f.tier === "weak").slice(0, PARKING_WEAK_DISPLAY_CAP)
+              return [...strongSpots, ...weakSpots]
                 .map((f) => ({
                   lat:      f.lat,
                   lon:      f.lon,
