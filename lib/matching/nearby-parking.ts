@@ -21,10 +21,17 @@ import type { Place, AmenityFeature } from "../types"
 
 export const DEFAULT_MAX_NEARBY_PARKING_M = 250
 
-// Wider radius used only for map display: show parking spots that are within
-// this distance of any found place, even if too far to trigger enrichment.
-// Gives users a useful "parking nearby" overview without polluting the whole city.
-export const NEARBY_PARKING_DISPLAY_RADIUS_M = 500
+// Decoupling cap for the passive parking layer. A spot is shown when it lies
+// within the SEARCH RADIUS of the centre — so everything the search itself
+// covered can surface, anchor-free — but never beyond this distance. The cap
+// only bites on very wide searches (radius up to RADIUS_MAX_KM = 50 km): it stops
+// them from scattering pins kilometres past anything the user is looking at and
+// keeps the empty-result amenity fitBounds from zooming out to a far-flung lot.
+// It must comfortably exceed both the default 5 km search radius AND a town's
+// geocoded-centre-to-edge span (a city centroid can sit ~3 km from venues that
+// are legitimately inside it — e.g. Bad Muskau's Nominatim point is 2.8 km from
+// its central car park), so anything inside a normal-radius search stays visible.
+export const PARKING_DISPLAY_MAX_M = 10_000
 
 // OSM parking data quality is constant regardless of distance to the venue;
 // only the spatial relevance changes, and that is already gated by maxDistanceM.
@@ -122,6 +129,13 @@ export const PARKING_DEDUP_RADIUS_M = 20
 // Upper bound on parking features shipped in the /api/search payload, mirroring
 // TOILET_DISPLAY_CAP. Bounds payload size in dense areas (markers are display-only).
 export const PARKING_DISPLAY_CAP = 200
+
+// Per-tier caps for the passive parking layer. Applied SEPARATELY so a dense
+// strong layer cannot crowd weak spots out of a shared budget (dedupe ranks
+// strong above weak, so a single combined cap would starve the weak tier in a
+// busy city — and weak is the only tier some users opt into via showWeakParking).
+export const PARKING_STRONG_DISPLAY_CAP = 150
+export const PARKING_WEAK_DISPLAY_CAP   = 50
 
 // Collapse duplicate parking features that point at the same physical lot, then
 // cap the count. Preference order when two collide: strong tier over weak, then

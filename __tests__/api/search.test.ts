@@ -192,9 +192,10 @@ describe("POST /api/search — nearby parking enrichment", () => {
 
   it("enriches parking to nearbyOnly=true when parking filter is OFF", async () => {
     // Two fetch calls: one for OSM venues, one for Overpass disabled parking.
-    // We discriminate by URL substring.
-    vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
-      if (url.includes("parking_space")) {
+    // Both POST to the same Overpass URL — the query lives in the body, so we
+    // discriminate on the request body, not the URL.
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((_url: string, init?: { body?: string }) => {
+      if (init?.body?.includes("parking_space")) {
         return Promise.resolve({ ok: true, json: async () => ({ elements: [OSM_PARKING_SPOT] }) })
       }
       return Promise.resolve({ ok: true, json: async () => ({ elements: [OSM_RESTAURANT] }) })
@@ -219,8 +220,8 @@ describe("POST /api/search — nearby parking enrichment", () => {
   })
 
   it("enriches parking even when parking filter is ON", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
-      if (url.includes("parking_space")) {
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((_url: string, init?: { body?: string }) => {
+      if (init?.body?.includes("parking_space")) {
         return Promise.resolve({ ok: true, json: async () => ({ elements: [OSM_PARKING_SPOT] }) })
       }
       return Promise.resolve({ ok: true, json: async () => ({ elements: [OSM_RESTAURANT] }) })
@@ -264,6 +265,80 @@ describe("POST /api/search — nearby parking enrichment", () => {
 
     const payload = result!.payload as { places: Array<{ accessibility: { parking: { value: string } } }>; parkingSpots: unknown[] }
     expect(payload.places[0].accessibility.parking.value).toBe("unknown")
+    expect(payload.parkingSpots).toHaveLength(0)
+  })
+
+  // A strong spot ~1 km from the venue: too far to enrich (>250 m) so the venue
+  // is NOT anchored to it, but well inside the 2 km centre-display radius. The
+  // anchor-free display means it must still be shipped (previously it was dropped
+  // because no enriched venue sat next to it).
+  const OSM_PARKING_FAR = {
+    type: "node",
+    id: 888,
+    lat: 52.529, // ~1 km north of the 52.52 search centre / venue
+    lon: 13.405,
+    tags: { amenity: "parking_space", "parking_space": "disabled", "capacity:disabled": "3" },
+  }
+
+  it("ships a strong spot with no enriched venue anchor (within centre radius)", async () => {
+    // The Overpass query lives in the POST body, not the URL — discriminate there.
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((_url: string, init?: { body?: string }) => {
+      if (init?.body?.includes("parking_space")) {
+        return Promise.resolve({ ok: true, json: async () => ({ elements: [OSM_PARKING_FAR] }) })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ elements: [OSM_RESTAURANT] }) })
+    }))
+
+    const req = makeReq({
+      ...BASE_BODY,
+      filters: { ...BASE_BODY.filters, parking: false, entrance: false, toilet: false },
+      sources: { ...BASE_BODY.sources, osm: true },
+    })
+    const res    = await POST(req)
+    const events = await parseEvents(res)
+    const result = events.find((e) => e.type === "result")
+    expect(result).toBeDefined()
+
+    const payload = result!.payload as { places: Array<{ accessibility: { parking: { value: string } } }>; parkingSpots: unknown[] }
+    // Venue stays unenriched (spot is >250 m away) ...
+    expect(payload.places[0].accessibility.parking.value).toBe("unknown")
+    // ... yet the spot is still displayed (anchor-free).
+    expect(payload.parkingSpots).toHaveLength(1)
+  })
+
+  // A strong spot ~12 km from the centre, inside a deliberately wide 20 km search:
+  // fetched, but trimmed by the PARKING_DISPLAY_MAX_M (10 km) cap so a very wide
+  // search doesn't scatter pins far from where the user looked. (Within a normal
+  // ≤10 km radius the display distance equals the search radius and nothing is
+  // trimmed — that's the Bad Muskau case where a 2.8 km spot must stay visible.)
+  const OSM_PARKING_TOOFAR = {
+    type: "node",
+    id: 777,
+    lat: 52.628, // ~12 km north of the 52.52 centre — beyond the 10 km cap
+    lon: 13.405,
+    tags: { amenity: "parking_space", "parking_space": "disabled", "capacity:disabled": "2" },
+  }
+
+  it("trims a strong spot beyond the display cap on a very wide search", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((_url: string, init?: { body?: string }) => {
+      if (init?.body?.includes("parking_space")) {
+        return Promise.resolve({ ok: true, json: async () => ({ elements: [OSM_PARKING_TOOFAR] }) })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ elements: [OSM_RESTAURANT] }) })
+    }))
+
+    const req = makeReq({
+      ...BASE_BODY,
+      radiusKm: 20, // wide enough to fetch the 12 km spot, but past the 10 km cap
+      filters: { ...BASE_BODY.filters, parking: false, entrance: false, toilet: false },
+      sources: { ...BASE_BODY.sources, osm: true },
+    })
+    const res    = await POST(req)
+    const events = await parseEvents(res)
+    const result = events.find((e) => e.type === "result")
+    expect(result).toBeDefined()
+
+    const payload = result!.payload as { parkingSpots: unknown[] }
     expect(payload.parkingSpots).toHaveLength(0)
   })
 })
