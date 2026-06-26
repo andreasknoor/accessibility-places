@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, Fragment } from "react"
-import { Send, Loader2, LocateFixed, Search, X, Coffee, UtensilsCrossed, Beer, BookOpen, Hotel, Landmark, Film, Library, GalleryHorizontal, Star, IceCream, MapPin } from "lucide-react"
+import { Send, Loader2, LocateFixed, X, Coffee, UtensilsCrossed, Beer, BookOpen, Hotel, Landmark, Film, Library, GalleryHorizontal, Star, IceCream, MapPin } from "lucide-react"
 import { track } from "@/lib/analytics"
 import { Button } from "@/components/ui/button"
 import { useTranslations, useLocale } from "@/lib/i18n"
@@ -145,7 +145,22 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
   return data.district ?? ""
 }
 
-export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onGpsResolved, skipAutoLocate, hasGpsCoords, locateTrigger, biasCoords, onAmenitySearch, amenityActive, onExitAmenity, onCategoryQueryChange, activeSearchCoords, searchCenter, international }: Props) {
+// Forward-geocode a typed place to coordinates for the "Schnellsuche" amenity
+// chips (e.g. "Hamburg" + 🅿 → parking in Hamburg). DACH-restricted unless the
+// international flag is passed through (mirrors unified-suggest).
+async function geocodeLocation(q: string, international: boolean): Promise<Coords> {
+  const intlParam = international ? "&intl=1" : ""
+  const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}${intlParam}`)
+  if (!res.ok) throw new Error("geocode failed")
+  const data = await res.json()
+  if (typeof data.lat !== "number" || typeof data.lon !== "number") throw new Error("no coords")
+  return { lat: data.lat, lon: data.lon }
+}
+
+// Note: `skipAutoLocate` / `hasGpsCoords` remain in Props (callers still pass them)
+// but are no longer read here — the old nearby-mode locate button and the mode-tab
+// GPS dot that consumed them were removed with the visible mode tabs (issue #28).
+export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onGpsResolved, locateTrigger, biasCoords, onAmenitySearch, amenityActive, onExitAmenity, onCategoryQueryChange, activeSearchCoords, searchCenter, international }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
   const isMobile = useIsMobile()
@@ -446,6 +461,26 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     handleLocate()
   }
 
+  // Inline ⌖ button: express the "nearby" intent without a visible mode tab.
+  // Equivalent to the old "In der Nähe" tab — switches internal mode and locates.
+  function onLocateTap() {
+    if (isLoading) return
+    switchMode("nearby")
+  }
+
+  // ✕ on the active-location token: drop the GPS fix and return to the neutral
+  // typed-search state. Stops follow-me and re-routes the internal mode to "text"
+  // (so distance display / nearby semantics turn off downstream via onModeChange).
+  function clearLocationToken() {
+    if (watchIdRef.current !== null) {
+      clearWatchPosition(watchIdRef.current)
+      watchIdRef.current = null
+    }
+    setNearbyPhase("idle")
+    setMode("text")
+    onModeChange?.("text")
+  }
+
   // Amenity chip tap: run a parking/WC search at the best-known location. Order:
   // an active nearby fix → the current area's coordinates → else auto-locate (the
   // GPS fix is routed back here via pendingAmenityRef). Single-select like the
@@ -467,6 +502,25 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     setSuggestions([])
     setShowSuggestions(false)
     setAmenityLocateError(null)
+    // 1. An explicit, user-typed location wins — even over a live GPS fix. Typing
+    // "Hamburg" while standing in Berlin means you want Hamburg ("Schnellsuche"
+    // is location-neutral, not nearby-only). A picked area/venue already ran a
+    // search, so its centre is covered by searchCenter in step 4 — no geocode.
+    const typed = locationPart(location)
+    const isUserTyped = !!location && location !== programmaticLocRef.current && !!typed
+    if (isUserTyped) {
+      setAmenityLocating(type)
+      geocodeLocation(typed, !!international)
+        .then((coords) => {
+          setAmenityLocating(null)
+          onAmenitySearch?.(type, coords)
+        })
+        .catch(() => {
+          setAmenityLocating(null)
+          setAmenityLocateError(t.chat.locationError)
+        })
+      return
+    }
     if (typeof nearbyPhase === "object") {
       onAmenitySearch?.(type, { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
       return
@@ -733,64 +787,11 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     {showDevConsole && <DevConsole onClose={() => setShowDevConsole(false)} />}
     <div className="flex flex-col gap-3 p-4 border-b border-border bg-card relative z-20">
 
-      {/* ── Mode selector ── */}
-      {isMobile ? (
-        <div className="flex rounded-md overflow-hidden border border-border">
-          {(["nearby", "text"] as Mode[]).map((m) => (
-            <button
-              key={m}
-              onClick={() => switchMode(m)}
-              className={cn(
-                "flex-1 flex flex-col items-center gap-1 py-2.5 relative transition-colors border-r border-border last:border-r-0 cursor-pointer",
-                mode === m
-                  ? "bg-primary/10 text-primary-strong"
-                  : "bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-            >
-              {m === "nearby" && <LocateFixed className="w-[1.125rem] h-[1.125rem]" />}
-              {m === "text"   && <Search      className="w-[1.125rem] h-[1.125rem]" />}
-              <span className="text-xs font-medium leading-none flex items-center gap-1">
-                {m === "text"   && t.chat.modeText}
-                {m === "nearby" && t.chat.modeNearby}
-                {m === "nearby" && (
-                  <span className={cn("inline-block w-1.5 h-1.5 rounded-full", hasGpsCoords ? "bg-green-500" : "bg-muted-foreground/30")} />
-                )}
-              </span>
-              {mode === m && <span className="absolute bottom-0 inset-x-0 h-0.5 bg-primary" />}
-            </button>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-1.5">
-          {(["nearby", "text"] as Mode[]).map((m) => (
-            <button
-              key={m}
-              onClick={() => switchMode(m)}
-              className={cn(
-                "flex flex-col items-center gap-1.5 rounded-lg border py-2 px-2 transition-colors cursor-pointer",
-                mode === m
-                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                  : "bg-card border-border text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-            >
-              {m === "nearby" && <LocateFixed className="w-5 h-5" />}
-              {m === "text"   && <Search      className="w-5 h-5" />}
-              <span className="text-sm font-semibold leading-tight flex items-center gap-1">
-                {m === "text"   && t.chat.modeText}
-                {m === "nearby" && t.chat.modeNearby}
-                {m === "nearby" && (
-                  <span className={cn("inline-block w-1.5 h-1.5 rounded-full", hasGpsCoords ? "bg-green-400" : "bg-white/30")} />
-                )}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* ── Text search mode ── */}
-      {mode === "text" && (
-        <>
-        <div className="flex gap-2 items-center">
+      {/* ── Unified search field (always visible). The old top-level mode tabs
+          (Überall / In der Nähe) are gone — the "nearby" intent is now the inline
+          ⌖ button below; typing/picking a suggestion expresses "search there".
+          Internal `mode` state is unchanged (issue #28). ── */}
+      <div className="flex gap-2 items-center">
           {/* Unified search input — areas, venues, and quoted name filters */}
           <div className="relative flex-1">
             {inputPulse && (
@@ -909,6 +910,26 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             )}
           </div>
 
+          {/* Inline ⌖ — the "nearby" intent as a one-tap action (no mode tab).
+              Primary/tinted while the field is empty; recedes once the user types. */}
+          <button
+            type="button"
+            onClick={onLocateTap}
+            disabled={isLoading}
+            aria-label={t.chat.useLocation}
+            aria-busy={nearbyPhase === "locating"}
+            className={cn(
+              "shrink-0 h-[38px] w-[38px] flex items-center justify-center rounded-md border transition-colors disabled:opacity-50 cursor-pointer",
+              !location.trim()
+                ? "border-primary bg-primary/10 text-primary-strong hover:bg-primary/20"
+                : "border-input bg-background text-muted-foreground hover:text-foreground hover:bg-muted",
+            )}
+          >
+            {nearbyPhase === "locating"
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : <LocateFixed className="w-4 h-4" />}
+          </button>
+
           <Button
             onClick={submit}
             disabled={isLoading || !location.trim()}
@@ -932,88 +953,44 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           </Button>
         </div>
 
-        </>
+      {/* ── Active-location token (replaces the old nearby block). Shown whenever
+          a GPS fix is live, independent of any visible mode; ✕ drops the fix. ── */}
+      {district !== null && (
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="inline-flex items-center gap-1.5 max-w-full rounded-full bg-primary/10 text-primary-strong pl-2.5 pr-1 py-1 text-xs font-medium">
+            <LocateFixed className="w-3 h-3 shrink-0" aria-hidden />
+            <span className="truncate">{district || t.chat.modeNearby}</span>
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" aria-hidden />
+            <button
+              type="button"
+              onClick={clearLocationToken}
+              aria-label={t.chat.clearLocation}
+              title={t.chat.locationActive(district)}
+              className="shrink-0 ml-0.5 rounded-full p-0.5 hover:bg-primary/20 transition-colors cursor-pointer"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </span>
+        </div>
+      )}
+      {nearbyPhase === "error" && (
+        <p role="alert" className="text-xs text-destructive">{t.chat.locationError}</p>
       )}
 
-      {/* ── Nearby mode ── */}
-      {mode === "nearby" && (
-        <>
-          {nearbyPhase === "idle" && !skipAutoLocate && (
-            <Button onClick={handleLocate} disabled={isLoading} variant="outline" className="w-full gap-2">
-              <LocateFixed className="w-4 h-4" />
-              {t.chat.locateButton}
-            </Button>
-          )}
+      {/* ── Chip strip (B2, issue #28): two visually distinct rows so the three
+          kinds of control no longer read as one undifferentiated scroll.
+          Row 1 = venue categories ("what kind of place"); Row 2 = amenity
+          quick-find actions ("find parking / a WC at this location"). Layout only
+          — `CHIPS` / `SETTING_CHIPS` / `SEO_CATEGORY_TO_CHIP_IDX` order is
+          untouched; amenity chips and „Alle" stay pseudo-chips outside `CHIPS`.
+          Each row is its own single-select radiogroup. ── */}
 
-          {nearbyPhase === "locating" && (
-            <div className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              {t.chat.locateButton} …
-            </div>
-          )}
-
-          {nearbyPhase === "error" && (
-            <div className="flex flex-col items-center gap-2">
-              <p className="text-sm text-destructive">{t.chat.locationError}</p>
-              <Button variant="outline" size="sm" onClick={handleLocate}>
-                <LocateFixed className="w-3.5 h-3.5 mr-1.5" />
-                {t.chat.locateButton}
-              </Button>
-            </div>
-          )}
-
-          {district !== null && (
-            <div className="flex items-center gap-2 min-w-0">
-              <p className="text-xs text-muted-foreground flex items-center gap-1 min-w-0">
-                <LocateFixed className="w-3 h-3 shrink-0 text-primary" />
-                {/* Compact: just the district name (confirms geolocation) — the
-                    crosshair icon already conveys "you are here". */}
-                <span className="text-primary font-medium truncate">{district}</span>
-              </p>
-            </div>
-          )}
-
-        </>
-      )}
-
-      {/* ── Category chip strip — both modes. The two amenity chips (parking / WC)
-          sit at the front, single-select with the venue chips: selecting one runs
-          an amenity search instead of a venue search. A single radiogroup with
-          role=radio + aria-checked on every chip gives consistent, correct
-          single-select semantics to assistive tech (finding F5). ── */}
+      {/* Row 1 — venue categories */}
       <div
         role="radiogroup"
         aria-label={t.chat.chipsGroupLabel}
         className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none] -mx-4 px-4"
       >
-        {onAmenitySearch && ([
-          { type: "toilet"  as const, icon: "🚻", label: t.chat.chipToilet,  activeCls: "bg-green-700 text-white" },
-          { type: "parking" as const, icon: "🅿", label: t.chat.chipParking, activeCls: "bg-blue-600 text-white" },
-        ]).map(({ type, icon, label, activeCls }) => {
-          const loading = amenityLocating === type
-          return (
-            <button
-              key={type}
-              role="radio"
-              onClick={() => selectAmenity(type)}
-              disabled={isLoading}
-              aria-checked={amenityActive === type}
-              aria-busy={loading}
-              className={cn(
-                "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
-                amenityActive === type
-                  ? activeCls
-                  : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
-              )}
-            >
-              {loading
-                ? <Loader2 className="inline w-3 h-3 mr-1 animate-spin" aria-hidden />
-                : `${icon} `
-              }
-              {label}
-            </button>
-          )
-        })}
         <button
           key="all"
           role="radio"
@@ -1047,6 +1024,49 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           </button>
         ))}
       </div>
+
+      {/* Row 2 — amenity quick-find actions (parking / WC). The labelled lead-in
+          tells first-timers these search around a location, they don't filter
+          venues. Location-neutral: a typed place is honoured (selectAmenity §2). */}
+      {onAmenitySearch && (
+        <div className="flex items-center gap-2 -mt-0.5">
+          <span className="shrink-0 text-[11px] font-medium uppercase tracking-wide text-muted-foreground select-none">
+            {t.chat.amenityRowLabel}
+          </span>
+          <div
+            role="radiogroup"
+            aria-label={t.chat.amenityRowLabel}
+            className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]"
+          >
+            {([
+              { type: "parking" as const, icon: "🅿", label: t.chat.chipParking, activeCls: "bg-blue-600 text-white border-blue-600", idleCls: "border-blue-600/40 text-blue-700 dark:text-blue-400" },
+              { type: "toilet"  as const, icon: "🚻", label: t.chat.chipToilet,  activeCls: "bg-green-700 text-white border-green-700", idleCls: "border-green-700/40 text-green-700 dark:text-green-400" },
+            ]).map(({ type, icon, label, activeCls, idleCls }) => {
+              const loading = amenityLocating === type
+              return (
+                <button
+                  key={type}
+                  role="radio"
+                  onClick={() => selectAmenity(type)}
+                  disabled={isLoading}
+                  aria-checked={amenityActive === type}
+                  aria-busy={loading}
+                  className={cn(
+                    "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium border transition-colors whitespace-nowrap disabled:opacity-50",
+                    amenityActive === type ? activeCls : cn("bg-card hover:bg-muted", idleCls),
+                  )}
+                >
+                  {loading
+                    ? <Loader2 className="inline w-3 h-3 mr-1 animate-spin" aria-hidden />
+                    : `${icon} `
+                  }
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
       {amenityLocateError && (
         <p role="alert" className="text-xs text-destructive -mt-1">{amenityLocateError}</p>
       )}

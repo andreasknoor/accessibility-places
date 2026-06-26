@@ -562,11 +562,12 @@ describe("ChatPanel all-categories chip", () => {
 // ─── initialMode ─────────────────────────────────────────────────────────────
 
 describe("ChatPanel initialMode", () => {
-  it("defaults to nearby mode when initialMode is not passed", () => {
+  it("renders the inline ⌖ location button instead of mode tabs (issue #28)", () => {
     vi.stubGlobal("navigator", { geolocation: { getCurrentPosition: vi.fn(), watchPosition: vi.fn(), clearWatch: vi.fn() }, clipboard: navigator.clipboard })
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
-    const nearbyTab = screen.getByText(/In der Nähe/)
-    expect(nearbyTab.closest("button")).toHaveClass("bg-primary")
+    expect(screen.getByRole("button", { name: "Standort verwenden" })).toBeInTheDocument()
+    // The old top-level "Überall" mode tab no longer exists.
+    expect(screen.queryByText("Überall")).not.toBeInTheDocument()
   })
 
   it("calls geolocation.getCurrentPosition on mount when initialMode is not passed (returning visitor)", () => {
@@ -587,11 +588,12 @@ describe("ChatPanel initialMode", () => {
     expect(getCurrentPosition).not.toHaveBeenCalled()
   })
 
-  it("shows nearby mode tab as active when initialMode='nearby'", () => {
+  it("does not render visible Überall/Nearby mode tabs when initialMode='nearby' (issue #28)", () => {
     vi.stubGlobal("navigator", { geolocation: { getCurrentPosition: vi.fn(), watchPosition: vi.fn(), clearWatch: vi.fn() }, clipboard: navigator.clipboard })
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="nearby" />)
-    const nearbyTab = screen.getByText(/In der Nähe/)
-    expect(nearbyTab.closest("button")).toHaveClass("bg-primary")
+    expect(screen.queryByText("Überall")).not.toBeInTheDocument()
+    // "In der Nähe" only appears later as the location token (after a GPS fix), never as a tab.
+    expect(screen.getByRole("button", { name: "Standort verwenden" })).toBeInTheDocument()
   })
 
   it("calls geolocation.getCurrentPosition on mount when initialMode='nearby' (returning visitor)", () => {
@@ -632,9 +634,19 @@ describe("ChatPanel GPS resolution", () => {
     simulateGpsSuccess(48.137, 11.576, "Maxvorstadt")
     const onGpsResolved = vi.fn()
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} onGpsResolved={onGpsResolved} />)
-    fireEvent.click(screen.getByText(/In der Nähe/))
+    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
     await act(() => vi.runAllTimersAsync())
     expect(onGpsResolved).toHaveBeenCalledWith({ lat: 48.137, lon: 11.576 })
+  })
+
+  it("tapping ⌖ locates AND immediately starts a nearby search (like the old 'In der Nähe' tab)", async () => {
+    simulateGpsSuccess(48.137, 11.576, "Maxvorstadt")
+    const onSearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} isLoading={false} />)
+    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
+    await act(() => vi.runAllTimersAsync())
+    // The GPS fix is fed straight into a venue search at those coordinates.
+    expect(onSearch).toHaveBeenCalledWith(expect.any(String), { lat: 48.137, lon: 11.576 })
   })
 })
 
@@ -652,10 +664,10 @@ describe("ChatPanel single-field UI", () => {
     expect(screen.queryByRole("button", { name: /Ort suchen/ })).not.toBeInTheDocument()
   })
 
-  it("renders exactly two mode buttons: In der Nähe and Überall", () => {
+  it("renders no visible mode tabs — the inline ⌖ button replaces them (issue #28)", () => {
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
-    const modeButtons = screen.getAllByRole("button", { name: /In der Nähe|Überall/ })
-    expect(modeButtons).toHaveLength(2)
+    expect(screen.queryByRole("button", { name: /Überall/ })).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Standort verwenden" })).toBeInTheDocument()
   })
 
   it("chip strip is visible in text mode", () => {
@@ -721,16 +733,21 @@ describe("ChatPanel amenity chips", () => {
   })
 })
 
-// ─── Finding F5 (a11y): chips form a single radiogroup with consistent aria-checked ─
+// ─── Finding F5 / issue #28 (a11y): chips form two single-select radiogroups —
+// row 1 = venue categories (Alle + venues), row 2 = amenity quick-find actions ─
 
-describe("ChatPanel amenity chips — accessibility (finding F5)", () => {
-  it("wraps all chips (amenity + Alle + venue) in a single radiogroup", () => {
+describe("ChatPanel amenity chips — accessibility (finding F5 / B2 two-row layout)", () => {
+  it("groups category chips and amenity chips into two distinct radiogroups", () => {
     render(<ChatPanel onSearch={vi.fn()} onAmenitySearch={vi.fn()} isLoading={false} initialMode="text" />)
-    const group = screen.getByRole("radiogroup")
-    expect(within(group).getByRole("radio", { name: /🅿/ })).toBeInTheDocument()
-    expect(within(group).getByRole("radio", { name: /🚻/ })).toBeInTheDocument()
-    expect(within(group).getByRole("radio", { name: new RegExp(`^${"Alle"}`) })).toBeInTheDocument()
-    expect(within(group).getByRole("radio", { name: /Restaurants/ })).toBeInTheDocument()
+    // Category row (label "Kategorie") holds Alle + venue chips, not the amenity chips.
+    const categoryGroup = screen.getByRole("radiogroup", { name: "Kategorie" })
+    expect(within(categoryGroup).getByRole("radio", { name: new RegExp(`^${"Alle"}`) })).toBeInTheDocument()
+    expect(within(categoryGroup).getByRole("radio", { name: /Restaurants/ })).toBeInTheDocument()
+    expect(within(categoryGroup).queryByRole("radio", { name: /🅿/ })).not.toBeInTheDocument()
+    // Amenity quick-find row (label "Schnellsuche") holds the two amenity chips.
+    const amenityGroup = screen.getByRole("radiogroup", { name: "Schnellsuche" })
+    expect(within(amenityGroup).getByRole("radio", { name: /🅿/ })).toBeInTheDocument()
+    expect(within(amenityGroup).getByRole("radio", { name: /🚻/ })).toBeInTheDocument()
   })
 
   it("marks exactly the active amenity chip as checked, all others unchecked", () => {
@@ -746,6 +763,68 @@ describe("ChatPanel amenity chips — accessibility (finding F5)", () => {
     render(<ChatPanel onSearch={vi.fn()} onAmenitySearch={vi.fn()} isLoading={false} initialMode="text" />)
     expect(screen.getByRole("radio", { name: /🅿/ })).toHaveAttribute("aria-checked", "false")
     expect(screen.getByRole("radio", { name: /🚻/ })).toHaveAttribute("aria-checked", "false")
+  })
+})
+
+// ─── Schnellsuche (issue #28): a typed, not-yet-searched location is honoured by
+// the amenity chips — "Hamburg" + 🅿 geocodes Hamburg and searches there, beating
+// even a live GPS fix (typing is the more explicit signal) ────────────────────
+
+describe("ChatPanel Schnellsuche — typed-location geocode", () => {
+  it("geocodes the typed location and runs the amenity search there", async () => {
+    const onAmenitySearch = vi.fn()
+    vi.stubGlobal("fetch", vi.fn((url: unknown) =>
+      Promise.resolve(new Response(
+        JSON.stringify(typeof url === "string" && url.includes("/api/geocode?q=")
+          ? { lat: 53.55, lon: 9.99, displayName: "Hamburg" }
+          : []),
+        { status: 200 },
+      )),
+    ))
+    render(<ChatPanel onSearch={vi.fn()} onAmenitySearch={onAmenitySearch} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "Hamburg" } })
+    fireEvent.click(screen.getByRole("radio", { name: /🅿/ }))
+    await act(() => vi.runAllTimersAsync())
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith(expect.stringContaining("/api/geocode?q=Hamburg"))
+    expect(onAmenitySearch).toHaveBeenCalledWith("parking", { lat: 53.55, lon: 9.99 })
+  })
+
+  it("a typed location beats a live GPS fix", async () => {
+    // Resolve a real GPS fix first (via the ⌖ button), then type a different place
+    // and tap an amenity chip — the typed place must win.
+    simulateGpsSuccess(52.52, 13.405, "Mitte")
+    const onAmenitySearch = vi.fn()
+    render(<ChatPanel onSearch={vi.fn()} onAmenitySearch={onAmenitySearch} isLoading={false} initialMode="text" />)
+    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
+    await act(() => vi.runAllTimersAsync())
+    onAmenitySearch.mockClear()
+    // Re-stub fetch to answer the geocode call for the typed place.
+    vi.stubGlobal("fetch", vi.fn((url: unknown) =>
+      Promise.resolve(new Response(
+        JSON.stringify(typeof url === "string" && url.includes("/api/geocode?q=")
+          ? { lat: 53.55, lon: 9.99 } : []),
+        { status: 200 },
+      )),
+    ))
+    fireEvent.change(getInput(), { target: { value: "Hamburg" } })
+    fireEvent.click(screen.getByRole("radio", { name: /🅿/ }))
+    await act(() => vi.runAllTimersAsync())
+    expect(onAmenitySearch).toHaveBeenCalledWith("parking", { lat: 53.55, lon: 9.99 })
+  })
+
+  it("forwards the intl flag to the geocode call when international is set", async () => {
+    const onAmenitySearch = vi.fn()
+    vi.stubGlobal("fetch", vi.fn((url: unknown) =>
+      Promise.resolve(new Response(
+        JSON.stringify(typeof url === "string" && url.includes("/api/geocode?q=") ? { lat: 48.85, lon: 2.35 } : []),
+        { status: 200 },
+      )),
+    ))
+    render(<ChatPanel onSearch={vi.fn()} onAmenitySearch={onAmenitySearch} isLoading={false} initialMode="text" international />)
+    fireEvent.change(getInput(), { target: { value: "Paris" } })
+    fireEvent.click(screen.getByRole("radio", { name: /🚻/ }))
+    await act(() => vi.runAllTimersAsync())
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith(expect.stringContaining("intl=1"))
   })
 })
 
@@ -846,7 +925,7 @@ describe("ChatPanel amenity chips — location resolution & no mode-hijack (find
       />,
     )
     // Resolve a real GPS fix via the normal "In der Nähe" flow first.
-    fireEvent.click(screen.getByText(/In der Nähe/))
+    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
     await act(() => vi.runAllTimersAsync())
     onAmenitySearch.mockClear()
 
@@ -877,7 +956,7 @@ describe("ChatPanel amenity chips — racing an in-flight 'In der Nähe' locate 
     const onAmenitySearch = vi.fn()
     render(<ChatPanel onSearch={onSearch} onAmenitySearch={onAmenitySearch} isLoading={false} initialMode="text" />)
 
-    fireEvent.click(screen.getByText(/In der Nähe/))
+    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
     // GPS hasn't resolved yet — tap WC immediately, before the fix lands.
     fireEvent.click(screen.getByRole("radio", { name: /🚻/ }))
 
@@ -895,7 +974,7 @@ describe("ChatPanel amenity chips — racing an in-flight 'In der Nähe' locate 
     const onSearch = vi.fn()
     const onAmenitySearch = vi.fn()
     render(<ChatPanel onSearch={onSearch} onAmenitySearch={onAmenitySearch} isLoading={false} initialMode="text" />)
-    fireEvent.click(screen.getByText(/In der Nähe/))
+    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
     await act(() => vi.runAllTimersAsync())
     expect(onSearch).toHaveBeenCalled()
     expect(onAmenitySearch).not.toHaveBeenCalled()
