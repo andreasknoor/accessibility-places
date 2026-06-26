@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>#28 — Unified Search · Concept Prototype</title>
+<style>
+  :root{
+    --bg:#f8fafc; --card:#ffffff; --muted:#f1f5f9; --muted-fg:#64748b;
+    --border:#e2e8f0; --card-border:#dbe2ea; --fg:#0f172a;
+    --primary:#2563eb; --primary-strong:#1d4ed8; --primary-fg:#ffffff;
+    --green:#15803d; --green-100:#dcfce7; --green-700:#15803d;
+    --blue-600:#2563eb; --amber:#f59e0b; --amber-100:#fef3c7; --amber-800:#92400e;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5;padding:32px 20px 80px}
+  h1{font-size:26px;margin:0 0 6px}
+  h2{font-size:19px;margin:48px 0 4px;padding-top:18px;border-top:2px solid var(--border)}
+  h3{font-size:15px;margin:0 0 2px}
+  .lede{color:var(--muted-fg);max-width:760px;margin:0 0 8px}
+  .pill-rec{display:inline-block;background:var(--green-100);color:var(--green-700);
+    font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;vertical-align:middle;margin-left:8px}
+  .grid{display:flex;flex-wrap:wrap;gap:28px;margin-top:18px;align-items:flex-start}
+  .concept{width:380px}
+  .concept .cap{margin:10px 2px 0;color:var(--muted-fg);font-size:13px}
+  .concept .cap b{color:var(--fg)}
+
+  /* phone frame */
+  .phone{width:380px;border:1px solid var(--card-border);border-radius:26px;background:var(--card);
+    box-shadow:0 8px 28px rgba(15,23,42,.10);overflow:hidden}
+  .statusbar{height:30px;background:var(--card);display:flex;align-items:center;justify-content:center;
+    font-size:12px;color:var(--muted-fg);border-bottom:1px solid var(--muted)}
+  .appbar{padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--muted)}
+  .appbar .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px}
+  .appbar .brand .logo{width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px}
+  .appbar .gear{color:var(--muted-fg);font-size:17px}
+
+  .searchpanel{padding:14px;border-bottom:1px solid var(--border);background:var(--card);display:flex;flex-direction:column;gap:12px}
+
+  /* OLD tabs (for the "before") */
+  .tabs{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px;font-size:12px;font-weight:600;
+    color:var(--muted-fg);background:var(--card);cursor:pointer;position:relative;border-right:1px solid var(--border)}
+  .tab:last-child{border-right:0}
+  .tab.active{background:rgba(37,99,235,.08);color:var(--primary-strong)}
+  .tab.active::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--primary)}
+  .tab .ico{font-size:16px}
+  .dot{width:7px;height:7px;border-radius:999px;display:inline-block}
+  .dot.on{background:#22c55e}.dot.off{background:#cbd5e1}
+
+  /* field */
+  .field{position:relative;flex:1;display:flex;align-items:center}
+  .field input{width:100%;height:40px;border:1px solid var(--primary);border-radius:8px;background:var(--card);
+    padding:0 12px;font-size:14px;color:var(--fg);outline:none}
+  .field input::placeholder{color:var(--muted-fg)}
+  .row{display:flex;gap:8px;align-items:center}
+  .iconbtn{width:40px;height:40px;border-radius:8px;border:1px solid var(--border);background:var(--card);
+    display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;color:var(--primary-strong);flex:0 0 auto}
+  .iconbtn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+  .sendbtn{height:40px;border-radius:8px;border:1px solid var(--primary);background:var(--primary);color:#fff;
+    padding:0 14px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;flex:0 0 auto}
+  .sendbtn.ghost{background:var(--muted);color:var(--muted-fg);border-color:var(--border)}
+
+  /* location token */
+  .loctoken{display:inline-flex;align-items:center;gap:7px;align-self:flex-start;
+    background:rgba(37,99,235,.07);border:1px solid rgba(37,99,235,.25);color:var(--primary-strong);
+    border-radius:999px;padding:5px 10px;font-size:13px;font-weight:600}
+  .loctoken .x{color:var(--muted-fg);cursor:pointer;font-weight:700}
+  .loctoken .live{width:7px;height:7px;border-radius:999px;background:#22c55e}
+
+  /* A3 dual state */
+  .dualbtn{width:100%;height:38px;border-radius:8px;border:1px solid var(--border);background:var(--card);
+    color:var(--primary-strong);font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+  .dualbtn.active{background:rgba(37,99,235,.07);border-color:rgba(37,99,235,.25)}
+
+  /* A2 in-field token */
+  .fauxinput{width:100%;min-height:40px;border:1px solid var(--primary);border-radius:8px;background:var(--card);
+    padding:5px 8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:14px}
+  .fauxinput .infield-token{display:inline-flex;align-items:center;gap:6px;background:rgba(37,99,235,.10);
+    color:var(--primary-strong);border-radius:7px;padding:3px 8px;font-size:13px;font-weight:600}
+  .fauxinput .ghost{color:var(--muted-fg)}
+
+  /* chips */
+  .chiprow{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px}
+  .chiprow::-webkit-scrollbar{display:none}
+  .chip{flex:0 0 auto;border:none;border-radius:999px;padding:7px 12px;font-size:12.5px;font-weight:600;
+    background:var(--muted);color:var(--muted-fg);cursor:pointer;white-space:nowrap}
+  .chip.cat-active{background:var(--primary);color:#fff}
+  .chip.am{border:1.5px solid;background:var(--card)}
+  .chip.am.park{border-color:#bfdbfe;color:var(--blue-600)}
+  .chip.am.wc{border-color:#bbf7d0;color:var(--green-700)}
+  .chip.am.park.on{background:var(--blue-600);color:#fff;border-color:var(--blue-600)}
+  .chip.am.wc.on{background:var(--green-700);color:#fff;border-color:var(--green-700)}
+  .divider{flex:0 0 auto;width:1px;align-self:stretch;background:var(--border);margin:2px 3px}
+  .amlead{font-size:11px;font-weight:700;color:var(--muted-fg);text-transform:none;display:flex;align-items:center;flex:0 0 auto;padding-right:2px}
+  .pinned{display:flex;align-items:center;gap:7px;flex:0 0 auto}
+  .grouplabel{font-size:11px;color:var(--muted-fg);font-weight:700;margin:2px 2px -4px}
+
+  /* body / footer */
+  .listarea{height:150px;background:var(--muted);padding:12px;display:flex;flex-direction:column;gap:8px}
+  .reslist .skel{height:46px;border-radius:8px;background:#fff;border:1px solid var(--card-border)}
+  .footer{display:flex;border-top:1px solid var(--border);background:var(--card)}
+  .ftab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;font-size:11px;font-weight:600;color:var(--muted-fg);cursor:pointer}
+  .ftab.active{color:var(--primary-strong)}
+  .ftab .fi{font-size:17px}
+
+  .note{max-width:760px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 14px;margin:18px 0 0;font-size:13.5px;color:#7c5e10}
+  .legend{max-width:760px;font-size:13px;color:var(--muted-fg);margin:6px 0 0}
+  code{background:var(--muted);padding:1px 5px;border-radius:4px;font-size:12px}
+  .rec-banner{background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:12px 14px;max-width:760px;margin-top:10px;font-size:14px;color:#065f46}
+  .tag{display:inline-block;font-size:11px;font-weight:700;color:#fff;background:var(--muted-fg);border-radius:6px;padding:2px 7px;margin-left:6px;vertical-align:middle}
+  .tag.rec{background:var(--green-700)}
+</style>
+</head>
+<body>
+
+<h1>Issue&nbsp;#28 — One location-aware search field</h1>
+<p class="lede">Interactive design prototype (mobile target, 380&nbsp;px). Tap the GPS&nbsp;⌖ buttons, the location ✕, and the chips — they react. This is a <b>visual concept</b>, not the live app. Strings are the real DE i18n strings. Recommended options are tagged.</p>
+
+<div class="note"><b>Per your direction:</b> the bottom footer tabs (Ergebnisse / Karte / Filter) stay. The two big top tabs (“Überall / In der Nähe”) are what we remove — see the <b>Before</b> below, then the concepts.</div>
+
+<!-- ============ BEFORE ============ -->
+<h2>Before — today's two-tab layout</h2>
+<p class="legend">The mode tabs sit above the field; the chip strip mixes amenities, “Alle” and categories in one undifferentiated row.</p>
+<div class="grid">
+  <div class="concept">
+    <div class="phone">
+      <div class="statusbar">9:41</div>
+      <div class="appbar"><div class="brand"><span class="logo">♿</span> Accessible Places</div><div class="gear">⚙︎</div></div>
+      <div class="searchpanel">
+        <div class="tabs">
+          <div class="tab active"><span class="ico">⌖</span><span>In der Nähe <span class="dot on"></span></span></div>
+          <div class="tab"><span class="ico">🔍</span><span>Überall</span></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted-fg);display:flex;gap:6px;align-items:center"><span style="color:var(--primary)">⌖</span> <b style="color:var(--primary-strong)">Mitte</b></div>
+        <div class="chiprow">
+          <button class="chip am wc">🚻 WC</button>
+          <button class="chip am park">🅿 Parken</button>
+          <button class="chip cat-active">Alle</button>
+          <button class="chip">☕ Cafés</button>
+          <button class="chip">🍽 Restaurants</button>
+          <button class="chip">🏨 Hotels</button>
+        </div>
+      </div>
+      <div class="listarea reslist"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+      <div class="footer">
+        <div class="ftab active"><span class="fi">≡</span>Ergebnisse</div>
+        <div class="ftab"><span class="fi">🗺</span>Karte</div>
+        <div class="ftab"><span class="fi">⚙︎</span>Filter</div>
+      </div>
+    </div>
+    <p class="cap"><b>Problem:</b> two stacked decisions (tab, then chip), and the chip row gives 🚻/🅿/Alle/categories identical weight.</p>
+  </div>
+</div>
+
+<!-- ============ MAIN CHANGE 1: FIELD ============ -->
+<h2>Main change&nbsp;1 — the unified field <span style="font-weight:400;font-size:14px;color:var(--muted-fg)">(how “nearby” folds into one field)</span></h2>
+<p class="legend">Each frame uses the recommended chip layout (B2) below so you can read the field change in isolation. Tap ⌖ to acquire location, ✕ to clear.</p>
+
+<div class="grid" id="fieldgrid">
+
+  <!-- A1 -->
+  <div class="concept">
+    <div class="phone">
+      <div class="statusbar">9:41</div>
+      <div class="appbar"><div class="brand"><span class="logo">♿</span> Accessible Places</div><div class="gear">⚙︎</div></div>
+      <div class="searchpanel">
+        <div class="row">
+          <div class="field"><input placeholder="Ort oder Name, z. B. „Cafés in Berlin“"></div>
+          <button class="iconbtn primary js-gps" title="Standort verwenden">⌖</button>
+          <button class="sendbtn ghost">➤</button>
+        </div>
+        <span class="loctoken js-token" style="display:none"><span class="live"></span>📍 <span class="js-district">Mitte</span> <span class="x js-clear">✕</span></span>
+        <div class="grouplabel">Kategorie</div>
+        <div class="chiprow"><button class="chip cat-active">Alle</button><button class="chip">☕ Cafés</button><button class="chip">🍽 Restaurants</button><button class="chip">🏨 Hotels</button><button class="chip">🎭 Theater</button></div>
+        <div class="chiprow"><span class="amlead">In der Nähe:</span><button class="chip am park">🅿 Parken</button><button class="chip am wc">🚻 WC</button></div>
+      </div>
+      <div class="listarea reslist"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+      <div class="footer"><div class="ftab active"><span class="fi">≡</span>Ergebnisse</div><div class="ftab"><span class="fi">🗺</span>Karte</div><div class="ftab"><span class="fi">⚙︎</span>Filter</div></div>
+    </div>
+    <p class="cap"><b>A1 · Inline ⌖ + location token</b> <span class="tag rec">Empfohlen</span><br>Crosshair next to Send; active location is a removable pill under the field. Closest to Maps muscle memory.</p>
+  </div>
+
+  <!-- A2 -->
+  <div class="concept">
+    <div class="phone">
+      <div class="statusbar">9:41</div>
+      <div class="appbar"><div class="brand"><span class="logo">♿</span> Accessible Places</div><div class="gear">⚙︎</div></div>
+      <div class="searchpanel">
+        <div class="row">
+          <div class="field">
+            <div class="fauxinput js-faux"><span class="infield-token js-faux-token" style="display:none"><span class="live" style="width:7px;height:7px;border-radius:999px;background:#22c55e;display:inline-block"></span>📍 Dein Standort <span class="x js-clear" style="cursor:pointer;color:var(--muted-fg)">✕</span></span><span class="ghost js-faux-ph">Ort oder Name …</span></div>
+          </div>
+          <button class="iconbtn primary js-gps" title="Standort verwenden">⌖</button>
+          <button class="sendbtn ghost">➤</button>
+        </div>
+        <div class="grouplabel">Kategorie</div>
+        <div class="chiprow"><button class="chip cat-active">Alle</button><button class="chip">☕ Cafés</button><button class="chip">🍽 Restaurants</button><button class="chip">🏨 Hotels</button><button class="chip">🎭 Theater</button></div>
+        <div class="chiprow"><span class="amlead">In der Nähe:</span><button class="chip am park">🅿 Parken</button><button class="chip am wc">🚻 WC</button></div>
+      </div>
+      <div class="listarea reslist"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+      <div class="footer"><div class="ftab active"><span class="fi">≡</span>Ergebnisse</div><div class="ftab"><span class="fi">🗺</span>Karte</div><div class="ftab"><span class="fi">⚙︎</span>Filter</div></div>
+    </div>
+    <p class="cap"><b>A2 · Token inside the field</b><br>Most compact — but a chip-inside-input needs a faux-input; trickier caret/keyboard/SR handling. Higher build risk.</p>
+  </div>
+
+  <!-- A3 -->
+  <div class="concept">
+    <div class="phone">
+      <div class="statusbar">9:41</div>
+      <div class="appbar"><div class="brand"><span class="logo">♿</span> Accessible Places</div><div class="gear">⚙︎</div></div>
+      <div class="searchpanel">
+        <div class="row">
+          <div class="field"><input placeholder="Ort oder Name eingeben …"></div>
+          <button class="sendbtn ghost">➤</button>
+        </div>
+        <button class="dualbtn js-dual"><span class="js-dual-ico">⌖</span> <span class="js-dual-label">Standort verwenden</span></button>
+        <div class="grouplabel">Kategorie</div>
+        <div class="chiprow"><button class="chip cat-active">Alle</button><button class="chip">☕ Cafés</button><button class="chip">🍽 Restaurants</button><button class="chip">🏨 Hotels</button><button class="chip">🎭 Theater</button></div>
+        <div class="chiprow"><span class="amlead">In der Nähe:</span><button class="chip am park">🅿 Parken</button><button class="chip am wc">🚻 WC</button></div>
+      </div>
+      <div class="listarea reslist"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+      <div class="footer"><div class="ftab active"><span class="fi">≡</span>Ergebnisse</div><div class="ftab"><span class="fi">🗺</span>Karte</div><div class="ftab"><span class="fi">⚙︎</span>Filter</div></div>
+    </div>
+    <p class="cap"><b>A3 · Field + dual-state row</b><br>One control below the field flips between “Standort verwenden” ⇄ “📍 Mitte · ändern”. Very explicit; costs a row even when idle.</p>
+  </div>
+
+</div>
+
+<!-- ============ MAIN CHANGE 2: CHIPS ============ -->
+<h2>Main change&nbsp;2 — fixing the chip strip <span style="font-weight:400;font-size:14px;color:var(--muted-fg)">(separating amenity actions from category filters)</span></h2>
+<p class="legend">Each frame uses the recommended field (A1) so you can read the chip change in isolation. Tap chips — categories and amenities are independent single-selects.</p>
+
+<div class="grid" id="chipgrid">
+
+  <!-- B1 -->
+  <div class="concept">
+    <div class="phone">
+      <div class="statusbar">9:41</div>
+      <div class="appbar"><div class="brand"><span class="logo">♿</span> Accessible Places</div><div class="gear">⚙︎</div></div>
+      <div class="searchpanel">
+        <div class="row"><div class="field"><input placeholder="Ort oder Name …"></div><button class="iconbtn primary js-gps">⌖</button><button class="sendbtn ghost">➤</button></div>
+        <span class="loctoken js-token" style="display:none"><span class="live"></span>📍 <span class="js-district">Mitte</span> <span class="x js-clear">✕</span></span>
+        <div class="chiprow">
+          <div class="pinned"><button class="chip am park">🅿</button><button class="chip am wc">🚻</button></div>
+          <div class="divider"></div>
+          <button class="chip cat-active">Alle</button><button class="chip">☕ Cafés</button><button class="chip">🍽 Restaurants</button><button class="chip">🏨 Hotels</button>
+        </div>
+      </div>
+      <div class="listarea reslist"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+      <div class="footer"><div class="ftab active"><span class="fi">≡</span>Ergebnisse</div><div class="ftab"><span class="fi">🗺</span>Karte</div><div class="ftab"><span class="fi">⚙︎</span>Filter</div></div>
+    </div>
+    <p class="cap"><b>B1 · Pinned amenities + scrolling categories (1 row)</b><br>🅿/🚻 fixed left as icon pills, a divider, then categories scroll. Compact, but eats category scroll width.</p>
+  </div>
+
+  <!-- B2 -->
+  <div class="concept">
+    <div class="phone">
+      <div class="statusbar">9:41</div>
+      <div class="appbar"><div class="brand"><span class="logo">♿</span> Accessible Places</div><div class="gear">⚙︎</div></div>
+      <div class="searchpanel">
+        <div class="row"><div class="field"><input placeholder="Ort oder Name …"></div><button class="iconbtn primary js-gps">⌖</button><button class="sendbtn ghost">➤</button></div>
+        <span class="loctoken js-token" style="display:none"><span class="live"></span>📍 <span class="js-district">Mitte</span> <span class="x js-clear">✕</span></span>
+        <div class="grouplabel">Kategorie</div>
+        <div class="chiprow"><button class="chip cat-active">Alle</button><button class="chip">☕ Cafés</button><button class="chip">🍽 Restaurants</button><button class="chip">🏨 Hotels</button><button class="chip">🍻 Biergärten</button></div>
+        <div class="chiprow"><span class="amlead">In der Nähe:</span><button class="chip am park">🅿 Parken</button><button class="chip am wc">🚻 WC</button></div>
+      </div>
+      <div class="listarea reslist"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+      <div class="footer"><div class="ftab active"><span class="fi">≡</span>Ergebnisse</div><div class="ftab"><span class="fi">🗺</span>Karte</div><div class="ftab"><span class="fi">⚙︎</span>Filter</div></div>
+    </div>
+    <p class="cap"><b>B2 · Two dedicated rows</b> <span class="tag rec">Empfohlen</span><br>Row 1 = categories (Alle first). Row 2 = labelled amenity actions. The “In der Nähe:” lead-in tells first-timers 🅿/🚻 search <i>around me</i>.</p>
+  </div>
+
+  <!-- B3 -->
+  <div class="concept">
+    <div class="phone">
+      <div class="statusbar">9:41</div>
+      <div class="appbar"><div class="brand"><span class="logo">♿</span> Accessible Places</div><div class="gear">⚙︎</div></div>
+      <div class="searchpanel">
+        <div class="row"><div class="field"><input placeholder="Ort oder Name …"></div><button class="iconbtn primary js-gps">⌖</button><button class="sendbtn ghost">➤</button></div>
+        <span class="loctoken js-token" style="display:none"><span class="live"></span>📍 <span class="js-district">Mitte</span> <span class="x js-clear">✕</span></span>
+        <div class="chiprow">
+          <button class="chip am park">🅿 Parken</button><button class="chip am wc">🚻 WC</button>
+          <div class="divider"></div>
+          <button class="chip cat-active">Alle</button><button class="chip">☕ Cafés</button><button class="chip">🍽 Restaurants</button><button class="chip">🏨 Hotels</button>
+        </div>
+      </div>
+      <div class="listarea reslist"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+      <div class="footer"><div class="ftab active"><span class="fi">≡</span>Ergebnisse</div><div class="ftab"><span class="fi">🗺</span>Karte</div><div class="ftab"><span class="fi">⚙︎</span>Filter</div></div>
+    </div>
+    <p class="cap"><b>B3 · Divider + restyled single row</b><br>One row kept; amenities get accent rings + a divider before categories. Smallest height, weakest grouping.</p>
+  </div>
+
+</div>
+
+<!-- ============ RECOMMENDED COMBINED ============ -->
+<h2>Recommended combination — A1 + B2</h2>
+<div class="rec-banner"><b>A1 (inline ⌖ + location token)</b> + <b>B2 (two chip rows, labelled amenity actions)</b>. One field, one tap for “nearby”, and a chip area where each row is exactly one kind of thing. Try the full flow below: tap ⌖, then a category, then an amenity.</div>
+<div class="grid">
+  <div class="concept" style="width:380px">
+    <div class="phone">
+      <div class="statusbar">9:41</div>
+      <div class="appbar"><div class="brand"><span class="logo">♿</span> Accessible Places</div><div class="gear">⚙︎</div></div>
+      <div class="searchpanel">
+        <div class="row">
+          <div class="field"><input placeholder="Ort oder Name, z. B. „Cafés in Berlin“"></div>
+          <button class="iconbtn primary js-gps" title="Standort verwenden">⌖</button>
+          <button class="sendbtn ghost">➤</button>
+        </div>
+        <span class="loctoken js-token" style="display:none"><span class="live"></span>📍 <span class="js-district">Mitte</span> <span class="x js-clear">✕</span></span>
+        <div class="grouplabel">Kategorie</div>
+        <div class="chiprow"><button class="chip cat-active">Alle</button><button class="chip">☕ Cafés</button><button class="chip">🍽 Restaurants</button><button class="chip">🏨 Hotels</button><button class="chip">🍻 Biergärten</button><button class="chip">🍺 Kneipen</button><button class="chip">🏛 Museen</button></div>
+        <div class="chiprow"><span class="amlead">In der Nähe:</span><button class="chip am park">🅿 Parken</button><button class="chip am wc">🚻 WC</button></div>
+      </div>
+      <div class="listarea reslist"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+      <div class="footer"><div class="ftab active"><span class="fi">≡</span>Ergebnisse</div><div class="ftab"><span class="fi">🗺</span>Karte</div><div class="ftab"><span class="fi">⚙︎</span>Filter</div></div>
+    </div>
+    <p class="cap"><b>Net effect vs. today:</b> the ~56&nbsp;px tab block is gone; the freed space buys a clean, self-describing two-row chip area. One decision surface instead of two.</p>
+  </div>
+</div>
+
+<p class="legend" style="margin-top:24px">Full written concept (behaviour, invariants, affected files, open questions): <code>docs/plans/issue-28-unified-search.md</code></p>
+
+<script>
+  // GPS toggle: shows/clears the location token (A1/B*), faux-token (A2), dual-state (A3)
+  function setLocated(phone, on){
+    phone.querySelectorAll('.js-token').forEach(t=>t.style.display = on ? 'inline-flex' : 'none');
+    phone.querySelectorAll('.js-faux-token').forEach(t=>t.style.display = on ? 'inline-flex' : 'none');
+    phone.querySelectorAll('.js-faux-ph').forEach(p=>p.style.display = on ? 'none' : 'inline');
+    phone.querySelectorAll('.js-gps').forEach(b=>{ b.classList.toggle('primary', !on); });
+  }
+  document.querySelectorAll('.phone').forEach(phone=>{
+    phone.querySelectorAll('.js-gps').forEach(btn=>btn.addEventListener('click',()=>setLocated(phone,true)));
+    phone.querySelectorAll('.js-clear').forEach(x=>x.addEventListener('click',(e)=>{e.stopPropagation();setLocated(phone,false);}));
+    const dual = phone.querySelector('.js-dual');
+    if(dual){ let on=false; dual.addEventListener('click',()=>{ on=!on; dual.classList.toggle('active',on);
+      dual.querySelector('.js-dual-ico').textContent = on?'📍':'⌖';
+      dual.querySelector('.js-dual-label').textContent = on?'Mitte · ändern':'Standort verwenden'; }); }
+    // category chips: single-select within their row
+    phone.querySelectorAll('.chiprow').forEach(rowEl=>{
+      const cats = rowEl.querySelectorAll('.chip:not(.am)');
+      cats.forEach(c=>c.addEventListener('click',()=>{ cats.forEach(x=>x.classList.remove('cat-active')); c.classList.add('cat-active'); }));
+    });
+    // amenity chips: single-select across all amenity chips in the phone, toggle off on re-tap
+    const ams = phone.querySelectorAll('.chip.am');
+    ams.forEach(a=>a.addEventListener('click',()=>{
+      const was=a.classList.contains('on'); ams.forEach(x=>x.classList.remove('on'));
+      if(!was) a.classList.add('on');
+    }));
+    // footer tabs
+    const ftabs = phone.querySelectorAll('.ftab');
+    ftabs.forEach(f=>f.addEventListener('click',()=>{ ftabs.forEach(x=>x.classList.remove('active')); f.classList.add('active'); }));
+  });
+</script>
+</body>
+</html>
