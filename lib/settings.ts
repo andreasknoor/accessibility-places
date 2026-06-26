@@ -25,7 +25,7 @@ export interface AppSettings {
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   defaultSearchMode:  null,
-  defaultMobileView:  "results",
+  defaultMobileView:  "map",
   defaultChipIdx:     null,
   sortOrder:          "confidence",
   autoZoom:           true,

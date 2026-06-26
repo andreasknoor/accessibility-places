@@ -1,13 +1,15 @@
 "use client"
 
-import { useState, useRef, useEffect, useMemo } from "react"
+import { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import { Loader2, RefreshCw, MapPin, X, ChevronDown, ChevronRight, ArrowUpDown, SlidersHorizontal, Compass, LocateFixed } from "lucide-react"
 import PlaceCard from "./PlaceCard"
+import AmenityCard from "./AmenityCard"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { Popover, PopoverTrigger, PopoverContent, PopoverClose } from "@/components/ui/popover"
 import { haversineMetres } from "@/lib/matching/match"
-import type { Place, SearchFilters, FilterDebug } from "@/lib/types"
+import { amenitySpotKey } from "@/lib/search-ui"
+import type { Place, SearchFilters, FilterDebug, AmenityFeature, AmenityType } from "@/lib/types"
 
 const RADIUS_PRESETS_KM = [1, 2, 5, 10, 25, 50] as const
 
@@ -43,15 +45,34 @@ interface Props {
   // lookup (place search). Shows a "Results for <name>" banner so the user knows
   // the category chips did not scope this search. Undefined for area searches.
   placeSearchName?:     string
+  // Amenity search (parking / WC). When set, the list renders amenity result cards
+  // (label + distance) instead of place cards; `places` is empty in this mode.
+  amenityType?:         AmenityType | null
+  amenityResults?:      AmenityFeature[]
+  amenityHint?:         string
+  // Dedicated expand-radius action for the amenity empty state — distinct from
+  // onExpandRadius (which only ever re-runs the venue search) so an active
+  // amenity search never resurfaces a stale venue query (finding F6a).
+  onAmenityExpandRadius?: () => void
+  // "Zur Karte" on an amenity result card — pans/zooms MapView to that spot
+  // (mirrors onSelect for places; amenity spots have no stable Place id, so the
+  // spot itself is passed instead of an id).
+  onAmenitySelect?: (spot: AmenityFeature) => void
+  // Currently-selected amenity spot (amenitySpotKey), controlled by HomeClient so
+  // a map-marker click can highlight the matching card. Mirrors selectedId for
+  // places. Scrolling reuses the shared scrollToId mechanism (amenity keys and
+  // place ids never coexist).
+  selectedAmenityKey?: string
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToText, isFirstVisit, onDismissWelcome, onStartNearby, intlNotice, placeSearchName }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToText, isFirstVisit, onDismissWelcome, onStartNearby, intlNotice, placeSearchName, amenityType, amenityResults, amenityHint, onAmenityExpandRadius, onAmenitySelect, selectedAmenityKey }: Props) {
   const t = useTranslations()
+  const amenityMode = amenityType != null
   const [mapHintSeen, setMapHintSeen] = useState(() =>
     typeof window !== "undefined" && !!localStorage.getItem("ap_map_hint_seen")
   )
   const [localSortBy, setLocalSortBy] = useState<"confidence" | "distance">("confidence")
-  const showWelcome = !isLoading && places.length === 0 && !hasSearched && chatMode === "nearby" && isFirstVisit
+  const showWelcome = !isLoading && places.length === 0 && !hasSearched && chatMode === "nearby" && isFirstVisit && !amenityMode
   const sortBy = sortByProp ?? localSortBy
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -76,20 +97,57 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
     return places
   }, [places, sortBy, searchCenter])
 
+  // Amenity results, always sorted by distance (the only meaningful order for
+  // "nearest parking / toilet").
+  const displayedAmenities = useMemo(() => {
+    const list = amenityResults ?? []
+    if (!searchCenter) return list
+    return [...list].sort((a, b) =>
+      haversineMetres(searchCenter, a) - haversineMetres(searchCenter, b)
+    )
+  }, [amenityResults, searchCenter])
+
+  // Scroll the target entry into view *within the results scroll container*.
+  // We compute scrollTop manually rather than using Element.scrollIntoView so
+  // that only the list scrolls — never the page or a parent.
+  //
+  // We always *centre* the target rather than bailing out as soon as it is
+  // merely "fully visible": amenity (parking/WC) cards never change height, and
+  // distance-sorted spots cluster near the top of the list, so a tapped marker's
+  // card is frequently already on-screen but jammed against an edge. An
+  // early-out on full visibility left it "knapp daneben" (off-centre) and forced
+  // the user to scroll by hand. A small dead-band keeps it a no-op once the entry
+  // is roughly centred, so the correction passes below don't fight a smooth
+  // scroll already in flight.
+  const scrollTargetIntoView = useCallback((id: string, smooth: boolean) => {
+    const container = scrollContainerRef.current
+    const el = itemRefs.current.get(id)
+    if (!container || !el) return
+    const cRect = container.getBoundingClientRect()
+    const eRect = el.getBoundingClientRect()
+    const currentTop = eRect.top - cRect.top
+    const desiredTop = Math.max(8, (container.clientHeight - eRect.height) / 2)
+    const delta = currentTop - desiredTop
+    if (Math.abs(delta) < 4) return // already centred — leave it
+    const max = container.scrollHeight - container.clientHeight
+    const top = Math.max(0, Math.min(container.scrollTop + delta, max))
+    container.scrollTo({ top, behavior: smooth ? "smooth" : "auto" })
+  }, [])
+
   useEffect(() => {
     if (!scrollToId) return
-    // block:"center" (not "nearest") so the entry always jumps into view — with
-    // "nearest" scrollIntoView does nothing when the item is already marginally
-    // within the scrollport, which read as "the list doesn't move". Double rAF: the
-    // results tab may have just switched from display:none (mobile "show in
-    // results"), so one frame isn't always enough for layout before scrolling.
-    const id = requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        itemRefs.current.get(scrollToId)?.scrollIntoView({ behavior: "smooth", block: "center" })
-      }),
+    // Double rAF: the results tab may have just switched from display:none
+    // (mobile "show in results"), so one frame isn't enough for layout first.
+    const raf = requestAnimationFrame(() =>
+      requestAnimationFrame(() => scrollTargetIntoView(scrollToId, true)),
     )
-    return () => cancelAnimationFrame(id)
-  }, [scrollToId])
+    // Correction pass once layout has settled: the now-selected card can grow
+    // (ring/expanded details) or images can load and shift offsets after the
+    // initial scroll, leaving the entry partly out of view. Re-check and nudge
+    // (instant) only if it is no longer fully visible.
+    const timer = setTimeout(() => scrollTargetIntoView(scrollToId, false), 450)
+    return () => { cancelAnimationFrame(raf); clearTimeout(timer) }
+  }, [scrollToId, scrollTargetIntoView])
 
   function handleSelect(place: Place) {
     if (!mapHintSeen) {
@@ -173,7 +231,12 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
             )}
           </h2>
           <div className="flex items-center gap-2">
-            {!isLoading && places.length > 0 && (
+            {!isLoading && amenityMode && displayedAmenities.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {t.results.amenityCount(displayedAmenities.length)}
+              </span>
+            )}
+            {!isLoading && !amenityMode && places.length > 0 && (
               <span className="text-xs text-muted-foreground">
                 {t.results.count(places.length)}
                 {parkingSpotCount != null && parkingSpotCount > 0 && (
@@ -314,7 +377,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
             </div>
           )}
 
-          {!isLoading && places.length === 0 && !hasSearched && chatMode !== "nearby" && (
+          {!isLoading && !amenityMode && places.length === 0 && !hasSearched && chatMode !== "nearby" && (
             <div className="flex flex-col items-center gap-4 py-14 px-6 text-center">
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
                 <MapPin className="w-8 h-8 text-muted-foreground" />
@@ -326,7 +389,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
             </div>
           )}
 
-          {!isLoading && places.length === 0 && hasSearched && (
+          {!isLoading && !amenityMode && places.length === 0 && hasSearched && (
             <div className="flex flex-col items-center gap-3 py-8 px-4">
               {filterDebug && filterDebug.total > 0 ? (
                 <>
@@ -380,7 +443,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
             </div>
           )}
 
-          {!isLoading && displayedPlaces.map((place) => (
+          {!isLoading && !amenityMode && displayedPlaces.map((place) => (
             <div
               key={place.id}
               ref={(el) => { if (el) itemRefs.current.set(place.id, el); else itemRefs.current.delete(place.id) }}
@@ -393,6 +456,45 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
                 />
             </div>
           ))}
+
+          {/* Amenity (parking / WC) results — simple distance-sorted cards */}
+          {!isLoading && amenityMode && displayedAmenities.length === 0 && (
+            <div className="flex flex-col items-center gap-3 py-8 px-4">
+              <p className="text-sm text-muted-foreground text-center">
+                {amenityHint ?? t.chat.noResults}
+              </p>
+              {onAmenityExpandRadius && (
+                <button
+                  onClick={onAmenityExpandRadius}
+                  className="px-3 py-1.5 rounded-md border border-border bg-card text-sm font-medium hover:bg-muted transition-colors"
+                >
+                  {t.results.expandRadius}
+                </button>
+              )}
+            </div>
+          )}
+
+          {!isLoading && amenityMode && displayedAmenities.map((spot, i) => {
+            // Render key may need the index to stay unique; the selection/scroll
+            // key must NOT (the map marker has no list index) — see amenitySpotKey.
+            const renderKey = spot.osmId ?? `${spot.lat},${spot.lon}-${i}`
+            const selKey = amenitySpotKey(spot)
+            const distanceM = searchCenter ? haversineMetres(searchCenter, spot) : undefined
+            return (
+              <div
+                key={renderKey}
+                ref={(el) => { if (el) itemRefs.current.set(selKey, el); else itemRefs.current.delete(selKey) }}
+              >
+                <AmenityCard
+                  spot={spot}
+                  amenityType={amenityType}
+                  isSelected={selKey === selectedAmenityKey}
+                  distanceM={distanceM}
+                  onClick={onAmenitySelect ? () => onAmenitySelect(spot) : undefined}
+                />
+              </div>
+            )
+          })}
         </div>
       </div>}
     </div>

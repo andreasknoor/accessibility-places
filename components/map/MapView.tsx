@@ -66,6 +66,22 @@ interface Props {
   // at zoom 16. Stamped as programmatic so "search here" is NOT auto-shown by
   // moveend — instead the button is shown explicitly (Option 2).
   locatePanTrigger?:       number
+  // "Zur Karte" from an amenity (parking/WC) result card: pans/zooms to that
+  // spot's coordinates and opens its popup. Distinct from selectedId/panTrigger
+  // (place markers) since amenity markers aren't tracked in the place cluster.
+  // Incrementing the trigger re-fires even when the target coords are unchanged
+  // (clicking the same card twice should still re-center).
+  amenityPanTarget?:       { lat: number; lon: number } | null
+  amenityPanTrigger?:      number
+  // Clicking a parking/WC marker selects the matching list card (reverse of
+  // amenityPanTarget). Mirrors onSelect for place markers; amenity spots have no
+  // stable Place id, so the spot's coords/osmId are passed and keyed via
+  // amenitySpotKey on the consumer side. The popup still opens as well.
+  onAmenityMarkerClick?:   (spot: { osmId?: string; lat: number; lon: number }) => void
+  // The "jump to results" link inside a parking/WC popup (mobile only — mirrors
+  // onShowInResults for venue popups): highlights the matching card and switches
+  // to the results tab. Only passed on mobile, so the link is absent on desktop.
+  onShowAmenityInResults?: (spot: { osmId?: string; lat: number; lon: number }) => void
 }
 
 const CONFIDENCE_COLORS = {
@@ -157,6 +173,10 @@ export default function MapView({
   onSearchHere,
   onLocate,
   locatePanTrigger,
+  amenityPanTarget = null,
+  amenityPanTrigger,
+  onAmenityMarkerClick,
+  onShowAmenityInResults,
 }: Props) {
   const t        = useTranslations()
   const mapRef   = useRef<HTMLDivElement>(null)
@@ -179,12 +199,14 @@ export default function MapView({
   }
 
   const onShowInResultsRef  = useRef(onShowInResults)
+  const onShowAmenityInResultsRef = useRef(onShowAmenityInResults)
   const placesRef           = useRef(places)
   const userLocationRef     = useRef(userLocation)
   const searchCenterRef     = useRef(center)
   const onSearchHereRef     = useRef(onSearchHere)
   const focusModeRef        = useRef(focusMode)
   useEffect(() => { onShowInResultsRef.current = onShowInResults }, [onShowInResults])
+  useEffect(() => { onShowAmenityInResultsRef.current = onShowAmenityInResults }, [onShowAmenityInResults])
   useEffect(() => { placesRef.current = places }, [places])
   useEffect(() => { userLocationRef.current = userLocation }, [userLocation])
   useEffect(() => { searchCenterRef.current = center }, [center])
@@ -466,20 +488,23 @@ export default function MapView({
       const title = tier === "weak"
         ? t.map.parkingAccessible
         : spot.capacity != null ? t.map.parkingSpots(spot.capacity) : t.map.parkingSpot
-      const subtitle = tier === "weak" ? t.map.parkingAccessibleHint : null
+      // Reservation-status badge, parity with the result-list AmenityCard.
+      const badgeText  = tier === "weak" ? t.map.parkingNotReservedBadge : t.map.parkingReservedBadge
+      const badgeStyle = tier === "weak" ? "background:#fef3c7;color:#92400e" : "background:#dcfce7;color:#166534"
       const mapsUrl = `https://www.google.com/maps?q=${spot.lat},${spot.lon}`
 
       const div = document.createElement("div")
       div.style.cssText = "font-family:sans-serif;font-size:12px;line-height:1.6;min-width:140px"
       div.innerHTML = `
-        <div style="font-weight:600;margin-bottom:${subtitle ? "1px" : "5px"}">${title}</div>
-        ${subtitle ? `<div style="color:#b45309;font-size:11px;margin-bottom:5px">${subtitle}</div>` : ""}
+        <div style="font-weight:600;margin-bottom:3px">${title}</div>
+        <div style="margin-bottom:6px"><span style="display:inline-block;font-size:10px;font-weight:600;padding:1px 7px;border-radius:9999px;${badgeStyle}">${badgeText}</span></div>
         <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:11px;margin-bottom:6px">
           ${distText     ? `<span style="color:#888">↔</span><span>${distText}</span>` : ""}
           ${feeText      ? `<span style="color:#888">€</span><span>${esc(feeText)}</span>` : ""}
           ${maxstayText  ? `<span style="color:#888">${t.map.parkingMaxstay}</span><span>${esc(maxstayText)}</span>` : ""}
           ${accessText   ? `<span style="color:#888">🔒</span><span style="color:#b45309">${accessText}</span>` : ""}
         </div>
+        <div style="font-size:10px;color:#888;margin-bottom:6px">${t.map.source}: ${SOURCE_LABELS.osm}</div>
         <span data-gmaps style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#2563eb;cursor:pointer;text-decoration:underline">
           <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           ${t.results.googleMapsLink}
@@ -489,6 +514,7 @@ export default function MapView({
           <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
           ${t.map.parkingReportButton}
         </span>` : ""}
+        ${onShowAmenityInResultsRef.current ? `<button data-show-results style="display:block;margin-top:8px;font-size:11px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-align:left">${t.map.showInResults} →</button>` : ""}
       `
       // Use L.DomEvent.on (not addEventListener) — plain addEventListener and
       // inline onclick fail on mobile because Leaflet intercepts touchstart.
@@ -527,9 +553,19 @@ export default function MapView({
         })
       }
 
+      const showResultsBtn = div.querySelector<HTMLElement>("[data-show-results]")
+      if (showResultsBtn) {
+        const captured = { osmId: spot.osmId, lat: spot.lat, lon: spot.lon }
+        L!.DomEvent.on(showResultsBtn, "click", (ev: Event) => {
+          L!.DomEvent.stopPropagation(ev)
+          onShowAmenityInResultsRef.current?.(captured)
+        })
+      }
+
       const marker = L.marker([spot.lat, spot.lon], { icon, zIndexOffset: -200 })
         .bindPopup(div, { maxWidth: 240 })
         .addTo(mapInst.current)
+      marker.on("click", () => onAmenityMarkerClick?.({ osmId: spot.osmId, lat: spot.lat, lon: spot.lon }))
       parkingMarkersRef.current.push(marker)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -595,10 +631,12 @@ export default function MapView({
         <div style="font-size:11px;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:2px 0;margin-bottom:7px">
           ${rows.join("")}
         </div>
+        <div style="font-size:10px;color:#888;margin-bottom:6px">${t.map.source}: ${SOURCE_LABELS.osm}</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px">
           <span data-gmaps style="${linkStyle}">${extLinkSvg}${t.results.googleMapsLink}</span>
           ${wheelmapUrl ? `<span data-wheelmap style="${linkStyle}">${extLinkSvg}Wheelmap</span>` : ""}
         </div>
+        ${onShowAmenityInResultsRef.current ? `<button data-show-results style="display:block;margin-top:8px;font-size:11px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-align:left">${t.map.showInResults} →</button>` : ""}
       `
       const gmapsBtn = div.querySelector<HTMLElement>("[data-gmaps]")
       if (gmapsBtn) {
@@ -608,10 +646,19 @@ export default function MapView({
       if (wheelmapBtn && wheelmapUrl) {
         L.DomEvent.on(wheelmapBtn, "click", () => void openExternalUrl(wheelmapUrl))
       }
+      const showResultsBtn = div.querySelector<HTMLElement>("[data-show-results]")
+      if (showResultsBtn) {
+        const captured = { osmId: spot.osmId, lat: spot.lat, lon: spot.lon }
+        L.DomEvent.on(showResultsBtn, "click", (ev: Event) => {
+          L!.DomEvent.stopPropagation(ev)
+          onShowAmenityInResultsRef.current?.(captured)
+        })
+      }
 
       const marker = L.marker([spot.lat, spot.lon], { icon })
         .bindPopup(div, { maxWidth: 220 })
         .addTo(mapInst.current)
+      marker.on("click", () => onAmenityMarkerClick?.({ osmId: spot.osmId, lat: spot.lat, lon: spot.lon }))
       toiletMarkersRef.current.push(marker)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -769,6 +816,29 @@ export default function MapView({
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, panTrigger, mapReady])
+
+  // "Zur Karte" from an amenity (parking/WC) result card. Amenity markers are
+  // added directly to the map (not clustered), so no zoomToShowLayer dance is
+  // needed — just center on the spot and open its popup. mapReady is in the
+  // deps for the same reason as the place-selection effect above: on first
+  // mobile map mount the container isn't measured yet when this first fires.
+  useEffect(() => {
+    if (!mapInst.current || !L || !mapReady || !amenityPanTarget) return
+    const EPS = 1e-6
+    const marker = [...parkingMarkersRef.current, ...toiletMarkersRef.current].find((m) => {
+      const ll = m.getLatLng()
+      return Math.abs(ll.lat - amenityPanTarget.lat) < EPS && Math.abs(ll.lng - amenityPanTarget.lon) < EPS
+    })
+    lastProgrammaticMoveRef.current = Date.now()
+    mapInst.current.setView([amenityPanTarget.lat, amenityPanTarget.lon], Math.max(mapInst.current.getZoom(), 17))
+    if (marker) {
+      // Re-stamp: opening the popup can autoPan the map, firing a later moveend
+      // after the setView animation already settled.
+      lastProgrammaticMoveRef.current = Date.now()
+      marker.openPopup()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [amenityPanTrigger, mapReady])
 
   // Pan to center — only when no results (e.g. failed search, initial state, or parking-only view)
   // When parking spots are visible without venue results, fit the view to all spots + GPS location.

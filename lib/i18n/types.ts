@@ -22,6 +22,10 @@ export interface Translations {
     suggestGroupAreas:  string
     suggestGroupVenues: string
     chipAll:            string
+    // Amenity search chips (single-select, at the front of the chip strip).
+    chipParking:        string
+    chipToilet:         string
+    chipsGroupLabel:    string
     send:          string
     thinking:      string
     noResults:        string
@@ -128,6 +132,10 @@ export interface Translations {
     adjustFilters:        string
     adjustFiltersHint:    string
     distanceFromHere:     (m: number) => string
+    amenityParkingLabel:  string
+    amenityToiletLabel:   string
+    amenityCapacity:      (n: number) => string
+    amenityCount:         (n: number) => string
     openDetails:          (name: string) => string
     showNearbyParking:    string
     copyLink:             string
@@ -195,12 +203,15 @@ export interface Translations {
     parkingSpot:            string
     parkingSpots:           (n: number) => string
     parkingAccessible:      string
-    parkingAccessibleHint:  string
+    parkingReservedBadge:    string
+    parkingNotReservedBadge: string
+    parkingDedicatedLabel:   string
     toggleParking:          string
     nearbyParking:          string
     parkingFree:            string
     parkingPaid:            string
     parkingMaxstay:         string
+    parkingFeeLabel:        string
     parkingPrivate:         string
     parkingCustomers:       string
     legend:                 string

@@ -30,11 +30,16 @@ interface Props {
   hasGpsCoords?:     boolean
   locateTrigger?:    number
   biasCoords?:       Coords
-  // Amenity focus layer chips in the nearby-info row (parking / WC).
-  focusLayers?:        Set<AmenityType>
-  onToggleFocusLayer?: (type: AmenityType) => void
-  focusLoadingLayer?:  AmenityType | null
-  focusHints?:         Partial<Record<AmenityType, string>>
+  // Amenity search chips (parking / WC) — single-select, at the front of the chip
+  // strip. Selecting one runs an amenity search at the current location (GPS or the
+  // active area); if no location is known yet, ChatPanel auto-locates first.
+  onAmenitySearch?:  (type: AmenityType, coords?: Coords) => void
+  // The amenity currently being searched (null = normal venue search). Drives chip
+  // highlighting; owned by the parent so a venue search elsewhere clears it.
+  amenityActive?:    AmenityType | null
+  // Clears amenity mode without running a search (e.g. tapping "Alle"/a venue chip
+  // while no location is set, so no venue search fires to clear it for us).
+  onExitAmenity?:    () => void
   // Reports a category-only query reflecting the current chip selection, so the
   // map's "search here" can run even before any search has been submitted (text
   // mode, no location entered). Null chip → an all-categories query.
@@ -43,6 +48,13 @@ interface Props {
   // (e.g. "search here", nearby). Set → a chip change in text mode refines THIS
   // area in place instead of re-geocoding the (possibly stale) location textbox.
   activeSearchCoords?: Coords
+  // The resolved centre of the current search, set after ANY successful search —
+  // including a plain typed-area search ("Cafés in Hamburg"), which never carries
+  // client-side coordinates (activeSearchCoords stays undefined for those; the
+  // server resolves the location and reports it back). Amenity chips fall back to
+  // this so "search elsewhere" works for the common typed-area case, not just
+  // coordinate-based searches.
+  searchCenter?: Coords
   // Opt-in international mode (AppSettings.internationalMode). When true the
   // autocomplete widens from DACH to the supported-country allowlist.
   international?: boolean
@@ -133,7 +145,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
   return data.district ?? ""
 }
 
-export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onGpsResolved, skipAutoLocate, hasGpsCoords, locateTrigger, biasCoords, focusLayers, onToggleFocusLayer, focusLoadingLayer, focusHints, onCategoryQueryChange, activeSearchCoords, international }: Props) {
+export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onGpsResolved, skipAutoLocate, hasGpsCoords, locateTrigger, biasCoords, onAmenitySearch, amenityActive, onExitAmenity, onCategoryQueryChange, activeSearchCoords, searchCenter, international }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
   const isMobile = useIsMobile()
@@ -152,6 +164,12 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // edits the field again.
   const [venuePicked,    setVenuePicked]    = useState(false)
   const [showDevConsole, setShowDevConsole] = useState(false)
+  // GPS acquisition for an amenity chip tap with no known location yet (finding
+  // F1/F6b). Deliberately separate from `nearbyPhase`/`handleLocate` — this must
+  // NOT switch the legacy Überall/In-der-Nähe mode or touch venue search state;
+  // it only ever resolves into onAmenitySearch.
+  const [amenityLocating,    setAmenityLocating]    = useState<AmenityType | null>(null)
+  const [amenityLocateError, setAmenityLocateError] = useState<string | null>(null)
   const selectedIdxRef       = useRef<number | null>(null)
   // True once the startup category has been definitively established — by a SEO
   // deep-link, a restored last search, the user's default-category setting, or a
@@ -161,6 +179,14 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const debounceRef          = useRef<ReturnType<typeof setTimeout>>(undefined)
   const suggestAbortRef      = useRef<AbortController>(undefined)
   const locatingRef          = useRef(false)
+  // Set when an amenity chip is tapped while a "Nearby" locate (handleLocate) is
+  // already in flight (nearbyPhase === "locating") — e.g. tapping "In der Nähe
+  // suchen" and immediately tapping "WC" before GPS resolves. Rather than firing
+  // a second, independent geolocation request that races the first one,
+  // selectAmenity parks the requested type here; handleLocate's success/error
+  // handler checks it and routes that one fix into an amenity search instead of
+  // (not in addition to) the venue nearby-search it would otherwise run.
+  const pendingAmenityTypeRef = useRef<AmenityType | null>(null)
   const watchIdRef           = useRef<GeoWatchId | null>(null)
   // Holds the location value that was set programmatically (restore, area pick,
   // venue pick). Autocomplete is suppressed as long as location equals this
@@ -420,7 +446,69 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     handleLocate()
   }
 
+  // Amenity chip tap: run a parking/WC search at the best-known location. Order:
+  // an active nearby fix → the current area's coordinates → else auto-locate (the
+  // GPS fix is routed back here via pendingAmenityRef). Single-select like the
+  // venue chips: the parent owns `amenityActive` and clears it on a venue search.
+  // Amenity chip tap: run a parking/WC search at the best-known location.
+  // Priority: an active nearby GPS fix (freshest/most specific) → the resolved
+  // centre of ANY prior search (searchCenter — covers a plain typed-area search
+  // like "Cafés in Hamburg", which never carries client-side coordinates) →
+  // activeSearchCoords (coordinate-based searches) → else acquire GPS directly.
+  //
+  // Deliberately does NOT call setMode/onModeChange/handleLocate: those are tied
+  // to the legacy Überall/In-der-Nähe tabs and to the venue search's
+  // clearSearchState, which used to fire SYNCHRONOUSLY on tap — wiping any
+  // on-screen venue results before the GPS fix even resolved, and silently
+  // discarding the previously-searched area's context on locate failure. The
+  // amenity chips are mode-agnostic by design (see issue #30) and must not
+  // touch venue search state at all.
+  function selectAmenity(type: AmenityType) {
+    setSuggestions([])
+    setShowSuggestions(false)
+    setAmenityLocateError(null)
+    if (typeof nearbyPhase === "object") {
+      onAmenitySearch?.(type, { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
+      return
+    }
+    // A "Nearby" locate is already in flight — wait for that one fix instead of
+    // starting a second, independent geolocation request (see pendingAmenityTypeRef).
+    if (nearbyPhase === "locating") {
+      pendingAmenityTypeRef.current = type
+      setAmenityLocating(type)
+      return
+    }
+    const known = searchCenter ?? activeSearchCoords
+    if (known) {
+      onAmenitySearch?.(type, known)
+      return
+    }
+    if (!isGeolocationAvailable()) {
+      setAmenityLocateError(t.chat.locationError)
+      return
+    }
+    setAmenityLocating(type)
+    getCurrentPosition({ timeout: 30_000, enableHighAccuracy: false, maximumAge: 60_000 })
+      .then(({ lat, lon }) => {
+        setAmenityLocating(null)
+        onAmenitySearch?.(type, { lat, lon })
+      })
+      .catch(() => {
+        setAmenityLocating(null)
+        setAmenityLocateError(t.chat.locationError)
+      })
+  }
+
   function selectChip(idx: number | null) {
+    // Leaving amenity mode: a venue/"Alle" chip is single-select with the amenity
+    // chips. If no search ends up firing (text mode, no location), the parent still
+    // needs to clear amenityActive so the highlight returns to this chip.
+    onExitAmenity?.()
+    // Cancel a pending amenity-locate routing (see pendingAmenityTypeRef) — the
+    // user picked a venue/"Alle" chip instead, so the in-flight GPS fix (if any)
+    // should land as the normal venue nearby-search, not an amenity search.
+    pendingAmenityTypeRef.current = null
+    setAmenityLocating(null)
     chipResolvedRef.current = true
     setSelectedIdx(idx)
     selectedIdxRef.current = idx
@@ -587,12 +675,27 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           setNearbyPhase({ district: d, lat, lon })
           saveNearbyLocation({ district: d, lat, lon }) // restore the located UI on a session return
           onGpsResolved?.({ lat, lon })
-          // Read locale from a ref so a fix that arrives after the user switched
-          // language still uses the current value.
-          const label = chipLabel(selectedIdxRef.current, localeRef.current)
-          onSearch(nearbyQuery(label, d), { lat, lon })
+          // An amenity chip was tapped while this fix was still in flight — route
+          // it there instead of firing the venue nearby-search (see
+          // pendingAmenityTypeRef / selectAmenity's "locating" branch).
+          const pendingAmenity = pendingAmenityTypeRef.current
+          if (pendingAmenity) {
+            pendingAmenityTypeRef.current = null
+            setAmenityLocating(null)
+            onAmenitySearch?.(pendingAmenity, { lat, lon })
+          } else {
+            // Read locale from a ref so a fix that arrives after the user switched
+            // language still uses the current value.
+            const label = chipLabel(selectedIdxRef.current, localeRef.current)
+            onSearch(nearbyQuery(label, d), { lat, lon })
+          }
         } catch {
           setNearbyPhase("error")
+          if (pendingAmenityTypeRef.current) {
+            pendingAmenityTypeRef.current = null
+            setAmenityLocating(null)
+            setAmenityLocateError(t.chat.locationError)
+          }
         }
         // Silently track position changes after the initial fix. Uses the native
         // plugin in the app (permission already granted by getCurrentPosition, so
@@ -611,6 +714,11 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       .catch((err) => {
         locatingRef.current = false
         setNearbyPhase("error")
+        if (pendingAmenityTypeRef.current) {
+          pendingAmenityTypeRef.current = null
+          setAmenityLocating(null)
+          setAmenityLocateError(t.chat.locationError)
+        }
         const msg = (err as { message?: string; code?: number }).message ?? String(err)
         console.error("[geolocation] error", msg)
       })
@@ -854,104 +962,93 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             </div>
           )}
 
-          {(district !== null || (onToggleFocusLayer && typeof nearbyPhase === "object")) && (
+          {district !== null && (
             <div className="flex items-center gap-2 min-w-0">
-              {district !== null && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1 min-w-0">
-                  <LocateFixed className="w-3 h-3 shrink-0 text-primary" />
-                  {/* Compact: just the district name (confirms geolocation) — the
-                      crosshair icon already conveys "you are here". */}
-                  <span className="text-primary font-medium truncate">{district}</span>
-                </p>
-              )}
-              {typeof nearbyPhase === "object" && onToggleFocusLayer && (
-                <div className="ml-auto flex flex-col items-end gap-1 shrink-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] text-muted-foreground mr-0.5">{t.chat.focusLabel}</span>
-                    <div className="flex items-center gap-1" role="radiogroup">
-                    {([
-                      { type: "parking" as const, icon: "🅿", label: t.chat.focusChipParking, activeCls: "bg-blue-600  text-white border-blue-600"  },
-                      { type: "toilet"  as const, icon: "🚻", label: t.chat.focusChipToilet,  activeCls: "bg-green-700 text-white border-green-700" },
-                    ]).map(({ type, icon, label, activeCls }) => {
-                      const active  = focusLayers?.has(type) ?? false
-                      const loading = focusLoadingLayer === type
-                      return (
-                        <button
-                          key={type}
-                          onClick={() => onToggleFocusLayer(type)}
-                          disabled={loading}
-                          role="radio"
-                          aria-checked={active}
-                          className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-60 disabled:cursor-wait ${active ? activeCls : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"}`}
-                        >
-                          {loading
-                            ? <Loader2 className="w-3 h-3 animate-spin" aria-hidden />
-                            : <span aria-hidden>{icon}</span>
-                          }
-                          <span>{label}</span>
-                        </button>
-                      )
-                    })}
-                    </div>
-                    {focusLayers?.size ? (
-                      <button
-                        onClick={() => {
-                          const active = focusLayers.values().next().value as AmenityType
-                          onToggleFocusLayer(active)
-                        }}
-                        className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-foreground bg-background hover:bg-muted transition-colors"
-                      >
-                        <X className="w-3 h-3" aria-hidden />
-                        <span>{t.chat.focusExit}</span>
-                      </button>
-                    ) : null}
-                  </div>
-                  {(focusHints?.parking || focusHints?.toilet) && (
-                    <div className="flex flex-col items-end">
-                      {focusHints?.parking && <p className="text-[11px] text-amber-600">{focusHints.parking}</p>}
-                      {focusHints?.toilet  && <p className="text-[11px] text-amber-600">{focusHints.toilet}</p>}
-                    </div>
-                  )}
-                </div>
-              )}
+              <p className="text-xs text-muted-foreground flex items-center gap-1 min-w-0">
+                <LocateFixed className="w-3 h-3 shrink-0 text-primary" />
+                {/* Compact: just the district name (confirms geolocation) — the
+                    crosshair icon already conveys "you are here". */}
+                <span className="text-primary font-medium truncate">{district}</span>
+              </p>
             </div>
           )}
 
         </>
       )}
 
-      {/* ── Category chip strip — both modes, hidden during amenity focus ── */}
-      {!(focusLayers?.size) && (
-        <div className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none] -mx-4 px-4">
+      {/* ── Category chip strip — both modes. The two amenity chips (parking / WC)
+          sit at the front, single-select with the venue chips: selecting one runs
+          an amenity search instead of a venue search. A single radiogroup with
+          role=radio + aria-checked on every chip gives consistent, correct
+          single-select semantics to assistive tech (finding F5). ── */}
+      <div
+        role="radiogroup"
+        aria-label={t.chat.chipsGroupLabel}
+        className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none] -mx-4 px-4"
+      >
+        {onAmenitySearch && ([
+          { type: "toilet"  as const, icon: "🚻", label: t.chat.chipToilet,  activeCls: "bg-green-700 text-white" },
+          { type: "parking" as const, icon: "🅿", label: t.chat.chipParking, activeCls: "bg-blue-600 text-white" },
+        ]).map(({ type, icon, label, activeCls }) => {
+          const loading = amenityLocating === type
+          return (
+            <button
+              key={type}
+              role="radio"
+              onClick={() => selectAmenity(type)}
+              disabled={isLoading}
+              aria-checked={amenityActive === type}
+              aria-busy={loading}
+              className={cn(
+                "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
+                amenityActive === type
+                  ? activeCls
+                  : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+              )}
+            >
+              {loading
+                ? <Loader2 className="inline w-3 h-3 mr-1 animate-spin" aria-hidden />
+                : `${icon} `
+              }
+              {label}
+            </button>
+          )
+        })}
+        <button
+          key="all"
+          role="radio"
+          onClick={() => selectChip(null)}
+          disabled={isLoading}
+          aria-checked={amenityActive == null && selectedIdx === null}
+          className={cn(
+            "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
+            amenityActive == null && selectedIdx === null
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+          )}
+        >
+          {t.chat.chipAll}
+        </button>
+        {CHIPS.map((chip, idx) => (
           <button
-            key="all"
-            onClick={() => selectChip(null)}
+            key={chip.de}
+            role="radio"
+            onClick={() => selectChip(idx)}
             disabled={isLoading}
+            aria-checked={amenityActive == null && idx === selectedIdx}
             className={cn(
               "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
-              selectedIdx === null
+              amenityActive == null && idx === selectedIdx
                 ? "bg-primary text-primary-foreground"
                 : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
             )}
           >
-            {t.chat.chipAll}
+            {chip.icon} {locale === "de" ? chip.de : chip.en}
           </button>
-          {CHIPS.map((chip, idx) => (
-            <button
-              key={chip.de}
-              onClick={() => selectChip(idx)}
-              disabled={isLoading}
-              className={cn(
-                "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
-                idx === selectedIdx
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
-              )}
-            >
-              {chip.icon} {locale === "de" ? chip.de : chip.en}
-            </button>
-          ))}
-        </div>
+        ))}
+      </div>
+      {amenityLocateError && (
+        <p role="alert" className="text-xs text-destructive -mt-1">{amenityLocateError}</p>
       )}
 
     </div>
