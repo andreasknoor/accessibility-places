@@ -259,7 +259,7 @@ const de: Translations = {
     toiletDesignatedValue:  "Designiert",
     toiletAccessLabel:      "Zugang",
     searchHere:             "Hier suchen",
-    searchHereFocus:        "An dieser Position suchen",
+    searchHereFocus:        "Hier suchen",
     locate:                 "Mein Standort",
     locateError:            "Standort nicht verfügbar",
   },
