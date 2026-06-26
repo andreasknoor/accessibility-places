@@ -64,6 +64,9 @@ const de: Translations = {
     welcomeOrDivider: "Oder wähle einen anderen Einstieg:",
     welcomeTextCard:      "Ort oder Name eingeben",
     welcomeTextCardHint:  `Tippe z. B. „Restaurants in Berlin“ oder „Café Sissi Wien“`,
+    welcomeViewLabel:     "Ergebnisse anzeigen als",
+    welcomeViewList:      "Liste",
+    welcomeViewMap:       "Karte",
   },
   filters: {
     title: "Filter",

@@ -53,7 +53,7 @@ const FAQ_CATEGORIES_EN: FaqCategory[] = [
       {
         id: "find-nearby",
         q: "How do I find wheelchair-accessible restaurants or cafés near me?",
-        a: "Tap \"Nearby\" and allow location access. Accessible Places automatically detects your position and searches for accessible restaurants, cafés or other venues in your immediate vicinity — no need to type a location.",
+        a: "Tap the location button (⌖) next to the search field and allow location access. Accessible Places automatically detects your position and searches for accessible restaurants, cafés or other venues in your immediate vicinity — no need to type a location.",
       },
       {
         id: "find-parking-toilet",
@@ -61,9 +61,9 @@ const FAQ_CATEGORIES_EN: FaqCategory[] = [
         a: (
           <>
             <p>
-              Switch to <strong className="font-semibold text-foreground">&ldquo;Nearby&rdquo;</strong> mode (left tab). Once your location is detected, two buttons appear:{" "}
-              <strong className="font-semibold text-foreground">&ldquo;Search only: 🅿 Parking&rdquo;</strong> and{" "}
-              <strong className="font-semibold text-foreground">&ldquo;Search only: 🚻 Toilets&rdquo;</strong>. Tapping one hides all other search results and shows only wheelchair-accessible parking or accessible toilets within your set radius (default: 4 km, adjustable in Settings).
+              Tap the location button (⌖) or type your location. Below the search field you&apos;ll find the quick-search chips{" "}
+              <strong className="font-semibold text-foreground">🅿 Parking</strong> and{" "}
+              <strong className="font-semibold text-foreground">🚻 Toilets</strong>. Tapping a chip replaces the regular search results and shows only wheelchair-accessible parking or accessible toilets within your set radius (adjustable in Settings).
             </p>
             <p className="mt-2">
               Toilet markers appear in <strong className="font-semibold text-foreground">green</strong> for standalone public toilets (e.g. in squares or parks) and in <strong className="font-semibold text-foreground">violet</strong> for toilets inside venues. Tap a marker for details such as Euro key requirement or changing table.
@@ -74,7 +74,7 @@ const FAQ_CATEGORIES_EN: FaqCategory[] = [
           </>
         ),
         schemaText:
-          "Switch to \"Nearby\" mode (left tab). Once your location is detected, two buttons appear: \"Search only: Parking\" and \"Search only: Toilets\". Tapping one hides all other search results and shows only wheelchair-accessible parking or accessible toilets within your set radius (default: 4 km, adjustable in Settings). Toilet markers appear in green for standalone public toilets and in violet for toilets inside venues. Tap a marker for details such as Euro key requirement or changing table. Alternatively, use the layer buttons at the bottom-left of the map to show parking or toilet markers alongside your regular search results.",
+          "Tap the location button (⌖) or type your location. Below the search field you'll find the quick-search chips 🅿 Parking and 🚻 Toilets. Tapping a chip replaces the regular search results and shows wheelchair-accessible parking or accessible toilets within your set radius. Toilet markers appear in green for standalone public toilets and in violet for toilets inside venues. Tap a marker for details such as Euro key requirement or changing table. Alternatively, use the layer buttons at the bottom-left of the map to show parking or toilet markers alongside your regular search results.",
       },
     ],
   },

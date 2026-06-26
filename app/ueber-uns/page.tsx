@@ -84,23 +84,23 @@ export default function UeberUnsPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">Nicht suchen, sondern finden: Zwei Wege ans Ziel</h2>
+            <h2 className="text-lg font-bold mb-3">Ein Suchfeld für alle Wege ans Ziel</h2>
             <p className="text-muted-foreground mb-4">
-              Das oberste Ziel von Accessible Places ist es, je nach Situation den kürzesten Weg zur gewünschten Information bereitzustellen. Dafür bietet das Tool zwei intuitive Suchmodi:
+              Das oberste Ziel von Accessible Places ist es, je nach Situation den kürzesten Weg zur gewünschten Information bereitzustellen. Dafür gibt es ein einziges, ortssensitives Suchfeld mit zwei Einstiegswegen:
             </p>
             <ol className="flex flex-col gap-4">
               <li className="flex gap-3">
                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center mt-0.5">1</span>
                 <div>
-                  <p className="font-semibold">In der Nähe</p>
-                  <p className="text-muted-foreground mt-0.5">Perfekt für spontane Entscheidungen von unterwegs. Die App ermittelt (nach Freigabe) automatisch den Standort des Smartphones und zeigt sofort die nächsten barrierefreien Restaurants, Cafés oder Kinos in der direkten Umgebung an.</p>
+                  <p className="font-semibold">Standort verwenden (⌖)</p>
+                  <p className="text-muted-foreground mt-0.5">Perfekt für spontane Entscheidungen von unterwegs. Ein Tippen auf den Standort-Button ermittelt (nach Freigabe) automatisch den Standort des Smartphones und zeigt sofort die nächsten barrierefreien Restaurants, Cafés oder Kinos in der direkten Umgebung an.</p>
                 </div>
               </li>
               <li className="flex gap-3">
                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center mt-0.5">2</span>
                 <div>
-                  <p className="font-semibold">Überall</p>
-                  <p className="text-muted-foreground mt-0.5">Ein einziges Suchfeld für die Planung im Vorfeld – für eine ganze Gegend ebenso wie für einen ganz bestimmten Ort. Für die Umgebungssuche gibt man einfach den Zielort und eine Kategorie (z.&nbsp;B. Hotel oder Theater) ein und erhält die besten Treffer als Liste oder auf der Karte. Wer dagegen die Barrierefreiheit einer konkreten Location – einer Sehenswürdigkeit, eines Museums oder einer Bar – wissen möchte, tippt einfach deren Namen ein und bekommt sofort alle Details zu Eingang, WC und Parkplatz.</p>
+                  <p className="font-semibold">Ort oder Name eingeben</p>
+                  <p className="text-muted-foreground mt-0.5">Ideal für die Planung im Vorfeld. Einfach Zielort und Kategorie (z.&nbsp;B. Hotel oder Theater) eingeben und die besten Treffer als Liste oder auf der Karte erhalten. Wer die Barrierefreiheit einer konkreten Location prüfen möchte, tippt einfach deren Namen ein und bekommt sofort alle Details zu Eingang, WC und Parkplatz.</p>
                 </div>
               </li>
             </ol>

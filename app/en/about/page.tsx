@@ -84,23 +84,23 @@ export default function AboutPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">Two Ways to Find What You're Looking For</h2>
+            <h2 className="text-lg font-bold mb-3">One Search Field, Two Ways to Start</h2>
             <p className="text-muted-foreground mb-4">
-              The primary goal of Accessible Places is to provide the shortest path to the right information, whatever the situation. The app offers two intuitive search modes:
+              The primary goal of Accessible Places is to provide the shortest path to the right information, whatever the situation. A single location-aware search field supports two starting points:
             </p>
             <ol className="flex flex-col gap-4">
               <li className="flex gap-3">
                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center mt-0.5">1</span>
                 <div>
-                  <p className="font-semibold">Nearby</p>
-                  <p className="text-muted-foreground mt-0.5">Perfect for spontaneous decisions on the go. The app automatically detects your smartphone's location (with permission) and instantly shows the nearest accessible restaurants, cafés or cinemas in your immediate area.</p>
+                  <p className="font-semibold">Use my location (⌖)</p>
+                  <p className="text-muted-foreground mt-0.5">Perfect for spontaneous decisions on the go. A tap on the location button automatically detects your smartphone&apos;s position (with permission) and instantly shows the nearest accessible restaurants, cafés or cinemas in your immediate area.</p>
                 </div>
               </li>
               <li className="flex gap-3">
                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center mt-0.5">2</span>
                 <div>
-                  <p className="font-semibold">Anywhere</p>
-                  <p className="text-muted-foreground mt-0.5">A single search field for planning ahead – whether for a whole area or one specific place. For an area search, simply enter your destination and a category (e.g. hotel or theatre) and get the best results in a list or on a map. To check the accessibility of a particular venue – an attraction, museum or bar – just type its name instead and immediately get all available details about the entrance, toilet and parking.</p>
+                  <p className="font-semibold">Type a place or name</p>
+                  <p className="text-muted-foreground mt-0.5">Ideal for planning ahead. Simply enter your destination and a category (e.g. hotel or theatre) and get the best results in a list or on a map. To check the accessibility of a particular venue &ndash; an attraction, museum or bar &ndash; just type its name and immediately get all available details about the entrance, toilet and parking.</p>
                 </div>
               </li>
             </ol>

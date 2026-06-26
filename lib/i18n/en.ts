@@ -64,6 +64,9 @@ const en: Translations = {
     welcomeOrDivider: "Or choose a different starting point:",
     welcomeTextCard:      "Type a place or name",
     welcomeTextCardHint:  `Try e.g. “Restaurants in Berlin” or “Café Sissi Vienna”`,
+    welcomeViewLabel:     "Show results as",
+    welcomeViewList:      "List",
+    welcomeViewMap:       "Map",
   },
   filters: {
     title: "Filters",

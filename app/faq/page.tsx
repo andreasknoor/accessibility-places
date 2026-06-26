@@ -53,7 +53,7 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
       {
         id: "find-nearby",
         q: "Wie finde ich barrierefreie Restaurants oder Cafés in meiner Nähe?",
-        a: 'Tippe auf "In der Nähe" und erteile der App die Standortfreigabe. Accessible Places ermittelt automatisch deinen Standort und sucht barrierefreie Restaurants, Cafés oder andere Orte in deiner direkten Umgebung — ohne dass du einen Ort eingeben musst.',
+        a: "Tippe auf den Standort-Button (⌖) neben dem Suchfeld und erteile der App die Standortfreigabe. Accessible Places ermittelt automatisch deinen Standort und sucht barrierefreie Restaurants, Cafés oder andere Orte in deiner direkten Umgebung — ohne dass du einen Ort eingeben musst.",
       },
       {
         id: "find-parking-toilet",
@@ -61,9 +61,9 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
         a: (
           <>
             <p>
-              Wechsle in den Modus <strong className="font-semibold text-foreground">&bdquo;In der Nähe&ldquo;</strong> (linker Tab). Sobald dein Standort erkannt wurde, erscheint eine Zeile mit zwei Buttons:{" "}
-              <strong className="font-semibold text-foreground">&bdquo;Suche nur: 🅿 Parkplätze&ldquo;</strong> und{" "}
-              <strong className="font-semibold text-foreground">&bdquo;Suche nur: 🚻 WCs&ldquo;</strong>. Ein Tippen auf einen Button blendet alle anderen Suchergebnisse aus und zeigt auf der Karte rollstuhlgerechte Parkplätze bzw. barrierefreie WCs im eingestellten Suchradius (Standard: 4 km, anpassbar unter Einstellungen).
+              Tippe auf den Standort-Button (⌖) oder gib deinen Ort ein. Unterhalb des Suchfelds findest du die Schnellsuche-Chips{" "}
+              <strong className="font-semibold text-foreground">🅿 Parken</strong> und{" "}
+              <strong className="font-semibold text-foreground">🚻 WC</strong>. Ein Tippen auf einen Chip ersetzt die normalen Suchergebnisse und zeigt auf der Karte rollstuhlgerechte Parkplätze bzw. barrierefreie WCs im eingestellten Suchradius (anpassbar unter Einstellungen).
             </p>
             <p className="mt-2">
               WC-Marker erscheinen in <strong className="font-semibold text-foreground">Grün</strong> für eigenständige öffentliche WCs (z.&nbsp;B. auf Plätzen oder in Parks) und in <strong className="font-semibold text-foreground">Violett</strong> für WCs in Lokalen oder anderen Orten. Tippe auf einen Marker für Details wie Euroschlüssel-Pflicht oder Wickeltisch.
@@ -74,7 +74,7 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
           </>
         ),
         schemaText:
-          "Wechsle in den Modus \"In der Nähe\" (linker Tab). Sobald dein Standort erkannt wurde, erscheint eine Zeile mit zwei Buttons: \"Suche nur: Parkplätze\" und \"Suche nur: WCs\". Ein Tippen auf einen Button blendet alle anderen Suchergebnisse aus und zeigt auf der Karte rollstuhlgerechte Parkplätze bzw. barrierefreie WCs im eingestellten Suchradius (Standard: 4 km, anpassbar unter Einstellungen). WC-Marker erscheinen in Grün für eigenständige öffentliche WCs und in Violett für WCs in Lokalen. Tippe auf einen Marker für Details wie Euroschlüssel-Pflicht oder Wickeltisch. Alternativ kannst du über die Marker-Buttons links unten in der Karte Parkplatz- oder WC-Marker zusätzlich zu deinen normalen Suchergebnissen einblenden.",
+          "Tippe auf den Standort-Button (⌖) oder gib deinen Ort ein. Unterhalb des Suchfelds findest du die Schnellsuche-Chips 🅿 Parken und 🚻 WC. Ein Tippen auf einen Chip ersetzt die normalen Suchergebnisse und zeigt rollstuhlgerechte Parkplätze bzw. barrierefreie WCs im eingestellten Suchradius. WC-Marker erscheinen in Grün für eigenständige öffentliche WCs und in Violett für WCs in Lokalen. Tippe auf einen Marker für Details wie Euroschlüssel-Pflicht oder Wickeltisch. Alternativ kannst du über die Marker-Buttons links unten in der Karte Parkplatz- oder WC-Marker zusätzlich zu deinen normalen Suchergebnissen einblenden.",
       },
     ],
   },

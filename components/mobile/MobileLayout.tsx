@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import dynamic from "next/dynamic"
 import Script from "next/script"
 import Link from "next/link"
-import { Map, List, SlidersHorizontal, Compass, ChevronRight, LocateFixed } from "lucide-react"
+import { Map, List, SlidersHorizontal, Compass, ChevronRight, LocateFixed, CheckCircle2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { hapticLight } from "@/lib/native/haptics"
@@ -257,6 +257,8 @@ export default function MobileLayout({
             <p className="font-semibold text-foreground">{t.chat.welcomeTitle}</p>
             <p className="text-sm text-muted-foreground">{t.chat.welcomeSubtitle}</p>
           </div>
+
+          {/* Primary: GPS CTA */}
           {onStartNearby && (
             <button
               onClick={onStartNearby}
@@ -272,6 +274,8 @@ export default function MobileLayout({
               <ChevronRight className="w-4 h-4 shrink-0" />
             </button>
           )}
+
+          {/* Secondary: text search alternative */}
           <div className="w-full flex flex-col gap-2">
             <p className="text-xs text-muted-foreground">{t.chat.welcomeOrDivider}</p>
             {onSwitchToText && (
@@ -290,10 +294,39 @@ export default function MobileLayout({
               </button>
             )}
           </div>
+
+          {/* Detail preference: list vs map (secondary decision, visually separated) */}
+          <div className="w-full border-t border-border pt-3 flex flex-col gap-2 text-left">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t.chat.welcomeViewLabel}</p>
+            <div className="grid grid-cols-2 gap-2">
+              {(["results", "map"] as const).map((v) => {
+                const isActive = (settings.defaultMobileView ?? "map") === v
+                return (
+                  <button
+                    key={v}
+                    onClick={() => { onUpdateSettings({ defaultMobileView: v }); setActiveTab(v) }}
+                    className={cn(
+                      "flex items-center gap-2 rounded-lg border-2 px-3 py-2.5 transition-colors text-left",
+                      isActive
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-card hover:bg-muted"
+                    )}
+                  >
+                    {v === "results" ? <List className="w-4 h-4 shrink-0 text-primary" /> : <Map className="w-4 h-4 shrink-0 text-primary" />}
+                    <span className="text-sm font-medium text-foreground">
+                      {v === "results" ? t.chat.welcomeViewList : t.chat.welcomeViewMap}
+                    </span>
+                    {isActive && <CheckCircle2 className="w-4 h-4 text-primary ml-auto shrink-0" />}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           {onDismissWelcome && (
             <button
               onClick={onDismissWelcome}
-              className="mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
             >
               {t.chat.welcomeDismiss}
             </button>
