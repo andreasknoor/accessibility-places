@@ -109,21 +109,28 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
 
   // Scroll the target entry into view *within the results scroll container*.
   // We compute scrollTop manually rather than using Element.scrollIntoView so
-  // that (a) only the list scrolls — never the page or a parent — and (b) the
-  // result is clamped to leave the entry *fully* visible (centered when there's
-  // room, flush to the nearest edge otherwise). scrollIntoView({block:"center"})
-  // could leave the selected entry partly cut off when it sits near the list
-  // ends or when its height changed after selection.
+  // that only the list scrolls — never the page or a parent.
+  //
+  // We always *centre* the target rather than bailing out as soon as it is
+  // merely "fully visible": amenity (parking/WC) cards never change height, and
+  // distance-sorted spots cluster near the top of the list, so a tapped marker's
+  // card is frequently already on-screen but jammed against an edge. An
+  // early-out on full visibility left it "knapp daneben" (off-centre) and forced
+  // the user to scroll by hand. A small dead-band keeps it a no-op once the entry
+  // is roughly centred, so the correction passes below don't fight a smooth
+  // scroll already in flight.
   const scrollTargetIntoView = useCallback((id: string, smooth: boolean) => {
     const container = scrollContainerRef.current
     const el = itemRefs.current.get(id)
     if (!container || !el) return
     const cRect = container.getBoundingClientRect()
     const eRect = el.getBoundingClientRect()
-    if (eRect.top >= cRect.top && eRect.bottom <= cRect.bottom) return // already fully visible
-    const center = (eRect.top - cRect.top) - (container.clientHeight - eRect.height) / 2
+    const currentTop = eRect.top - cRect.top
+    const desiredTop = Math.max(8, (container.clientHeight - eRect.height) / 2)
+    const delta = currentTop - desiredTop
+    if (Math.abs(delta) < 4) return // already centred — leave it
     const max = container.scrollHeight - container.clientHeight
-    const top = Math.max(0, Math.min(container.scrollTop + center, max))
+    const top = Math.max(0, Math.min(container.scrollTop + delta, max))
     container.scrollTo({ top, behavior: smooth ? "smooth" : "auto" })
   }, [])
 
