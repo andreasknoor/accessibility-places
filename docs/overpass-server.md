@@ -69,6 +69,22 @@ where `<TIMESTAMP>` is the OSM base timestamp from `/api/status`.
 
 When the daemon is overloaded it returns `Content-Type: text/html` with HTTP 200 (not 5xx). The OSM adapter guard (`res.headers?.get("content-type")`) detects this and rejects the endpoint so the parallel race falls through to the public mirrors.
 
+## Public mirror selection (`OVERPASS_ENDPOINTS`)
+
+`OVERPASS_ENDPOINTS` is a comma-separated list of Overpass URLs that overrides the defaults; multiple URLs retain the parallel-race (`Promise.any`) behaviour. Production puts the private Hetzner server first, then the public fallback:
+
+```
+https://overpass.accessible-places.org/api/interpreter,https://overpass-api.de/api/interpreter
+```
+
+**`overpass-api.de` is the only reliably-open public mirror.** Verify any candidate with a REAL data query (not just `out count`):
+
+- `overpass.kumi.systems` / `overpass.private.coffee` — a dead shared backend.
+- `overpass.openstreetmap.fr` — returns HTTP 403 "white-listed usages only" for real venue/parking queries (dropped 2026-06-16).
+- `overpass.osm.ch` — Swiss-only; must **never** be added to the general race (it wins with empty results outside CH).
+
+Outside DACH (international mode) the private server is intentionally dropped, leaving only `overpass-api.de` — its per-IP fair-use limit can surface as 429 there.
+
 ## Restricting access with a shared-secret header (optional)
 
 By default the Overpass API has **no authentication** — anyone who knows the URL
