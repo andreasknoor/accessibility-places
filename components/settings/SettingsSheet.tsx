@@ -157,11 +157,14 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
           </SectionTitle>
           <div className="divide-y divide-border/60">
             <Row label={ts.searchMode}>
+              {/* Two real behaviours only: auto-locate on launch vs. start empty.
+                  A stored null (legacy "no preference") behaves as auto-locate
+                  (loadSettings().defaultSearchMode ?? "nearby"), so it maps to the
+                  "nearby" option here rather than a third, ambiguous entry. */}
               <SelectInput
-                value={settings.defaultSearchMode ?? ""}
-                onChange={(v) => onUpdate({ defaultSearchMode: v === "" ? null : v as "text" | "nearby" })}
+                value={settings.defaultSearchMode === "text" ? "text" : "nearby"}
+                onChange={(v) => onUpdate({ defaultSearchMode: v as "text" | "nearby" })}
               >
-                <option value="">{ts.searchModeDefault}</option>
                 <option value="nearby">{ts.searchModeNearby}</option>
                 <option value="text">{ts.searchModeText}</option>
               </SelectInput>

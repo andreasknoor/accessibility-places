@@ -26,8 +26,6 @@ interface Props {
   initialChipIdx?:   number
   initialMode?:      "text" | "nearby" | "place"  // "place" is treated as "text" (legacy)
   onGpsResolved?:    (coords: Coords) => void
-  skipAutoLocate?:   boolean
-  hasGpsCoords?:     boolean
   locateTrigger?:    number
   biasCoords?:       Coords
   // Amenity search chips (parking / WC) — single-select, at the front of the chip
@@ -157,9 +155,6 @@ async function geocodeLocation(q: string, international: boolean): Promise<Coord
   return { lat: data.lat, lon: data.lon }
 }
 
-// Note: `skipAutoLocate` / `hasGpsCoords` remain in Props (callers still pass them)
-// but are no longer read here — the old nearby-mode locate button and the mode-tab
-// GPS dot that consumed them were removed with the visible mode tabs (issue #28).
 export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onGpsResolved, locateTrigger, biasCoords, onAmenitySearch, amenityActive, onExitAmenity, onCategoryQueryChange, activeSearchCoords, searchCenter, international }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
@@ -290,7 +285,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // first-time visitor (the welcome screen must stay until they interact).
   //
   // We read the first-visit state DIRECTLY from localStorage here rather than
-  // from the isFirstVisit-derived `skipAutoLocate` prop. That prop is racy: the
+  // from an isFirstVisit-derived prop. Such a prop is racy: the
   // #418 hydration fix initialises isFirstVisit=false and corrects it to true in
   // a useLayoutEffect, but React flushes this passive mount effect BEFORE that
   // correction's re-render settles — so any prop/ref read here still sees the
@@ -461,24 +456,40 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     handleLocate()
   }
 
-  // Inline ⌖ button: express the "nearby" intent without a visible mode tab.
-  // Equivalent to the old "In der Nähe" tab — switches internal mode and locates.
-  function onLocateTap() {
-    if (isLoading) return
-    switchMode("nearby")
-  }
-
-  // ✕ on the active-location token: drop the GPS fix and return to the neutral
-  // typed-search state. Stops follow-me and re-routes the internal mode to "text"
-  // (so distance display / nearby semantics turn off downstream via onModeChange).
-  function clearLocationToken() {
+  // Tear down the "nearby" context: stop follow-me, drop the GPS-fix phase (which
+  // also clears the location token AND any stale "locating"/"error" state), and —
+  // only if we were actually in nearby mode — flip the internal mode back to text
+  // so distance display / nearby semantics turn off downstream via onModeChange.
+  // Called by every typed-search path (submit / suggestion pick): the old visible
+  // "Überall" tab used to do this transition, the always-on field must do it too,
+  // otherwise a text search inherits the previous nearby fix (stale "you are here"
+  // token + distance-from-old-centre on a non-nearby result set).
+  function exitNearbyState() {
     if (watchIdRef.current !== null) {
       clearWatchPosition(watchIdRef.current)
       watchIdRef.current = null
     }
     setNearbyPhase("idle")
-    setMode("text")
-    onModeChange?.("text")
+    if (mode === "nearby") {
+      setMode("text")
+      onModeChange?.("text")
+    }
+  }
+
+  // Inline ⌖ button: express the "nearby" intent without a visible mode tab.
+  // Equivalent to the old "In der Nähe" tab — switches internal mode and locates.
+  // Clears any typed text first: ⌖ means "use MY location", so a leftover "Hamburg"
+  // in the field would otherwise contradict the GPS results (and the location token).
+  function onLocateTap() {
+    if (isLoading) return
+    setLocation("")
+    switchMode("nearby")
+  }
+
+  // ✕ on the active-location token: drop the GPS fix and return to the neutral
+  // typed-search state.
+  function clearLocationToken() {
+    exitNearbyState()
   }
 
   // Amenity chip tap: run a parking/WC search at the best-known location. Order:
@@ -517,7 +528,9 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
         })
         .catch(() => {
           setAmenityLocating(null)
-          setAmenityLocateError(t.chat.locationError)
+          // Geocoding a typed place failed — this is "place not found", not the
+          // GPS "your location could not be determined" case.
+          setAmenityLocateError(t.chat.placeNotFound)
         })
       return
     }
@@ -629,6 +642,9 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     // after the search completes (searchCenter updates → biasCoords dep changes
     // → effect re-runs with the same input text → dropdown reappears).
     programmaticLocRef.current = location.trim()
+    // A typed search is never a nearby search — leave any prior GPS context behind
+    // (token, distance display, mode) so it doesn't contaminate these results.
+    exitNearbyState()
 
     // Input still holds a picked venue → re-run the place search for it.
     const picked = pickedVenueRef.current
@@ -656,6 +672,9 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     setShowSuggestions(false)
     setHighlightedIdx(-1)
     track("suggest_pick", { kind: s.kind })
+    // Picking an area/venue is a located (non-GPS) search — drop any prior nearby
+    // context so it doesn't leak its token/distance/mode into these results.
+    exitNearbyState()
 
     if (s.kind === "venue") {
       programmaticLocRef.current = s.display
@@ -973,6 +992,12 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           </span>
         </div>
       )}
+      {nearbyPhase === "locating" && (
+        <p role="status" className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Loader2 className="w-3 h-3 animate-spin" aria-hidden />
+          {t.chat.locateButton} …
+        </p>
+      )}
       {nearbyPhase === "error" && (
         <p role="alert" className="text-xs text-destructive">{t.chat.locationError}</p>
       )}
@@ -1030,12 +1055,12 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           venues. Location-neutral: a typed place is honoured (selectAmenity §2). */}
       {onAmenitySearch && (
         <div className="flex items-center gap-2 -mt-0.5">
-          <span className="shrink-0 text-[11px] font-medium uppercase tracking-wide text-muted-foreground select-none">
+          <span id="amenity-row-label" className="shrink-0 text-[11px] font-medium uppercase tracking-wide text-muted-foreground select-none">
             {t.chat.amenityRowLabel}
           </span>
           <div
             role="radiogroup"
-            aria-label={t.chat.amenityRowLabel}
+            aria-labelledby="amenity-row-label"
             className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]"
           >
             {([

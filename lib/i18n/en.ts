@@ -62,7 +62,7 @@ const en: Translations = {
     welcomeNearbyCardHint: "Accessible places around your location",
     welcomeDismiss:   "Don't show again",
     welcomeOrDivider: "Or choose a different starting point:",
-    welcomeTextCard:      "Search anywhere",
+    welcomeTextCard:      "Type a place or name",
     welcomeTextCardHint:  `Try e.g. “Restaurants in Berlin” or “Café Sissi Vienna”`,
   },
   filters: {

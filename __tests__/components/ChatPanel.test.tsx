@@ -648,6 +648,40 @@ describe("ChatPanel GPS resolution", () => {
     // The GPS fix is fed straight into a venue search at those coordinates.
     expect(onSearch).toHaveBeenCalledWith(expect.any(String), { lat: 48.137, lon: 11.576 })
   })
+
+  it("a typed search after a nearby fix exits nearby mode and drops the location token (H1/M1)", async () => {
+    // Reverse geocode → district; everything else (autocomplete suggest) → empty.
+    vi.stubGlobal("navigator", {
+      clipboard: navigator.clipboard,
+      geolocation: {
+        getCurrentPosition: (success: PositionCallback) =>
+          success({ coords: { latitude: 48.1, longitude: 11.5 } } as GeolocationPosition),
+        watchPosition: vi.fn().mockReturnValue(1),
+        clearWatch: vi.fn(),
+      },
+    })
+    vi.stubGlobal("fetch", vi.fn((url: unknown) => {
+      const body = String(url).includes("/reverse") ? { district: "Maxvorstadt" } : []
+      return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }))
+    }))
+    const onSearch = vi.fn()
+    const onModeChange = vi.fn()
+    render(<ChatPanel onSearch={onSearch} isLoading={false} initialMode="text" onModeChange={onModeChange} />)
+
+    // 1. Locate → nearby mode + visible location token.
+    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
+    await act(() => vi.runAllTimersAsync())
+    expect(screen.getByText("Maxvorstadt")).toBeInTheDocument()
+    expect(onModeChange).toHaveBeenLastCalledWith("nearby")
+
+    // 2. A typed area search must leave nearby behind: token gone, mode back to text.
+    fireEvent.change(getInput(), { target: { value: "Berlin" } })
+    await act(() => vi.runAllTimersAsync())
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+    await act(() => vi.runAllTimersAsync())
+    expect(screen.queryByText("Maxvorstadt")).not.toBeInTheDocument()
+    expect(onModeChange).toHaveBeenLastCalledWith("text")
+  })
 })
 
 // ─── Single-field UI (name field removed in step 2 of issue #24) ─────────────

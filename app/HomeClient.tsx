@@ -191,7 +191,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [showRace,         setShowRace]         = useState(false)
   const logoTapCount  = useRef(0)
   const logoTapTimer  = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const [hasGpsCoords,        setHasGpsCoords]        = useState(false)
   const [gpsCoords,           setGpsCoords]           = useState<{ lat: number; lon: number } | null>(null)
   const gpsCoordRef  = useRef<{ lat: number; lon: number } | null>(null)
   // Native home-screen quick action ("Rollstuhl-Parkplatz/-WC suchen") in flight.
@@ -774,7 +773,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     markVisited()
     gpsCoordRef.current = coords
     setGpsCoords(coords)
-    setHasGpsCoords(true)
   }, [])
 
   // Locate button: fetch GPS, set user dot, trigger pan in MapView (locatePanTrigger).
@@ -807,7 +805,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
     gpsCoordRef.current = coords
     setGpsCoords(coords)
-    setHasGpsCoords(true)
     setLocatePanTrigger((k) => k + 1)
   }, [])
 
@@ -1119,7 +1116,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       setSortBy(patch.sortOrder)
     }
     if (patch.defaultSearchMode !== undefined) {
-      setChatMode(patch.defaultSearchMode ?? "text")
+      // Consistent with the launch fallback (loadSettings().defaultSearchMode ?? "nearby"):
+      // "no explicit preference" means auto-locate, not start-empty.
+      setChatMode(patch.defaultSearchMode ?? "nearby")
     }
     if (patch.internationalMode === true) {
       setSources((s) => ({ ...s, google_places: true, acceslibre: true }))
@@ -1251,7 +1250,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onResetOnboarding={() => { try { localStorage.removeItem("ap_visited"); localStorage.removeItem("ap_welcome_dismissed") } catch { /* ignore */ }; setIsFirstVisit(true) }}
         onDismissWelcome={handleDismissWelcome}
         onStartNearby={handleStartNearby}
-        hasGpsCoords={hasGpsCoords}
         locateTrigger={locateTriggerKey}
         biasCoords={searchCenter ?? gpsCoords ?? undefined}
         onSwitchToText={() => handleSwitchMode("text")}
@@ -1337,8 +1335,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           initialChipIdx={initialCategory && resetKey === 0 ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : settings.defaultChipIdx ?? undefined}
           initialMode={chatMode}
           onGpsResolved={handleGpsResolved}
-          skipAutoLocate={isFirstVisit}
-          hasGpsCoords={hasGpsCoords}
           locateTrigger={locateTriggerKey}
           biasCoords={searchCenter ?? gpsCoords ?? undefined}
           onAmenitySearch={handleAmenitySearch}

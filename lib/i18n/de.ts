@@ -62,7 +62,7 @@ const de: Translations = {
     welcomeNearbyCardHint: "Barrierefreie Orte rund um deinen Standort",
     welcomeDismiss:   "Nicht mehr anzeigen",
     welcomeOrDivider: "Oder wähle einen anderen Einstieg:",
-    welcomeTextCard:      "Überall suchen",
+    welcomeTextCard:      "Ort oder Name eingeben",
     welcomeTextCardHint:  `Tippe z. B. „Restaurants in Berlin“ oder „Café Sissi Wien“`,
   },
   filters: {
