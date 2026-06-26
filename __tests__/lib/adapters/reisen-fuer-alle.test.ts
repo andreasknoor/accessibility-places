@@ -143,13 +143,25 @@ describe("fetchReisenFuerAlle", () => {
     expect(result).toHaveLength(0)
   })
 
-  it("skips items with zero coordinates", async () => {
+  it("skips items with missing/NaN coordinates", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      // empty string → parseFloat("") → NaN → dropped
+      json: async () => ({ data: [{ ...ITEM, lat: "", lon: "" }] }),
+    }))
+    const result = await fetchReisenFuerAlle(BASE_PARAMS)
+    expect(result).toHaveLength(0)
+  })
+
+  it("keeps items with exactly zero coordinates (equator/prime-meridian are valid)", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ data: [{ ...ITEM, lat: "0", lon: "0" }] }),
     }))
     const result = await fetchReisenFuerAlle(BASE_PARAMS)
-    expect(result).toHaveLength(0)
+    // 0,0 is a valid coordinate — must NOT be filtered out
+    expect(result).toHaveLength(1)
+    expect(result[0].coordinates).toEqual({ lat: 0, lon: 0 })
   })
 
   it("combines user signal with timeout so client disconnect aborts the fetch (Bug 3)", async () => {

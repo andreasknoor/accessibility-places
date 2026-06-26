@@ -157,7 +157,7 @@ interface GintoNode {
   accessibilityInfo: { defaultRatings: { key: string }[] }
   publication:     { linkUrl?: string }
   updatedAt:       string
-  qualityInfo:     { detailLevels: string[]; approvalLevels: string[] }
+  qualityInfo:     { detailLevels: string[]; approvalLevels: string[] } | null
 }
 
 async function fetchPage(
@@ -254,10 +254,10 @@ function nodeToPlace(node: GintoNode): Place {
   // date, so it is stored in metadata only and not used for verifiedRecently.
   // AUDITED entries deliberately do NOT set verifiedRecently either: the API
   // exposes no audit date, so "recently" would be unverifiable.
-  const approvals       = node.qualityInfo.approvalLevels
-  const baseWeight      = approvals.includes("AUDITED")        ? GINTO_AUDITED_WEIGHT
-                        : approvals.includes("SELF_DECLARED")  ? GINTO_SELF_DECLARED_WEIGHT
-                        : RELIABILITY_WEIGHTS.ginto
+  const approvals        = node.qualityInfo?.approvalLevels ?? []
+  const baseWeight       = approvals.includes("AUDITED")        ? GINTO_AUDITED_WEIGHT
+                         : approvals.includes("SELF_DECLARED")  ? GINTO_SELF_DECLARED_WEIGHT
+                         : RELIABILITY_WEIGHTS.ginto
   const weightMultiplier = baseWeight / RELIABILITY_WEIGHTS.ginto
 
   const attr = (value: A11yValue) =>
@@ -294,8 +294,8 @@ function nodeToPlace(node: GintoNode): Place {
         city:        node.position.city,
         countryCode: node.position.countryCode,
         linkUrl:     node.publication.linkUrl,
-        detailLevels:   node.qualityInfo.detailLevels,
-        approvalLevels: node.qualityInfo.approvalLevels,
+        detailLevels:   node.qualityInfo?.detailLevels,
+        approvalLevels: node.qualityInfo?.approvalLevels,
         updatedAt:      node.updatedAt,
       },
       raw: node,

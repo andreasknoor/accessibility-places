@@ -19,7 +19,7 @@ export function haversineMetres(
   const x =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2
-  return 2 * R * Math.asin(Math.sqrt(x))
+  return 2 * R * Math.asin(Math.sqrt(Math.min(x, 1)))
 }
 
 // ─── Trigram similarity ────────────────────────────────────────────────────

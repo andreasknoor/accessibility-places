@@ -581,9 +581,14 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     selectedIdxRef.current = idx
     const label = chipLabel(idx)
     if (mode === "nearby" && typeof nearbyPhase === "object") {
+      // Active GPS fix: fire nearby search without dropping the fix (the location
+      // token should stay visible — user is still "in nearby mode").
       onSearch(nearbyQuery(label, nearbyPhase.district), { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
       return
     }
+    // No active GPS fix but still in nearby mode (e.g. GPS failed / idle):
+    // exit nearby so mode doesn't stay stuck and distance display turns off.
+    if (mode === "nearby") exitNearbyState()
     // Picking a category while a specific venue is active exits the venue lookup
     // and runs a category search around the venue's coordinates ("cafés near the
     // Philharmonie"). We deliberately do NOT call clearPickState(): leaving

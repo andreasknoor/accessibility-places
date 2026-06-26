@@ -119,9 +119,9 @@ function mapCategory(item: any): Category {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toPlace(item: any): Place | null {
   if (!item?.name) return null
-  const lat = parseFloat(item.lat ?? item.latitude ?? "0")
-  const lon = parseFloat(item.lon ?? item.longitude ?? "0")
-  if (!lat || !lon) return null
+  const lat = parseFloat(item.lat ?? item.latitude ?? "")
+  const lon = parseFloat(item.lon ?? item.longitude ?? "")
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
 
   const entranceVal = criteriaValue(item, CRITERIA.entrance)
   const toiletVal   = criteriaValue(item, CRITERIA.toilet)

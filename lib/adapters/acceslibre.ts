@@ -130,7 +130,7 @@ interface AccesLibreItem {
   code_postal:   string
   site_internet: string | null
   activite:      { nom: string; slug: string } | null
-  geom:          { type: "Point"; coordinates: [number, number] }  // [lon, lat]
+  geom:          { type: "Point"; coordinates: [number, number] } | null  // [lon, lat]; null for un-geocoded items
   accessibilite: {
     entree?:      AccesLibreEntree
     accueil?:     AccesLibreAccueil
@@ -259,6 +259,7 @@ function itemToPlace(item: AccesLibreItem): Place | null {
   const slug = item.activite?.slug ?? ""
   const category = FROM_ACCESLIBRE[slug]
   if (!category) return null  // unmapped activite — skip
+  if (!item.geom) return null  // un-geocoded item — no coordinates to place on map
 
   // geom.coordinates is [lon, lat] — swap to [lat, lon]
   const [lon, lat] = item.geom.coordinates

@@ -62,7 +62,7 @@ function boolToValue(v: boolean | null | undefined): A11yValue {
 function toPlace(item: any, category: Category): Place | null {
   if (!item?.displayName?.text) return null
   const loc = item.location
-  if (!loc?.latitude || !loc?.longitude) return null
+  if (!Number.isFinite(loc?.latitude) || !Number.isFinite(loc?.longitude)) return null
 
   const a11y  = item.accessibilityOptions ?? {}
   const addr  = item.formattedAddress ?? ""

@@ -73,11 +73,10 @@ async function geocode(
     }
     const data = await res.json()
     if (!data[0]) return null  // "not found" is a valid response, not an error
-    return {
-      lat:   parseFloat(data[0].lat),
-      lon:   parseFloat(data[0].lon),
-      label: data[0].display_name,
-    }
+    const lat = parseFloat(data[0].lat)
+    const lon = parseFloat(data[0].lon)
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
+    return { lat, lon, label: data[0].display_name }
   } catch {
     trackError("nominatim")
     return null

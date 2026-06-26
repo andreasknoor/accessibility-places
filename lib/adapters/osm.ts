@@ -268,7 +268,7 @@ function elementToPlace(el: any): Place | null {
 
   const lat = el.lat ?? el.center?.lat
   const lon = el.lon ?? el.center?.lon
-  if (!lat || !lon) return null
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
 
   const wheelchairVal    = osmWheelchair(tags)
   const toiletVal        = osmToilet(tags)
