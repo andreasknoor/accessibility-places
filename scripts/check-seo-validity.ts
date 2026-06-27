@@ -32,7 +32,7 @@ if (existsSync(envPath)) {
 }
 
 // Parking enrichment is irrelevant for validity checks and doubles Overpass load.
-process.env.ENABLE_NEARBY_PARKING = "0"
+process.env.SKIP_NEARBY_ENRICHMENT = "1"
 
 const VALIDITY_PATH = join(process.cwd(), "lib/generated/seo-validity.json")
 const CONCURRENCY   = 2

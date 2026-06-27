@@ -12,8 +12,6 @@ const RADIUS_MAX_KM = 25.0
 
 // Generic nearby-amenity endpoint. Despite the legacy path name, it serves both
 // parking and toilet features via ?types=parking,toilet (default: parking).
-// Toilet features are only returned when ENABLE_NEARBY_TOILETS=1 — requesting
-// them while the flag is off yields an empty toilet set (client shows "none found").
 export async function GET(req: NextRequest) {
   if (isRateLimited("nearby-parking", ipFromRequest(req), 20)) return rateLimitResponse()
 
@@ -43,10 +41,7 @@ export async function GET(req: NextRequest) {
     .filter((s): s is AmenityType => s === "parking" || s === "toilet")
   const typeSet = new Set<AmenityType>(requested.length > 0 ? requested : ["parking"])
 
-  // Toilets are gated behind the feature flag — drop them if disabled.
-  if (typeSet.has("toilet") && process.env.ENABLE_NEARBY_TOILETS !== "1") {
-    typeSet.delete("toilet")
-  }
+
   const types = [...typeSet]
   if (types.length === 0) {
     return Response.json([], { headers: { "Cache-Control": "public, max-age=300, s-maxage=300" } })

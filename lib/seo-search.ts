@@ -59,12 +59,13 @@ export async function fetchPlacesForSeoPage(
 
   // Kick off nearby-parking fetch in parallel with the adapter fetches.
   // Non-fatal: failure leaves parking values as the adapters reported them.
-  const nearbyParkingEnabled = process.env.ENABLE_NEARBY_PARKING === "1"
-  const nearbyParkingPromise = nearbyParkingEnabled
-    ? fetchOsmDisabledParking({ lat, lon }, radiusKm, AbortSignal.timeout(20_000))
+  // SKIP_NEARBY_ENRICHMENT=1 is set by scripts/check-seo-validity.ts to avoid
+  // doubling Overpass load during bulk validity checks (not a user-facing toggle).
+  const nearbyParkingPromise = process.env.SKIP_NEARBY_ENRICHMENT === "1"
+    ? Promise.resolve([] as NearbyParkingFeature[])
+    : fetchOsmDisabledParking({ lat, lon }, radiusKm, AbortSignal.timeout(20_000))
         .then(r => r.features)
         .catch(() => [])
-    : Promise.resolve([] as NearbyParkingFeature[])
 
   const results = await fetchAllSources(params)
 
@@ -77,9 +78,7 @@ export async function fetchPlacesForSeoPage(
     }
   }
 
-  if (nearbyParkingEnabled) {
-    enrichWithNearbyParking(canonical, await nearbyParkingPromise)
-  }
+  enrichWithNearbyParking(canonical, await nearbyParkingPromise)
 
   const base = canonical.filter((p) => !p.dogPolicyOnly && p.category === category)
   const filtered = base.filter((p) => passesFilters(p, FILTERS_STRICT))

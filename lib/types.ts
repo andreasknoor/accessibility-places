@@ -313,7 +313,6 @@ export interface SearchResult {
   nameHint?: string
   // Parking spots for map display (strong + weak tier).
   parkingSpots?: ParkingSpot[]
-  // Wheelchair-accessible WC features (standalone + venue WCs) — Phase 2+.
-  // Populated only when ENABLE_NEARBY_TOILETS=1.
+  // Wheelchair-accessible WC features (standalone + venue WCs).
   amenitySpots?: AmenityFeature[]
 }

@@ -231,6 +231,7 @@ const de: Translations = {
     source:        "Quelle",
     confidence:    "Verlässlichkeit",
     showInResults: "Zeige in Ergebnissen",
+    showDetails: "Details anzeigen",
     parkingSpot:    "Behindertenparkplatz",
     parkingSpots:   (n: number) => `Behindertenparkplatz · ${n} Plätze`,
     parkingAccessible:     "Barrierefreier Parkplatz",

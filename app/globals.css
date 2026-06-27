@@ -202,4 +202,5 @@ body {
 /* Additive top padding for scrollable static pages (FAQ, Impressum, …) whose
    back button would otherwise sit under the status bar. Keeps the original
    py-10 (2.5rem) spacing and adds the notch inset on top. env() = 0 elsewhere. */
-.pt-safe-10 { padding-top: calc(2.5rem + env(safe-area-inset-top)); }
+.pt-safe-3  { padding-top: calc(0.75rem + env(safe-area-inset-top)); }
+.pt-safe-10 { padding-top: calc(2.5rem  + env(safe-area-inset-top)); }

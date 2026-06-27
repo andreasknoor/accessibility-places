@@ -208,6 +208,7 @@ export interface Translations {
     source:                 string
     confidence:             string
     showInResults:          string
+    showDetails:            string
     parkingSpot:            string
     parkingSpots:           (n: number) => string
     parkingAccessible:      string

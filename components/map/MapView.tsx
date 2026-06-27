@@ -1,8 +1,10 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { Maximize2, Minimize2, Search, LocateFixed, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import PlaceDebugSheet from "@/components/results/PlaceDebugSheet"
 import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS } from "@/lib/config"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
@@ -10,7 +12,7 @@ import { openExternalUrl } from "@/lib/native/browser"
 import { hapticLight } from "@/lib/native/haptics"
 import { confidenceLabel } from "@/lib/matching/merge"
 import { haversineMetres } from "@/lib/matching/match"
-import type { Place, ParkingSpot, AmenityFeature, AmenityTier } from "@/lib/types"
+import type { Place, ParkingSpot, AmenityFeature, AmenityTier, AmenityType } from "@/lib/types"
 
 // Leaflet is ESM-only — loaded dynamically to avoid SSR issues
 let L: typeof import("leaflet") | null = null
@@ -82,6 +84,13 @@ interface Props {
   // onShowInResults for venue popups): highlights the matching card and switches
   // to the results tab. Only passed on mobile, so the link is absent on desktop.
   onShowAmenityInResults?: (spot: { osmId?: string; lat: number; lon: number }) => void
+  // The active amenity search type (null during a venue search). The "jump to
+  // results" link in an amenity popup only works when that spot type IS the
+  // results list — i.e. an amenity chip search of the SAME type is active. During
+  // a venue search the parking/WC markers are a passive overlay and the spots are
+  // not in the (venue) results list, so the link must be hidden; likewise a WC
+  // popup during a parking search (cross-type passive overlay).
+  amenityType?: AmenityType | null
 }
 
 const CONFIDENCE_COLORS = {
@@ -177,6 +186,7 @@ export default function MapView({
   amenityPanTrigger,
   onAmenityMarkerClick,
   onShowAmenityInResults,
+  amenityType = null,
 }: Props) {
   const t        = useTranslations()
   const mapRef   = useRef<HTMLDivElement>(null)
@@ -194,6 +204,11 @@ export default function MapView({
   const userMarker = useRef<any>(null)
   const [mapReady, setMapReady] = useState(false)
   const [legendOpen, setLegendOpen] = useState(false)
+  // Place whose detail sheet is open over the map (from the popup "Details
+  // anzeigen" link). Rendered as a portal overlay so the Leaflet map underneath
+  // keeps its centre/zoom/open popup — closing the sheet reveals the map exactly
+  // as it was left, with no re-fit.
+  const [detailPlace, setDetailPlace] = useState<Place | null>(null)
   function esc(s: string) {
     return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
   }
@@ -514,7 +529,7 @@ export default function MapView({
           <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
           ${t.map.parkingReportButton}
         </span>` : ""}
-        ${onShowAmenityInResultsRef.current ? `<button data-show-results style="display:block;margin-top:8px;font-size:11px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-align:left">${t.map.showInResults} →</button>` : ""}
+        ${onShowAmenityInResultsRef.current && amenityType === "parking" ? `<button data-show-results style="display:block;margin-top:8px;font-size:11px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-align:left">${t.map.showInResults} →</button>` : ""}
       `
       // Use L.DomEvent.on (not addEventListener) — plain addEventListener and
       // inline onclick fail on mobile because Leaflet intercepts touchstart.
@@ -569,7 +584,7 @@ export default function MapView({
       parkingMarkersRef.current.push(marker)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parkingSpots, mapReady, t])
+  }, [parkingSpots, mapReady, t, amenityType])
 
   // Toilet (WC) spot markers — shown when toiletSpots is non-empty.
   useEffect(() => {
@@ -636,7 +651,7 @@ export default function MapView({
           <span data-gmaps style="${linkStyle}">${extLinkSvg}${t.results.googleMapsLink}</span>
           ${wheelmapUrl ? `<span data-wheelmap style="${linkStyle}">${extLinkSvg}Wheelmap</span>` : ""}
         </div>
-        ${onShowAmenityInResultsRef.current ? `<button data-show-results style="display:block;margin-top:8px;font-size:11px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-align:left">${t.map.showInResults} →</button>` : ""}
+        ${onShowAmenityInResultsRef.current && amenityType === "toilet" ? `<button data-show-results style="display:block;margin-top:8px;font-size:11px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-align:left">${t.map.showInResults} →</button>` : ""}
       `
       const gmapsBtn = div.querySelector<HTMLElement>("[data-gmaps]")
       if (gmapsBtn) {
@@ -662,7 +677,7 @@ export default function MapView({
       toiletMarkersRef.current.push(marker)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toiletSpots, mapReady, t])
+  }, [toiletSpots, mapReady, t, amenityType])
 
   // Update markers when places change. In amenity focus mode the cluster is
   // cleared so only amenity spots and the user dot remain visible.
@@ -746,8 +761,19 @@ export default function MapView({
           <div style="margin-top:6px;font-size:10px;color:#888">
             ${t.map.source}: ${SOURCE_LABELS[place.primarySource]}
           </div>
-          ${onShowInResults ? `<button data-show-id style="display:block;margin-top:8px;font-size:11px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-align:left">${t.map.showInResults} →</button>` : ""}
+          <button data-show-details style="display:block;margin-top:8px;font-size:11px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-align:left">${esc(t.map.showDetails)} →</button>
+          ${onShowInResults ? `<button data-show-id style="display:block;margin-top:4px;font-size:11px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-align:left">${t.map.showInResults} →</button>` : ""}
         `
+
+        const detailsBtn = div.querySelector<HTMLElement>("[data-show-details]")
+        if (detailsBtn) {
+          const capturedId = place.id
+          L!.DomEvent.on(detailsBtn, "click", (ev: Event) => {
+            L!.DomEvent.stopPropagation(ev)
+            const p = placesRef.current.find((pl) => pl.id === capturedId)
+            if (p) setDetailPlace(p)
+          })
+        }
 
         if (onShowInResults) {
           const btn = div.querySelector<HTMLElement>("[data-show-id]")
@@ -1138,6 +1164,13 @@ export default function MapView({
             </button>
           )}
         </div>
+      )}
+
+      {/* Detail sheet opened from a map popup. Portal overlay — the map underneath
+          is untouched, so closing returns to the exact same view. */}
+      {detailPlace && createPortal(
+        <PlaceDebugSheet place={detailPlace} onClose={() => setDetailPlace(null)} />,
+        document.body,
       )}
     </div>
   )

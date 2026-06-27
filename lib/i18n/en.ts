@@ -231,6 +231,7 @@ const en: Translations = {
     source:        "Source",
     confidence:    "Reliability",
     showInResults: "Show in results",
+    showDetails: "Show details",
     parkingSpot:    "Disabled parking",
     parkingSpots:   (n: number) => `Disabled parking · ${n} spaces`,
     parkingAccessible:     "Accessible parking",

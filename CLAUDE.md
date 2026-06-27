@@ -220,8 +220,7 @@ All optional unless noted; a source with a missing key is silently skipped.
 - `GINTO_API_KEY` — Ginto GraphQL source (Swiss-focused). Contact support@ginto.guide.
 - `GINTO_GEOFENCE=1` — restrict Ginto to searches that can reach the CH bbox (off by default; emergency brake against rate limits).
 - `ACCESLIBRE_API_KEY` — AccèsLibre (FR); only active in international mode with the search centre in France.
-- `ENABLE_NEARBY_PARKING=1` — disabled-parking enrichment fetch in `/api/search` + SEO pages (parallel OSM fetch → enrichment + `parkingSpots` markers). Off by default.
-- `ENABLE_NEARBY_TOILETS=1` — wheelchair-WC fetch in `/api/search` (passive layer) + `/api/nearby-parking` (WC chip). Independent of parking, display-only (never enriches `toilet.value`). Off by default. **Both flags must be set in Vercel production** or that layer is silently off for everyone.
+- `SKIP_NEARBY_ENRICHMENT=1` — internal flag used by `scripts/check-seo-validity.ts` to skip the parallel disabled-parking fetch during bulk validity checks (avoids doubling Overpass load). Not a user-facing toggle; parking/toilet fetches are always-on in production.
 - `HEALTH_CHECK_SECRET` — required to activate `GET /api/health` and `GET /api/stats` (no/`?token=` mismatch → 401; unset → both 503).
 - `KV_REST_API_URL` / `KV_REST_API_TOKEN` — Upstash Redis for adapter stats; absent → `lib/stats.ts` is a no-op, `/api/stats` returns 503.
 - `OVERPASS_ENDPOINTS` — comma-separated Overpass URL override (retains the parallel race). Mirror-selection forensics (which public mirrors are dead/blocked, the DACH/intl split) → `docs/overpass-server.md`.

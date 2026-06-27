@@ -118,8 +118,6 @@ Create a `.env.local` in the project root. None of these are exposed to the brow
 | `GINTO_API_KEY` | optional | Ginto GraphQL API (Swiss-focused accessibility data, queried DACH-wide) |
 | `GINTO_GEOFENCE` | optional | Set to `1` to restrict Ginto calls to searches that can reach the CH bounding box (emergency brake against rate limits) |
 | `GOOGLE_PLACES_API_KEY` | optional | Google Places (New) data; also enables the photo proxy |
-| `ENABLE_NEARBY_PARKING` | optional | Set to `1` to enable disabled-parking enrichment and parking markers |
-| `ENABLE_NEARBY_TOILETS` | optional | Set to `1` to enable the wheelchair-WC map layer (display-only, never enriches a venue) |
 | `GITHUB_REPORT_TOKEN` | optional | Enables `POST /api/report-parking` (user parking reports → GitHub issues) |
 | `NEXT_PUBLIC_SENTRY_DSN` | optional | GlitchTip (Sentry-protocol) error reporting; production only |
 | `OVERPASS_ENDPOINTS` | optional | Comma-separated Overpass URLs (defaults to two public mirrors; production prepends a private server) |
@@ -192,7 +190,7 @@ adapters in parallel  → OSM, A.Cloud, Reisen für Alle, Ginto, Google Places
 match + merge   (haversine + trigram + name containment)
    │
    ▼
-nearby-parking enrichment   (optional, ENABLE_NEARBY_PARKING)
+nearby-parking enrichment
    │
    ▼
 computeFilteredConfidence   (only active filter criteria count)
@@ -253,9 +251,9 @@ When an OSM record carries `check_date:wheelchair` (or `check_date:toilets:wheel
 
 ### Nearby disabled-parking enrichment
 
-Gated behind `ENABLE_NEARBY_PARKING`. `enrichWithNearbyParking()` upgrades a venue's `parking.value` from `"unknown"` to `"yes"` (with `details.nearbyOnly = true`, confidence `0.75`) when a dedicated disabled-parking OSM node sits within 250 m. It deliberately adds no source attribution, so per-source filter counts and confidence are unaffected. Parking markers use a wider 500 m display radius. Two tiers exist: a **strong** tier (reserved disabled spaces — the only one that may enrich) and a weak, display-only tier (`amenity=parking` merely tagged `wheelchair=yes`), gated client-side by the `showWeakParking` setting.
+`enrichWithNearbyParking()` upgrades a venue's `parking.value` from `"unknown"` to `"yes"` (with `details.nearbyOnly = true`, confidence `0.75`) when a dedicated disabled-parking OSM node sits within 250 m. It deliberately adds no source attribution, so per-source filter counts and confidence are unaffected. Parking markers use a wider 500 m display radius. Two tiers exist: a **strong** tier (reserved disabled spaces — the only one that may enrich) and a weak, display-only tier (`amenity=parking` merely tagged `wheelchair=yes`), gated client-side by the `showWeakParking` setting.
 
-Wheelchair WCs (`ENABLE_NEARBY_TOILETS`) are a second amenity type sharing the same machinery — but **display-only**: a nearby WC never changes a venue's `toilet.value`. WC markers encode the host (standalone public toilet vs. WC inside a venue); duplicates within 25 m are collapsed and responses are capped at 300 markers.
+Wheelchair WCs are a second amenity type sharing the same machinery — but **display-only**: a nearby WC never changes a venue's `toilet.value`. WC markers encode the host (standalone public toilet vs. WC inside a venue); duplicates within 25 m are collapsed and responses are capped at 300 markers.
 
 ---
 

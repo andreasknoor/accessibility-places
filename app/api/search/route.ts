@@ -368,8 +368,8 @@ export async function POST(req: NextRequest) {
         // is the rate-limited public mirror. The parking/WC layers are
         // DACH-centric and sparse abroad, so skip them there to avoid piling two
         // extra heavy queries onto that single endpoint (a 429 amplifier).
-        const nearbyParkingEnabled = process.env.ENABLE_NEARBY_PARKING === "1" && !outsideDach
-        const nearbyToiletsEnabled = process.env.ENABLE_NEARBY_TOILETS  === "1" && !outsideDach
+        const nearbyParkingEnabled = !outsideDach
+        const nearbyToiletsEnabled = !outsideDach
         // Always include the weak parking tier in the parking fetch. It is
         // display-only (never enriches/filters) and gated client-side by the
         // showWeakParking setting. SEO opts out via the function-arg default.
@@ -535,7 +535,6 @@ export async function POST(req: NextRequest) {
                 }))
             })(),
             // WC markers — all fetched toilet features, display-only.
-            // Client gates visibility via ENABLE_NEARBY_TOILETS and future layer toggle.
             amenitySpots: toiletFeatures.length > 0 ? toiletFeatures : undefined,
           },
         })

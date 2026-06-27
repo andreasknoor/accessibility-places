@@ -162,9 +162,8 @@ describe("POST /api/search — input validation", () => {
 
 describe("POST /api/search — nearby parking enrichment", () => {
   // OSM Overpass returns one restaurant with unknown parking and one disabled
-  // parking spot 80 m away. With ENABLE_NEARBY_PARKING=1 the restaurant's
-  // parking value is upgraded to "yes" + nearbyOnly=true, and parkingSpots
-  // is populated in the result payload.
+  // parking spot 80 m away. The restaurant's parking value is upgraded to
+  // "yes" + nearbyOnly=true, and parkingSpots is populated in the result payload.
   const OSM_RESTAURANT = {
     type: "node",
     id: 111,
@@ -187,7 +186,6 @@ describe("POST /api/search — nearby parking enrichment", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks()
-    vi.stubEnv("ENABLE_NEARBY_PARKING", "1")
   })
 
   it("enriches parking to nearbyOnly=true when parking filter is OFF", async () => {
@@ -244,27 +242,28 @@ describe("POST /api/search — nearby parking enrichment", () => {
     expect(payload.parkingSpots).toHaveLength(1)
   })
 
-  it("does NOT enrich when ENABLE_NEARBY_PARKING is unset", async () => {
-    vi.unstubAllEnvs()
-    // ENABLE_NEARBY_PARKING is NOT set — only the OSM venue fetch should fire
+  it("does NOT enrich when coordinates are outside DACH (international mode)", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok:   true,
-      json: async () => ({ elements: [OSM_RESTAURANT] }),
+      json: async () => ({ elements: [{ ...OSM_RESTAURANT, lat: 48.85, lon: 2.35 }] }),
     })
     vi.stubGlobal("fetch", fetchMock)
 
+    // Paris coordinates + international mode — outside DACH, enrichment must be skipped
     const req = makeReq({
       ...BASE_BODY,
-      filters:  { ...BASE_BODY.filters, parking: false, entrance: false, toilet: false },
-      sources:  { ...BASE_BODY.sources, osm: true },
+      location:     "Paris",
+      coordinates:  { lat: 48.85, lon: 2.35 },
+      international: true,
+      filters:      { ...BASE_BODY.filters, parking: false, entrance: false, toilet: false },
+      sources:      { ...BASE_BODY.sources, osm: true },
     })
     const res    = await POST(req)
     const events = await parseEvents(res)
     const result = events.find((e) => e.type === "result")
     expect(result).toBeDefined()
 
-    const payload = result!.payload as { places: Array<{ accessibility: { parking: { value: string } } }>; parkingSpots: unknown[] }
-    expect(payload.places[0].accessibility.parking.value).toBe("unknown")
+    const payload = result!.payload as { parkingSpots: unknown[] }
     expect(payload.parkingSpots).toHaveLength(0)
   })
 

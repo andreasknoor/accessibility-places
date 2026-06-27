@@ -208,7 +208,7 @@ export default function MobileLayout({
       </a>
 
       {/* ── Header ── */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card shrink-0 safe-area-inset-top">
+      <header className="flex items-center justify-between px-4 pb-3 pt-safe-3 border-b border-border bg-card shrink-0">
         <button
           onClick={() => { onLogoTap?.(); onReset?.() }}
           className="flex items-center gap-2.5 hover:opacity-75 transition-opacity"
@@ -430,6 +430,7 @@ export default function MobileLayout({
               amenityPanTrigger={amenityPanTrigger}
               onAmenityMarkerClick={onAmenityMarkerClick}
               onShowAmenityInResults={handleShowAmenityInResults}
+              amenityType={amenityActive}
             />
           )}
         </div>
