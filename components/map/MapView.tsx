@@ -890,8 +890,9 @@ export default function MapView({
     const amenities = [...(parkingSpots ?? []), ...(toiletSpots ?? [])]
     if (amenities.length > 0) {
       const latlngs: [number, number][] = amenities.map((s) => [s.lat, s.lon])
-      const ul = userLocationRef.current
-      if (ul) latlngs.push([ul.lat, ul.lon])
+      // Do NOT include userLocationRef here — the amenity search may be far from
+      // the user's GPS position (e.g. parking in München while standing in Berlin).
+      // The spots themselves define the correct viewport.
       lastProgrammaticMoveRef.current = Date.now()
       mapInst.current.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 16 })
       return
@@ -956,8 +957,7 @@ export default function MapView({
         const spots = [...(parkingSpots ?? []), ...(toiletSpots ?? [])]
         if (spots.length > 0) {
           const latlngs: [number, number][] = spots.map((s) => [s.lat, s.lon])
-          const ul = userLocationRef.current
-          if (ul) latlngs.push([ul.lat, ul.lon])
+          // Same reasoning as the primary amenity fit: do not add userLocation.
           lastProgrammaticMoveRef.current = Date.now()
           mapInst.current?.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 16 })
         } else if (center) {
