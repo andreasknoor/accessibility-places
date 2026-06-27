@@ -244,6 +244,8 @@ const de: Translations = {
     parkingPaid:      "Kostenpflichtig",
     parkingMaxstay:   "Max. Parkzeit",
     parkingFeeLabel:  "Gebühr",
+    parkingDistanceLabel: "Entfernung",
+    parkingAccessLabel:   "Zugang",
     parkingPrivate:   "Privat",
     parkingCustomers: "Nur Kunden",
     legend:           "Legende",

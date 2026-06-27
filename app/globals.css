@@ -173,6 +173,26 @@ body {
   top: 0;
 }
 
+/* Redesigned map popups (venue / parking / WC, class "ap-popup"). The flush left
+   accent bar requires removing Leaflet's default content inset; we re-add the
+   padding inside the content column so the bar reaches the rounded popup edge.
+   The close button is nudged into the corner and lifted above the content. */
+.ap-popup .leaflet-popup-content-wrapper {
+  padding: 0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.ap-popup .leaflet-popup-content {
+  margin: 0;
+  font-family: sans-serif;
+  line-height: 1.5;
+}
+.ap-popup .leaflet-popup-close-button {
+  top: 5px;
+  right: 7px;
+  z-index: 2;
+}
+
 /* Accessibility: keep the map attribution legible over any tile. Leaflet's default
    0.7-alpha background lets dark tiles bleed through and drop the link/text contrast
    below 3:1. A near-opaque background + a high-contrast, underlined link keeps it

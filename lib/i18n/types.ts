@@ -221,6 +221,8 @@ export interface Translations {
     parkingPaid:            string
     parkingMaxstay:         string
     parkingFeeLabel:        string
+    parkingDistanceLabel:   string
+    parkingAccessLabel:     string
     parkingPrivate:         string
     parkingCustomers:       string
     legend:                 string

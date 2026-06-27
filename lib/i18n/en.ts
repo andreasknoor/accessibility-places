@@ -244,6 +244,8 @@ const en: Translations = {
     parkingPaid:      "Paid",
     parkingMaxstay:   "Max. stay",
     parkingFeeLabel:  "Fee",
+    parkingDistanceLabel: "Distance",
+    parkingAccessLabel:   "Access",
     parkingPrivate:   "Private",
     parkingCustomers: "Customers only",
     legend:           "Legend",

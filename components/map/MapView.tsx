@@ -103,6 +103,39 @@ function markerColor(confidence: number): string {
   return CONFIDENCE_COLORS[confidenceLabel(confidence)]
 }
 
+// ─── Shared popup styling (venue / parking / WC) ──────────────────────────────
+// All three map popups use one layout: a flush left accent bar (host/confidence
+// colour) + an icon badge header + an aligned key/value grid + a footer with
+// exactly one bold blue default CTA and the rest as plain text links. The flush
+// bar relies on the ".ap-popup" CSS override (globals.css) zeroing Leaflet's
+// content inset; the padding is re-added on the content column below.
+const POPUP_PAD     = "padding:12px 14px;flex:1;min-width:0"
+const POPUP_KV      = "display:grid;grid-template-columns:auto 1fr;gap:7px 10px;align-items:center"
+const POPUP_FOOTER  = "border-top:1px solid #f0f0f0;margin-top:11px;padding-top:10px"
+const POPUP_CTA     = "display:flex;align-items:center;justify-content:center;gap:6px;width:100%;background:#2563eb;color:#fff;border:none;border-radius:8px;padding:9px;font-size:13px;font-weight:600;cursor:pointer"
+const POPUP_LINK    = "display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline"
+const POPUP_LINK_WARN = "display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:#92400e;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline"
+const POPUP_LINKS   = "display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-top:10px"
+const POPUP_SRC     = "font-size:10.5px;color:#9ca3af;text-align:center;margin-top:10px"
+const POPUP_TITLE   = "font-weight:700;font-size:14px;flex:1;min-width:0"
+const POPUP_SUB     = "font-size:11px;color:#71717a;margin:2px 0 11px"
+const POPUP_BADGE   = "display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;flex-shrink:0;font-size:14px"
+// External-link glyph (white via currentColor inside the blue CTA, blue in text links).
+const POPUP_EXT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`
+
+// Wraps popup content in the flush-bar shell. `bar` is the accent colour.
+function popupShell(bar: string, inner: string): string {
+  return `<div style="display:flex"><div style="width:5px;flex-shrink:0;background:${bar}"></div><div style="${POPUP_PAD}">${inner}</div></div>`
+}
+
+// One label/value row for the popup key/value grid. `dot` draws a leading status
+// dot (used by the venue criteria); `color` tints the value text.
+function popupRow(label: string, value: string, opts: { color?: string; dot?: string } = {}): string {
+  const valStyle = `font-size:12px;font-weight:600;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px${opts.color ? `;color:${opts.color}` : ""}`
+  const dotEl = opts.dot ? `<span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${opts.dot};display:inline-block"></span>` : ""
+  return `<span style="font-size:11px;color:#71717a">${label}</span><span style="${valStyle}">${dotEl}${value}</span>`
+}
+
 // Parking marker colours per tier.
 // "strong" (reserved disabled bays) = blue "P"; "weak" (wheelchair=yes lot) = amber with dark "P"
 // (white-on-amber fails contrast — this is an accessibility app).
@@ -508,29 +541,39 @@ export default function MapView({
       const badgeStyle = tier === "weak" ? "background:#fef3c7;color:#92400e" : "background:#dcfce7;color:#166534"
       const mapsUrl = `https://www.google.com/maps?q=${spot.lat},${spot.lon}`
 
+      const barColor   = PARKING_TIER_STYLE[tier].fill
+      const badgeFill  = PARKING_TIER_STYLE[tier].fill
+      const badgeP     = PARKING_TIER_STYLE[tier].text
+      const showResults = onShowAmenityInResultsRef.current && amenityType === "parking"
+
+      const rows = [
+        distText    ? popupRow(t.map.parkingDistanceLabel, distText) : "",
+        feeText     ? popupRow(t.map.parkingFeeLabel, esc(feeText), { color: spot.fee === "no" ? "#15803d" : undefined }) : "",
+        maxstayText ? popupRow(t.map.parkingMaxstay, esc(maxstayText)) : "",
+        accessText  ? popupRow(t.map.parkingAccessLabel, accessText, { color: "#b45309" }) : "",
+      ].join("")
+
       const div = document.createElement("div")
-      div.style.cssText = "font-family:sans-serif;font-size:12px;line-height:1.6;min-width:140px"
-      div.innerHTML = `
-        <div style="font-weight:600;margin-bottom:3px">${title}</div>
-        <div style="margin-bottom:6px"><span style="display:inline-block;font-size:10px;font-weight:600;padding:1px 7px;border-radius:9999px;${badgeStyle}">${badgeText}</span></div>
-        <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:11px;margin-bottom:6px">
-          ${distText     ? `<span style="color:#888">↔</span><span>${distText}</span>` : ""}
-          ${feeText      ? `<span style="color:#888">€</span><span>${esc(feeText)}</span>` : ""}
-          ${maxstayText  ? `<span style="color:#888">${t.map.parkingMaxstay}</span><span>${esc(maxstayText)}</span>` : ""}
-          ${accessText   ? `<span style="color:#888">🔒</span><span style="color:#b45309">${accessText}</span>` : ""}
+      div.style.cssText = "font-family:sans-serif"
+      div.innerHTML = popupShell(barColor, `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px;padding-right:14px">
+          <span style="${POPUP_BADGE};background:${badgeFill};color:${badgeP};font-weight:700;font-size:13px">P</span>
+          <span style="${POPUP_TITLE}">${title}</span>
+          <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:9999px;white-space:nowrap;${badgeStyle}">${badgeText}</span>
         </div>
-        <div style="font-size:10px;color:#888;margin-bottom:6px">${t.map.source}: ${SOURCE_LABELS.osm}</div>
-        <span data-gmaps style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#2563eb;cursor:pointer;text-decoration:underline">
-          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          ${t.results.googleMapsLink}
-        </span>
-        ${tier === "weak" ? `
-        <span data-report style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#92400e;cursor:pointer;text-decoration:underline;margin-top:5px">
-          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
-          ${t.map.parkingReportButton}
-        </span>` : ""}
-        ${onShowAmenityInResultsRef.current && amenityType === "parking" ? `<button data-show-results style="display:block;margin-top:8px;font-size:11px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-align:left">${t.map.showInResults} →</button>` : ""}
-      `
+        ${rows ? `<div style="${POPUP_KV}">${rows}</div>` : ""}
+        <div style="${POPUP_FOOTER}">
+          <button data-gmaps style="${POPUP_CTA}">${POPUP_EXT_SVG}${t.results.googleMapsLink}</button>
+          ${showResults || tier === "weak" ? `<div style="${POPUP_LINKS}">
+            ${showResults ? `<button data-show-results style="${POPUP_LINK}">${t.map.showInResults} →</button>` : ""}
+            ${tier === "weak" ? `<button data-report style="${POPUP_LINK_WARN}">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+              ${t.map.parkingReportButton}
+            </button>` : ""}
+          </div>` : ""}
+          <div style="${POPUP_SRC}">${t.map.source}: ${SOURCE_LABELS.osm}</div>
+        </div>
+      `)
       // Use L.DomEvent.on (not addEventListener) — plain addEventListener and
       // inline onclick fail on mobile because Leaflet intercepts touchstart.
       const gmapsBtn = div.querySelector<HTMLElement>("[data-gmaps]")
@@ -578,7 +621,7 @@ export default function MapView({
       }
 
       const marker = L.marker([spot.lat, spot.lon], { icon, zIndexOffset: -200 })
-        .bindPopup(div, { maxWidth: 240 })
+        .bindPopup(div, { maxWidth: 250, className: "ap-popup" })
         .addTo(mapInst.current)
       marker.on("click", () => onAmenityMarkerClick?.({ osmId: spot.osmId, lat: spot.lat, lon: spot.lon }))
       parkingMarkersRef.current.push(marker)
@@ -609,50 +652,45 @@ export default function MapView({
       const isCustomers = spot.host?.access === "customers" || spot.access === "customers"
       const mapsUrl  = `https://www.google.com/maps?q=${spot.lat},${spot.lon}`
 
-      // One property row: icon + muted label left, value right (optional accent colour).
-      // Only called when we have a real value — no "k. A." rows are shown.
-      const row = (icon: string, label: string, value: string, color?: string) =>
-        `<div style="display:flex;justify-content:space-between;gap:14px;padding:3px 0">
-          <span style="color:#6b7280">${icon}&thinsp;${label}</span>
-          <span style="font-weight:500;text-align:right${color ? `;color:${color}` : ""}">${value}</span>
-        </div>`
+      const rows = [
+        popupRow(`♿ ${t.map.toiletWheelchairLabel ?? "Rollstuhlgerecht"}`,
+          tier === "strong" ? (t.map.toiletDesignatedValue ?? "Designiert") : yes, { color: "#15803d" }),
+        spot.euroKey       ? popupRow(`🔑 ${t.map.toiletEuroKey ?? "Euroschlüssel"}`, yes) : "",
+        spot.changingTable ? popupRow(`👶 ${t.map.toiletChangingTable ?? "Wickeltisch"}`, yes) : "",
+        isCustomers        ? popupRow(`🚪 ${t.map.toiletAccessLabel ?? "Zugang"}`,
+          t.map.toiletCustomers ?? "Nur für Gäste", { color: "#b45309" }) : "",
+      ].join("")
 
-      const rows: string[] = []
-      if (host === "venue") {
-        const placeName = spot.host?.name ? esc(spot.host.name) : (t.map.toiletVenueGeneric ?? "Lokalität")
-        rows.push(row("🏢", t.map.toiletAssociatedPlace ?? "Ort", placeName))
-      }
-      rows.push(row("♿", t.map.toiletWheelchairLabel ?? "Rollstuhlgerecht",
-        tier === "strong" ? (t.map.toiletDesignatedValue ?? "Designiert") : yes))
-      if (spot.euroKey)       rows.push(row("🔑", t.map.toiletEuroKey      ?? "Euroschlüssel", yes))
-      if (spot.changingTable) rows.push(row("👶", t.map.toiletChangingTable ?? "Wickeltisch",   yes))
-      if (isCustomers)        rows.push(row("🚪", t.map.toiletAccessLabel   ?? "Zugang",
-        t.map.toiletCustomers ?? "Nur für Gäste", "#b45309"))
+      // Venue WCs name their host in the subline; standalone WCs have no subline.
+      const sub = host === "venue"
+        ? `🏢 ${spot.host?.name ? esc(spot.host.name) : (t.map.toiletVenueGeneric ?? "Lokalität")}`
+        : ""
 
-      const extLinkSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`
-      const linkStyle = `display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#2563eb;cursor:pointer;text-decoration:underline`
-
-      // Wheelmap only indexes OSM nodes, not ways or relations
+      // Wheelmap only indexes OSM nodes, not ways or relations.
       const osmNodeId = spot.osmId?.startsWith("node/") ? spot.osmId.slice(5) : undefined
       const wheelmapUrl = osmNodeId ? `https://wheelmap.org/nodes/${osmNodeId}` : undefined
+      const showResults = onShowAmenityInResultsRef.current && amenityType === "toilet"
 
       const div = document.createElement("div")
-      div.style.cssText = "font-family:sans-serif;font-size:12px;line-height:1.5;min-width:184px"
-      div.innerHTML = `
-        <div style="display:flex;align-items:center;gap:7px;margin-bottom:7px">
-          <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:${accent};font-size:14px;flex-shrink:0">🚻</span>
-          <span style="font-weight:600;font-size:13px">${title}</span>
+      div.style.cssText = "font-family:sans-serif"
+      div.innerHTML = popupShell(accent, `
+        <div style="display:flex;align-items:center;gap:8px;${sub ? "" : "margin-bottom:11px;"}padding-right:14px">
+          <span style="${POPUP_BADGE};background:${accent}">🚻</span>
+          <span style="${POPUP_TITLE}">${title}</span>
         </div>
-        <div style="font-size:11px;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:2px 0;margin-bottom:7px">
-          ${rows.join("")}
+        ${sub ? `<div style="${POPUP_SUB}">${sub}</div>` : ""}
+        <div style="${POPUP_KV}">${rows}</div>
+        <div style="${POPUP_FOOTER}">
+          ${wheelmapUrl
+            ? `<button data-wheelmap style="${POPUP_CTA}">${POPUP_EXT_SVG}Wheelmap</button>`
+            : `<button data-gmaps style="${POPUP_CTA}">${POPUP_EXT_SVG}${t.results.googleMapsLink}</button>`}
+          ${(wheelmapUrl || showResults) ? `<div style="${POPUP_LINKS}">
+            ${wheelmapUrl ? `<button data-gmaps style="${POPUP_LINK}">${t.results.googleMapsLink} →</button>` : ""}
+            ${showResults ? `<button data-show-results style="${POPUP_LINK}">${t.map.showInResults} →</button>` : ""}
+          </div>` : ""}
+          <div style="${POPUP_SRC}">${t.map.source}: ${SOURCE_LABELS.osm}</div>
         </div>
-        <div style="font-size:10px;color:#888;margin-bottom:6px">${t.map.source}: ${SOURCE_LABELS.osm}</div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px">
-          <span data-gmaps style="${linkStyle}">${extLinkSvg}${t.results.googleMapsLink}</span>
-          ${wheelmapUrl ? `<span data-wheelmap style="${linkStyle}">${extLinkSvg}Wheelmap</span>` : ""}
-        </div>
-        ${onShowAmenityInResultsRef.current && amenityType === "toilet" ? `<button data-show-results style="display:block;margin-top:8px;font-size:11px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-align:left">${t.map.showInResults} →</button>` : ""}
-      `
+      `)
       const gmapsBtn = div.querySelector<HTMLElement>("[data-gmaps]")
       if (gmapsBtn) {
         L.DomEvent.on(gmapsBtn, "click", () => void openExternalUrl(mapsUrl))
@@ -671,7 +709,7 @@ export default function MapView({
       }
 
       const marker = L.marker([spot.lat, spot.lon], { icon })
-        .bindPopup(div, { maxWidth: 220 })
+        .bindPopup(div, { maxWidth: 240, className: "ap-popup" })
         .addTo(mapInst.current)
       marker.on("click", () => onAmenityMarkerClick?.({ osmId: spot.osmId, lat: spot.lat, lon: spot.lon }))
       toiletMarkersRef.current.push(marker)
@@ -746,24 +784,31 @@ export default function MapView({
         const categoryIcon  = CATEGORY_ICONS[place.category] ?? "📍"
         const categoryLabel = (t.categories as Record<string, string>)[place.category] ?? place.category
 
-        div.innerHTML = `
-          <strong style="display:block;margin-bottom:2px">${esc(place.name)} <span style="color:${markerColor(place.overallConfidence)};font-weight:normal">(${Math.round(place.overallConfidence * 100)}%)</span></strong>
-          <div style="color:#666;font-size:11px;margin-bottom:4px">${categoryIcon} ${esc(categoryLabel)}</div>
-          ${addr ? `<div style="color:#666;font-size:11px;margin-bottom:6px">${esc(addr)}</div>` : ""}
-          <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:11px">
-            <span style="color:#888">${t.criteria.entrance}</span>
-            <span style="color:${markerColor(place.accessibility.entrance.confidence)}">${t.a11y[place.accessibility.entrance.value] ?? place.accessibility.entrance.value}</span>
-            <span style="color:#888">${t.criteria.toilet}</span>
-            <span style="color:${markerColor(place.accessibility.toilet.confidence)}">${t.a11y[place.accessibility.toilet.value] ?? place.accessibility.toilet.value}</span>
-            <span style="color:#888">${t.criteria.parking}</span>
-            <span style="color:${markerColor(place.accessibility.parking.confidence)}">${parkingText}</span>
+        const conf      = Math.round(place.overallConfidence * 100)
+        const confLabel = t.results.confidence[confidenceLabel(place.overallConfidence)]
+        const barColor  = markerColor(place.overallConfidence)
+        const ent = place.accessibility.entrance
+        const toi = place.accessibility.toilet
+        const par = place.accessibility.parking
+        const meta = `${categoryIcon} ${esc(categoryLabel)}${addr ? ` · ${esc(addr)}` : ""}`
+
+        div.innerHTML = popupShell(barColor, `
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding-right:16px">
+            <span style="${POPUP_TITLE}">${esc(place.name)}</span>
+            <span style="color:${barColor};font-size:11px;font-weight:700;white-space:nowrap">${conf} % · ${confLabel}</span>
           </div>
-          <div style="margin-top:6px;font-size:10px;color:#888">
-            ${t.map.source}: ${SOURCE_LABELS[place.primarySource]}
+          <div style="${POPUP_SUB}">${meta}</div>
+          <div style="${POPUP_KV}">
+            ${popupRow(t.criteria.entrance, t.a11y[ent.value] ?? ent.value, { color: markerColor(ent.confidence), dot: markerColor(ent.confidence) })}
+            ${popupRow(t.criteria.toilet,   t.a11y[toi.value] ?? toi.value, { color: markerColor(toi.confidence), dot: markerColor(toi.confidence) })}
+            ${popupRow(t.criteria.parking,  parkingText,                    { color: markerColor(par.confidence), dot: markerColor(par.confidence) })}
           </div>
-          <button data-show-details style="display:block;margin-top:8px;font-size:11px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-align:left">${esc(t.map.showDetails)} →</button>
-          ${onShowInResults ? `<button data-show-id style="display:block;margin-top:4px;font-size:11px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-align:left">${t.map.showInResults} →</button>` : ""}
-        `
+          <div style="${POPUP_FOOTER}">
+            <button data-show-details style="${POPUP_CTA}">${esc(t.map.showDetails)}</button>
+            ${onShowInResults ? `<div style="${POPUP_LINKS}"><button data-show-id style="${POPUP_LINK}">${esc(t.map.showInResults)} →</button></div>` : ""}
+            <div style="${POPUP_SRC}">${t.map.source}: ${SOURCE_LABELS[place.primarySource]}</div>
+          </div>
+        `)
 
         const detailsBtn = div.querySelector<HTMLElement>("[data-show-details]")
         if (detailsBtn) {
@@ -786,7 +831,7 @@ export default function MapView({
             })
           }
         }
-        const popup = L!.popup({ maxWidth: 260 }).setContent(div)
+        const popup = L!.popup({ maxWidth: 280, className: "ap-popup" }).setContent(div)
 
         const marker = L!.marker(
           [place.coordinates.lat, place.coordinates.lon],
