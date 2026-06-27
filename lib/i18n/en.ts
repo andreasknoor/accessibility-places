@@ -255,7 +255,7 @@ const en: Translations = {
     legendToiletStandalone: "Standalone toilet",
     legendToiletVenue:      "Toilet inside a venue",
     parkingDistanceTo:   (dist: string, name: string) => `${dist} from ${name}`,
-    parkingReportButton: "Report as reserved disabled parking",
+    parkingReportButton: "Report as reserved",
     parkingReportDone:   "Reported – thanks!",
     parkingReportError:  "Error – please try again",
     toiletDesignated:    "Wheelchair toilet",

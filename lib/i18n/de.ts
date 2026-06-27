@@ -255,7 +255,7 @@ const de: Translations = {
     legendToiletStandalone: "Eigenständiges WC",
     legendToiletVenue:      "WC in Lokalität",
     parkingDistanceTo:   (dist: string, name: string) => `${dist} von ${name}`,
-    parkingReportButton: "Als reservierten Behindertenparkplatz melden",
+    parkingReportButton: "Als reserviert melden",
     parkingReportDone:   "Gemeldet – danke!",
     parkingReportError:  "Fehler – bitte erneut versuchen",
     toiletDesignated:    "Rollstuhl-WC",
