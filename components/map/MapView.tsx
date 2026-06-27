@@ -94,13 +94,26 @@ interface Props {
 }
 
 const CONFIDENCE_COLORS = {
-  high:   "#22c55e",   // green-500
+  high:   "#22c55e",   // green-500 — for markers, bars, decorative dots (vivid)
   medium: "#eab308",   // yellow-500
   low:    "#ef4444",   // red-500
 }
 
+// WCAG AA-passing colours for confidence text on a white popup background.
+// markerColor() values (#22c55e/#eab308/#ef4444) fail 4.5:1 on white, so
+// text uses a darker shade while dots/bars keep the vivid marker colour.
+const CONFIDENCE_TEXT_COLORS = {
+  high:   "#15803d",   // green-700  5.02:1 ✓
+  medium: "#a16207",   // amber-700  4.92:1 ✓
+  low:    "#dc2626",   // red-600    4.83:1 ✓
+}
+
 function markerColor(confidence: number): string {
   return CONFIDENCE_COLORS[confidenceLabel(confidence)]
+}
+
+function textColor(confidence: number): string {
+  return CONFIDENCE_TEXT_COLORS[confidenceLabel(confidence)]
 }
 
 // ─── Shared popup styling (venue / parking / WC) ──────────────────────────────
@@ -111,15 +124,17 @@ function markerColor(confidence: number): string {
 // content inset; the padding is re-added on the content column below.
 const POPUP_PAD     = "padding:12px 14px;flex:1;min-width:0"
 const POPUP_KV      = "display:grid;grid-template-columns:auto 1fr;gap:7px 10px;align-items:center"
-const POPUP_FOOTER  = "border-top:1px solid #f0f0f0;margin-top:11px;padding-top:10px"
-const POPUP_CTA     = "display:flex;align-items:center;justify-content:center;gap:6px;width:100%;background:#2563eb;color:#fff;border:none;border-radius:8px;padding:9px;font-size:13px;font-weight:600;cursor:pointer"
+const POPUP_FOOTER  = "border-top:1px solid #f0f0f0;margin-top:11px;padding-top:9px"
+// Smaller vertical padding keeps the popup compact; font-size 12px stays readable at this width.
+const POPUP_CTA     = "display:flex;align-items:center;justify-content:center;gap:6px;width:100%;background:#2563eb;color:#fff;border:none;border-radius:7px;padding:6px 8px;font-size:12px;font-weight:600;cursor:pointer"
 const POPUP_LINK    = "display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline"
 const POPUP_LINK_WARN = "display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:#92400e;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline"
-const POPUP_LINKS   = "display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-top:10px"
-const POPUP_SRC     = "font-size:10.5px;color:#9ca3af;text-align:center;margin-top:10px"
-const POPUP_TITLE   = "font-weight:700;font-size:14px;flex:1;min-width:0"
+const POPUP_LINKS   = "display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-top:9px"
+// POPUP_TITLE: overflow control prevents long names pushing the pill/badge off-screen.
+const POPUP_TITLE   = "font-weight:700;font-size:14px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
 const POPUP_SUB     = "font-size:11px;color:#71717a;margin:2px 0 11px"
-const POPUP_BADGE   = "display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;flex-shrink:0;font-size:14px"
+// No font-size here — each usage sets its own (P badge: 13px, 🚻 emoji: 14px).
+const POPUP_BADGE   = "display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;flex-shrink:0"
 // External-link glyph (white via currentColor inside the blue CTA, blue in text links).
 const POPUP_EXT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`
 
@@ -541,9 +556,8 @@ export default function MapView({
       const badgeStyle = tier === "weak" ? "background:#fef3c7;color:#92400e" : "background:#dcfce7;color:#166534"
       const mapsUrl = `https://www.google.com/maps?q=${spot.lat},${spot.lon}`
 
-      const barColor   = PARKING_TIER_STYLE[tier].fill
-      const badgeFill  = PARKING_TIER_STYLE[tier].fill
-      const badgeP     = PARKING_TIER_STYLE[tier].text
+      const barColor    = PARKING_TIER_STYLE[tier].fill
+      const badgeTextC  = PARKING_TIER_STYLE[tier].text
       const showResults = onShowAmenityInResultsRef.current && amenityType === "parking"
 
       const rows = [
@@ -557,9 +571,9 @@ export default function MapView({
       div.style.cssText = "font-family:sans-serif"
       div.innerHTML = popupShell(barColor, `
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px;padding-right:14px">
-          <span style="${POPUP_BADGE};background:${badgeFill};color:${badgeP};font-weight:700;font-size:13px">P</span>
+          <span style="${POPUP_BADGE};background:${barColor};color:${badgeTextC};font-weight:700;font-size:13px">P</span>
           <span style="${POPUP_TITLE}">${title}</span>
-          <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:9999px;white-space:nowrap;${badgeStyle}">${badgeText}</span>
+          <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:9999px;white-space:nowrap;flex-shrink:0;${badgeStyle}">${badgeText}</span>
         </div>
         ${rows ? `<div style="${POPUP_KV}">${rows}</div>` : ""}
         <div style="${POPUP_FOOTER}">
@@ -571,7 +585,6 @@ export default function MapView({
               ${t.map.parkingReportButton}
             </button>` : ""}
           </div>` : ""}
-          <div style="${POPUP_SRC}">${t.map.source}: ${SOURCE_LABELS.osm}</div>
         </div>
       `)
       // Use L.DomEvent.on (not addEventListener) — plain addEventListener and
@@ -675,7 +688,7 @@ export default function MapView({
       div.style.cssText = "font-family:sans-serif"
       div.innerHTML = popupShell(accent, `
         <div style="display:flex;align-items:center;gap:8px;${sub ? "" : "margin-bottom:11px;"}padding-right:14px">
-          <span style="${POPUP_BADGE};background:${accent}">🚻</span>
+          <span style="${POPUP_BADGE};background:${accent};font-size:14px">🚻</span>
           <span style="${POPUP_TITLE}">${title}</span>
         </div>
         ${sub ? `<div style="${POPUP_SUB}">${sub}</div>` : ""}
@@ -688,7 +701,6 @@ export default function MapView({
             ${wheelmapUrl ? `<button data-gmaps style="${POPUP_LINK}">${t.results.googleMapsLink} →</button>` : ""}
             ${showResults ? `<button data-show-results style="${POPUP_LINK}">${t.map.showInResults} →</button>` : ""}
           </div>` : ""}
-          <div style="${POPUP_SRC}">${t.map.source}: ${SOURCE_LABELS.osm}</div>
         </div>
       `)
       const gmapsBtn = div.querySelector<HTMLElement>("[data-gmaps]")
@@ -795,18 +807,17 @@ export default function MapView({
         div.innerHTML = popupShell(barColor, `
           <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding-right:16px">
             <span style="${POPUP_TITLE}">${esc(place.name)}</span>
-            <span style="color:${barColor};font-size:11px;font-weight:700;white-space:nowrap">${conf} % · ${confLabel}</span>
+            <span style="color:${textColor(place.overallConfidence)};font-size:11px;font-weight:700;white-space:nowrap">${conf} % · ${confLabel}</span>
           </div>
           <div style="${POPUP_SUB}">${meta}</div>
           <div style="${POPUP_KV}">
-            ${popupRow(t.criteria.entrance, t.a11y[ent.value] ?? ent.value, { color: markerColor(ent.confidence), dot: markerColor(ent.confidence) })}
-            ${popupRow(t.criteria.toilet,   t.a11y[toi.value] ?? toi.value, { color: markerColor(toi.confidence), dot: markerColor(toi.confidence) })}
-            ${popupRow(t.criteria.parking,  parkingText,                    { color: markerColor(par.confidence), dot: markerColor(par.confidence) })}
+            ${popupRow(t.criteria.entrance, t.a11y[ent.value] ?? ent.value, { color: textColor(ent.confidence), dot: markerColor(ent.confidence) })}
+            ${popupRow(t.criteria.toilet,   t.a11y[toi.value] ?? toi.value, { color: textColor(toi.confidence), dot: markerColor(toi.confidence) })}
+            ${popupRow(t.criteria.parking,  parkingText,                    { color: textColor(par.confidence), dot: markerColor(par.confidence) })}
           </div>
           <div style="${POPUP_FOOTER}">
             <button data-show-details style="${POPUP_CTA}">${esc(t.map.showDetails)}</button>
             ${onShowInResults ? `<div style="${POPUP_LINKS}"><button data-show-id style="${POPUP_LINK}">${esc(t.map.showInResults)} →</button></div>` : ""}
-            <div style="${POPUP_SRC}">${t.map.source}: ${SOURCE_LABELS[place.primarySource]}</div>
           </div>
         `)
 
