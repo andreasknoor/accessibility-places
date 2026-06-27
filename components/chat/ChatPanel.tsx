@@ -946,11 +946,11 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
               extra row that the old location token occupied below the input. */}
           {district !== null ? (
             <span
-              className="shrink-0 inline-flex items-center gap-1.5 h-[38px] px-2.5 rounded-md border border-primary/30 bg-primary/10 text-primary-strong text-xs font-medium"
+              className="shrink-0 inline-flex items-center gap-1.5 h-[38px] px-2.5 rounded-md border border-primary/30 bg-primary/10 text-primary-strong text-xs font-medium max-w-[130px]"
               title={t.chat.locationActive(district)}
             >
               <LocateFixed className="w-3.5 h-3.5 shrink-0" aria-hidden />
-              <span className="truncate max-w-[80px]">{district || t.chat.modeNearby}</span>
+              <span className="truncate min-w-0">{district || t.chat.modeNearby}</span>
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" aria-hidden />
               <button
                 type="button"
