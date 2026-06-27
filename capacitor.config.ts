@@ -31,6 +31,15 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
+      // launchAutoHide:false keeps the NATIVE splash up until the web SplashOverlay
+      // has painted and calls SplashScreen.hide() (components/SplashOverlay.tsx, in a
+      // post-paint useEffect). This app loads a REMOTE URL, so the WebView load +
+      // React mount take longer than the old 600ms launchShowDuration — auto-hiding
+      // dropped the native splash before the web overlay was ready, leaving a flicker
+      // of bare app content. Manual hide = seamless handoff, no flicker.
+      // Note: with launchAutoHide:false, launchShowDuration is inert (no auto-dismiss
+      // ceiling); dismissal relies solely on SplashOverlay calling hide().
+      launchAutoHide: false,
       launchShowDuration: 600,
       backgroundColor: "#ffffff",
       androidScaleType: "CENTER_CROP",

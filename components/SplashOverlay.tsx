@@ -25,16 +25,21 @@ export default function SplashOverlay() {
     }
   }, [])
 
+  // Dismiss the native Capacitor splash once React has mounted AND painted (useEffect
+  // fires post-paint). The native config uses launchAutoHide:false, so the native
+  // splash stays up until this call — giving a seamless handoff with no flicker of
+  // bare app content. This MUST run unconditionally (not gated on `show`): if it were
+  // gated and `show` never became true, the native splash would hang forever.
+  // Dynamic import keeps @capacitor/splash-screen out of the web bundle's critical
+  // path and avoids SSR issues; it no-ops in the browser / PWA.
   useEffect(() => {
-    if (!show) return
-
-    // Tell the native Capacitor splash to hide as soon as our overlay is ready.
-    // Dynamic import keeps @capacitor/splash-screen out of the web bundle's
-    // critical path and avoids SSR issues.
     import("@capacitor/splash-screen")
       .then(({ SplashScreen }) => SplashScreen.hide())
-      .catch(() => {}) // no-op in browser / PWA
+      .catch(() => {})
+  }, [])
 
+  useEffect(() => {
+    if (!show) return
     const fadeTimer = setTimeout(() => setPhase("fading"), 2200)
     const doneTimer = setTimeout(() => setPhase("gone"),   2700)
     return () => { clearTimeout(fadeTimer); clearTimeout(doneTimer) }
