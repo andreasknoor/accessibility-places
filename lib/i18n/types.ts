@@ -214,6 +214,7 @@ export interface Translations {
     parkingAccessible:      string
     parkingReservedBadge:    string
     parkingNotReservedBadge: string
+    parkingReservedLabel:    string
     parkingDedicatedLabel:   string
     toggleParking:          string
     nearbyParking:          string

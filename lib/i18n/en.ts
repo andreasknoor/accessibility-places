@@ -237,6 +237,7 @@ const en: Translations = {
     parkingAccessible:     "Accessible parking",
     parkingReservedBadge:    "Reserved",
     parkingNotReservedBadge: "Not reserved",
+    parkingReservedLabel:    "Reserved wheelchair spaces",
     parkingDedicatedLabel:   "Dedicated wheelchair spaces",
     toggleParking:  "Show wheelchair parking on map",
     nearbyParking:  "Nearby parking",

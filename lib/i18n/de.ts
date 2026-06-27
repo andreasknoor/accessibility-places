@@ -237,6 +237,7 @@ const de: Translations = {
     parkingAccessible:     "Barrierefreier Parkplatz",
     parkingReservedBadge:    "Reserviert",
     parkingNotReservedBadge: "Nicht reserviert",
+    parkingReservedLabel:    "Reservierte Rollstuhlplätze",
     parkingDedicatedLabel:   "Dedizierte Rollstuhlplätze",
     toggleParking:  "Rollstuhlparkplätze in Karte anzeigen",
     nearbyParking:  "Parkplätze in der Nähe",

@@ -555,16 +555,20 @@ export default function MapView({
       const title = tier === "weak"
         ? t.map.parkingAccessible
         : spot.capacity != null ? t.map.parkingSpots(spot.capacity) : t.map.parkingSpot
-      // Reservation-status badge, parity with the result-list AmenityCard.
-      const badgeText  = tier === "weak" ? t.map.parkingNotReservedBadge : t.map.parkingReservedBadge
-      const badgeStyle = tier === "weak" ? "background:#fef3c7;color:#92400e" : "background:#dcfce7;color:#166534"
       const mapsUrl = `https://www.google.com/maps?q=${spot.lat},${spot.lon}`
 
       const barColor    = PARKING_TIER_STYLE[tier].fill
       const badgeTextC  = PARKING_TIER_STYLE[tier].text
       const showResults = onShowAmenityInResultsRef.current && amenityType === "parking"
 
+      // Reservation shown as a checkbox row (☑ Ja / ☐ Nein) — first in the grid.
+      const reservedValue = tier === "weak"
+        ? `☐ ${t.a11y.no}`
+        : `☑ ${t.a11y.yes}`
+      const reservedColor = tier === "weak" ? "#b45309" : "#15803d"
+
       const rows = [
+        popupRow(t.map.parkingReservedLabel, reservedValue, { color: reservedColor }),
         distText    ? popupRow(t.map.parkingDistanceLabel, distText) : "",
         feeText     ? popupRow(t.map.parkingFeeLabel, esc(feeText), { color: spot.fee === "no" ? "#15803d" : undefined }) : "",
         maxstayText ? popupRow(t.map.parkingMaxstay, esc(maxstayText)) : "",
@@ -577,9 +581,8 @@ export default function MapView({
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px;padding-right:14px">
           <span style="${POPUP_BADGE};background:${barColor};color:${badgeTextC};font-weight:700;font-size:13px">P</span>
           <span style="${POPUP_TITLE}">${title}</span>
-          <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:9999px;white-space:nowrap;flex-shrink:0;${badgeStyle}">${badgeText}</span>
         </div>
-        ${rows ? `<div style="${POPUP_KV}">${rows}</div>` : ""}
+        <div style="${POPUP_KV}">${rows}</div>
         <div style="${POPUP_FOOTER}">
           <button data-gmaps style="${POPUP_CTA}">${POPUP_EXT_SVG}${t.results.googleMapsLink}</button>
           ${showResults || tier === "weak" ? `<div style="${POPUP_LINKS}">
