@@ -91,6 +91,9 @@ interface Props {
   // not in the (venue) results list, so the link must be hidden; likewise a WC
   // popup during a parking search (cross-type passive overlay).
   amenityType?: AmenityType | null
+  // Called when a Leaflet popup opens or closes. Used by MobileLayout to hide
+  // the result-count pill so the popup is never occluded by it.
+  onPopupOpenChange?: (open: boolean) => void
 }
 
 const CONFIDENCE_COLORS = {
@@ -235,6 +238,7 @@ export default function MapView({
   onAmenityMarkerClick,
   onShowAmenityInResults,
   amenityType = null,
+  onPopupOpenChange,
 }: Props) {
   const t        = useTranslations()
   const mapRef   = useRef<HTMLDivElement>(null)
@@ -364,8 +368,8 @@ export default function MapView({
       // lastProgrammaticMoveRef just before it runs; a moveend within the window
       // after that stamp is app-driven and ignored. Any later moveend is a user pan.
       // Fade the floating buttons while a popup is open (see popupOpen state).
-      map.on("popupopen",  () => setPopupOpen(true))
-      map.on("popupclose", () => setPopupOpen(false))
+      map.on("popupopen",  () => { setPopupOpen(true);  onPopupOpenChange?.(true)  })
+      map.on("popupclose", () => { setPopupOpen(false); onPopupOpenChange?.(false) })
 
       map.on("moveend", () => {
         // No "search here" in amenity focus mode — it would re-run the venue

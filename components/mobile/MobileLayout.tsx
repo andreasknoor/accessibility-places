@@ -116,6 +116,7 @@ export default function MobileLayout({
   // auto-popped keyboard would be intrusive. Read at ChatPanel (re)mount time
   // because onSwitchToText bumps resetKey, which remounts it.
   const [autoFocusInput, setAutoFocusInput] = useState(false)
+  const [mapPopupOpen,   setMapPopupOpen]   = useState(false)
   const [mapMounted,  setMapMounted]  = useState(false)
   const [panTrigger,  setPanTrigger]  = useState(0)
   const [scrollToId,  setScrollToId]  = useState<string | undefined>()
@@ -385,7 +386,10 @@ export default function MobileLayout({
           {hasSearched && !isLoading && resultCount > 0 && !amenityActiveBool && (
             <button
               onClick={() => { hapticLight(); setActiveTab("results") }}
-              className="absolute top-3 left-14 z-[1000] flex items-center gap-1.5 rounded-full bg-card/95 backdrop-blur-sm border border-border shadow-md px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+              className={cn(
+                "absolute top-3 left-14 z-[1000] flex items-center gap-1.5 rounded-full bg-card/95 backdrop-blur-sm border border-border shadow-md px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors",
+                mapPopupOpen && "opacity-0 pointer-events-none",
+              )}
               aria-label={t.results.title}
             >
               <List className="w-3.5 h-3.5 text-primary shrink-0" />
@@ -398,7 +402,10 @@ export default function MobileLayout({
           {amenityActiveBool && !isLoading && (amenityResults?.length ?? 0) > 0 && (
             <button
               onClick={() => { hapticLight(); setActiveTab("results") }}
-              className="absolute top-3 left-14 z-[1000] flex items-center gap-1.5 rounded-full bg-card/95 backdrop-blur-sm border border-border shadow-md px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+              className={cn(
+                "absolute top-3 left-14 z-[1000] flex items-center gap-1.5 rounded-full bg-card/95 backdrop-blur-sm border border-border shadow-md px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors",
+                mapPopupOpen && "opacity-0 pointer-events-none",
+              )}
             >
               <List className="w-3.5 h-3.5 text-primary shrink-0" />
               <span>{t.results.amenityCount(amenityResults!.length)}</span>
@@ -437,6 +444,7 @@ export default function MobileLayout({
               onAmenityMarkerClick={onAmenityMarkerClick}
               onShowAmenityInResults={handleShowAmenityInResults}
               amenityType={amenityActive}
+              onPopupOpenChange={setMapPopupOpen}
             />
           )}
         </div>
