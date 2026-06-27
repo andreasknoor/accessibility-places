@@ -389,7 +389,7 @@ const en: Translations = {
     autoZoom:          "Auto-zoom after search",
     autoZoomHint:      "Fit map to all results after each search",
     alwaysShowParking: "Always show wheelchair parking on map",
-    showWeakParking:     "Also wheelchair-accessible parking",
+    showWeakParking:     "Also non-reserved parking",
     showWeakParkingHint: "Yellow markers: lots without reserved disabled spaces (weaker data)",
     publicToiletsOnly:     "Public/standalone toilets only",
     publicToiletsOnlyHint: "Toilet search shows only standalone toilets, not toilets inside venues",

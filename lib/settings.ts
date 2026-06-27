@@ -11,7 +11,7 @@ export interface AppSettings {
   alwaysShowParking:  boolean
   alwaysShowToilets:  boolean
   // Show the weak "accessible" parking tier (wheelchair=yes lots without reserved
-  // bays) as yellow markers on the map — including in Parkplatz-Modus. Default off.
+  // bays) as yellow markers on the map — including in Parkplatz-Modus. Default on.
   showWeakParking:    boolean
   // WC focus mode: when true, restricts the WC layer to standalone public toilets
   // (amenity=toilets) and hides WCs that are part of a venue. Default off (show all).
@@ -31,7 +31,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   autoZoom:           true,
   alwaysShowParking:  false,
   alwaysShowToilets:  false,
-  showWeakParking:    false,
+  showWeakParking:    true,
   publicToiletsOnly:  false,
   parkingRadiusKm:    4.0,
   internationalMode:  false,

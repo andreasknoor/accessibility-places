@@ -389,7 +389,7 @@ const de: Translations = {
     autoZoom:          "Automatischer Zoom nach Suche",
     autoZoomHint:      "Kartenausschnitt auf alle Ergebnisse anpassen",
     alwaysShowParking: "Rollstuhlparkplätze immer in Karte",
-    showWeakParking:     "Auch rollstuhlgerechte Parkplätze",
+    showWeakParking:     "Auch nicht reservierte Parkplätze",
     showWeakParkingHint: "Gelbe Marker: Parkplätze ohne reservierte Behindertenplätze (schwächere Datenlage)",
     publicToiletsOnly:     "Nur öffentliche/eigenständige WCs",
     publicToiletsOnlyHint: "WC-Suche zeigt nur eigenständige WCs, keine WCs in Lokalitäten",
