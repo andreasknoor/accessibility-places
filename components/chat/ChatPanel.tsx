@@ -848,7 +848,13 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
               aria-autocomplete="list"
               aria-activedescendant={highlightedIdx >= 0 ? `unified-opt-${highlightedIdx}` : undefined}
               className={cn(
-                "w-full rounded-md border bg-background px-3 py-2 text-sm h-[38px]",
+                // text-base (16px) on mobile prevents iOS Safari/WKWebView from
+                // auto-zooming the viewport on focus (it zooms any input < 16px and
+                // does not reliably reset the scale afterwards — manifests as the
+                // whole app being ~20% too wide with the footer clipped). Desktop
+                // keeps the denser 14px. Do NOT "fix" this with maximum-scale/
+                // user-scalable=no — pinch-zoom must stay enabled (WCAG 1.4.4).
+                "w-full rounded-md border bg-background px-3 py-2 text-base md:text-sm h-[38px]",
                 "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
                 "focus-visible:ring-ring disabled:opacity-50",
                 isMobile ? "border-primary" : "border-input",

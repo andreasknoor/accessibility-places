@@ -79,7 +79,9 @@ function SelectInput({ value, onChange, children, ...aria }: {
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="text-sm border border-border rounded-md px-2 py-1 bg-background max-w-[160px]"
+      // text-base (16px) on mobile keeps iOS from auto-zooming the viewport when
+      // the native picker opens (same root cause as the ChatPanel search input).
+      className="text-base md:text-sm border border-border rounded-md px-2 py-1 bg-background max-w-[160px]"
       {...aria}
     >
       {children}
