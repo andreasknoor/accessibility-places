@@ -256,7 +256,12 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
         } else {
           applyDefaultChip()
         }
-        if (typeof loc === "string" && loc.trim()) {
+        // Only restore the location text in text mode. In nearby mode the GPS pill
+        // already conveys the active location; showing a stale city name alongside
+        // the pill (e.g. "München" + "Berlin Mitte ●") is contradictory.
+        const startsInNearby = initialMode !== "text"
+          && (loadSettings().defaultSearchMode ?? "nearby") === "nearby"
+        if (!startsInNearby && typeof loc === "string" && loc.trim()) {
           programmaticLocRef.current = loc
           setLocation(loc)
         }
