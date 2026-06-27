@@ -110,6 +110,12 @@ export default function MobileLayout({
   onAmenitySelect, selectedAmenityKey, onAmenityMarkerClick, amenityPanTarget, amenityPanTrigger,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
+  // Focus the search input after a deliberate switch into text mode (e.g. tapping
+  // the welcome screen's "enter a place or name" card) so the user can type right
+  // away — mirroring the desktop autoFocus. Not set on plain app load, where an
+  // auto-popped keyboard would be intrusive. Read at ChatPanel (re)mount time
+  // because onSwitchToText bumps resetKey, which remounts it.
+  const [autoFocusInput, setAutoFocusInput] = useState(false)
   const [mapMounted,  setMapMounted]  = useState(false)
   const [panTrigger,  setPanTrigger]  = useState(0)
   const [scrollToId,  setScrollToId]  = useState<string | undefined>()
@@ -229,7 +235,7 @@ export default function MobileLayout({
 
       {/* ── Search bar (always visible) ── */}
       <div role="search">
-        <ChatPanel key={resetKey} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} locateTrigger={locateTrigger} biasCoords={biasCoords} onAmenitySearch={handleAmenitySearch} amenityActive={amenityActive} onExitAmenity={onExitAmenity} onCategoryQueryChange={onCategoryQueryChange} activeSearchCoords={activeSearchCoords} searchCenter={searchCenter} international={settings.internationalMode} />
+        <ChatPanel key={resetKey} autoFocus={autoFocusInput} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} locateTrigger={locateTrigger} biasCoords={biasCoords} onAmenitySearch={handleAmenitySearch} amenityActive={amenityActive} onExitAmenity={onExitAmenity} onCategoryQueryChange={onCategoryQueryChange} activeSearchCoords={activeSearchCoords} searchCenter={searchCenter} international={settings.internationalMode} />
       </div>
 
       {/* Global search progress — covers every trigger (search here, filter, radius,
@@ -280,7 +286,7 @@ export default function MobileLayout({
             <p className="text-xs text-muted-foreground">{t.chat.welcomeOrDivider}</p>
             {onSwitchToText && (
               <button
-                onClick={onSwitchToText}
+                onClick={() => { setAutoFocusInput(true); onSwitchToText?.() }}
                 className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 hover:bg-muted hover:border-primary/30 transition-colors text-left group"
               >
                 <span className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
