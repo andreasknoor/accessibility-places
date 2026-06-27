@@ -375,6 +375,7 @@ export interface Translations {
     resetToDefaults:   string
     resetDone:         string
     parkingRadius:     string
+    parkingRadiusHint: string
     internationalMode:     string
     internationalModeHint: string
   }

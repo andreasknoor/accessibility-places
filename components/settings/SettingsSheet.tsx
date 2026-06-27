@@ -233,7 +233,7 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
                 onChange={(v) => onUpdate({ publicToiletsOnly: v })}
               />
             </Row>
-            <Row label={ts.parkingRadius}>
+            <Row label={ts.parkingRadius} hint={ts.parkingRadiusHint}>
               <SliderInput
                 min={0.05}
                 max={5.0}
