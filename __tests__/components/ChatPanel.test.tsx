@@ -668,18 +668,18 @@ describe("ChatPanel GPS resolution", () => {
     const onModeChange = vi.fn()
     render(<ChatPanel onSearch={onSearch} isLoading={false} initialMode="text" onModeChange={onModeChange} />)
 
-    // 1. Locate → nearby mode + visible location token.
+    // 1. Locate → nearby mode + GPS badge on the locate button (district in title).
     fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
     await act(() => vi.runAllTimersAsync())
-    expect(screen.getByText("Maxvorstadt")).toBeInTheDocument()
+    expect(screen.getByTitle(/Maxvorstadt/)).toBeInTheDocument()
     expect(onModeChange).toHaveBeenLastCalledWith("nearby")
 
-    // 2. A typed area search must leave nearby behind: token gone, mode back to text.
+    // 2. A typed area search must leave nearby behind: badge gone, mode back to text.
     fireEvent.change(getInput(), { target: { value: "Berlin" } })
     await act(() => vi.runAllTimersAsync())
     fireEvent.keyDown(getInput(), { key: "Enter" })
     await act(() => vi.runAllTimersAsync())
-    expect(screen.queryByText("Maxvorstadt")).not.toBeInTheDocument()
+    expect(screen.queryByTitle(/Maxvorstadt/)).not.toBeInTheDocument()
     expect(onModeChange).toHaveBeenLastCalledWith("text")
   })
 })
