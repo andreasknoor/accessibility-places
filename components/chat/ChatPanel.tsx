@@ -941,24 +941,45 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           </div>
 
           {/* Inline ⌖ — the "nearby" intent as a one-tap action (no mode tab).
-              Primary/tinted while the field is empty; recedes once the user types. */}
-          <button
-            type="button"
-            onClick={onLocateTap}
-            disabled={isLoading}
-            aria-label={t.chat.useLocation}
-            aria-busy={nearbyPhase === "locating"}
-            className={cn(
-              "shrink-0 h-[38px] w-[38px] flex items-center justify-center rounded-md border transition-colors disabled:opacity-50 cursor-pointer",
-              !location.trim()
-                ? "border-primary bg-primary/10 text-primary-strong hover:bg-primary/20"
-                : "border-input bg-background text-muted-foreground hover:text-foreground hover:bg-muted",
-            )}
-          >
-            {nearbyPhase === "locating"
-              ? <Loader2 className="w-4 h-4 animate-spin" />
-              : <LocateFixed className="w-4 h-4" />}
-          </button>
+              When a GPS fix is active the button is replaced by a compact pill
+              showing the district name + green dot + dismiss ✕, saving the
+              extra row that the old location token occupied below the input. */}
+          {district !== null ? (
+            <span
+              className="shrink-0 inline-flex items-center gap-1.5 h-[38px] px-2.5 rounded-md border border-primary/30 bg-primary/10 text-primary-strong text-xs font-medium"
+              title={t.chat.locationActive(district)}
+            >
+              <LocateFixed className="w-3.5 h-3.5 shrink-0" aria-hidden />
+              <span className="truncate max-w-[80px]">{district || t.chat.modeNearby}</span>
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" aria-hidden />
+              <button
+                type="button"
+                onClick={clearLocationToken}
+                aria-label={t.chat.clearLocation}
+                className="shrink-0 ml-0.5 rounded-full p-0.5 hover:bg-primary/20 transition-colors cursor-pointer"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={onLocateTap}
+              disabled={isLoading}
+              aria-label={t.chat.useLocation}
+              aria-busy={nearbyPhase === "locating"}
+              className={cn(
+                "shrink-0 h-[38px] w-[38px] flex items-center justify-center rounded-md border transition-colors disabled:opacity-50 cursor-pointer",
+                !location.trim()
+                  ? "border-primary bg-primary/10 text-primary-strong hover:bg-primary/20"
+                  : "border-input bg-background text-muted-foreground hover:text-foreground hover:bg-muted",
+              )}
+            >
+              {nearbyPhase === "locating"
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <LocateFixed className="w-4 h-4" />}
+            </button>
+          )}
 
           <Button
             onClick={submit}
@@ -983,26 +1004,6 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           </Button>
         </div>
 
-      {/* ── Active-location token (replaces the old nearby block). Shown whenever
-          a GPS fix is live, independent of any visible mode; ✕ drops the fix. ── */}
-      {district !== null && (
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="inline-flex items-center gap-1.5 max-w-full rounded-full bg-primary/10 text-primary-strong pl-2.5 pr-1 py-1 text-xs font-medium">
-            <LocateFixed className="w-3 h-3 shrink-0" aria-hidden />
-            <span className="truncate">{district || t.chat.modeNearby}</span>
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" aria-hidden />
-            <button
-              type="button"
-              onClick={clearLocationToken}
-              aria-label={t.chat.clearLocation}
-              title={t.chat.locationActive(district)}
-              className="shrink-0 ml-0.5 rounded-full p-0.5 hover:bg-primary/20 transition-colors cursor-pointer"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </span>
-        </div>
-      )}
       {nearbyPhase === "locating" && (
         <p role="status" className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Loader2 className="w-3 h-3 animate-spin" aria-hidden />
