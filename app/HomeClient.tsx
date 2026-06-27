@@ -1288,13 +1288,23 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // ResultsList are hidden via `display: none` so their internal state survives.
   return (
     <>
+    {/* SplashOverlay must be the FIRST child here too (mirrors the mobile path) so
+        React reconciles it by position and keeps the SAME instance across the
+        isMobile flip (useIsMobile starts false → first render is this desktop path,
+        then flips true pre-paint). On iOS the desktop-path render already passes the
+        splash's own mobile check (innerWidth<768 + pointer:coarse) and marks the
+        splash "shown" via splashAlreadyShownThisSession()'s side effect; if a skip
+        link sits at index 0 instead, the flip remounts SplashOverlay and the fresh
+        instance sees "already shown" → the splash never plays. The skip link stays
+        the first FOCUSABLE element regardless (SplashOverlay is an aria-hidden,
+        non-focusable div), so the WCAG skip-link requirement is unaffected. */}
+    <SplashOverlay />
     <a
       href="#main-content"
       className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-2 focus-visible:left-2 focus-visible:z-50 focus-visible:px-4 focus-visible:py-2 focus-visible:rounded-md focus-visible:bg-primary focus-visible:text-primary-foreground focus-visible:shadow-lg"
     >
       {t.common.skipToContent}
     </a>
-    <SplashOverlay />
     {showRace && <WheelchairRace onDone={() => setShowRace(false)} />}
     {showIntlHint && intlTier && (
       <IntlHintBanner tier={intlTier} onActivate={activateIntlFromHint} onClose={dismissIntlHint} />
