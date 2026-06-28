@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import dynamic from "next/dynamic"
 import Script from "next/script"
 import Link from "next/link"
-import { Map, List, SlidersHorizontal, Compass, ChevronRight, LocateFixed, CheckCircle2 } from "lucide-react"
+import { Map, List, SlidersHorizontal, Compass, ChevronRight, LocateFixed, CheckCircle2, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { hapticLight } from "@/lib/native/haptics"
@@ -177,6 +177,11 @@ export default function MobileLayout({
   const activeFilterCount = [filters.entrance, filters.toilet, filters.parking, filters.seating, filters.onlyVerified].filter(Boolean).length
 
   const resultCount = places.length
+
+  // "Search here" runner reported by MapView when the user pans away from the
+  // search centre (null = no pending pan). Rendered as a pill inline next to the
+  // count pill so the two never overlap on small screens.
+  const [searchHereRun, setSearchHereRun] = useState<(() => void) | null>(null)
 
   const allTabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "results", label: t.results.title ?? "Ergebnisse", icon: <List className="w-5 h-5" /> },
@@ -381,20 +386,37 @@ export default function MobileLayout({
 
         {/* Map tab — lazy-mounted so Leaflet initializes in a visible container */}
         <div className={cn("h-full relative", activeTab !== "map" && "hidden")}>
-          {/* Result count pill — top-left, tapping switches to results list.
-              Hidden in focus mode: it points at the (now irrelevant) venue results. */}
-          {hasSearched && !isLoading && resultCount > 0 && !amenityActiveBool && (
-            <button
-              onClick={() => { hapticLight(); setActiveTab("results") }}
+          {/* Top-left pill row — count pill + (when the user has panned) the
+              "search here" pill, flowing side-by-side with a small gap like the
+              category chips. Hidden in focus mode: the count points at the (now
+              irrelevant) venue results. */}
+          {!amenityActiveBool && ((hasSearched && !isLoading && resultCount > 0) || searchHereRun) && (
+            <div
               className={cn(
-                "absolute top-3 left-14 z-[1000] flex items-center gap-1.5 rounded-full bg-card/95 backdrop-blur-sm border border-border shadow-md px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors",
+                "absolute top-3 left-14 z-[1000] flex items-center gap-1.5 transition-opacity",
                 mapPopupOpen && "opacity-0 pointer-events-none",
               )}
-              aria-label={t.results.title}
             >
-              <List className="w-3.5 h-3.5 text-primary shrink-0" />
-              <span>{t.results.count(resultCount)}</span>
-            </button>
+              {hasSearched && !isLoading && resultCount > 0 && (
+                <button
+                  onClick={() => { hapticLight(); setActiveTab("results") }}
+                  className="flex items-center gap-1.5 rounded-full bg-card/95 backdrop-blur-sm border border-border shadow-md px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                  aria-label={t.results.title}
+                >
+                  <List className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span>{t.results.count(resultCount)}</span>
+                </button>
+              )}
+              {searchHereRun && (
+                <button
+                  onClick={() => { hapticLight(); searchHereRun() }}
+                  className="flex items-center gap-1.5 rounded-full bg-card/95 backdrop-blur-sm border border-border shadow-md px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                >
+                  <Search className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
+                  <span>{t.map.searchHere}</span>
+                </button>
+              )}
+            </div>
           )}
           {/* Amenity count pill — same affordance during a WC/parking search, so
               the distance-sorted spot list is one tap (and one Tab-stop) away.
@@ -437,6 +459,8 @@ export default function MobileLayout({
               onFocusSearchHere={onAmenitySearchHere}
               showWeakParking={settings.showWeakParking}
               onSearchHere={onSearchHere}
+              hideSearchHereButton
+              onPanned={(run) => setSearchHereRun(() => run)}
               onLocate={onLocate}
               locatePanTrigger={locatePanTrigger}
               amenityPanTarget={amenityPanTarget}

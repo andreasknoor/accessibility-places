@@ -61,6 +61,14 @@ interface Props {
   // Called when the user pans the map and clicks "Search here". Receives the
   // new map centre; caller should re-run the last search at that location.
   onSearchHere?:           (center: { lat: number; lon: number }, radiusKm: number) => void
+  // When true, MapView does NOT render its own (centred) "search here" button.
+  // Instead it reports pan state via onPanned so the parent can render the pill
+  // inline next to the result-count pill (mobile). Has no effect in focus mode.
+  hideSearchHereButton?:   boolean
+  // Reports the "search here" availability up to the parent: a runner to execute
+  // the search (pan centre + viewport radius computed at click time), or null
+  // when no pan is pending. Only fires for the non-focus venue search.
+  onPanned?:               (run: (() => void) | null) => void
   // Called when the user taps the locate button. Should resolve with GPS coords
   // or reject on permission denial / timeout. MapView tracks loading + error state.
   onLocate?:               () => Promise<void>
@@ -231,6 +239,8 @@ export default function MapView({
   onFocusSearchHere,
   showWeakParking = false,
   onSearchHere,
+  hideSearchHereButton = false,
+  onPanned,
   onLocate,
   locatePanTrigger,
   amenityPanTarget = null,
@@ -271,7 +281,9 @@ export default function MapView({
   const userLocationRef     = useRef(userLocation)
   const searchCenterRef     = useRef(center)
   const onSearchHereRef     = useRef(onSearchHere)
+  const onPannedRef         = useRef(onPanned)
   const focusModeRef        = useRef(focusMode)
+  useEffect(() => { onPannedRef.current = onPanned }, [onPanned])
   useEffect(() => { onShowInResultsRef.current = onShowInResults }, [onShowInResults])
   useEffect(() => { onShowAmenityInResultsRef.current = onShowAmenityInResults }, [onShowAmenityInResults])
   useEffect(() => { placesRef.current = places }, [places])
@@ -282,6 +294,27 @@ export default function MapView({
 
   // Floating "search here" button state — set when user pans away from search centre.
   const [searchHereCenter, setSearchHereCenter] = useState<{ lat: number; lon: number } | null>(null)
+  // Report pan availability to the parent so it can render the "search here" pill
+  // inline next to the count pill (mobile). The runner computes the viewport
+  // radius at click time. Suppressed in focus mode (that path keeps its own
+  // always-centred control).
+  useEffect(() => {
+    const notify = onPannedRef.current
+    if (!notify) return
+    if (searchHereCenter && onSearchHereRef.current && !focusMode) {
+      const panned = searchHereCenter
+      notify(() => {
+        const map = mapInst.current
+        const viewportRadiusKm = map
+          ? map.getCenter().distanceTo(map.getBounds().getNorthEast()) / 1000
+          : 5
+        onSearchHereRef.current?.(panned, viewportRadiusKm)
+        setSearchHereCenter(null)
+      })
+    } else {
+      notify(null)
+    }
+  }, [searchHereCenter, focusMode])
   // Locate button interaction state
   const [locating,          setLocating]          = useState(false)
   const [locateErrorVisible, setLocateErrorVisible] = useState(false)
@@ -1102,11 +1135,11 @@ export default function MapView({
 
       {/* Hidden in amenity focus mode: "search here" re-runs the venue search and
           resets the focus layers, which would silently exit the parking/WC view. */}
-      {searchHereCenter && onSearchHere && !focusMode && (
-        // Pinned to the right, just left of the locate button (which sits at
-        // right-3 on mobile / right-14 on desktop), so it never overlaps the
-        // result-count pill in the top-left corner on small screens.
-        <div className={`absolute top-3 z-[1000] transition-opacity ${showFullscreenToggle ? "right-[6.5rem]" : "right-14"} ${popupOpen ? "opacity-0 pointer-events-none" : ""}`}>
+      {/* On mobile (hideSearchHereButton) the parent renders this pill inline next
+          to the count pill instead — see onPanned. This centred variant is the
+          desktop control, where there is no overlapping count pill. */}
+      {searchHereCenter && onSearchHere && !focusMode && !hideSearchHereButton && (
+        <div className={`absolute top-3 left-1/2 -translate-x-1/2 z-[1000] transition-opacity ${popupOpen ? "opacity-0 pointer-events-none" : ""}`}>
           <button
             onClick={() => {
               hapticLight()
@@ -1117,7 +1150,7 @@ export default function MapView({
               onSearchHere(searchHereCenter, viewportRadiusKm)
               setSearchHereCenter(null)
             }}
-            className="flex items-center gap-1.5 rounded-full border border-border bg-background/95 backdrop-blur-sm px-3 py-1.5 text-xs font-medium shadow-md hover:bg-muted transition-colors"
+            className="flex items-center gap-1.5 rounded-full border border-border bg-background/95 backdrop-blur-sm px-3 py-1.5 text-sm font-medium shadow-md hover:bg-muted transition-colors"
           >
             <Search className="w-3.5 h-3.5" aria-hidden />
             {t.map.searchHere}
