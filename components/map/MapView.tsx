@@ -1103,7 +1103,10 @@ export default function MapView({
       {/* Hidden in amenity focus mode: "search here" re-runs the venue search and
           resets the focus layers, which would silently exit the parking/WC view. */}
       {searchHereCenter && onSearchHere && !focusMode && (
-        <div className={`absolute top-3 left-1/2 -translate-x-1/2 z-[1000] transition-opacity ${popupOpen ? "opacity-0 pointer-events-none" : ""}`}>
+        // Pinned to the right, just left of the locate button (which sits at
+        // right-3 on mobile / right-14 on desktop), so it never overlaps the
+        // result-count pill in the top-left corner on small screens.
+        <div className={`absolute top-3 z-[1000] transition-opacity ${showFullscreenToggle ? "right-[6.5rem]" : "right-14"} ${popupOpen ? "opacity-0 pointer-events-none" : ""}`}>
           <button
             onClick={() => {
               hapticLight()
@@ -1114,7 +1117,7 @@ export default function MapView({
               onSearchHere(searchHereCenter, viewportRadiusKm)
               setSearchHereCenter(null)
             }}
-            className="flex items-center gap-1.5 rounded-full border border-border bg-background/95 backdrop-blur-sm px-3 py-1.5 text-sm font-medium shadow-md hover:bg-muted transition-colors"
+            className="flex items-center gap-1.5 rounded-full border border-border bg-background/95 backdrop-blur-sm px-3 py-1.5 text-xs font-medium shadow-md hover:bg-muted transition-colors"
           >
             <Search className="w-3.5 h-3.5" aria-hidden />
             {t.map.searchHere}
