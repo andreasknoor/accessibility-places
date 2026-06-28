@@ -69,6 +69,16 @@ interface Props {
   // the search (pan centre + viewport radius computed at click time), or null
   // when no pan is pending. Only fires for the non-focus venue search.
   onPanned?:               (run: (() => void) | null) => void
+  // Reports the live viewport as a potential search origin to the parent. Fires
+  // with { center, radiusKm } when a real user pan is pending (the same signal
+  // that drives the "search here" pill — so the reported origin and the visible
+  // pill are always in lockstep), or null otherwise (no pan / focus mode / after
+  // a search recentres the map). The parent stores this in a ref and reads it at
+  // chip-click time to use the visible area as the search origin. Suppressed in
+  // focus mode, which keeps its own "search this area" control — so this never
+  // fires during an active amenity search (scope cut: viewport origin applies
+  // only when entering venue/amenity searches, not while one is running).
+  onViewportChange?:       (v: { center: { lat: number; lon: number }; radiusKm: number } | null) => void
   // Called when the user taps the locate button. Should resolve with GPS coords
   // or reject on permission denial / timeout. MapView tracks loading + error state.
   onLocate?:               () => Promise<void>
@@ -241,6 +251,7 @@ export default function MapView({
   onSearchHere,
   hideSearchHereButton = false,
   onPanned,
+  onViewportChange,
   onLocate,
   locatePanTrigger,
   amenityPanTarget = null,
@@ -282,8 +293,10 @@ export default function MapView({
   const searchCenterRef     = useRef(center)
   const onSearchHereRef     = useRef(onSearchHere)
   const onPannedRef         = useRef(onPanned)
+  const onViewportChangeRef = useRef(onViewportChange)
   const focusModeRef        = useRef(focusMode)
   useEffect(() => { onPannedRef.current = onPanned }, [onPanned])
+  useEffect(() => { onViewportChangeRef.current = onViewportChange }, [onViewportChange])
   useEffect(() => { onShowInResultsRef.current = onShowInResults }, [onShowInResults])
   useEffect(() => { onShowAmenityInResultsRef.current = onShowAmenityInResults }, [onShowAmenityInResults])
   useEffect(() => { placesRef.current = places }, [places])
@@ -299,20 +312,27 @@ export default function MapView({
   // radius at click time. Suppressed in focus mode (that path keeps its own
   // always-centred control).
   useEffect(() => {
-    const notify = onPannedRef.current
-    if (!notify) return
-    if (searchHereCenter && onSearchHereRef.current && !focusMode) {
+    const notify  = onPannedRef.current
+    const report  = onViewportChangeRef.current
+    // A pending pan exists only when searchHereCenter is set by a genuine moveend
+    // (see the moveend handler: it requires searchCenterRef so this never fires on
+    // a cold map) and we are not in focus mode. The pill and the viewport-origin
+    // report are driven by the exact same condition, so they can never diverge.
+    const panPending = !!(searchHereCenter && onSearchHereRef.current && !focusMode)
+    if (panPending && searchHereCenter) {
+      const map = mapInst.current
+      const viewportRadiusKm = map
+        ? map.getCenter().distanceTo(map.getBounds().getNorthEast()) / 1000
+        : 5
       const panned = searchHereCenter
-      notify(() => {
-        const map = mapInst.current
-        const viewportRadiusKm = map
-          ? map.getCenter().distanceTo(map.getBounds().getNorthEast()) / 1000
-          : 5
+      notify?.(() => {
         onSearchHereRef.current?.(panned, viewportRadiusKm)
         setSearchHereCenter(null)
       })
+      report?.({ center: panned, radiusKm: viewportRadiusKm })
     } else {
-      notify(null)
+      notify?.(null)
+      report?.(null)
     }
   }, [searchHereCenter, focusMode])
   // Locate button interaction state
@@ -338,6 +358,15 @@ export default function MapView({
 
   // Dismiss the button whenever a new search result arrives (centre changed).
   useEffect(() => { setSearchHereCenter(null) }, [center])
+
+  // Forget any pending pan when the map is hidden (mobile: user switched away from
+  // the map tab). The "search here" pill — and therefore the viewport-as-origin
+  // signal it drives — is only visible on the map tab; without this, a chip tapped
+  // from the results tab would silently search a panned area the user can no longer
+  // see. Clearing here keeps the visible signal and the actual behaviour in step.
+  // `visible === false` (not `!visible`) so desktop, where the prop is omitted,
+  // never triggers it. (issue: map-viewport-as-origin, M2)
+  useEffect(() => { if (visible === false) setSearchHereCenter(null) }, [visible])
 
   // Pan to userLocation when locatePanTrigger increments (locate button tapped).
   // Stamp the move as programmatic so moveend does NOT show "search here" via the

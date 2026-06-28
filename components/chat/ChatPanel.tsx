@@ -8,22 +8,28 @@ import { useTranslations, useLocale } from "@/lib/i18n"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { cn } from "@/lib/utils"
 import { extractQuotedName } from "@/lib/llm"
-import { loadSettings } from "@/lib/settings"
+import { loadSettings, legacyChipIdxToCat } from "@/lib/settings"
 import { isReturningNow, loadSearchRun, loadActiveMode, saveNearbyLocation, loadNearbyLocation } from "@/lib/session-restore"
 import { getCurrentPosition, isGeolocationAvailable, watchPosition, clearWatchPosition, type GeoWatchId } from "@/lib/native/geolocation"
 import DevConsole from "@/components/easter-eggs/DevConsole"
-import type { AmenityType } from "@/lib/types"
+import type { AmenityType, Category } from "@/lib/types"
+import { venueViewportOrigin, amenityViewportOrigin, type ViewportOrigin } from "@/lib/search-ui"
 
 type Coords = { lat: number; lon: number }
 
 interface Props {
-  onSearch:          (query: string, coords?: Coords, nameHint?: string) => void
+  // radiusKm is supplied only by the viewport-origin chip path (a search of the
+  // visible map area); the parent then uses it as the radius AND syncs the slider.
+  onSearch:          (query: string, coords?: Coords, nameHint?: string, radiusKm?: number) => void
   onPlaceSearch?:    (nameHint: string, coords?: Coords) => void
   isLoading:         boolean
   onModeChange?:     (mode: "text" | "nearby") => void
   autoFocus?:        boolean
   initialLocation?:  string
-  initialChipIdx?:   number
+  // Stable category key of the chip to pre-select (null/undefined = "Alle"). The
+  // parent passes a category — never an index — so SEO deep-links and the saved
+  // default survive any chip reordering. Converted to a positional index internally.
+  initialChipCat?:   Category | null
   initialMode?:      "text" | "nearby" | "place"  // "place" is treated as "text" (legacy)
   onGpsResolved?:    (coords: Coords) => void
   locateTrigger?:    number
@@ -31,7 +37,10 @@ interface Props {
   // Amenity search chips (parking / WC) — single-select, at the front of the chip
   // strip. Selecting one runs an amenity search at the current location (GPS or the
   // active area); if no location is known yet, ChatPanel auto-locates first.
-  onAmenitySearch?:  (type: AmenityType, coords?: Coords) => void
+  // radiusKm + panned are supplied only by the viewport-origin chip path: panned
+  // (= the viewport centre) keeps the map from re-fitting and signals the parent to
+  // snap + persist the amenity radius slider, mirroring "search this area".
+  onAmenitySearch?:  (type: AmenityType, coords?: Coords, radiusKm?: number, panned?: Coords) => void
   // The amenity currently being searched (null = normal venue search). Drives chip
   // highlighting; owned by the parent so a venue search elsewhere clears it.
   amenityActive?:    AmenityType | null
@@ -56,23 +65,41 @@ interface Props {
   // Opt-in international mode (AppSettings.internationalMode). When true the
   // autocomplete widens from DACH to the supported-country allowlist.
   international?: boolean
+  // Reads the live map viewport when the user has panned (null otherwise). Called
+  // at chip-click time so a category/amenity chip searches the visible area after
+  // a pan. Stable identity (reads a parent ref) — no re-render on every map move.
+  // Returns null on a cold map / after a search recentres / in focus mode, so the
+  // chip falls through to its existing origin chain. See lib/search-ui helpers.
+  getViewportOrigin?: () => ViewportOrigin | null
 }
 
-const CHIPS = [
-  { icon: "🍽", de: "Restaurants",       en: "Restaurants"  },
-  { icon: "☕", de: "Cafés",             en: "Cafés"         },
-  { icon: "🏨", de: "Hotels",            en: "Hotels"        },
-  { icon: "🍻", de: "Biergärten",        en: "Beer Gardens"  },
-  { icon: "🍺", de: "Kneipen",           en: "Pubs"          },
-  { icon: "🏛", de: "Museen",            en: "Museums"       },
-  { icon: "🎭", de: "Theater",           en: "Theaters"      },
-  { icon: "🎬", de: "Kinos",             en: "Cinemas"       },
-  { icon: "🍦", de: "Eisdielen",         en: "Ice Cream"     },
-  { icon: "🍸", de: "Bars",              en: "Bars"          },
-  { icon: "🗺",  de: "Sehenswürdigkeiten", en: "Attractions" },
-  { icon: "💊", de: "Apotheken",         en: "Pharmacies"   },
-  { icon: "🩺", de: "Arztpraxen",        en: "Doctors"      },
+// Each chip carries its stable `cat` key. Identity/persistence (default chip, last
+// search, SEO deep-link) is by `cat`, never by array position — so this list can be
+// reordered or trimmed without breaking saved preferences. Mirror order in
+// SETTING_CHIPS (settings.ts) for visual consistency only.
+const CHIPS: { cat: Category; icon: string; de: string; en: string }[] = [
+  { cat: "restaurant", icon: "🍽", de: "Restaurants",       en: "Restaurants"   },
+  { cat: "cafe",       icon: "☕", de: "Cafés & Eis",        en: "Cafés & Ice Cream" },
+  { cat: "hotel",      icon: "🏨", de: "Hotels",            en: "Hotels"        },
+  { cat: "biergarten", icon: "🍻", de: "Biergärten",        en: "Beer Gardens"  },
+  { cat: "pub",        icon: "🍺", de: "Kneipen",           en: "Pubs"          },
+  { cat: "museum",     icon: "🏛", de: "Museen",            en: "Museums"       },
+  { cat: "theater",    icon: "🎭", de: "Theater",           en: "Theaters"      },
+  { cat: "cinema",     icon: "🎬", de: "Kinos",             en: "Cinemas"       },
+  { cat: "bar",        icon: "🍸", de: "Bars",              en: "Bars"          },
+  { cat: "attraction", icon: "🗺",  de: "Sehenswürdigkeiten", en: "Attractions" },
+  { cat: "pharmacy",   icon: "💊", de: "Apotheken",         en: "Pharmacies"    },
+  { cat: "doctors",    icon: "🩺", de: "Arztpraxen",        en: "Doctors"       },
 ]
+
+// Chip array index for a stable category key, or -1 / undefined when the category
+// has no chip (→ treated as "Alle"). The single place that converts the external
+// cat-keyed contract to the internal positional selectedIdx.
+function chipIdxForCat(cat: Category | null | undefined): number | undefined {
+  if (cat == null) return undefined
+  const i = CHIPS.findIndex((c) => c.cat === cat)
+  return i >= 0 ? i : undefined
+}
 
 type Mode        = "text" | "nearby"
 type NearbyPhase = "idle" | "locating" | { district: string; lat: number; lon: number } | "error"
@@ -155,7 +182,11 @@ async function geocodeLocation(q: string, international: boolean): Promise<Coord
   return { lat: data.lat, lon: data.lon }
 }
 
-export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipIdx, initialMode, onGpsResolved, locateTrigger, biasCoords, onAmenitySearch, amenityActive, onExitAmenity, onCategoryQueryChange, activeSearchCoords, searchCenter, international }: Props) {
+export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipCat, initialMode, onGpsResolved, locateTrigger, biasCoords, onAmenitySearch, amenityActive, onExitAmenity, onCategoryQueryChange, activeSearchCoords, searchCenter, international, getViewportOrigin }: Props) {
+  // Internal positional form of the cat-keyed prop. The mount/default effects below
+  // were written against an index; deriving it here keeps that logic untouched while
+  // the external contract stays category-keyed.
+  const initialChipIdx = chipIdxForCat(initialChipCat)
   const t = useTranslations()
   const { locale } = useLocale()
   const isMobile = useIsMobile()
@@ -245,12 +276,20 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     try {
       const saved = localStorage.getItem("ap_last_search")
       if (saved) {
-        const { idx, loc } = JSON.parse(saved)
-        if (typeof idx === "number" && idx >= 0 && idx < CHIPS.length) {
-          setSelectedIdx(idx)
-          selectedIdxRef.current = idx
+        const parsed = JSON.parse(saved)
+        const loc = parsed.loc
+        // New format stores the stable category key `cat`; legacy entries stored a
+        // positional `idx` — translate those once via the same table as the settings
+        // migration. `cat: null` / `idx: null` means an explicit "Alle" choice.
+        const hasCat = "cat" in parsed
+        const savedCat: Category | null = hasCat ? parsed.cat : legacyChipIdxToCat(parsed.idx)
+        const explicitAlle = hasCat ? parsed.cat === null : parsed.idx === null
+        const restoredIdx = chipIdxForCat(savedCat)
+        if (restoredIdx !== undefined) {
+          setSelectedIdx(restoredIdx)
+          selectedIdxRef.current = restoredIdx
           chipResolvedRef.current = true
-        } else if (idx === null) {
+        } else if (explicitAlle) {
           // Explicit "Alle" from the last search wins over the default setting.
           chipResolvedRef.current = true
         } else {
@@ -539,6 +578,17 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
         })
       return
     }
+    // 2. The user panned the map → search the visible area. Below a typed location
+    // (above) but ABOVE the active GPS fix: a visible pan ("search here" pill) is the
+    // newer, explicit spatial intent and must win over the nearby fix, else a default
+    // nearby search would always re-run at the GPS location and ignore the pan (the
+    // reported venue-chip bug, symmetric here). `panned` = the viewport centre so the
+    // parent snaps + persists the amenity radius (mirrors "search this area").
+    const vp = amenityViewportOrigin(getViewportOrigin?.())
+    if (vp) {
+      onAmenitySearch?.(type, vp.center, vp.radiusKm, vp.center)
+      return
+    }
     if (typeof nearbyPhase === "object") {
       onAmenitySearch?.(type, { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
       return
@@ -585,6 +635,26 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     setSelectedIdx(idx)
     selectedIdxRef.current = idx
     const label = chipLabel(idx)
+    // Highest-priority spatial intent: the user has panned the map (the "search
+    // here" pill is showing, so getViewportOrigin returns the visible viewport) and
+    // wants THIS area searched — even in nearby mode, where the active GPS fix would
+    // otherwise win and the pan be silently ignored (the reported bug). A freshly
+    // typed location still beats the viewport (chipIsUserTyped → vp null → falls
+    // through to the location branches). Leaving nearby mode is intended: the results
+    // are no longer "near me", so distance-from-me display must turn off. Clears any
+    // active venue pick (we're searching an area now, not "cafés near the venue").
+    const chipTyped = locationPart(location)
+    const chipIsUserTyped = !!location && location !== programmaticLocRef.current && !!chipTyped
+    const vp = chipIsUserTyped ? null : venueViewportOrigin(getViewportOrigin?.())
+    if (vp) {
+      if (mode === "nearby") exitNearbyState()
+      pickedVenueRef.current = null
+      setVenuePicked(false)
+      setSuggestions([])
+      setShowSuggestions(false)
+      onSearch(categoryQuery(label), vp.center, undefined, vp.radiusKm)
+      return
+    }
     if (mode === "nearby" && typeof nearbyPhase === "object") {
       // Active GPS fix: fire nearby search without dropping the fix (the location
       // token should stay visible — user is still "in nearby mode").
@@ -673,7 +743,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     }
     // Default for raw free text: area search (conservative — never silently
     // routes typed text to a venue lookup; venues are reached via the dropdown).
-    try { localStorage.setItem("ap_last_search", JSON.stringify({ idx: selectedIdx, loc: location.trim() })) } catch { /* ignore */ }
+    try { localStorage.setItem("ap_last_search", JSON.stringify({ cat: selectedIdx != null ? CHIPS[selectedIdx].cat : null, loc: location.trim() })) } catch { /* ignore */ }
     onSearch(buildQuery(rest), undefined, quoted || undefined)
   }
 
@@ -703,7 +773,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     pickedVenueRef.current = null
     setVenuePicked(false)
     setLocation(newLocation)
-    try { localStorage.setItem("ap_last_search", JSON.stringify({ idx: selectedIdx, loc: newLocation.trim() })) } catch { /* ignore */ }
+    try { localStorage.setItem("ap_last_search", JSON.stringify({ cat: selectedIdx != null ? CHIPS[selectedIdx].cat : null, loc: newLocation.trim() })) } catch { /* ignore */ }
     // A picked area is known to be a pure location — "in <display>" keeps an
     // all-categories search from re-parsing category terms out of city names.
     onSearch(selectedIdx === null ? `in ${s.display}` : buildQuery(s.display), undefined, quoted || undefined)
@@ -1015,10 +1085,11 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       {/* ── Chip strip (B2, issue #28): two visually distinct rows so the three
           kinds of control no longer read as one undifferentiated scroll.
           Row 1 = venue categories ("what kind of place"); Row 2 = amenity
-          quick-find actions ("find parking / a WC at this location"). Layout only
-          — `CHIPS` / `SETTING_CHIPS` / `SEO_CATEGORY_TO_CHIP_IDX` order is
-          untouched; amenity chips and „Alle" stay pseudo-chips outside `CHIPS`.
-          Each row is its own single-select radiogroup. ── */}
+          quick-find actions ("find parking / a WC at this location"). Layout only.
+          Chips are identified by their `cat` key, so `CHIPS` / `SETTING_CHIPS` order
+          is cosmetic now (no positional index contract); amenity chips and „Alle"
+          stay pseudo-chips outside `CHIPS`. Each row is its own single-select
+          radiogroup. ── */}
 
       {/* Row 1 — venue categories */}
       <div

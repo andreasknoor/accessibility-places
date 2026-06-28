@@ -31,7 +31,7 @@ const FAQ_CATEGORIES_EN: FaqCategory[] = [
       {
         id: "which-venues",
         q: "Which wheelchair-accessible venues can I find — restaurants, hotels, cafés?",
-        a: "Restaurants, cafés, bars, pubs, beer gardens, fast food / snack bars, hotels, hostels, holiday apartments, museums, theatres, cinemas, libraries, galleries, attractions and ice cream shops.",
+        a: "Restaurants, cafés & ice cream shops, bars, pubs, beer gardens, fast food / snack bars, hotels, hostels, holiday apartments, museums, theatres, cinemas, libraries, galleries and attractions.",
       },
       {
         id: "free",

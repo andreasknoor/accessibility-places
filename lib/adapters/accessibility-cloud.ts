@@ -117,7 +117,7 @@ function parkingDetails(props: any): ParkingDetails {
 function mapCategory(props: any): Category | undefined {
   const raw = props?.category
   const cat = (Array.isArray(raw) ? raw.map(String).join(" ") : String(raw ?? "")).toLowerCase()
-  if (cat.includes("ice_cream") || cat.includes("eisdiele") || cat.includes("gelato")) return "ice_cream"
+  if (cat.includes("ice_cream") || cat.includes("eisdiele") || cat.includes("gelato")) return "cafe"  // merged into cafe
   if (cat.includes("cafe") || cat.includes("coffee") || cat.includes("kaffee")) return "cafe"
   if (cat.includes("restaurant"))                                                 return "restaurant"
   if (cat.includes("biergarten"))                                                 return "biergarten"

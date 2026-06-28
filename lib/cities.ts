@@ -76,21 +76,6 @@ export const SEO_CATEGORY_TO_SLUG: Partial<Record<Category, string>> = Object.fr
   Object.entries(SEO_CATEGORY_SLUGS).map(([slug, cat]) => [cat, slug]),
 ) as Partial<Record<Category, string>>
 
-// CHIPS array index in ChatPanel for visual chip pre-selection
-// (undefined = no matching chip; search still works via query term)
-export const SEO_CATEGORY_TO_CHIP_IDX: Partial<Record<string, number>> = {
-  restaurant: 0,
-  cafe:       1,
-  hotel:      2,
-  biergarten: 3,
-  pub:        4,
-  museum:     5,
-  theater:    6,
-  cinema:     7,
-  bar:        9,
-  attraction: 10,
-}
-
 // Query term that parseQuery() server-side recognises for each category slug
 export const SEO_CATEGORY_QUERY_TERM: Record<string, { de: string; en: string }> = {
   cafe:       { de: "Cafés",             en: "Cafés" },

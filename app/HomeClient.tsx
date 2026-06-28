@@ -19,8 +19,8 @@ import SettingsSheet from "@/components/settings/SettingsSheet"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { DEFAULT_RADIUS_KM, RADIUS_MIN_KM, RADIUS_MAX_KM, regionForCoordinates, accessTierForCountry } from "@/lib/config"
-import { clampAmenityRadiusKm, snapAmenityRadiusKm, rerunTarget, expandRadiusTarget, canShowResultsRadiusPicker, amenitySpotKey } from "@/lib/search-ui"
-import { SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
+import { clampAmenityRadiusKm, snapAmenityRadiusKm, snapVenueRadiusKm, rerunTarget, expandRadiusTarget, canShowResultsRadiusPicker, amenitySpotKey, type ViewportOrigin } from "@/lib/search-ui"
+import { SEO_CATEGORY_SLUGS, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
 import { useSettings, loadSettings, DEFAULT_APP_SETTINGS } from "@/lib/settings"
@@ -149,6 +149,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // (null = normal venue search). `amenitySpots` holds the fetched results, shown
   // both as map markers (via the parking/toilet sources below) and as list cards.
   const [amenitySearch,       setAmenitySearch]       = useState<AmenityType | null>(null)
+  // Mirror of amenitySearch readable inside handleAmenitySearch without adding it to
+  // the callback's deps: lets the handler tell a fresh ENTRY into amenity mode (was
+  // null) from a "search this area" refine (already active), so only the latter keeps
+  // the map fixed while entry fits to the found spots.
+  const amenitySearchRef = useRef<AmenityType | null>(null)
   const [amenitySpots,        setAmenitySpots]        = useState<AmenityFeature[]>([])
   // Non-null when the user ran "search this area" (panned centre) during an amenity
   // search. null = anchored at the origin coords. Drives whether the map re-fits.
@@ -193,6 +198,13 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const logoTapTimer  = useRef<ReturnType<typeof setTimeout>>(undefined)
   const [gpsCoords,           setGpsCoords]           = useState<{ lat: number; lon: number } | null>(null)
   const gpsCoordRef  = useRef<{ lat: number; lon: number } | null>(null)
+  // Live map viewport when the user has panned, reported by MapView's onViewportChange
+  // (null otherwise — cold map / after a search recentres / focus mode). Held in a
+  // ref, not state: it updates on every pan but is only ever read at chip-click time
+  // (getViewportOrigin), so it must not trigger re-renders. Lets a category/amenity
+  // chip use the visible area as its search origin (issue: map-viewport-as-origin).
+  const viewportRef = useRef<ViewportOrigin | null>(null)
+  useEffect(() => { amenitySearchRef.current = amenitySearch }, [amenitySearch])
   // Native home-screen quick action ("Rollstuhl-Parkplatz/-WC suchen") in flight.
   // `pendingFocusAction` holds the amenity to focus once GPS is available; the
   // ref-mirror lets handleSearch suppress its focus-reset so a concurrent
@@ -679,6 +691,13 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
   }, [lastQuery, lastNameHint, categoryQuery, handleSearch])
 
+  // Read the live map viewport for the chip handlers (ChatPanel.getViewportOrigin).
+  // Stable identity (only reads a ref) so passing it to ChatPanel never re-renders
+  // on map pans. Returns the raw report; the chip path clamps it to the venue or
+  // amenity radius domain via the lib/search-ui helpers. Null when no pan is pending
+  // — the cold-map gate lives in MapView (it only reports once the map is positioned).
+  const getViewportOrigin = useCallback(() => viewportRef.current, [])
+
   const handleExpandRadius = useCallback(() => {
     if (!lastQuery) return
     const newRadius = Math.min(radiusKm * 2, RADIUS_MAX_KM)
@@ -826,6 +845,13 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   ) => {
     const center = coords ?? gpsCoordRef.current ?? gpsCoords
     if (!center) return  // ChatPanel handles the locate-first case
+    // A fresh entry into amenity mode (no amenity search active yet) should fit the
+    // map to the found spots — even when reached via a panned viewport — so the user
+    // sees the (≤5 km) results rather than staying on a wide, far-zoomed view with a
+    // tiny cluster in the middle. Only "search this area" (already active, panned)
+    // keeps the map fixed. So `panned` drives the radius write-back (below), but the
+    // map-fit suppression is gated on this being a refine, not an entry.
+    const wasEntry = amenitySearchRef.current === null
     amenityAbortRef.current?.abort()
     const controller = new AbortController()
     amenityAbortRef.current = controller
@@ -843,7 +869,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setFilterDebug(undefined)
     setSourceStates({})
     setSearchCenter(center)        // enables distance display + sorting
-    setAmenityPanned(panned ?? null)
+    setAmenityPanned(wasEntry ? null : (panned ?? null))  // entry fits to spots; refine stays put
     setAmenityHint(null)
     setIsLoading(true)
     track("amenity_search", { type })
@@ -852,7 +878,17 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     // parkingRadiusKm setting) — NOT the venue radiusKm (1-50km). Sharing the
     // venue radius meant any chip switch silently re-ran at whatever radiusKm
     // happened to be, ignoring a radius the user had just chosen (finding F4).
-    const radius = radiusKmOverride ?? amenityRadiusKm
+    // When called with BOTH an explicit radius AND a panned centre (the viewport
+    // signature: viewport-origin chip or "search this area"), the radius came from
+    // the map viewport — snap it and sync the slider/settings so the FilterPanel
+    // reflects what was actually searched (F4). The plain chip paths (no radius, or
+    // radius without panned, i.e. the FilterPanel slider commit) are untouched.
+    let radius = radiusKmOverride ?? amenityRadiusKm
+    if (radiusKmOverride != null && panned) {
+      radius = snapAmenityRadiusKm(radiusKmOverride)
+      setAmenityRadiusKm(radius)
+      updateSettings({ parkingRadiusKm: radius })
+    }
     try {
       const res = await fetch(
         `/api/nearby-parking?lat=${center.lat}&lon=${center.lon}&radius=${radius}&types=${type}${settings.internationalMode ? "&intl=1" : ""}`,
@@ -869,7 +905,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     } finally {
       if (amenityAbortRef.current === controller) setIsLoading(false)
     }
-  }, [gpsCoords, amenityRadiusKm, settings.internationalMode, noneFoundFor])
+  }, [gpsCoords, amenityRadiusKm, settings.internationalMode, noneFoundFor, updateSettings])
 
   // "Search this area" during an amenity search: re-fetch the active amenity type
   // at the panned map centre. Recorded as `panned` so the map fit no longer forces
@@ -1221,7 +1257,14 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         amenityRadiusKm={amenityRadiusKm}
         sourceStates={sourceStates}
         searchCenter={searchCenter}
-        onSearch={(query, coords, nameHint) => handleSearch(query, undefined, coords, nameHint)}
+        onSearch={(query, coords, nameHint, radiusKm) => {
+          // radiusKm is set only by the viewport-origin chip path (a search of the
+          // visible map area): use it as the radius AND sync the slider so the
+          // FilterPanel reflects what was searched (F4). Normal searches pass no
+          // radius and keep the user's current slider value untouched.
+          if (radiusKm != null) setRadiusKm(snapVenueRadiusKm(radiusKm))
+          handleSearch(query, radiusKm, coords, nameHint)
+        }}
         onPlaceSearch={handlePlaceSearch}
         onRerun={resolvedOnRerun}
         hasSourceError={hasSourceError}
@@ -1235,7 +1278,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         resetKey={resetKey}
         filterDebug={filterDebug}
         initialLocation={resetKey === 0 ? initialCity : undefined}
-        initialChipIdx={initialCategory && resetKey === 0 ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : settings.defaultChipIdx ?? undefined}
+        initialChipCat={initialCategory && resetKey === 0 ? SEO_CATEGORY_SLUGS[initialCategory] : (settings.defaultChipCat ?? undefined)}
         scrollToId={scrollToId}
         showParking={filters.alwaysShowParking}
         onToggleParking={hasParkingToggle ? handleToggleParking : undefined}
@@ -1277,6 +1320,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         gpsCoords={gpsCoords}
         onCategoryQueryChange={setCategoryQuery}
         activeSearchCoords={lastCoords}
+        getViewportOrigin={getViewportOrigin}
+        onViewportChange={(v) => { viewportRef.current = v }}
       />
       </>
     )
@@ -1335,14 +1380,21 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       <div role="search" className={cn(isFullscreen && "hidden")}>
         <ChatPanel
           key={resetKey}
-          onSearch={(query, coords, nameHint) => handleSearch(query, undefined, coords, nameHint)}
+          onSearch={(query, coords, nameHint, radiusKm) => {
+          // radiusKm is set only by the viewport-origin chip path (a search of the
+          // visible map area): use it as the radius AND sync the slider so the
+          // FilterPanel reflects what was searched (F4). Normal searches pass no
+          // radius and keep the user's current slider value untouched.
+          if (radiusKm != null) setRadiusKm(snapVenueRadiusKm(radiusKm))
+          handleSearch(query, radiusKm, coords, nameHint)
+        }}
           onPlaceSearch={handlePlaceSearch}
           international={settings.internationalMode}
           isLoading={isLoading}
           onModeChange={handleModeChange}
           autoFocus
           initialLocation={resetKey === 0 ? initialCity : undefined}
-          initialChipIdx={initialCategory && resetKey === 0 ? SEO_CATEGORY_TO_CHIP_IDX[initialCategory] : settings.defaultChipIdx ?? undefined}
+          initialChipCat={initialCategory && resetKey === 0 ? SEO_CATEGORY_SLUGS[initialCategory] : (settings.defaultChipCat ?? undefined)}
           initialMode={chatMode}
           onGpsResolved={handleGpsResolved}
           locateTrigger={locateTriggerKey}
@@ -1353,6 +1405,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           onCategoryQueryChange={setCategoryQuery}
           activeSearchCoords={lastCoords}
           searchCenter={searchCenter}
+          getViewportOrigin={getViewportOrigin}
         />
       </div>
 
@@ -1502,6 +1555,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             onFocusSearchHere={handleAmenitySearchHere}
             showWeakParking={settings.showWeakParking}
             onSearchHere={handleSearchHere}
+            onViewportChange={(v) => { viewportRef.current = v }}
             onLocate={isGeolocationAvailable() ? handleLocate : undefined}
             locatePanTrigger={locatePanTrigger}
             amenityPanTarget={amenityPanTarget}

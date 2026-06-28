@@ -2,7 +2,7 @@ import type { SourceId, Category } from "./types"
 
 // User-visible app version, shown in the header next to the subtitle.
 // Bump on every meaningful release.
-export const APP_VERSION = "9.4"
+export const APP_VERSION = "9.6"
 
 export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
   reisen_fuer_alle:    1.00,
@@ -196,7 +196,7 @@ export const NOMINATIM_ENDPOINT =
 
 // OSM category → amenity/tourism tags
 export const CATEGORY_OSM_TAGS: Record<Category, { amenity?: readonly string[]; tourism?: readonly string[]; shop?: readonly string[] }> = {
-  cafe:        { amenity: ["cafe"] },
+  cafe:        { amenity: ["cafe", "ice_cream"] },  // merged: ice cream parlours are often only tagged amenity=cafe
   restaurant:  { amenity: ["restaurant"] },
   bar:         { amenity: ["bar"] },
   pub:         { amenity: ["pub"] },
@@ -211,7 +211,6 @@ export const CATEGORY_OSM_TAGS: Record<Category, { amenity?: readonly string[]; 
   library:     { amenity: ["library"] },
   gallery:     { tourism: ["gallery"], amenity: ["arts_centre"] },
   attraction:  { tourism: ["attraction", "theme_park"] },
-  ice_cream:   { amenity: ["ice_cream"] },
   pharmacy:    { amenity: ["pharmacy"] },
   doctors:     { amenity: ["doctors", "clinic"] },
   dentist:     { amenity: ["dentist"] },

@@ -5,7 +5,6 @@ import {
   CITY_MAP,
   SEO_CATEGORY_SLUGS,
   SEO_CATEGORY_TO_SLUG,
-  SEO_CATEGORY_TO_CHIP_IDX,
   SEO_CATEGORY_LABEL,
 } from "@/lib/cities"
 
@@ -27,19 +26,6 @@ describe("SEO_CATEGORY_TO_SLUG", () => {
     for (const [slug, cat] of Object.entries(SEO_CATEGORY_SLUGS)) {
       expect(SEO_CATEGORY_TO_SLUG[cat]).toBe(slug)
     }
-  })
-})
-
-describe("SEO_CATEGORY_TO_CHIP_IDX", () => {
-  it("only references slugs that exist in SEO_CATEGORY_SLUGS", () => {
-    for (const slug of Object.keys(SEO_CATEGORY_TO_CHIP_IDX)) {
-      expect(SEO_CATEGORY_SLUGS).toHaveProperty(slug)
-    }
-  })
-
-  it("has no duplicate chip indices", () => {
-    const indices = Object.values(SEO_CATEGORY_TO_CHIP_IDX).filter((v) => v !== undefined)
-    expect(new Set(indices).size).toBe(indices.length)
   })
 })
 

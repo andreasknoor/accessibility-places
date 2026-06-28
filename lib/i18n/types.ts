@@ -266,7 +266,6 @@ export interface Translations {
     library:     string
     gallery:     string
     attraction:  string
-    ice_cream:   string
     pharmacy:    string
     doctors:     string
     dentist:     string

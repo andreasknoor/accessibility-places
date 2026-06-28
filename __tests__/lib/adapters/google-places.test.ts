@@ -181,7 +181,7 @@ describe("fetchGooglePlaces", () => {
       categories: [
         "cafe", "restaurant", "bar", "pub", "biergarten", "fast_food",
         "hotel", "hostel", "apartment",
-        "museum", "theater", "cinema", "library", "gallery", "attraction", "ice_cream",
+        "museum", "theater", "cinema", "library", "gallery", "attraction",
       ],
     })
     expect(fetchMock).toHaveBeenCalledTimes(3)

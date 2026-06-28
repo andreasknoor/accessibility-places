@@ -1,11 +1,16 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
+import type { Category } from "@/lib/types"
 
 export interface AppSettings {
   defaultSearchMode:  "text" | "nearby" | null  // null = no preference (app default)
   defaultMobileView:  "results" | "map"
-  defaultChipIdx:     number | null   // null = "Alle" (all categories, the app default)
+  // Stable category key of the pre-selected chip (null = "Alle"/all categories, the
+  // app default). Keyed by Category — NOT a positional chip index — so reordering or
+  // removing a chip can never silently re-map a saved preference. Legacy installs
+  // that stored the old positional `defaultChipIdx` are migrated in loadSettings().
+  defaultChipCat:     Category | null
   sortOrder:          "confidence" | "distance"
   autoZoom:           boolean
   alwaysShowParking:  boolean
@@ -26,7 +31,7 @@ export interface AppSettings {
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   defaultSearchMode:  null,
   defaultMobileView:  "map",
-  defaultChipIdx:     null,
+  defaultChipCat:     null,
   sortOrder:          "confidence",
   autoZoom:           true,
   alwaysShowParking:  false,
@@ -37,22 +42,38 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   internationalMode:  false,
 }
 
-// Mirrors CHIPS in ChatPanel.tsx — same order and indices must stay in sync
-export const SETTING_CHIPS = [
-  { icon: "🍽", de: "Restaurants",         en: "Restaurants"  },
-  { icon: "☕", de: "Cafés",               en: "Cafés"         },
-  { icon: "🏨", de: "Hotels",              en: "Hotels"        },
-  { icon: "🍻", de: "Biergärten",          en: "Beer Gardens"  },
-  { icon: "🍺", de: "Kneipen",             en: "Pubs"          },
-  { icon: "🏛", de: "Museen",              en: "Museums"       },
-  { icon: "🎭", de: "Theater",             en: "Theaters"      },
-  { icon: "🎬", de: "Kinos",               en: "Cinemas"       },
-  { icon: "🍦", de: "Eisdielen",           en: "Ice Cream"     },
-  { icon: "🍸", de: "Bars",                en: "Bars"          },
-  { icon: "🗺",  de: "Sehenswürdigkeiten", en: "Attractions"   },
-  { icon: "💊", de: "Apotheken",           en: "Pharmacies"    },
-  { icon: "🩺", de: "Arztpraxen",          en: "Doctors"       },
-] as const
+// Mirrors CHIPS in ChatPanel.tsx. Each entry carries its stable `cat` key, so the
+// two arrays no longer need to share a positional index — only their visible order
+// should match for consistency. The default-chip picker stores `cat`, never an index.
+export const SETTING_CHIPS: { cat: Category; icon: string; de: string; en: string }[] = [
+  { cat: "restaurant", icon: "🍽", de: "Restaurants",       en: "Restaurants"   },
+  { cat: "cafe",       icon: "☕", de: "Cafés & Eis",        en: "Cafés & Ice Cream" },
+  { cat: "hotel",      icon: "🏨", de: "Hotels",            en: "Hotels"        },
+  { cat: "biergarten", icon: "🍻", de: "Biergärten",        en: "Beer Gardens"  },
+  { cat: "pub",        icon: "🍺", de: "Kneipen",           en: "Pubs"          },
+  { cat: "museum",     icon: "🏛", de: "Museen",            en: "Museums"       },
+  { cat: "theater",    icon: "🎭", de: "Theater",           en: "Theaters"      },
+  { cat: "cinema",     icon: "🎬", de: "Kinos",             en: "Cinemas"       },
+  { cat: "bar",        icon: "🍸", de: "Bars",              en: "Bars"          },
+  { cat: "attraction", icon: "🗺",  de: "Sehenswürdigkeiten", en: "Attractions" },
+  { cat: "pharmacy",   icon: "💊", de: "Apotheken",         en: "Pharmacies"    },
+  { cat: "doctors",    icon: "🩺", de: "Arztpraxen",        en: "Doctors"       },
+]
+
+// Pre-merge positional chip order (with the now-removed "Eisdielen" at index 8),
+// used once to translate a legacy persisted `defaultChipIdx` into a stable category
+// key. Index 8 maps to "cafe" because ice_cream was merged into cafe.
+const LEGACY_CHIP_IDX_TO_CAT: Category[] = [
+  "restaurant", "cafe", "hotel", "biergarten", "pub", "museum", "theater",
+  "cinema", "cafe", "bar", "attraction", "pharmacy", "doctors",
+]
+
+// Exported so ChatPanel can migrate its own legacy `ap_last_search` {idx} payload
+// with the exact same table. null/out-of-range → "Alle" (null).
+export function legacyChipIdxToCat(idx: number | null | undefined): Category | null {
+  if (typeof idx !== "number") return null
+  return LEGACY_CHIP_IDX_TO_CAT[idx] ?? null
+}
 
 const SETTINGS_KEY = "ap_settings"
 
@@ -61,9 +82,18 @@ export function loadSettings(): AppSettings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY)
     if (!raw) return DEFAULT_APP_SETTINGS
-    const parsed = { ...DEFAULT_APP_SETTINGS, ...JSON.parse(raw) }
+    const stored = JSON.parse(raw)
+    const parsed = { ...DEFAULT_APP_SETTINGS, ...stored }
     // Migrate legacy "place" mode (removed in v4.13) → "text"
     if (parsed.defaultSearchMode === "place") parsed.defaultSearchMode = "text"
+    // Migrate legacy positional defaultChipIdx → stable defaultChipCat (cafe+ice_cream
+    // merge). Guard on the RAW stored value: a legacy install has `defaultChipIdx` but
+    // no `defaultChipCat`, so this runs exactly once. Naturally idempotent — once
+    // defaultChipCat is persisted, the guard is false and the index is never re-read.
+    if (stored.defaultChipCat === undefined && stored.defaultChipIdx !== undefined) {
+      parsed.defaultChipCat = legacyChipIdxToCat(stored.defaultChipIdx)
+    }
+    delete (parsed as { defaultChipIdx?: unknown }).defaultChipIdx  // drop the legacy field
     return parsed
   } catch {
     return DEFAULT_APP_SETTINGS

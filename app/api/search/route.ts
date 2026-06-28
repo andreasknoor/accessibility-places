@@ -446,7 +446,7 @@ export async function POST(req: NextRequest) {
         // ── 5b. Category filter ──────────────────────────────────────────────
         // Adapters like A.Cloud have no server-side category filter and return
         // all accessible places in the radius. Post-filter here so a search for
-        // "ice_cream" doesn't surface cafés, restaurants, etc.
+        // e.g. "museum" doesn't surface cafés, restaurants, etc.
         const categoryFiltered = params.categories?.length
           ? wheelchairCanonical.filter((p) => params.categories!.includes(p.category))
           : wheelchairCanonical

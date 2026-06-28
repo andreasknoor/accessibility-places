@@ -19,7 +19,6 @@ export type Category =
   | "cafe" | "restaurant" | "bar" | "pub" | "biergarten" | "fast_food"
   | "hotel" | "hostel" | "apartment"
   | "museum" | "theater" | "cinema" | "library" | "gallery" | "attraction"
-  | "ice_cream"
   | "pharmacy" | "doctors" | "dentist" | "veterinary" | "hospital"
   | "chemist" | "supermarket" | "bakery" | "hairdresser"
   | "bank" | "post_office" | "zoo"

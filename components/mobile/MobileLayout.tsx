@@ -8,13 +8,13 @@ import { Map, List, SlidersHorizontal, Compass, ChevronRight, LocateFixed, Check
 import { cn } from "@/lib/utils"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { hapticLight } from "@/lib/native/haptics"
-import { amenitySpotKey } from "@/lib/search-ui"
+import { amenitySpotKey, type ViewportOrigin } from "@/lib/search-ui"
 import ChatPanel       from "@/components/chat/ChatPanel"
 import FilterPanel     from "@/components/filters/FilterPanel"
 import ResultsList     from "@/components/results/ResultsList"
 import LanguageSwitcher from "@/components/LanguageSwitcher"
 import SettingsSheet   from "@/components/settings/SettingsSheet"
-import type { Place, SearchFilters, ActiveSources, SourceId, SourceState, FilterDebug, ParkingSpot, AmenityFeature, AmenityType } from "@/lib/types"
+import type { Place, SearchFilters, ActiveSources, SourceId, SourceState, FilterDebug, ParkingSpot, AmenityFeature, AmenityType, Category } from "@/lib/types"
 import type { AppSettings } from "@/lib/settings"
 
 const MapView = dynamic(() => import("@/components/map/MapView"), { ssr: false })
@@ -36,8 +36,11 @@ interface Props {
   onRadius:      (r: number) => void
   sourceStates?: Partial<Record<SourceId, SourceState>>
   searchCenter?: { lat: number; lon: number }
-  onSearch:        (query: string, coords?: { lat: number; lon: number }, nameHint?: string) => void
+  onSearch:        (query: string, coords?: { lat: number; lon: number }, nameHint?: string, radiusKm?: number) => void
   onPlaceSearch?:  (nameHint: string, coords?: { lat: number; lon: number }) => void
+  // Map-viewport-as-search-origin: forwarded straight to ChatPanel / MapView.
+  getViewportOrigin?:  () => ViewportOrigin | null
+  onViewportChange?:   (v: ViewportOrigin | null) => void
   onRerun?:         () => void
   hasSourceError?:  boolean
   onExpandRadius?:  () => void
@@ -50,7 +53,7 @@ interface Props {
   resetKey?:         number
   filterDebug?:      FilterDebug
   initialLocation?:     string
-  initialChipIdx?:      number
+  initialChipCat?:      Category | null
   scrollToId?:          string
   showParking?:         boolean
   showToilets?:         boolean
@@ -65,7 +68,7 @@ interface Props {
   defaultMobileView:    "results" | "map"
   onGpsResolved?:       (coords: { lat: number; lon: number }) => void
   amenityActive?:       AmenityType | null
-  onAmenitySearch?:     (type: AmenityType, coords?: { lat: number; lon: number }) => void
+  onAmenitySearch?:     (type: AmenityType, coords?: { lat: number; lon: number }, radiusKm?: number, panned?: { lat: number; lon: number }) => void
   onExitAmenity?:       () => void
   amenityResults?:      AmenityFeature[]
   amenityHint?:         string
@@ -101,13 +104,14 @@ export default function MobileLayout({
   places, parkingSpots, toiletSpots, selectedId, onSelect, isLoading,
   filters, sources, radiusKm, onFilters, onSources, onRadius,
   sourceStates, searchCenter, onSearch, onPlaceSearch, onRerun, hasSourceError, onExpandRadius, onAmenityExpandRadius, onRadiusChange, hasSearched, error,
-  onReset, onLogoTap, resetKey, filterDebug, initialLocation, initialChipIdx, scrollToId: externalScrollToId,
+  onReset, onLogoTap, resetKey, filterDebug, initialLocation, initialChipCat, scrollToId: externalScrollToId,
   showParking, showToilets, onSetMapLayers, hasToiletData, onToggleParking, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
   onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, onStartNearby, locateTrigger, onSwitchToText,
   chatMode, onChatModeChange, biasCoords, onSearchHere, onLocate, locatePanTrigger, gpsCoords, onCategoryQueryChange, activeSearchCoords,
   amenityActive, onAmenitySearch, onExitAmenity, amenityResults, amenityHint, amenitySearchCenter, onAmenitySearchHere, onAmenityRadius, amenityRadiusKm, intlNotice, placeSearchName,
   onAmenitySelect, selectedAmenityKey, onAmenityMarkerClick, amenityPanTarget, amenityPanTrigger,
+  getViewportOrigin, onViewportChange,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   // Focus the search input after a deliberate switch into text mode (e.g. tapping
@@ -128,7 +132,7 @@ export default function MobileLayout({
   }
 
   // All search-triggering actions switch to the configured default view
-  const handleSearch = (query: string, coords?: { lat: number; lon: number }, nameHint?: string) => { setActiveTab(defaultMobileView ?? "results"); onSearch(query, coords, nameHint) }
+  const handleSearch = (query: string, coords?: { lat: number; lon: number }, nameHint?: string, radiusKm?: number) => { setActiveTab(defaultMobileView ?? "results"); onSearch(query, coords, nameHint, radiusKm) }
   const handleRerun = onRerun ? () => { setActiveTab(defaultMobileView ?? "results"); onRerun() } : undefined
   const handleExpandRadius = onExpandRadius ? () => { setActiveTab(defaultMobileView ?? "results"); onExpandRadius() } : undefined
   const handleAmenityExpandRadius = onAmenityExpandRadius ? () => { setActiveTab(defaultMobileView ?? "results"); onAmenityExpandRadius() } : undefined
@@ -150,9 +154,9 @@ export default function MobileLayout({
   // An amenity chip search switches to the configured default view (its results
   // appear as list cards AND map markers), like any other search.
   const handleAmenitySearch = onAmenitySearch
-    ? (type: AmenityType, coords?: { lat: number; lon: number }) => {
+    ? (type: AmenityType, coords?: { lat: number; lon: number }, radiusKm?: number, panned?: { lat: number; lon: number }) => {
         setActiveTab(defaultMobileView ?? "results")
-        onAmenitySearch(type, coords)
+        onAmenitySearch(type, coords, radiusKm, panned)
       }
     : undefined
   const t = useTranslations()
@@ -241,7 +245,7 @@ export default function MobileLayout({
 
       {/* ── Search bar (always visible) ── */}
       <div role="search">
-        <ChatPanel key={resetKey} autoFocus={autoFocusInput} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipIdx={initialChipIdx} initialMode={chatMode} onGpsResolved={onGpsResolved} locateTrigger={locateTrigger} biasCoords={biasCoords} onAmenitySearch={handleAmenitySearch} amenityActive={amenityActive} onExitAmenity={onExitAmenity} onCategoryQueryChange={onCategoryQueryChange} activeSearchCoords={activeSearchCoords} searchCenter={searchCenter} international={settings.internationalMode} />
+        <ChatPanel key={resetKey} autoFocus={autoFocusInput} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipCat={initialChipCat} initialMode={chatMode} onGpsResolved={onGpsResolved} locateTrigger={locateTrigger} biasCoords={biasCoords} onAmenitySearch={handleAmenitySearch} amenityActive={amenityActive} onExitAmenity={onExitAmenity} onCategoryQueryChange={onCategoryQueryChange} activeSearchCoords={activeSearchCoords} searchCenter={searchCenter} international={settings.internationalMode} getViewportOrigin={getViewportOrigin} />
       </div>
 
       {/* Global search progress — covers every trigger (search here, filter, radius,
@@ -459,6 +463,7 @@ export default function MobileLayout({
               onFocusSearchHere={onAmenitySearchHere}
               showWeakParking={settings.showWeakParking}
               onSearchHere={onSearchHere}
+              onViewportChange={onViewportChange}
               hideSearchHereButton
               onPanned={(run) => setSearchHereRun(() => run)}
               onLocate={onLocate}

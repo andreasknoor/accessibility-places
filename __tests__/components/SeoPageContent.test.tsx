@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest"
 import { render, screen } from "@testing-library/react"
 import SeoPageContent from "@/components/seo/SeoPageContent"
 import { buildAttribute } from "@/lib/matching/merge"
-import { CITIES, SEO_CATEGORY_TO_CHIP_IDX, SEO_CATEGORY_LABEL } from "@/lib/cities"
+import { CITIES, SEO_CATEGORY_SLUGS, SEO_CATEGORY_LABEL } from "@/lib/cities"
 import type { Place } from "@/lib/types"
 
 // Validity data changes with every cron run — mock it so tests stay stable.
@@ -55,8 +55,8 @@ describe("SeoPageContent — confidence badge", () => {
 })
 
 describe("SeoPageContent — related categories", () => {
-  const chipSlugs    = Object.keys(SEO_CATEGORY_TO_CHIP_IDX)
-  const nonChipSlugs = Object.keys(SEO_CATEGORY_LABEL).filter((s) => !(s in SEO_CATEGORY_TO_CHIP_IDX))
+  const chipSlugs    = Object.keys(SEO_CATEGORY_SLUGS)
+  const nonChipSlugs = Object.keys(SEO_CATEGORY_LABEL).filter((s) => !(s in SEO_CATEGORY_SLUGS))
 
   it("shows all chip-backed categories except the current one", () => {
     render(<SeoPageContent locale="de" city={BERLIN} categorySlug="restaurant" places={[]} />)

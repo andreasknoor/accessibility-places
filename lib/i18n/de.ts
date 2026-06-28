@@ -275,7 +275,7 @@ const de: Translations = {
     locateError:            "Standort nicht verfügbar",
   },
   categories: {
-    cafe:        "Café",
+    cafe:        "Café & Eis",
     restaurant:  "Restaurant",
     bar:         "Bar",
     pub:         "Kneipe / Pub",
@@ -290,7 +290,6 @@ const de: Translations = {
     library:     "Bibliothek",
     gallery:     "Galerie",
     attraction:  "Sehenswürdigkeit",
-    ice_cream:   "Eisdiele",
     pharmacy:    "Apotheke",
     doctors:     "Arztpraxis",
     dentist:     "Zahnarzt",

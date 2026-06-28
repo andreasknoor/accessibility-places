@@ -86,8 +86,8 @@ const FROM_ACCESLIBRE: Partial<Record<string, Category>> = {
   "barbier":                           "hairdresser",
   "banques-caisses-depargne":          "bank",
   "bureau-de-poste":                   "post_office",
-  "glacier":                           "ice_cream",
-  "confiserie":                        "ice_cream",
+  "glacier":                           "cafe",  // merged: ice cream → cafe
+  "confiserie":                        "cafe",  // merged: ice cream → cafe
 }
 
 // Reverse map (our Category → AccèsLibre activite slugs), derived from

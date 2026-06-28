@@ -8,6 +8,7 @@ import { useTranslations, useLocale } from "@/lib/i18n"
 import { SETTING_CHIPS, DEFAULT_APP_SETTINGS } from "@/lib/settings"
 import { cn } from "@/lib/utils"
 import type { AppSettings } from "@/lib/settings"
+import type { Category } from "@/lib/types"
 
 interface Props {
   settings:           AppSettings
@@ -173,15 +174,12 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
             </Row>
             <Row label={ts.defaultCategory}>
               <SelectInput
-                value={settings.defaultChipIdx ?? -1}
-                onChange={(v) => {
-                  const n = parseInt(v)
-                  onUpdate({ defaultChipIdx: n === -1 ? null : n })
-                }}
+                value={settings.defaultChipCat ?? ""}
+                onChange={(v) => onUpdate({ defaultChipCat: v === "" ? null : (v as Category) })}
               >
-                <option value={-1}>{ts.categoryNone}</option>
-                {SETTING_CHIPS.map((chip, i) => (
-                  <option key={i} value={i}>
+                <option value="">{ts.categoryNone}</option>
+                {SETTING_CHIPS.map((chip) => (
+                  <option key={chip.cat} value={chip.cat}>
                     {chip.icon} {locale === "en" ? chip.en : chip.de}
                   </option>
                 ))}

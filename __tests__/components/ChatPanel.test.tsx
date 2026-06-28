@@ -451,22 +451,22 @@ describe("ChatPanel clear button", () => {
   })
 })
 
-// ─── initialChipIdx / defaultChipIdx restore ────────────────────────────────
+// ─── initialChipCat / defaultChipCat restore ────────────────────────────────
 
-describe("ChatPanel initialChipIdx restore", () => {
-  it("selects the chip at initialChipIdx when no saved last-search exists", () => {
+describe("ChatPanel initialChipCat restore", () => {
+  it("selects the chip for initialChipCat when no saved last-search exists", () => {
     localStorage.clear()
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" initialChipIdx={2} />)
-    // chip index 2 = Hotels
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" initialChipCat="hotel" />)
     const buttons = screen.getAllByRole("radio")
     const hotelChip = buttons.find((b) => b.textContent?.includes("Hotels"))
     expect(hotelChip).toBeDefined()
     expect(hotelChip).toHaveClass("bg-primary")
   })
 
-  it("saved last-search chip overrides initialChipIdx", () => {
+  it("saved last-search chip overrides initialChipCat (legacy {idx} payload still migrates)", () => {
+    // Legacy positional payload: idx 1 = old "Cafés" chip → migrates to cat "cafe".
     localStorage.setItem("ap_last_search", JSON.stringify({ idx: 1, loc: "Berlin" }))
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" initialChipIdx={2} />)
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" initialChipCat="hotel" />)
     const buttons = screen.getAllByRole("radio")
     const cafeChip  = buttons.find((b) => b.textContent?.includes("Cafés"))
     const hotelChip = buttons.find((b) => b.textContent?.includes("Hotels"))
@@ -474,16 +474,15 @@ describe("ChatPanel initialChipIdx restore", () => {
     expect(hotelChip).not.toHaveClass("bg-primary")
   })
 
-  it("falls back to initialChipIdx when saved idx is invalid", () => {
+  it("falls back to initialChipCat when saved idx is invalid", () => {
     localStorage.setItem("ap_last_search", JSON.stringify({ idx: 999, loc: "Berlin" }))
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" initialChipIdx={3} />)
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" initialChipCat="biergarten" />)
     const buttons = screen.getAllByRole("radio")
-    // chip index 3 = Biergärten
     const biergartChip = buttons.find((b) => b.textContent?.includes("Biergärten"))
     expect(biergartChip).toHaveClass("bg-primary")
   })
 
-  it("defaults to the 'Alle' chip (all categories) when neither saved search nor initialChipIdx exist", () => {
+  it("defaults to the 'Alle' chip (all categories) when neither saved search nor initialChipCat exist", () => {
     localStorage.clear()
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
     const buttons = screen.getAllByRole("radio")
@@ -494,8 +493,8 @@ describe("ChatPanel initialChipIdx restore", () => {
   })
 
   it("restores a saved null chip ('Alle') without falling back to a category", () => {
-    localStorage.setItem("ap_last_search", JSON.stringify({ idx: null, loc: "Berlin" }))
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" initialChipIdx={2} />)
+    localStorage.setItem("ap_last_search", JSON.stringify({ cat: null, loc: "Berlin" }))
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" initialChipCat="hotel" />)
     const buttons = screen.getAllByRole("radio")
     const alleChip = buttons.find((b) => b.textContent?.includes("Alle"))
     expect(alleChip).toHaveClass("bg-primary")

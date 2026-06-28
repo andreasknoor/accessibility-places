@@ -31,7 +31,7 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
       {
         id: "which-venues",
         q: "Welche barrierefreien Orte kann ich finden — Restaurants, Hotels, Cafés?",
-        a: "Restaurants, Cafés, Bars, Kneipen, Biergärten, Imbisse, Hotels, Hostels, Ferienwohnungen, Museen, Theater, Kinos, Bibliotheken, Galerien, Sehenswürdigkeiten und Eisdielen.",
+        a: "Restaurants, Cafés & Eisdielen, Bars, Kneipen, Biergärten, Imbisse, Hotels, Hostels, Ferienwohnungen, Museen, Theater, Kinos, Bibliotheken, Galerien und Sehenswürdigkeiten.",
       },
       {
         id: "free",

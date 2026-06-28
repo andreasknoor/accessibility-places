@@ -275,7 +275,7 @@ const en: Translations = {
     locateError:            "Location unavailable",
   },
   categories: {
-    cafe:        "Café",
+    cafe:        "Café & Ice Cream",
     restaurant:  "Restaurant",
     bar:         "Bar",
     pub:         "Pub",
@@ -290,7 +290,6 @@ const en: Translations = {
     library:     "Library",
     gallery:     "Gallery",
     attraction:  "Attraction",
-    ice_cream:   "Ice Cream Shop",
     pharmacy:    "Pharmacy",
     doctors:     "Doctor's Office",
     dentist:     "Dentist",

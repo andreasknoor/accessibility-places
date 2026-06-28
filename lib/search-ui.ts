@@ -7,7 +7,45 @@
 // JSX ternaries.
 
 import type { AmenityType } from "@/lib/types"
-import { RADIUS_MAX_KM } from "@/lib/config"
+import { RADIUS_MIN_KM, RADIUS_MAX_KM } from "@/lib/config"
+
+export interface ViewportOrigin {
+  center: { lat: number; lon: number }
+  radiusKm: number
+}
+
+export function clampVenueRadiusKm(km: number): number {
+  return Math.min(Math.max(km, RADIUS_MIN_KM), RADIUS_MAX_KM)
+}
+
+// Like snapAmenityRadiusKm but for the venue domain (1–50 km): the viewport radius
+// arrives as a raw centre→corner float with ~10 decimals, and the viewport-origin
+// chip writes it back to the FilterPanel slider — so snap to one decimal first or
+// the slider shows e.g. "12.3478234123 km".
+export function snapVenueRadiusKm(km: number): number {
+  return clampVenueRadiusKm(Math.round(km * 10) / 10)
+}
+
+// Resolve the live map viewport into a venue/amenity search origin, used by the
+// category + amenity chips so that — after the user has panned the map — the next
+// chip search refers to the visible area rather than the stale previous origin.
+//
+// The cold-map gate is NOT re-implemented here: MapView only reports a non-null
+// viewport once a real search/GPS fix has positioned the map (its moveend handler
+// requires searchCenterRef), and reports null on the default overview, after a
+// search recentres, and in focus mode. So a null report means "no eligible
+// viewport" and the caller falls through to its existing origin chain (typed
+// location, GPS fix, activeSearchCoords, …). These helpers only clamp the raw
+// centre→corner radius into the right domain (venue 1–50 km, amenity 0.05–5 km).
+export function venueViewportOrigin(v: ViewportOrigin | null | undefined): ViewportOrigin | null {
+  if (!v) return null
+  return { center: v.center, radiusKm: snapVenueRadiusKm(v.radiusKm) }
+}
+
+export function amenityViewportOrigin(v: ViewportOrigin | null | undefined): ViewportOrigin | null {
+  if (!v) return null
+  return { center: v.center, radiusKm: snapAmenityRadiusKm(v.radiusKm) }
+}
 
 // Stable identity for an amenity spot, shared by the map markers and the result
 // list so a marker click can highlight the matching card (and vice-versa). OSM

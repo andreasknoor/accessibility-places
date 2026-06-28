@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { Accessibility, Map, Globe } from "lucide-react"
 import type { Place, A11yValue, EntranceDetails, ToiletDetails, ParkingDetails } from "@/lib/types"
-import { CITIES, SEO_CATEGORY_LABEL, SEO_CATEGORY_TO_CHIP_IDX, type City } from "@/lib/cities"
+import { CITIES, SEO_CATEGORY_LABEL, SEO_CATEGORY_SLUGS, type City } from "@/lib/cities"
 import { confidenceLabel } from "@/lib/matching/merge"
 import { hasData } from "@/lib/seo-validity"
 import NavigationProgress from "@/components/seo/NavigationProgress"
@@ -105,7 +105,6 @@ const CATEGORY_SCHEMA_TYPE: Record<string, string> = {
   library:     "Library",
   gallery:     "ArtGallery",
   attraction:  "TouristAttraction",
-  ice_cream:   "FoodEstablishment",
 }
 
 // ─── amenityFeature builder ──────────────────────────────────────────────────
@@ -420,7 +419,7 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
   const backLabel              = locale === "de" ? "← Zur Suche" : "← Back to search"
 
   const relatedCategories = Object.entries(SEO_CATEGORY_LABEL)
-    .filter(([slug]) => slug !== categorySlug && slug in SEO_CATEGORY_TO_CHIP_IDX && hasData(city.slug, slug))
+    .filter(([slug]) => slug !== categorySlug && slug in SEO_CATEGORY_SLUGS && hasData(city.slug, slug))
 
   const breadcrumbItems = [
     { label: "Accessible Places", href: homeUrl },

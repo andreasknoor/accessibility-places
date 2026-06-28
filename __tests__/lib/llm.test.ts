@@ -202,13 +202,13 @@ describe("parseQuery", () => {
 
   it("'in <city>' (no category part) returns all categories", () => {
     const r = parseQuery("in Berlin")
-    expect(r.categories.length).toBe(28)
+    expect(r.categories.length).toBe(27)
     expect(r.locationQuery).toBe("Berlin")
   })
 
   it("does not infer categories from the location part: city 'Essen' is not a restaurant hint", () => {
     const r = parseQuery("in Essen")
-    expect(r.categories.length).toBe(28)
+    expect(r.categories.length).toBe(27)
     expect(r.locationQuery).toBe("Essen")
   })
 
@@ -221,7 +221,7 @@ describe("parseQuery", () => {
   it("plain city name without 'in' geocodes as location", () => {
     const r = parseQuery("Berlin")
     expect(r.locationQuery).toBe("Berlin")
-    expect(r.categories.length).toBe(28)
+    expect(r.categories.length).toBe(27)
   })
 
   it("free text with category term and 'in' scopes correctly ('Sushi in Hamburg')", () => {
@@ -239,8 +239,8 @@ describe("inferCategories — expanded hints", () => {
     expect(inferCategories("Pizzeria Napoli")).toContain("restaurant")
   })
 
-  it("maps Eiscafé to ice_cream (compound word not covered by 'eis' word boundary)", () => {
-    expect(inferCategories("Eiscafé")).toContain("ice_cream")
+  it("maps Eiscafé to cafe (ice cream merged into cafe; compound word not covered by 'eis' word boundary)", () => {
+    expect(inferCategories("Eiscafé")).toContain("cafe")
   })
 
   it("maps Stadtbibliothek to library (compound word)", () => {

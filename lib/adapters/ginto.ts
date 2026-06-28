@@ -43,7 +43,6 @@ const TO_GINTO: Partial<Record<Category, string>> = {
   pub:         "restaurant",
   biergarten:  "restaurant",
   fast_food:   "restaurant",
-  ice_cream:   "restaurant",
   hotel:       "hotel",
   hostel:      "group_house",
   apartment:   "holiday_home",

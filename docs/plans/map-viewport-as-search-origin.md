@@ -1,6 +1,6 @@
 # Map viewport as search origin (Concept A + D)
 
-**Status:** planned, not started
+**Status:** implemented (v9.5, 2026-06-28). See "Implementation notes" at the end.
 **Date:** 2026-06-28
 **Goal:** When the user works primarily with the map — pans/scrolls to a new area
 and *then* picks a category (venue chip or amenity chip) — the search should use
@@ -199,3 +199,57 @@ interfaces / MapView props), bump `APP_VERSION`.
 If implicit behaviour proves surprising for field-primary users: add an
 `AppSettings.searchAsMoveMap` toggle (default off), surfaced on the map, gating the
 viewport-origin behaviour. Same plumbing as above, guarded by the flag.
+
+---
+
+## Implementation notes (v9.5)
+
+Built with a prior risk analysis; three deviations from the plan above, all to
+reduce risk:
+
+1. **Signal = the "search here" pill, not a separate "has panned" flag (R1/R3).**
+   MapView's new `onViewportChange` fires from the *same* effect that drives the
+   pill (`searchHereCenter && !focusMode`), so the reported viewport origin and the
+   visible pill are in lockstep by construction — they can never diverge. The
+   cold-map gate is therefore NOT re-implemented: MapView's existing `moveend`
+   handler only sets `searchHereCenter` when `searchCenterRef` is set (i.e. the map
+   has been positioned by a search/GPS), so a cold/default-overview map reports
+   `null` and the chip falls through to its old origin chain. No `hasPositioned`
+   param was needed — one source of truth instead of two.
+
+2. **Origin resolved in `HomeClient`, read lazily by `ChatPanel` (R6).** The live
+   viewport lives in `HomeClient`'s `viewportRef` (a ref, not state — `moveend` is
+   high-frequency, but the value is only read at chip-click time). `ChatPanel` gets
+   a stable `getViewportOrigin()` callback (reads the ref → no re-render churn) and
+   keeps the precedence decision (it knows typed/nearby state). The clamp/snap is a
+   pure helper (`venueViewportOrigin` / `amenityViewportOrigin` in `lib/search-ui`).
+
+3. **Scope cut for the amenity-focus case (R2).** While an amenity search is
+   *running*, `focusMode` suppresses MapView's pan signal, so `getViewportOrigin()`
+   returns `null` and an in-focus chip re-select keeps using "search this area".
+   Viewport origin therefore applies when *entering* a venue/amenity search (the
+   common case: pan in venue results → pick a chip), not while one is active.
+
+**Precedence ordering:** the concrete wiring slots from sections 3/4 were followed
+(viewport branch *after* typed/nearby, *before* `activeSearchCoords`), which places
+viewport just below an active GPS nearby fix — a deliberate, documented choice that
+overrides the abstract "2 above 3" line in "Target behaviour".
+
+**Radius write-back (R7):** venue path syncs the 1–50 km slider in `HomeClient`'s
+`onSearch` wrapper; amenity path snaps + persists `parkingRadiusKm` inside
+`handleAmenitySearch`, gated on `radiusKmOverride != null && panned` (the viewport /
+"search this area" signature) so the plain chip and FilterPanel-slider paths are
+untouched. Reuses the existing `snapAmenityRadiusKm` / clamp helpers.
+
+**Files touched:** `MapView.tsx` (`onViewportChange` prop + report from the pan
+effect), `lib/search-ui.ts` (`clampVenueRadiusKm`, `venueViewportOrigin`,
+`amenityViewportOrigin`, `ViewportOrigin`), `HomeClient.tsx` (`viewportRef`,
+`getViewportOrigin`, `onSearch`/amenity write-back, MapView/ChatPanel wiring),
+`ChatPanel.tsx` (viewport branches in `selectChip`/`selectAmenity`, widened
+callbacks), `MobileLayout.tsx` (prop pass-through), tests in
+`__tests__/lib/search-ui.test.ts`. No new i18n strings (reuses the pill).
+
+**Not statically verifiable** (needs manual/AT testing — the pan signal is
+time-window + threshold based and not reproducible in jsdom): the actual pan→chip
+flows, that programmatic recenters (locate / SEO deep-link / autoZoom fit) don't
+arm a viewport origin, and that typed-location still wins over a pan.

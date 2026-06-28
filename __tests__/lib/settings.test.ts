@@ -56,7 +56,7 @@ describe("loadSettings", () => {
     const custom: AppSettings = {
       defaultSearchMode: "nearby",
       defaultMobileView: "map",
-      defaultChipIdx:    3,
+      defaultChipCat:    "biergarten",
       sortOrder:         "distance",
       autoZoom:          false,
       alwaysShowParking: true,
@@ -70,9 +70,29 @@ describe("loadSettings", () => {
     expect(loadSettings()).toEqual(custom)
   })
 
-  it("defaultChipIdx null roundtrips correctly", () => {
-    localStorageMock.setItem(KEY, JSON.stringify({ defaultChipIdx: null }))
-    expect(loadSettings().defaultChipIdx).toBeNull()
+  it("defaultChipCat null roundtrips correctly", () => {
+    localStorageMock.setItem(KEY, JSON.stringify({ defaultChipCat: null }))
+    expect(loadSettings().defaultChipCat).toBeNull()
+  })
+
+  it("migrates a legacy positional defaultChipIdx to a stable defaultChipCat", () => {
+    // Old "Bars" chip was at index 9 (pre cafe+ice_cream merge).
+    localStorageMock.setItem(KEY, JSON.stringify({ defaultChipIdx: 9 }))
+    const migrated = loadSettings()
+    expect(migrated.defaultChipCat).toBe("bar")
+    expect((migrated as unknown as Record<string, unknown>).defaultChipIdx).toBeUndefined()
+  })
+
+  it("maps the removed 'Eisdielen' chip (legacy index 8) to the merged cafe category", () => {
+    localStorageMock.setItem(KEY, JSON.stringify({ defaultChipIdx: 8 }))
+    expect(loadSettings().defaultChipCat).toBe("cafe")
+  })
+
+  it("does not re-migrate once defaultChipCat is set (idempotent)", () => {
+    // A stored value that already has the new key must be left untouched, even if a
+    // stale defaultChipIdx lingers alongside it.
+    localStorageMock.setItem(KEY, JSON.stringify({ defaultChipCat: "bar", defaultChipIdx: 0 }))
+    expect(loadSettings().defaultChipCat).toBe("bar")
   })
 
   it("defaultSearchMode null roundtrips correctly", () => {

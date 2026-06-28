@@ -16,7 +16,9 @@ import { nanoid } from "../utils"
 const BASE_URL = "https://places.googleapis.com/v1/places:searchNearby"
 
 const CATEGORY_TYPES: Record<Category, string[]> = {
-  cafe:        ["cafe", "coffee_shop"],
+  // Merged category: ice cream parlours (no dedicated ice_cream type — ice_cream_shop
+  // is the closest) live under cafe now, so a cafe search fans out to them too.
+  cafe:        ["cafe", "coffee_shop", "ice_cream_shop"],
   restaurant:  ["restaurant"],
   bar:         ["bar"],
   pub:         ["pub"],
@@ -34,8 +36,6 @@ const CATEGORY_TYPES: Record<Category, string[]> = {
   library:     ["library"],
   gallery:     ["art_gallery"],
   attraction:  ["tourist_attraction", "amusement_park"],
-  // Google Places has no dedicated ice_cream type — ice_cream_shop is the closest.
-  ice_cream:   ["ice_cream_shop"],
   pharmacy:    ["pharmacy"],
   doctors:     ["doctor", "medical_clinic"],
   dentist:     ["dentist"],

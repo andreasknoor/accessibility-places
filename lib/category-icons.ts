@@ -14,7 +14,6 @@ export const CATEGORY_ICONS: Record<string, string> = {
   library:     "📚",
   gallery:     "🎨",
   attraction:  "🎡",
-  ice_cream:   "🍦",
   pharmacy:    "💊",
   doctors:     "🩺",
   dentist:     "🦷",
