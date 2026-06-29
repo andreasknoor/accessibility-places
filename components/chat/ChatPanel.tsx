@@ -547,6 +547,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // in the field would otherwise contradict the GPS results (and the location token).
   function onLocateTap() {
     if (isLoading) return
+    track("locate")
     setLocation("")
     switchMode("nearby")
   }
@@ -643,6 +644,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   }
 
   function selectChip(idx: number | null) {
+    track("chip_select", { category: idx != null ? CHIPS[idx].cat : "alle", mode })
     // Leaving amenity mode: a venue/"Alle" chip is single-select with the amenity
     // chips. If no search ends up firing (text mode, no location), the parent still
     // needs to clear amenityActive so the highlight returns to this chip.
@@ -668,6 +670,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     const chipIsUserTyped = !!location && location !== programmaticLocRef.current && !!chipTyped
     const vp = chipIsUserTyped ? null : venueViewportOrigin(getViewportOrigin?.())
     if (vp) {
+      track("viewport_chip_search", { category: idx != null ? CHIPS[idx].cat : "alle", radius_km: Math.round(vp.radiusKm) })
       if (mode === "nearby") exitNearbyState()
       pickedVenueRef.current = null
       setVenuePicked(false)
@@ -765,6 +768,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     // Default for raw free text: area search (conservative — never silently
     // routes typed text to a venue lookup; venues are reached via the dropdown).
     try { localStorage.setItem("ap_last_search", JSON.stringify({ cat: selectedIdx != null ? CHIPS[selectedIdx].cat : null, loc: location.trim() })) } catch { /* ignore */ }
+    track("search_freetext", { category: selectedIdx != null ? CHIPS[selectedIdx].cat : "alle" })
     onSearch(buildQuery(rest), undefined, quoted || undefined)
   }
 
@@ -778,6 +782,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     exitNearbyState()
 
     if (s.kind === "venue") {
+      track("place_search")
       programmaticLocRef.current = s.display
       pickedVenueRef.current = { display: s.display, name: s.name, lat: s.lat, lon: s.lon }
       setVenuePicked(true)

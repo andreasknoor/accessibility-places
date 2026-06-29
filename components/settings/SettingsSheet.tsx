@@ -7,6 +7,7 @@ import { Settings, Check, Search, Map, SlidersHorizontal } from "lucide-react"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { SETTING_CHIPS, DEFAULT_APP_SETTINGS } from "@/lib/settings"
 import { cn } from "@/lib/utils"
+import { track } from "@/lib/analytics"
 import type { AppSettings } from "@/lib/settings"
 import type { Category } from "@/lib/types"
 
@@ -301,7 +302,7 @@ export default function SettingsSheet({ settings, onUpdate, onResetOnboarding }:
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => { track("settings_open"); setOpen(true) }}
         title={t.settings.title}
         className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         aria-label={t.settings.title}

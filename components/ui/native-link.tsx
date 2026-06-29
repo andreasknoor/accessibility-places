@@ -2,6 +2,7 @@
 
 import type { AnchorHTMLAttributes } from "react"
 import { openExternalUrl } from "@/lib/native/browser"
+import { track } from "@/lib/analytics"
 
 // Drop-in replacement for <a target="_blank" rel="noopener noreferrer">.
 // On native Capacitor platforms, opens the URL in Chrome Custom Tabs (Android)
@@ -20,6 +21,7 @@ export function NativeLink({ href, onClick, children, ...props }: Props) {
       onClick={(e) => {
         onClick?.(e)
         e.preventDefault()
+        try { track("external_link", { domain: new URL(href).hostname }) } catch { /* ignore malformed URLs */ }
         void openExternalUrl(href)
       }}
       {...props}

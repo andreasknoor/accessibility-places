@@ -482,6 +482,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             setSearchCenter(data.location)
             setFilterDebug(data.filterDebug)
             track("search", { mode: chatMode, result_count: data.places.length })
+            if (chatMode === "nearby") track("nearby_search", { result_count: data.places.length })
             if (data.places.length === 0) {
               track("search_no_results", { mode: chatMode, radius_km: radiusKmOverride ?? radiusKm })
             }
@@ -696,6 +697,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     // clearSearchState), which would otherwise wipe lastQuery after handleSearch set it.
     setExitNearbyTriggerKey((k) => k + 1)
     setChatMode("text")
+    track("search_here", { radius_km: Math.round(clampedRadius) })
     if (lastQuery) {
       handleSearch(lastQuery, clampedRadius, coords, lastNameHint)
     } else if (categoryQuery) {
@@ -713,11 +715,13 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const handleExpandRadius = useCallback(() => {
     if (!lastQuery) return
     const newRadius = Math.min(radiusKm * 2, RADIUS_MAX_KM)
+    track("expand_radius", { from_km: radiusKm, to_km: newRadius })
     setRadiusKm(newRadius)
     handleSearch(lastQuery, newRadius, lastCoords, lastNameHint)
   }, [lastQuery, radiusKm, lastCoords, lastNameHint, handleSearch])
 
   const handleRadiusChange = useCallback((km: number) => {
+    track("radius_change", { km })
     setRadiusKm(km)
     if (lastQuery) handleSearch(lastQuery, km, lastCoords, lastNameHint)
   }, [lastQuery, lastCoords, lastNameHint, handleSearch])
@@ -1168,8 +1172,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       // "no explicit preference" means auto-locate, not start-empty.
       setChatMode(patch.defaultSearchMode ?? "nearby")
     }
-    if (patch.internationalMode === true) {
-      setSources((s) => ({ ...s, google_places: true, acceslibre: true }))
+    if (patch.internationalMode !== undefined) {
+      track("international_mode_toggle", { enabled: patch.internationalMode })
+      if (patch.internationalMode === true) {
+        setSources((s) => ({ ...s, google_places: true, acceslibre: true }))
+      }
     }
   }, [updateSettings])
 
@@ -1298,7 +1305,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         settings={settings}
         onUpdateSettings={handleUpdateSettings}
         sortBy={sortBy}
-        onSortChange={(s) => { setSortBy(s); updateSettings({ sortOrder: s }) }}
+        onSortChange={(s) => { track("sort_change", { order: s }); setSortBy(s); updateSettings({ sortOrder: s }) }}
         defaultMobileView={settings.defaultMobileView}
         onGpsResolved={handleGpsResolved}
         isFirstVisit={isFirstVisit}
@@ -1507,7 +1514,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             selectedAmenityKey={selectedAmenityKey}
             parkingSpotCount={parkingSpots.length > 0 ? parkingSpots.length : undefined}
             sortBy={sortBy}
-            onSortChange={(s) => { setSortBy(s); updateSettings({ sortOrder: s }) }}
+            onSortChange={(s) => { track("sort_change", { order: s }); setSortBy(s); updateSettings({ sortOrder: s }) }}
             chatMode={chatMode}
             onSwitchToText={chatMode !== "text" ? () => handleSwitchMode("text") : undefined}
             isFirstVisit={isFirstVisit}
