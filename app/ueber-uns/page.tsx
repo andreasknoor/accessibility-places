@@ -141,26 +141,6 @@ export default function UeberUnsPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">Praktischer Tipp: Die App ohne App-Store-Zwang nutzen</h2>
-            <p className="text-muted-foreground mb-4">
-              Man muss nicht erst den Apple App Store oder Google Play Store bemühen, um sich das Tool herunterzuladen. Da Accessible Places als moderne Progressive Web App (PWA) entwickelt wurde, lässt sie sich direkt aus dem mobilen Browser heraus installieren:
-            </p>
-            <ul className="flex flex-col gap-3">
-              <li className="flex items-start gap-2.5">
-                <span className="text-base leading-none mt-0.5">📱</span>
-                <p className="text-muted-foreground"><span className="font-semibold text-foreground">iPhone (Safari):</span> Unten auf das Teilen-Symbol tippen (das Viereck mit dem Pfeil nach oben) und „Zum Home-Bildschirm" wählen.</p>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <span className="text-base leading-none mt-0.5">🤖</span>
-                <p className="text-muted-foreground"><span className="font-semibold text-foreground">Android (Chrome):</span> Oben rechts auf das Drei-Punkte-Menü tippen und „App installieren" oder „Zum Startbildschirm hinzufügen" wählen.</p>
-              </li>
-            </ul>
-            <p className="text-muted-foreground mt-4">
-              Schon landet Accessible Places als vollwertige App auf dem Startbildschirm des Smartphones, inklusive eigenem Icon und im schicken Vollbildmodus ohne störende Browserleisten.
-            </p>
-          </section>
-
-          <section>
             <h2 className="text-lg font-bold mb-3">Starke Partner im Hintergrund: Woher stammen die Daten?</h2>
             <p className="text-muted-foreground">
               Sämtliche angezeigten Informationen basieren auf den offenen Datenbanken unserer starken Partner-Websites. Ohne diese großartigen Open-Data-Projekte wäre dieser Dienst überhaupt nicht möglich. Ein ganz persönlicher Dank geht daher an die jeweiligen Communities und Teams für die Bereitstellung der notwendigen Schnittstellen und Zugänge.

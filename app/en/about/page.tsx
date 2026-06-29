@@ -141,26 +141,6 @@ export default function AboutPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">Practical Tip: Install Without an App Store</h2>
-            <p className="text-muted-foreground mb-4">
-              You don't need to visit the Apple App Store or Google Play Store to get the app. Since Accessible Places is built as a modern Progressive Web App (PWA), it can be installed directly from your mobile browser:
-            </p>
-            <ul className="flex flex-col gap-3">
-              <li className="flex items-start gap-2.5">
-                <span className="text-base leading-none mt-0.5">📱</span>
-                <p className="text-muted-foreground"><span className="font-semibold text-foreground">iPhone (Safari):</span> Tap the Share icon at the bottom (the square with the upward arrow) and choose "Add to Home Screen".</p>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <span className="text-base leading-none mt-0.5">🤖</span>
-                <p className="text-muted-foreground"><span className="font-semibold text-foreground">Android (Chrome):</span> Tap the three-dot menu in the top right and choose "Install app" or "Add to Home Screen".</p>
-              </li>
-            </ul>
-            <p className="text-muted-foreground mt-4">
-              Accessible Places then appears on your home screen as a fully-featured app, complete with its own icon and a clean fullscreen mode without browser bars.
-            </p>
-          </section>
-
-          <section>
             <h2 className="text-lg font-bold mb-3">Strong Partners Behind the Scenes: Where Does the Data Come From?</h2>
             <p className="text-muted-foreground">
               All displayed information is based on the open databases of our strong partner websites. Without these outstanding open-data projects, this service would not be possible at all. A very personal thank-you goes to the respective communities and teams for providing the necessary interfaces and access.
