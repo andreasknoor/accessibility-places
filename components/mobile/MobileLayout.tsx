@@ -8,6 +8,7 @@ import { Map, List, SlidersHorizontal, Compass, ChevronRight, LocateFixed, Check
 import { cn } from "@/lib/utils"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { hapticLight } from "@/lib/native/haptics"
+import { track } from "@/lib/analytics"
 import { amenitySpotKey, type ViewportOrigin } from "@/lib/search-ui"
 import ChatPanel       from "@/components/chat/ChatPanel"
 import FilterPanel     from "@/components/filters/FilterPanel"
@@ -532,7 +533,7 @@ export default function MobileLayout({
           return (
             <button
               key={tab.id}
-              onClick={() => { hapticLight(); setActiveTab(tab.id) }}
+              onClick={() => { hapticLight(); track("tab_switch", { tab: tab.id }); setActiveTab(tab.id) }}
               disabled={disabled}
               className={cn(
                 "flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors",

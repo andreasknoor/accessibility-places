@@ -229,6 +229,20 @@ The settings sheet (gear icon) was opened.
 
 ---
 
+## Mobile Navigation
+
+### `tab_switch`
+A tab in the mobile bottom navigation bar was tapped (Ergebnisse / Karte / Filter).
+
+| Property | Type | Description |
+|---|---|---|
+| `tab` | `"results" \| "map" \| "filter"` | The tab the user switched to |
+
+**When:** In `MobileLayout`, on the tab bar button click. Only fires on explicit user taps — programmatic tab switches (e.g. after a search completes) do not fire this event.  
+**Why it matters:** Reveals the navigation pattern on mobile. A low `filter` rate means the Filter tab is not being discovered; a high `map` rate confirms map-first usage. Comparing `tab_switch { tab: "filter" }` against `filter_apply` shows the drop-off between opening the filter panel and actually setting a filter.
+
+---
+
 ## Detail & External Events
 
 ### `detail_sheet_open`
