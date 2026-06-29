@@ -166,6 +166,29 @@ describe("ResultsList — amenity empty state uses its own expand-radius action 
   })
 })
 
+describe("ResultsList — amenity distance label is gated on GPS (nearby) mode", () => {
+  const spots = [
+    { osmId: "node/1", lat: 52.521, lon: 13.405, amenityType: "parking" as const, tier: "strong" as const, capacity: 2 },
+  ]
+
+  it("shows the 'entfernt' distance label for amenity spots in nearby mode (origin = user GPS)", () => {
+    renderList({
+      places: [], onSelect: vi.fn(), isLoading: false, hasSearched: true,
+      amenityType: "parking", amenityResults: spots, searchCenter: center, chatMode: "nearby",
+    })
+    expect(screen.getByText(/entfernt/)).toBeInTheDocument()
+  })
+
+  it("hides the distance label for amenity spots in text mode (origin = map/search centre, not the user)", () => {
+    renderList({
+      places: [], onSelect: vi.fn(), isLoading: false, hasSearched: true,
+      amenityType: "parking", amenityResults: spots, searchCenter: center, chatMode: "text",
+    })
+    // The spot card still renders (distance-sorted), just without the misleading label.
+    expect(screen.queryByText(/entfernt/)).not.toBeInTheDocument()
+  })
+})
+
 describe("ResultsList — selectedAmenityKey highlights the matching card (map→list reverse direction)", () => {
   const spots = [
     { osmId: "node/1", lat: 52.521, lon: 13.405, amenityType: "parking" as const, tier: "strong" as const, capacity: 2 },

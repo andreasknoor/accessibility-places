@@ -479,7 +479,12 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
             // key must NOT (the map marker has no list index) — see amenitySpotKey.
             const renderKey = spot.osmId ?? `${spot.lat},${spot.lon}-${i}`
             const selKey = amenitySpotKey(spot)
-            const distanceM = searchCenter ? haversineMetres(searchCenter, spot) : undefined
+            // Only show the egocentric "X m entfernt" label when the search origin is
+            // the user's GPS position (nearby mode). For text/panned amenity searches
+            // the centre is the map/search location, not the user, so "entfernt" would
+            // be misleading — the list stays distance-sorted (displayedAmenities), just
+            // without the per-card label.
+            const distanceM = chatMode === "nearby" && searchCenter ? haversineMetres(searchCenter, spot) : undefined
             return (
               <div
                 key={renderKey}
