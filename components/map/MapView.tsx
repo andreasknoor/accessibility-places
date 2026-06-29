@@ -66,8 +66,8 @@ interface Props {
   // inline next to the result-count pill (mobile). Has no effect in focus mode.
   hideSearchHereButton?:   boolean
   // Reports the "search here" availability up to the parent: a runner to execute
-  // the search (pan centre + viewport radius computed at click time), or null
-  // when no pan is pending. Only fires for the non-focus venue search.
+  // the search (pan centre + viewport radius captured at pan time, not click time),
+  // or null when no pan is pending. Only fires for the non-focus venue search.
   onPanned?:               (run: (() => void) | null) => void
   // Reports the live viewport as a potential search origin to the parent. Fires
   // with { center, radiusKm } when a real user pan is pending (the same signal

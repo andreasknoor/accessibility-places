@@ -98,6 +98,14 @@ const TO_ACCESLIBRE: Partial<Record<Category, string[]>> = {}
 for (const [slug, cat] of Object.entries(FROM_ACCESLIBRE) as [string, Category][]) {
   ;(TO_ACCESLIBRE[cat] ??= []).push(slug)
 }
+// glacier/confiserie are kept in FROM_ACCESLIBRE so incoming records are correctly
+// classified as cafe, but excluded from the outbound query fan-out: including them
+// would add two extra sequential requests (+500ms) for every French café search
+// while contributing only a handful of venues that the unfiltered all-categories
+// path already returns.
+if (TO_ACCESLIBRE.cafe) {
+  TO_ACCESLIBRE.cafe = TO_ACCESLIBRE.cafe.filter((s) => s !== "glacier" && s !== "confiserie")
+}
 
 // ─── API response types ───────────────────────────────────────────────────────
 

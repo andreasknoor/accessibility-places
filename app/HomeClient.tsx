@@ -691,7 +691,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     // Searching an explicitly panned area means the results are no longer "near me":
     // leave nearby mode so a subsequent chip pick refines THIS area (activeSearchCoords)
     // rather than snapping back to the still-active GPS fix.
+    // setChatMode("text") runs in this same batch as handleSearch so that
+    // exitNearbyTrigger's ChatPanel effect can safely skip onModeChange (and therefore
+    // clearSearchState), which would otherwise wipe lastQuery after handleSearch set it.
     setExitNearbyTriggerKey((k) => k + 1)
+    setChatMode("text")
     if (lastQuery) {
       handleSearch(lastQuery, clampedRadius, coords, lastNameHint)
     } else if (categoryQuery) {

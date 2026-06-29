@@ -714,9 +714,13 @@ describe("ChatPanel GPS resolution", () => {
     expect(screen.getByTitle(/Maxvorstadt/)).toBeInTheDocument()
 
     // Parent runs "Hier suchen" on the panned area → bumps exitNearbyTrigger.
+    // The parent (HomeClient) calls setChatMode("text") directly in the same batch
+    // as handleSearch, so exitNearbyTrigger must NOT call onModeChange — doing so
+    // would trigger clearSearchState() and wipe lastQuery after handleSearch set it.
     rerender(<ChatPanel {...props} exitNearbyTrigger={1} />)
     await act(() => vi.runAllTimersAsync())
-    expect(onModeChange).toHaveBeenLastCalledWith("text")
+    // onModeChange is NOT called from the trigger path (parent owns the chatMode sync).
+    expect(onModeChange).not.toHaveBeenCalledWith("text")
 
     // Picking a chip now refines the searched area (Berlin), NOT the GPS fix (Munich).
     // (Clear the locate's own initial nearby search first so we assert only the chip.)

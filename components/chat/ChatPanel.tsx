@@ -247,7 +247,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const handleLocateRef   = useRef<() => void>(() => {})
   // Mirrors exitNearbyState so the exitNearbyTrigger effect (declared before the
   // function) can call the live implementation, same pattern as handleLocateRef.
-  const exitNearbyStateRef = useRef<() => void>(() => {})
+  const exitNearbyStateRef = useRef<(notifyParent?: boolean) => void>(() => {})
   // Mirrors `locale` so async GPS callbacks read the live value rather than the
   // closure-captured snapshot.
   const localeRef         = useRef(locale)
@@ -419,7 +419,10 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // refine the searched area (activeSearchCoords) rather than re-run at the GPS fix.
   useEffect(() => {
     if (!exitNearbyTrigger) return
-    exitNearbyStateRef.current()
+    // notifyParent=false: the parent (HomeClient) already called setChatMode("text")
+    // in the same batch as handleSearch, so onModeChange must not fire here — it
+    // would trigger clearSearchState() and wipe the lastQuery that handleSearch just set.
+    exitNearbyStateRef.current(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exitNearbyTrigger])
 
@@ -525,7 +528,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // "Überall" tab used to do this transition, the always-on field must do it too,
   // otherwise a text search inherits the previous nearby fix (stale "you are here"
   // token + distance-from-old-centre on a non-nearby result set).
-  function exitNearbyState() {
+  function exitNearbyState(notifyParent = true) {
     if (watchIdRef.current !== null) {
       clearWatchPosition(watchIdRef.current)
       watchIdRef.current = null
@@ -533,7 +536,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     setNearbyPhase("idle")
     if (mode === "nearby") {
       setMode("text")
-      onModeChange?.("text")
+      if (notifyParent) onModeChange?.("text")
     }
   }
   useEffect(() => { exitNearbyStateRef.current = exitNearbyState })
