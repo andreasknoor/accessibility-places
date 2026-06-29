@@ -191,6 +191,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   }, [])
   const [isFirstVisit,        setIsFirstVisit]        = useState(false)  // SSR-safe; real value read post-hydration (React #418)
   const [locateTriggerKey,    setLocateTriggerKey]    = useState(0)
+  // Bumped by handleSearchHere so ChatPanel leaves nearby mode after an explicit
+  // "Hier suchen" — otherwise a following chip pick re-runs at the GPS fix instead
+  // of refining the panned area (viewport-origin bug).
+  const [exitNearbyTriggerKey, setExitNearbyTriggerKey] = useState(0)
   const [locatePanTrigger,    setLocatePanTrigger]    = useState(0)
   // ── Easter Eggs ────────────────────────────────────────────────────────────
   const [showRace,         setShowRace]         = useState(false)
@@ -684,6 +688,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     // sees, not the last user-setting radius. (Amenity "search here" is wired
     // separately via MapView's onFocusSearchHere → handleAmenitySearchHere.)
     const clampedRadius = Math.min(Math.max(viewportRadiusKm, RADIUS_MIN_KM), RADIUS_MAX_KM)
+    // Searching an explicitly panned area means the results are no longer "near me":
+    // leave nearby mode so a subsequent chip pick refines THIS area (activeSearchCoords)
+    // rather than snapping back to the still-active GPS fix.
+    setExitNearbyTriggerKey((k) => k + 1)
     if (lastQuery) {
       handleSearch(lastQuery, clampedRadius, coords, lastNameHint)
     } else if (categoryQuery) {
@@ -1294,6 +1302,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onDismissWelcome={handleDismissWelcome}
         onStartNearby={handleStartNearby}
         locateTrigger={locateTriggerKey}
+        exitNearbyTrigger={exitNearbyTriggerKey}
         biasCoords={searchCenter ?? gpsCoords ?? undefined}
         onSwitchToText={() => handleSwitchMode("text")}
         chatMode={chatMode}
@@ -1398,6 +1407,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           initialMode={chatMode}
           onGpsResolved={handleGpsResolved}
           locateTrigger={locateTriggerKey}
+          exitNearbyTrigger={exitNearbyTriggerKey}
           biasCoords={searchCenter ?? gpsCoords ?? undefined}
           onAmenitySearch={handleAmenitySearch}
           amenityActive={amenitySearch}

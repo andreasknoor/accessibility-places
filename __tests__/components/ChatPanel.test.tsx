@@ -681,6 +681,51 @@ describe("ChatPanel GPS resolution", () => {
     expect(screen.queryByTitle(/Maxvorstadt/)).not.toBeInTheDocument()
     expect(onModeChange).toHaveBeenLastCalledWith("text")
   })
+
+  it("bumping exitNearbyTrigger leaves nearby mode so a chip pick refines the searched area, not the GPS fix (viewport-origin bug)", async () => {
+    // Reverse geocode → district; everything else (autocomplete suggest) → empty.
+    vi.stubGlobal("navigator", {
+      clipboard: navigator.clipboard,
+      geolocation: {
+        getCurrentPosition: (success: PositionCallback) =>
+          success({ coords: { latitude: 48.1, longitude: 11.5 } } as GeolocationPosition),
+        watchPosition: vi.fn().mockReturnValue(1),
+        clearWatch: vi.fn(),
+      },
+    })
+    vi.stubGlobal("fetch", vi.fn((url: unknown) => {
+      const body = String(url).includes("/reverse") ? { district: "Maxvorstadt" } : []
+      return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }))
+    }))
+    const onSearch = vi.fn()
+    const onModeChange = vi.fn()
+    // activeSearchCoords = the panned area the user just ran "Hier suchen" on (Berlin),
+    // distinct from the GPS fix (Munich). The parent sets it to the last searched coords.
+    const props = {
+      onSearch, onModeChange, isLoading: false, initialMode: "text" as const,
+      activeSearchCoords: { lat: 52.5, lon: 13.4 },
+    }
+    const { rerender } = render(<ChatPanel {...props} exitNearbyTrigger={0} />)
+
+    // Locate → nearby GPS fix (Munich) is active (district badge shown).
+    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
+    await act(() => vi.runAllTimersAsync())
+    expect(onModeChange).toHaveBeenLastCalledWith("nearby")
+    expect(screen.getByTitle(/Maxvorstadt/)).toBeInTheDocument()
+
+    // Parent runs "Hier suchen" on the panned area → bumps exitNearbyTrigger.
+    rerender(<ChatPanel {...props} exitNearbyTrigger={1} />)
+    await act(() => vi.runAllTimersAsync())
+    expect(onModeChange).toHaveBeenLastCalledWith("text")
+
+    // Picking a chip now refines the searched area (Berlin), NOT the GPS fix (Munich).
+    // (Clear the locate's own initial nearby search first so we assert only the chip.)
+    onSearch.mockClear()
+    const chip = screen.getAllByRole("radio").find((b) => b.textContent?.includes("Restaurants"))!
+    fireEvent.click(chip)
+    expect(onSearch).toHaveBeenCalledWith(expect.stringMatching(/Restaurant/), { lat: 52.5, lon: 13.4 })
+    expect(onSearch).not.toHaveBeenCalledWith(expect.anything(), { lat: 48.1, lon: 11.5 })
+  })
 })
 
 // ─── Single-field UI (name field removed in step 2 of issue #24) ─────────────

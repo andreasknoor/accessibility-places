@@ -86,6 +86,7 @@ interface Props {
   onDismissWelcome?:    () => void
   onStartNearby?:       () => void
   locateTrigger?:       number
+  exitNearbyTrigger?:   number
   onSwitchToText?:      () => void
   chatMode:             "text" | "nearby"
   onChatModeChange:     (mode: "text" | "nearby") => void
@@ -107,7 +108,7 @@ export default function MobileLayout({
   onReset, onLogoTap, resetKey, filterDebug, initialLocation, initialChipCat, scrollToId: externalScrollToId,
   showParking, showToilets, onSetMapLayers, hasToiletData, onToggleParking, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
-  onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, onStartNearby, locateTrigger, onSwitchToText,
+  onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, onStartNearby, locateTrigger, exitNearbyTrigger, onSwitchToText,
   chatMode, onChatModeChange, biasCoords, onSearchHere, onLocate, locatePanTrigger, gpsCoords, onCategoryQueryChange, activeSearchCoords,
   amenityActive, onAmenitySearch, onExitAmenity, amenityResults, amenityHint, amenitySearchCenter, onAmenitySearchHere, onAmenityRadius, amenityRadiusKm, intlNotice, placeSearchName,
   onAmenitySelect, selectedAmenityKey, onAmenityMarkerClick, amenityPanTarget, amenityPanTrigger,
@@ -245,7 +246,7 @@ export default function MobileLayout({
 
       {/* ── Search bar (always visible) ── */}
       <div role="search">
-        <ChatPanel key={resetKey} autoFocus={autoFocusInput} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipCat={initialChipCat} initialMode={chatMode} onGpsResolved={onGpsResolved} locateTrigger={locateTrigger} biasCoords={biasCoords} onAmenitySearch={handleAmenitySearch} amenityActive={amenityActive} onExitAmenity={onExitAmenity} onCategoryQueryChange={onCategoryQueryChange} activeSearchCoords={activeSearchCoords} searchCenter={searchCenter} international={settings.internationalMode} getViewportOrigin={getViewportOrigin} />
+        <ChatPanel key={resetKey} autoFocus={autoFocusInput} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipCat={initialChipCat} initialMode={chatMode} onGpsResolved={onGpsResolved} locateTrigger={locateTrigger} exitNearbyTrigger={exitNearbyTrigger} biasCoords={biasCoords} onAmenitySearch={handleAmenitySearch} amenityActive={amenityActive} onExitAmenity={onExitAmenity} onCategoryQueryChange={onCategoryQueryChange} activeSearchCoords={activeSearchCoords} searchCenter={searchCenter} international={settings.internationalMode} getViewportOrigin={getViewportOrigin} />
       </div>
 
       {/* Global search progress — covers every trigger (search here, filter, radius,

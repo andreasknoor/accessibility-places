@@ -33,6 +33,11 @@ interface Props {
   initialMode?:      "text" | "nearby" | "place"  // "place" is treated as "text" (legacy)
   onGpsResolved?:    (coords: Coords) => void
   locateTrigger?:    number
+  // Bumped by the parent when an explicit "Hier suchen" (coordinate-based area
+  // search at a panned viewport) runs. Forces the panel out of nearby mode so a
+  // subsequent chip pick refines the searched area via activeSearchCoords instead
+  // of snapping back to the still-active GPS fix (the reported viewport bug).
+  exitNearbyTrigger?: number
   biasCoords?:       Coords
   // Amenity search chips (parking / WC) — single-select, at the front of the chip
   // strip. Selecting one runs an amenity search at the current location (GPS or the
@@ -182,7 +187,7 @@ async function geocodeLocation(q: string, international: boolean): Promise<Coord
   return { lat: data.lat, lon: data.lon }
 }
 
-export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipCat, initialMode, onGpsResolved, locateTrigger, biasCoords, onAmenitySearch, amenityActive, onExitAmenity, onCategoryQueryChange, activeSearchCoords, searchCenter, international, getViewportOrigin }: Props) {
+export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipCat, initialMode, onGpsResolved, locateTrigger, exitNearbyTrigger, biasCoords, onAmenitySearch, amenityActive, onExitAmenity, onCategoryQueryChange, activeSearchCoords, searchCenter, international, getViewportOrigin }: Props) {
   // Internal positional form of the cat-keyed prop. The mount/default effects below
   // were written against an index; deriving it here keeps that logic untouched while
   // the external contract stays category-keyed.
@@ -240,6 +245,9 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const pickedVenueRef    = useRef<{ display: string; name: string; lat: number | null; lon: number | null } | null>(null)
   const inputRef          = useRef<HTMLInputElement>(null)
   const handleLocateRef   = useRef<() => void>(() => {})
+  // Mirrors exitNearbyState so the exitNearbyTrigger effect (declared before the
+  // function) can call the live implementation, same pattern as handleLocateRef.
+  const exitNearbyStateRef = useRef<() => void>(() => {})
   // Mirrors `locale` so async GPS callbacks read the live value rather than the
   // closure-captured snapshot.
   const localeRef         = useRef(locale)
@@ -406,6 +414,15 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locateTrigger])
 
+  // Leave nearby mode when the parent runs an explicit "Hier suchen" at a panned
+  // viewport: the results are no longer "near me", so a following chip pick must
+  // refine the searched area (activeSearchCoords) rather than re-run at the GPS fix.
+  useEffect(() => {
+    if (!exitNearbyTrigger) return
+    exitNearbyStateRef.current()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exitNearbyTrigger])
+
 
   // Fetch unified autocomplete suggestions (areas + venues, Photon via backend proxy)
   useEffect(() => {
@@ -519,6 +536,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       onModeChange?.("text")
     }
   }
+  useEffect(() => { exitNearbyStateRef.current = exitNearbyState })
 
   // Inline ⌖ button: express the "nearby" intent without a visible mode tab.
   // Equivalent to the old "In der Nähe" tab — switches internal mode and locates.

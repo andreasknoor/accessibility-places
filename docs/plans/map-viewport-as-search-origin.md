@@ -253,3 +253,25 @@ callbacks), `MobileLayout.tsx` (prop pass-through), tests in
 time-window + threshold based and not reproducible in jsdom): the actual pan→chip
 flows, that programmatic recenters (locate / SEO deep-link / autoZoom fit) don't
 arm a viewport origin, and that typed-location still wins over a pan.
+
+## Follow-up fix (v9.7): "Hier suchen" button did not exit nearby mode
+
+**Symptom (reported):** start in nearby mode (GPS results), pan the map, click the
+**"Hier suchen" button**, then pick a venue chip → the map snapped back to the GPS
+position instead of refining the searched (panned) area.
+
+**Cause:** the viewport-origin work made the *chip-on-pan* path exit nearby
+(`ChatPanel.selectChip` → `exitNearbyState`), but the symmetric *button* path
+(`HomeClient.handleSearchHere`) did not. After the explicit "search here", the
+pan-pending state clears (`viewportRef` → null, no pill), yet `chatMode` stayed
+`"nearby"` with a live `nearbyPhase` GPS fix. The next `selectChip` hit the
+`mode === "nearby" && nearbyPhase` branch (above the `activeSearchCoords` branch)
+and re-ran at the GPS coords.
+
+**Fix:** `handleSearchHere` bumps a new `exitNearbyTrigger` counter; a `useEffect`
+in `ChatPanel` calls `exitNearbyState()` on the bump (mirrors `locateTrigger`).
+Once nearby is left, the chip pick falls through to the `activeSearchCoords` branch
+and refines the panned area. Files: `HomeClient.tsx` (`exitNearbyTriggerKey` +
+bump in `handleSearchHere`), `ChatPanel.tsx` (`exitNearbyTrigger` prop + effect +
+`exitNearbyStateRef`), `MobileLayout.tsx` (pass-through). Test in
+`__tests__/components/ChatPanel.test.tsx`.
