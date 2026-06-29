@@ -56,6 +56,11 @@ const FAQ_CATEGORIES_EN: FaqCategory[] = [
         a: "Tap the location button (⌖) next to the search field and allow location access. Accessible Places automatically detects your position and searches for accessible restaurants, cafés or other venues in your immediate vicinity — no need to type a location.",
       },
       {
+        id: "international-search",
+        q: "Can I search outside Germany, Austria and Switzerland?",
+        a: "Yes — via international search, which you can enable in Settings (gear icon → \"International search\"). It's off by default, since Accessible Places is primarily built for the DACH region. Once enabled, it lifts the country boundary and also searches France, the United Kingdom, the Netherlands, Spain, Italy and the USA. Important: this feature is still in beta. Outside the DACH region fewer specialised data sources are available, and coverage varies widely by country — in major cities you'll usually find useful results, while in rural areas there may be few or none. Results can therefore be incomplete. We're continuing to improve international coverage.",
+      },
+      {
         id: "find-parking-toilet",
         q: "How do I find a wheelchair toilet or accessible parking space nearby?",
         a: (

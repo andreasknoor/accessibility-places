@@ -56,6 +56,11 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
         a: "Tippe auf den Standort-Button (⌖) neben dem Suchfeld und erteile der App die Standortfreigabe. Accessible Places ermittelt automatisch deinen Standort und sucht barrierefreie Restaurants, Cafés oder andere Orte in deiner direkten Umgebung — ohne dass du einen Ort eingeben musst.",
       },
       {
+        id: "international-search",
+        q: "Kann ich auch außerhalb von Deutschland, Österreich und der Schweiz suchen?",
+        a: "Ja — über die internationale Suche, die du in den Einstellungen (Zahnrad-Symbol → „Internationale Suche\") aktivieren kannst. Standardmäßig ist sie ausgeschaltet, da Accessible Places primär auf die DACH-Region ausgelegt ist. Eingeschaltet hebt sie die Ländergrenze auf und durchsucht zusätzlich Frankreich, Großbritannien, die Niederlande, Spanien, Italien und die USA. Wichtig: Diese Funktion befindet sich noch in der Beta-Phase. Außerhalb der DACH-Region stehen weniger spezialisierte Datenquellen zur Verfügung, und die Datenlage variiert stark je nach Land — in großen Städten findest du meist brauchbare Treffer, in ländlichen Gegenden oft nur wenige oder gar keine. Ergebnisse können also unvollständig sein. Wir arbeiten daran, die internationale Abdeckung weiter zu verbessern.",
+      },
+      {
         id: "find-parking-toilet",
         q: "Wie finde ich ein Rollstuhl-WC oder einen Rollstuhlparkplatz in der Nähe?",
         a: (
