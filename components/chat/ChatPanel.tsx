@@ -76,6 +76,13 @@ interface Props {
   // Returns null on a cold map / after a search recentres / in focus mode, so the
   // chip falls through to its existing origin chain. See lib/search-ui helpers.
   getViewportOrigin?: () => ViewportOrigin | null
+  // True while a genuine map pan is pending (the "search here" pill is showing —
+  // same signal as getViewportOrigin, after v9.14 only real drag gestures). Used
+  // to hide the green "at my location" badge while panned: the view is no longer
+  // centred on the GPS fix, so showing both the badge and the "search here" pill
+  // would be contradictory. Reversible — panning back / a new search recentres the
+  // map, clears the pill, and the badge returns.
+  panPending?: boolean
 }
 
 // Each chip carries its stable `cat` key. Identity/persistence (default chip, last
@@ -187,7 +194,7 @@ async function geocodeLocation(q: string, international: boolean): Promise<Coord
   return { lat: data.lat, lon: data.lon }
 }
 
-export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipCat, initialMode, onGpsResolved, locateTrigger, exitNearbyTrigger, biasCoords, onAmenitySearch, amenityActive, onExitAmenity, onCategoryQueryChange, activeSearchCoords, searchCenter, international, getViewportOrigin }: Props) {
+export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipCat, initialMode, onGpsResolved, locateTrigger, exitNearbyTrigger, biasCoords, onAmenitySearch, amenityActive, onExitAmenity, onCategoryQueryChange, activeSearchCoords, searchCenter, international, getViewportOrigin, panPending }: Props) {
   // Internal positional form of the cat-keyed prop. The mount/default effects below
   // were written against an index; deriving it here keeps that logic untouched while
   // the external contract stays category-keyed.
@@ -253,6 +260,13 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const localeRef         = useRef(locale)
 
   const district = typeof nearbyPhase === "object" ? nearbyPhase.district : null
+  // The green "at my location" badge reflects whether the map is currently centred on
+  // the GPS fix. A pending pan (panPending) means the user has moved the search centre
+  // away, so hide the badge and revert the ⌖ button to its neutral locate state — the
+  // displayed mode then always matches what a chip/amenity tap will actually search
+  // (the panned viewport, not the GPS fix). nearbyPhase itself is untouched, so the
+  // badge returns once the pan is cleared (panned back / new search recentres the map).
+  const showNearbyBadge = district !== null && !panPending
 
   // Sync mode when HomeClient corrects chatMode post-hydration via useLayoutEffect.
   // Maps legacy "place" initialMode to "text" (place mode was removed in v4.13).
@@ -1046,14 +1060,14 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
               top-right corner; tapping clears the fix. No fix: normal button. */}
           <button
             type="button"
-            onClick={district !== null ? clearLocationToken : onLocateTap}
+            onClick={showNearbyBadge ? clearLocationToken : onLocateTap}
             disabled={isLoading}
-            aria-label={district !== null ? t.chat.clearLocation : t.chat.useLocation}
-            title={district !== null ? t.chat.locationActive(district) : undefined}
+            aria-label={showNearbyBadge ? t.chat.clearLocation : t.chat.useLocation}
+            title={showNearbyBadge ? t.chat.locationActive(district!) : undefined}
             aria-busy={nearbyPhase === "locating"}
             className={cn(
               "relative shrink-0 h-[38px] w-[38px] flex items-center justify-center rounded-md border transition-colors disabled:opacity-50 cursor-pointer",
-              district !== null
+              showNearbyBadge
                 ? "border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
                 : !location.trim()
                   ? "border-primary bg-primary/10 text-primary-strong hover:bg-primary/20"
@@ -1063,7 +1077,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             {nearbyPhase === "locating"
               ? <Loader2 className="w-4 h-4 animate-spin" />
               : <LocateFixed className="w-4 h-4" />}
-            {district !== null && (
+            {showNearbyBadge && (
               <span
                 className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-sm bg-green-500 border-2 border-white flex items-center justify-center"
                 aria-hidden

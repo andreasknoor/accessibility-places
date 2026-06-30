@@ -730,6 +730,38 @@ describe("ChatPanel GPS resolution", () => {
     expect(onSearch).toHaveBeenCalledWith(expect.stringMatching(/Restaurant/), { lat: 52.5, lon: 13.4 })
     expect(onSearch).not.toHaveBeenCalledWith(expect.anything(), { lat: 48.1, lon: 11.5 })
   })
+
+  it("hides the green 'at my location' badge while a map pan is pending (panPending)", async () => {
+    vi.stubGlobal("navigator", {
+      clipboard: navigator.clipboard,
+      geolocation: {
+        getCurrentPosition: (success: PositionCallback) =>
+          success({ coords: { latitude: 48.1, longitude: 11.5 } } as GeolocationPosition),
+        watchPosition: vi.fn().mockReturnValue(1),
+        clearWatch: vi.fn(),
+      },
+    })
+    vi.stubGlobal("fetch", vi.fn((url: unknown) => {
+      const body = String(url).includes("/reverse") ? { district: "Maxvorstadt" } : []
+      return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }))
+    }))
+    const props = { onSearch: vi.fn(), isLoading: false, initialMode: "text" as const }
+    const { rerender } = render(<ChatPanel {...props} panPending={false} />)
+
+    // Acquire a GPS fix → the green district badge shows.
+    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
+    await act(() => vi.runAllTimersAsync())
+    expect(screen.getByTitle(/Maxvorstadt/)).toBeInTheDocument()
+
+    // A pan becomes pending → badge hidden, ⌖ reverts to the neutral locate button.
+    rerender(<ChatPanel {...props} panPending={true} />)
+    expect(screen.queryByTitle(/Maxvorstadt/)).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Standort verwenden" })).toBeInTheDocument()
+
+    // Panning back / a new search clears the pending pan → badge returns (reversible).
+    rerender(<ChatPanel {...props} panPending={false} />)
+    expect(screen.getByTitle(/Maxvorstadt/)).toBeInTheDocument()
+  })
 })
 
 // ─── Single-field UI (name field removed in step 2 of issue #24) ─────────────

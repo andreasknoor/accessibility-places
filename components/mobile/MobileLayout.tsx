@@ -42,6 +42,7 @@ interface Props {
   // Map-viewport-as-search-origin: forwarded straight to ChatPanel / MapView.
   getViewportOrigin?:  () => ViewportOrigin | null
   onViewportChange?:   (v: ViewportOrigin | null) => void
+  panPending?:         boolean
   onRerun?:         () => void
   hasSourceError?:  boolean
   onExpandRadius?:  () => void
@@ -113,7 +114,7 @@ export default function MobileLayout({
   chatMode, onChatModeChange, biasCoords, onSearchHere, onLocate, locatePanTrigger, gpsCoords, onCategoryQueryChange, activeSearchCoords,
   amenityActive, onAmenitySearch, onExitAmenity, amenityResults, amenityHint, amenitySearchCenter, onAmenitySearchHere, onAmenityRadius, amenityRadiusKm, intlNotice, placeSearchName,
   onAmenitySelect, selectedAmenityKey, onAmenityMarkerClick, amenityPanTarget, amenityPanTrigger,
-  getViewportOrigin, onViewportChange,
+  getViewportOrigin, onViewportChange, panPending,
 }: Props) {
   const [activeTab,   setActiveTab]   = useState<Tab>(defaultMobileView ?? "results")
   // Focus the search input after a deliberate switch into text mode (e.g. tapping
@@ -247,7 +248,7 @@ export default function MobileLayout({
 
       {/* ── Search bar (always visible) ── */}
       <div role="search">
-        <ChatPanel key={resetKey} autoFocus={autoFocusInput} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipCat={initialChipCat} initialMode={chatMode} onGpsResolved={onGpsResolved} locateTrigger={locateTrigger} exitNearbyTrigger={exitNearbyTrigger} biasCoords={biasCoords} onAmenitySearch={handleAmenitySearch} amenityActive={amenityActive} onExitAmenity={onExitAmenity} onCategoryQueryChange={onCategoryQueryChange} activeSearchCoords={activeSearchCoords} searchCenter={searchCenter} international={settings.internationalMode} getViewportOrigin={getViewportOrigin} />
+        <ChatPanel key={resetKey} autoFocus={autoFocusInput} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipCat={initialChipCat} initialMode={chatMode} onGpsResolved={onGpsResolved} locateTrigger={locateTrigger} exitNearbyTrigger={exitNearbyTrigger} biasCoords={biasCoords} onAmenitySearch={handleAmenitySearch} amenityActive={amenityActive} onExitAmenity={onExitAmenity} onCategoryQueryChange={onCategoryQueryChange} activeSearchCoords={activeSearchCoords} searchCenter={searchCenter} international={settings.internationalMode} getViewportOrigin={getViewportOrigin} panPending={panPending} />
       </div>
 
       {/* Global search progress — covers every trigger (search here, filter, radius,

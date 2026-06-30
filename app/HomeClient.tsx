@@ -208,6 +208,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // (getViewportOrigin), so it must not trigger re-renders. Lets a category/amenity
   // chip use the visible area as its search origin (issue: map-viewport-as-origin).
   const viewportRef = useRef<ViewportOrigin | null>(null)
+  // Boolean mirror of viewportRef for the UI: true while a genuine pan is pending.
+  // Unlike viewportRef (read at click time), this drives a render — ChatPanel hides
+  // the green "at my location" badge while panned. Toggles only on a threshold-cross
+  // pan (a few times per gesture), not per pixel, so the re-render cost is negligible.
+  const [mapPanned, setMapPanned] = useState(false)
   useEffect(() => { amenitySearchRef.current = amenitySearch }, [amenitySearch])
   // Native home-screen quick action ("Rollstuhl-Parkplatz/-WC suchen") in flight.
   // `pendingFocusAction` holds the amenity to focus once GPS is available; the
@@ -1341,7 +1346,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onCategoryQueryChange={setCategoryQuery}
         activeSearchCoords={lastCoords}
         getViewportOrigin={getViewportOrigin}
-        onViewportChange={(v) => { viewportRef.current = v }}
+        onViewportChange={(v) => { viewportRef.current = v; setMapPanned(v !== null) }}
+        panPending={mapPanned}
       />
       </>
     )
@@ -1427,6 +1433,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           activeSearchCoords={lastCoords}
           searchCenter={searchCenter}
           getViewportOrigin={getViewportOrigin}
+          panPending={mapPanned}
         />
       </div>
 
@@ -1576,7 +1583,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             onFocusSearchHere={handleAmenitySearchHere}
             showWeakParking={settings.showWeakParking}
             onSearchHere={handleSearchHere}
-            onViewportChange={(v) => { viewportRef.current = v }}
+            onViewportChange={(v) => { viewportRef.current = v; setMapPanned(v !== null) }}
             onLocate={isGeolocationAvailable() ? handleLocate : undefined}
             locatePanTrigger={locatePanTrigger}
             amenityPanTarget={amenityPanTarget}
