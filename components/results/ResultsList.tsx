@@ -27,6 +27,10 @@ interface Props {
   onRadiusChange?:  (km: number) => void
   hasSearched?:     boolean
   scrollToId?:      string
+  // Bumped on every explicit "show in results" so the scroll fires even when
+  // scrollToId is unchanged — the amenity marker tap pre-sets scrollToId while the
+  // list is still hidden, so revealing the tab alone would not re-trigger the scroll.
+  scrollTrigger?:   number
   filterDebug?:         FilterDebug
   searchCenter?:        { lat: number; lon: number }
   onAdjustFilters?:     () => void
@@ -65,7 +69,7 @@ interface Props {
   selectedAmenityKey?: string
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToText, isFirstVisit, onDismissWelcome, onStartNearby, intlNotice, placeSearchName, amenityType, amenityResults, amenityHint, onAmenityExpandRadius, onAmenitySelect, selectedAmenityKey }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, scrollTrigger, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToText, isFirstVisit, onDismissWelcome, onStartNearby, intlNotice, placeSearchName, amenityType, amenityResults, amenityHint, onAmenityExpandRadius, onAmenitySelect, selectedAmenityKey }: Props) {
   const t = useTranslations()
   const amenityMode = amenityType != null
   const [mapHintSeen, setMapHintSeen] = useState(() =>
@@ -147,7 +151,9 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
     // (instant) only if it is no longer fully visible.
     const timer = setTimeout(() => scrollTargetIntoView(scrollToId, false), 450)
     return () => { cancelAnimationFrame(raf); clearTimeout(timer) }
-  }, [scrollToId, scrollTargetIntoView])
+    // scrollTrigger is in the deps so a repeated "show in results" for an id that is
+    // already the current scrollToId still re-runs the scroll (see scrollTrigger prop).
+  }, [scrollToId, scrollTrigger, scrollTargetIntoView])
 
   function handleSelect(place: Place) {
     if (!mapHintSeen) {

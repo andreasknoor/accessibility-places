@@ -1,6 +1,6 @@
 import React from "react"
 import { describe, it, expect, vi } from "vitest"
-import { render, screen, fireEvent } from "@testing-library/react"
+import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import ResultsList from "@/components/results/ResultsList"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { buildAttribute } from "@/lib/matching/merge"
@@ -228,5 +228,40 @@ describe("ResultsList — selectedAmenityKey highlights the matching card (map�
       </TooltipProvider>,
     )
     expect(container.querySelectorAll(".ring-primary")).toHaveLength(1)
+  })
+})
+
+describe("ResultsList — scrollTrigger re-fires the scroll for an unchanged scrollToId", () => {
+  const spots = [
+    { osmId: "node/1", lat: 52.521, lon: 13.405, amenityType: "parking" as const, tier: "strong" as const, capacity: 2 },
+    { osmId: "node/2", lat: 52.522, lon: 13.405, amenityType: "parking" as const, tier: "strong" as const, capacity: 5 },
+  ]
+
+  it("scrolls again when only scrollTrigger changes (amenity 'show in results' after the marker tap pre-set the id)", async () => {
+    // jsdom doesn't implement scrollTo; install a spy on the prototype and restore after.
+    const original = HTMLElement.prototype.scrollTo
+    const scrollSpy = vi.fn()
+    HTMLElement.prototype.scrollTo = scrollSpy
+    try {
+      const base = {
+        places: [] as Place[], onSelect: vi.fn(), isLoading: false, hasSearched: true,
+        amenityType: "parking" as const, amenityResults: spots, searchCenter: center,
+      }
+      // First request: id set, trigger 1 → scrolls.
+      const { rerender } = renderList({ ...base, scrollToId: "node/2", scrollTrigger: 1 })
+      await waitFor(() => expect(scrollSpy).toHaveBeenCalled())
+
+      // Same id, bumped trigger — the regression was: nothing scrolled because the
+      // effect only watched scrollToId, which was already "node/2" from the marker tap.
+      scrollSpy.mockClear()
+      rerender(
+        <TooltipProvider>
+          <ResultsList {...base} scrollToId="node/2" scrollTrigger={2} />
+        </TooltipProvider>,
+      )
+      await waitFor(() => expect(scrollSpy).toHaveBeenCalled())
+    } finally {
+      HTMLElement.prototype.scrollTo = original
+    }
   })
 })

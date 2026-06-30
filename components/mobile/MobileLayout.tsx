@@ -126,12 +126,28 @@ export default function MobileLayout({
   const [mapPopupOpen,   setMapPopupOpen]   = useState(false)
   const [mapMounted,  setMapMounted]  = useState(false)
   const [panTrigger,  setPanTrigger]  = useState(0)
-  const [scrollToId,  setScrollToId]  = useState<string | undefined>()
+  // Single scroll-into-view request for the results list. The nonce makes a request
+  // fire even when the id is unchanged: the amenity marker tap pre-sets HomeClient's
+  // scrollToId (externalScrollToId) while the list is still hidden, so by the time
+  // "show in results" reveals it the id no longer changes — without the nonce the
+  // list never scrolled on the first call. Routing the HomeClient-driven external
+  // scrolls through the same request also means a stale id can never mask them (the
+  // old `local ?? external` coalescing was permanently sticky once set).
+  const [scrollReq, setScrollReq] = useState<{ id: string; nonce: number }>()
+  const scrollNonceRef = useRef(0)
+  function requestScroll(id: string) {
+    scrollNonceRef.current += 1
+    setScrollReq({ id, nonce: scrollNonceRef.current })
+  }
+  useEffect(() => {
+    if (externalScrollToId) requestScroll(externalScrollToId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalScrollToId])
 
   function handleShowInResults(place: Place) {
     onSelect(place)
     setActiveTab("results")
-    setScrollToId(place.id)
+    requestScroll(place.id)
   }
 
   // All search-triggering actions switch to the configured default view
@@ -150,7 +166,7 @@ export default function MobileLayout({
     ? (spot: { osmId?: string; lat: number; lon: number }) => {
         onAmenityMarkerClick(spot)
         setActiveTab("results")
-        setScrollToId(amenitySpotKey(spot))
+        requestScroll(amenitySpotKey(spot))
       }
     : undefined
   const amenityActiveBool = amenityActive != null
@@ -366,7 +382,8 @@ export default function MobileLayout({
             isLoading={isLoading}
             intlNotice={intlNotice}
             placeSearchName={placeSearchName}
-            scrollToId={scrollToId ?? externalScrollToId}
+            scrollToId={scrollReq?.id}
+            scrollTrigger={scrollReq?.nonce}
             onRerun={handleRerun}
             hasSourceError={hasSourceError}
             onExpandRadius={handleExpandRadius}
