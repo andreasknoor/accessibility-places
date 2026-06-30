@@ -351,6 +351,15 @@ export default function MapView({
   // (or a no-op move that fires none) can never desync a counter. Replaces the
   // old dragend flag, which iOS WKWebView fires unreliably for touch pans.
   const lastProgrammaticMoveRef = useRef(Date.now())
+  // True once the user starts a real drag-pan gesture (Leaflet `dragstart`), reset
+  // after the resulting moveend is consumed. Programmatic moves (setView/fitBounds/
+  // panTo) NEVER fire `dragstart`, so this is a direct, reliable "this move was a
+  // user pan" signal — unlike the 700 ms time window, which iOS/WKWebView defeats by
+  // firing a late moveend after a programmatic fitBounds (e.g. the passive-amenity
+  // fit), which was then misread as a user pan and used as a phantom search origin
+  // (parking-chip "jumps to a different place" bug). The moveend handler now requires
+  // this flag, so a phantom pan can no longer set searchHereCenter / the viewport origin.
+  const userPannedRef = useRef(false)
   // Last search center the pan-to-center effect has seen. Lets it recenter only on
   // a real center change (new search), not when a mode switch merely clears the
   // results/spots while the old center lingers.
@@ -433,10 +442,22 @@ export default function MapView({
       map.on("popupopen",  () => { setPopupOpen(true);  onPopupOpenChange?.(true)  })
       map.on("popupclose", () => { setPopupOpen(false); onPopupOpenChange?.(false) })
 
+      // Mark the start of a real user drag-pan. Programmatic moves never fire this,
+      // so it cleanly separates user pans from app-driven fitBounds/setView.
+      map.on("dragstart", () => { userPannedRef.current = true })
+
       map.on("moveend", () => {
+        // Read + reset the user-gesture flag first, so it can never leak into a
+        // later programmatic moveend (which would otherwise be misread as a pan).
+        const wasUserPan = userPannedRef.current
+        userPannedRef.current = false
         // No "search here" in amenity focus mode — it would re-run the venue
         // search and silently drop the parking/WC focus layers.
         if (focusModeRef.current) return
+        // Only a genuine drag-pan may set the search origin. This is the primary
+        // guard; the time window below stays as a secondary defence (e.g. a drag
+        // that interleaves with an in-flight programmatic move).
+        if (!wasUserPan) return
         if (Date.now() - lastProgrammaticMoveRef.current < PROGRAMMATIC_MOVE_WINDOW_MS) return
         if (!onSearchHereRef.current || !searchCenterRef.current) return
         // Guard against the final moveend Leaflet fires while tearing the map down.
