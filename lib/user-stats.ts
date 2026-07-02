@@ -65,12 +65,42 @@ export async function resetUserStats(): Promise<number> {
   return keys.length
 }
 
+export const COMMENT_MAX_LENGTH = 200
+
+// Operator-entered free-text note on a user (dashboard comment column). Unlike
+// every other stored value it is NOT write-validated to a safe shape — it must
+// be HTML-escaped when rendered. Stored in the user hash, so it shares the
+// 180-day TTL and is deleted by resetUserStats().
+// Returns false when the input is invalid or the user hash no longer exists
+// (writing to an expired key would resurrect it without a TTL).
+export async function setUserComment(uid: unknown, comment: unknown): Promise<boolean> {
+  if (typeof uid !== "string" || !UUID_RE.test(uid)) return false
+  if (typeof comment !== "string") return false
+  const redis = getRedis()
+  if (!redis) return false
+
+  const userKey = `user:${uid}`
+  if (!(await redis.exists(userKey))) return false
+
+  const trimmed = comment.trim().slice(0, COMMENT_MAX_LENGTH)
+  if (trimmed.length === 0) {
+    await redis.hdel(userKey, "comment")
+  } else {
+    await redis.hset(userKey, { comment: trimmed })
+    // Guard the exists→hset race: if the key expired in between, the hset
+    // recreated it TTL-less — re-arm the TTL so no key can live forever.
+    if ((await redis.ttl(userKey)) === -1) await redis.expire(userKey, TTL_SECONDS)
+  }
+  return true
+}
+
 export interface TopUser {
   uid:       string
   searches:  number
   firstSeen: string | null
   lastSeen:  string | null
   platform:  string | null
+  comment:   string | null
 }
 
 export async function getTopUsers(limit = 20): Promise<TopUser[]> {
@@ -107,6 +137,7 @@ export async function getTopUsers(limit = 20): Promise<TopUser[]> {
       firstSeen: h.firstSeen ?? null,
       lastSeen:  h.lastSeen ?? null,
       platform:  h.platform ?? null,
+      comment:   h.comment ?? null,
     })
   })
 

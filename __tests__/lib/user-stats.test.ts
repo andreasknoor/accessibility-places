@@ -22,11 +22,16 @@ const redisMock = {
   zrem:     vi.fn().mockResolvedValue(1),
   scan:     vi.fn(),
   del:      vi.fn().mockResolvedValue(1),
+  exists:   vi.fn().mockResolvedValue(1),
+  hset:     vi.fn().mockResolvedValue(1),
+  hdel:     vi.fn().mockResolvedValue(1),
+  ttl:      vi.fn().mockResolvedValue(1000),
+  expire:   vi.fn().mockResolvedValue(1),
 }
 
 vi.mock("@/lib/stats", () => ({ getRedis: () => redisMock }))
 
-import { trackUserSearch, getTopUsers, resetUserStats } from "@/lib/user-stats"
+import { trackUserSearch, getTopUsers, resetUserStats, setUserComment, COMMENT_MAX_LENGTH } from "@/lib/user-stats"
 
 const UID = "01234567-89ab-4cde-8f01-23456789abcd"
 
@@ -42,6 +47,11 @@ beforeEach(() => {
   pipeline.hset.mockReturnValue(pipeline)
   pipeline.expire.mockReturnValue(pipeline)
   execMock.mockResolvedValue([])
+  redisMock.exists.mockResolvedValue(1)
+  redisMock.hset.mockResolvedValue(1)
+  redisMock.hdel.mockResolvedValue(1)
+  redisMock.ttl.mockResolvedValue(1000)
+  redisMock.expire.mockResolvedValue(1)
 })
 
 describe("trackUserSearch validation", () => {
@@ -77,7 +87,7 @@ describe("getTopUsers", () => {
     const users = await getTopUsers(20)
     expect(redisMock.zrange).toHaveBeenCalledWith("users:by_searches", 0, 39, { rev: true, withScores: true })
     expect(users).toEqual([
-      { uid: UID, searches: 42, firstSeen: "2026-06-01", lastSeen: "2026-07-02", platform: "ios" },
+      { uid: UID, searches: 42, firstSeen: "2026-06-01", lastSeen: "2026-07-02", platform: "ios", comment: null },
     ])
   })
 
@@ -97,6 +107,43 @@ describe("getTopUsers", () => {
   it("returns [] when the zset is empty", async () => {
     redisMock.zrange.mockResolvedValue([])
     expect(await getTopUsers(20)).toEqual([])
+  })
+})
+
+describe("setUserComment", () => {
+  it("stores a trimmed comment on an existing user", async () => {
+    expect(await setUserComment(UID, "  power user, Berlin area  ")).toBe(true)
+    expect(redisMock.hset).toHaveBeenCalledWith(`user:${UID}`, { comment: "power user, Berlin area" })
+  })
+
+  it("caps the comment at COMMENT_MAX_LENGTH", async () => {
+    await setUserComment(UID, "x".repeat(COMMENT_MAX_LENGTH + 50))
+    const stored = redisMock.hset.mock.calls[0][1].comment as string
+    expect(stored).toHaveLength(COMMENT_MAX_LENGTH)
+  })
+
+  it("clears the comment field when given an empty string", async () => {
+    expect(await setUserComment(UID, "   ")).toBe(true)
+    expect(redisMock.hdel).toHaveBeenCalledWith(`user:${UID}`, "comment")
+    expect(redisMock.hset).not.toHaveBeenCalled()
+  })
+
+  it("refuses when the user hash no longer exists (no TTL-less resurrection)", async () => {
+    redisMock.exists.mockResolvedValue(0)
+    expect(await setUserComment(UID, "note")).toBe(false)
+    expect(redisMock.hset).not.toHaveBeenCalled()
+  })
+
+  it("re-arms the TTL if the key lost it in the exists→hset race", async () => {
+    redisMock.ttl.mockResolvedValue(-1)
+    await setUserComment(UID, "note")
+    expect(redisMock.expire).toHaveBeenCalledWith(`user:${UID}`, 180 * 24 * 60 * 60)
+  })
+
+  it("rejects invalid uids and non-string comments", async () => {
+    expect(await setUserComment("not-a-uuid", "note")).toBe(false)
+    expect(await setUserComment(UID, 42)).toBe(false)
+    expect(redisMock.hset).not.toHaveBeenCalled()
   })
 })
 
