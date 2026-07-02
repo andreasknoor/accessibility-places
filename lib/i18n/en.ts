@@ -338,6 +338,7 @@ const en: Translations = {
     hideRawData:    "Hide raw data",
     rawDataLoading:     "Loading raw data …",
     rawDataUnavailable: "(raw data unavailable)",
+    reportDataError:    "Report data error",
   },
   faq: {
     title:         "Frequently Asked Questions",

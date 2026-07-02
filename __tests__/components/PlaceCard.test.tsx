@@ -2,11 +2,18 @@ import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 import PlaceCard from "@/components/results/PlaceCard"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { LocaleProvider } from "@/lib/i18n"
 import { buildAttribute, emptyAttribute } from "@/lib/matching/merge"
 import type { Place } from "@/lib/types"
 
+// LocaleProvider mirrors the root layout — the info sheet opened from the card
+// reads the locale for the Tally report-form selection.
 function renderWithProvider(ui: React.ReactElement) {
-  return render(<TooltipProvider>{ui}</TooltipProvider>)
+  return render(
+    <LocaleProvider initialLocale="de">
+      <TooltipProvider>{ui}</TooltipProvider>
+    </LocaleProvider>,
+  )
 }
 
 function makePlace(overrides: Partial<Place> = {}): Place {

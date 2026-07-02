@@ -314,6 +314,7 @@ export interface Translations {
     hideRawData:    string
     rawDataLoading:     string
     rawDataUnavailable: string
+    reportDataError:    string
   }
   impressum: {
     title:      string

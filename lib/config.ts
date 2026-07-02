@@ -2,7 +2,16 @@ import type { SourceId, Category } from "./types"
 
 // User-visible app version, shown in the header next to the subtitle.
 // Bump on every meaningful release.
-export const APP_VERSION = "9.16"
+export const APP_VERSION = "9.17"
+
+// Tally form IDs for the per-place "report data error" flow (PlaceDebugSheet).
+// Empty string = feature hidden. Fill in after creating the DE/EN forms in
+// Tally; each form needs hidden fields named exactly: deeplink, placeName,
+// category, entrance, toilet, parking, sources, osmUrl, appVersion.
+export const TALLY_DATA_ERROR_FORMS: Record<"de" | "en", string> = {
+  de: "",
+  en: "",
+}
 
 export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
   reisen_fuer_alle:    1.00,

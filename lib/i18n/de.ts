@@ -338,6 +338,7 @@ const de: Translations = {
     hideRawData:    "Rohdaten ausblenden",
     rawDataLoading:     "Rohdaten werden geladen …",
     rawDataUnavailable: "(Rohdaten nicht verfügbar)",
+    reportDataError:    "Datenfehler melden",
   },
   faq: {
     title:         "Häufige Fragen",

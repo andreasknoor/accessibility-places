@@ -3,6 +3,13 @@ import { render, screen, fireEvent } from "@testing-library/react"
 import PlaceDebugSheet from "@/components/results/PlaceDebugSheet"
 import type { Place } from "@/lib/types"
 
+vi.mock("@/lib/tally", () => ({ openTallyPopup: vi.fn() }))
+vi.mock("@/lib/analytics", () => ({ track: vi.fn() }))
+vi.mock("@/lib/config", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/config")>()
+  return { ...actual, TALLY_DATA_ERROR_FORMS: { de: "testFormDe", en: "testFormEn" } }
+})
+
 vi.mock("@/lib/i18n", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/i18n")>()
   const de = (await import("@/lib/i18n/de")).default
@@ -222,6 +229,32 @@ describe("PlaceDebugSheet raw data toggle", () => {
     fireEvent.click(screen.getByText("Rohdaten anzeigen"))
     fireEvent.click(screen.getByText("Rohdaten ausblenden"))
     expect(screen.getByText("Rohdaten anzeigen")).toBeInTheDocument()
+  })
+})
+
+// ─── Report data error ────────────────────────────────────────────────────────
+
+describe("PlaceDebugSheet report data error", () => {
+  it("closes the sheet and opens the Tally popup prefilled with the place deep link", async () => {
+    const { openTallyPopup } = await import("@/lib/tally")
+    const onClose = vi.fn()
+    renderSheet(makePlace(), onClose)
+
+    fireEvent.click(screen.getByText("Datenfehler melden"))
+    expect(onClose).toHaveBeenCalledOnce()
+
+    await vi.waitFor(() => expect(openTallyPopup).toHaveBeenCalledOnce())
+    const [formId, hiddenFields] = (openTallyPopup as ReturnType<typeof vi.fn>).mock.calls[0] as [string, Record<string, string>]
+    expect(formId).toBe("testFormDe")
+    expect(hiddenFields.deeplink).toContain("selectLat=52.52")
+    expect(hiddenFields.deeplink).toContain("selectName=Caf%C3%A9+Sonnenschein")
+    expect(hiddenFields.placeName).toBe("Café Sonnenschein")
+    expect(hiddenFields.category).toBe("cafe")
+    expect(hiddenFields.entrance).toBe("yes")
+    expect(hiddenFields.toilet).toBe("unknown")
+    expect(hiddenFields.parking).toBe("no")
+    expect(hiddenFields.sources).toBe("osm")
+    expect(hiddenFields.osmUrl).toBe("https://www.openstreetmap.org/node/12345678")
   })
 })
 

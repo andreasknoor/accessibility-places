@@ -7,14 +7,17 @@ import {
   Utensils, Leaf, Dog, Wifi, Star, DollarSign,
   MessageSquare, ExternalLink, Accessibility,
   ShieldCheck, Award, ChevronDown, ChevronUp,
-  Truck, ShoppingBag, Share2, Car, Hash, Navigation, Copy,
+  Truck, ShoppingBag, Share2, Car, Hash, Navigation, Copy, Flag,
 } from "lucide-react"
 import { shareOrCopy } from "@/lib/native/share"
 import { hapticLight, hapticSuccess } from "@/lib/native/haptics"
-import { SOURCE_LABELS } from "@/lib/config"
+import { SOURCE_LABELS, APP_VERSION, TALLY_DATA_ERROR_FORMS } from "@/lib/config"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { NativeLink } from "@/components/ui/native-link"
-import { useTranslations } from "@/lib/i18n"
+import { useTranslations, useLocale } from "@/lib/i18n"
+import { buildPlaceDeepLink } from "@/lib/place-link"
+import { openTallyPopup } from "@/lib/tally"
+import { track } from "@/lib/analytics"
 import { cn } from "@/lib/utils"
 import type { Place, SourceId, ParkingDetails, EntranceDetails, ToiletDetails, SeatingDetails } from "@/lib/types"
 
@@ -111,14 +114,7 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
 
   function handleShareLink() {
     hapticLight()
-    const homePath = window.location.pathname.startsWith("/en") ? "/en/" : "/"
-    const params = new URLSearchParams({
-      selectLat:  String(place.coordinates.lat),
-      selectLon:  String(place.coordinates.lon),
-      selectName: place.name,
-      cat:        place.category,
-    })
-    const url = `${window.location.origin}${homePath}?${params}`
+    const url = buildPlaceDeepLink(place)
     void shareOrCopy({ title: place.name, text: place.name, url, dialogTitle: place.name }).then((outcome) => {
       if (outcome === "failed") return // user cancelled the share sheet — no feedback
       hapticSuccess()
@@ -129,6 +125,30 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
   }
   const t  = useTranslations()
   const ti = t.info
+  const { locale } = useLocale()
+  const reportFormId = TALLY_DATA_ERROR_FORMS[locale]
+
+  function handleReportDataError() {
+    hapticLight()
+    track("report_data_error", { category: place.category })
+    const hiddenFields: Record<string, string> = {
+      deeplink:   buildPlaceDeepLink(place),
+      placeName:  place.name,
+      category:   place.category,
+      entrance:   place.accessibility.entrance.value,
+      toilet:     place.accessibility.toilet.value,
+      parking:    place.accessibility.parking.value,
+      sources:    [...new Set(place.sourceRecords.map((r) => r.sourceId))].join(","),
+      appVersion: APP_VERSION,
+    }
+    if (osmLink) hiddenFields.osmUrl = osmLink
+    // Close the sheet before opening the Tally overlay: the sheet's focus trap
+    // would otherwise block Tab from reaching the popup iframe, and the trap's
+    // focus restore would steal focus from it. The delay lets unmount + focus
+    // restore settle first.
+    onClose()
+    setTimeout(() => openTallyPopup(reportFormId, hiddenFields), 150)
+  }
   const [showRaw, setShowRaw] = useState(false)
   // Lazily-fetched full raw data, keyed by source record index. In production
   // the search payload ships no `raw` (only a whitelisted `metadata` slice), so
@@ -481,6 +501,15 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
               <InfoRow icon={MessageSquare} label={ti.description}>
                 <span className="italic">{acceslibreCommentaire}</span>
               </InfoRow>
+            )}
+            {reportFormId && (
+              <button
+                onClick={handleReportDataError}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
+              >
+                <Flag className="w-3.5 h-3.5" />
+                {ti.reportDataError}
+              </button>
             )}
           </Section>
 
