@@ -1,4 +1,4 @@
-# Top-20 users in the adapter stats dashboard
+# Top users in the adapter stats dashboard (Top 50)
 
 Status: implemented in v9.20 (2026-07-02) — see `lib/user-id.ts`,
 `lib/user-stats.ts`, and the "Top 20 Users" section in `/api/stats?format=html`
@@ -22,7 +22,7 @@ them (e.g. show a questionnaire to heavy users).
 Stored per user (nothing else — no IP, no query strings, no coordinates):
 
 - `users:by_searches` — Redis **sorted set**; `ZINCRBY 1 <uid>` per search.
-  Top-20 = one `ZREVRANGE 0 19 WITHSCORES`.
+  Top-N = one `ZREVRANGE … WITHSCORES` (dashboard reads the top 50).
 - `user:<uid>` — Redis **hash**: `firstSeen` (`YYYY-MM-DD`, day granularity
   only — data minimisation), `lastSeen`, `platform` (`ios` | `android` | `web`,
   from the same detection as `lib/analytics.ts`).
