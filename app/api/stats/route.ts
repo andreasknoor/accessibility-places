@@ -105,6 +105,16 @@ function renderTopUsers(topUsers: TopUser[]): string {
     <tbody>${rows}</tbody>
   </table>
 </div>
+<div class="section-footer" style="justify-content:flex-end">
+  <button class="reset-btn" onclick="
+    if (!confirm('Permanently delete all USER statistics?\\n\\nAdapter stats are kept. This cannot be undone.')) return;
+    const token = new URLSearchParams(location.search).get('token') ?? '';
+    fetch('/api/stats?token=' + encodeURIComponent(token) + '&target=users', { method: 'DELETE' })
+      .then(r => r.json())
+      .then(d => { alert(d.deleted + ' keys deleted.'); location.reload(); })
+      .catch(() => alert('Reset failed.'));
+  ">Reset user stats</button>
+</div>
 <script>
   document.querySelectorAll('.comment-input').forEach((input) => {
     input.addEventListener('keydown', (e) => {
@@ -207,7 +217,8 @@ function renderHtml({ sources: stats, oldestHour }: StatsResponse, topUsers: Top
   .comment-input:focus { outline: none; border-color: #6b7280 }
   .comment-input.saved { border-color: #10b981 }
   .comment-input.save-error { border-color: #ef4444 }
-  .reset-bar { position: fixed; bottom: 24px; right: 24px; display: flex; gap: 10px }
+  .section-footer { margin-top: 16px; display: flex; justify-content: space-between; align-items: center; gap: 16px }
+  .section-footer .legend { margin-top: 0 }
   .reset-btn { background: #7f1d1d; color: #fca5a5; border: 1px solid #991b1b; border-radius: 6px; padding: 10px 18px; font: inherit; font-size: 0.8rem; cursor: pointer; letter-spacing: 0.03em }
   .reset-btn:hover { background: #991b1b; color: #fee2e2 }
 </style>
@@ -270,32 +281,23 @@ ${entries.length === 0 ? `
 </div>
 `}
 
+<div class="section-footer">
+  <div class="legend">
+    <span class="leg"><span class="dot" style="background:#10b981"></span>&lt; 1 % — OK</span>
+    <span class="leg"><span class="dot" style="background:#f59e0b"></span>1–5 % — Elevated</span>
+    <span class="leg"><span class="dot" style="background:#ef4444"></span>&gt; 5 % — Critical</span>
+  </div>
+  <button class="reset-btn" onclick="
+    if (!confirm('Permanently delete all ADAPTER statistics?\\n\\nUser stats are kept. This cannot be undone.')) return;
+    const token = new URLSearchParams(location.search).get('token') ?? '';
+    fetch('/api/stats?token=' + encodeURIComponent(token), { method: 'DELETE' })
+      .then(r => r.json())
+      .then(d => { alert(d.deleted + ' keys deleted.'); location.reload(); })
+      .catch(() => alert('Reset failed.'));
+  ">Reset adapter stats</button>
+</div>
+
 ${renderTopUsers(topUsers)}
-
-<div class="legend">
-  <span class="leg"><span class="dot" style="background:#10b981"></span>&lt; 1 % — OK</span>
-  <span class="leg"><span class="dot" style="background:#f59e0b"></span>1–5 % — Elevated</span>
-  <span class="leg"><span class="dot" style="background:#ef4444"></span>&gt; 5 % — Critical</span>
-</div>
-
-<div class="reset-bar">
-<button class="reset-btn" onclick="
-  if (!confirm('Permanently delete all ADAPTER statistics?\\n\\nUser stats are kept. This cannot be undone.')) return;
-  const token = new URLSearchParams(location.search).get('token') ?? '';
-  fetch('/api/stats?token=' + encodeURIComponent(token), { method: 'DELETE' })
-    .then(r => r.json())
-    .then(d => { alert(d.deleted + ' keys deleted.'); location.reload(); })
-    .catch(() => alert('Reset failed.'));
-">Reset adapter stats</button>
-<button class="reset-btn" onclick="
-  if (!confirm('Permanently delete all USER statistics?\\n\\nAdapter stats are kept. This cannot be undone.')) return;
-  const token = new URLSearchParams(location.search).get('token') ?? '';
-  fetch('/api/stats?token=' + encodeURIComponent(token) + '&target=users', { method: 'DELETE' })
-    .then(r => r.json())
-    .then(d => { alert(d.deleted + ' keys deleted.'); location.reload(); })
-    .catch(() => alert('Reset failed.'));
-">Reset user stats</button>
-</div>
 </body>
 </html>`
 }
