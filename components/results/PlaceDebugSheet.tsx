@@ -505,7 +505,7 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
             {reportFormId && (
               <button
                 onClick={handleReportDataError}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
+                className="flex items-center gap-1.5 text-xs text-primary-strong hover:underline cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm py-1 transition-colors"
               >
                 <Flag className="w-3.5 h-3.5" />
                 {ti.reportDataError}
