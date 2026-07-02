@@ -399,7 +399,7 @@ const de: Translations = {
     resetToDefaults:   "Auf Standard zurücksetzen",
     resetDone:         "Zurückgesetzt",
     parkingRadius:     "Standard-Suchradius 🅿️ & 🚻",
-    parkingRadiusHint: "Wird beim Tippen auf 🅿️ oder 🚻 als Startradius verwendet. Im Filterbereich kannst du den Umkreis danach jederzeit anpassen.",
+    parkingRadiusHint: "Wird beim Tippen auf 🅿️ oder 🚻 als Startradius verwendet.",
     internationalMode:     "Internationale Suche (Beta)",
     internationalModeHint: "Suche auch außerhalb von DACH (Frankreich, Großbritannien, Niederlande, Spanien, Italien, USA). Datenlage variiert je nach Land und ist außerhalb großer Städte oft dünn.",
     usageStats:            "Anonyme Nutzungsstatistik",
