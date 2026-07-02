@@ -31,7 +31,7 @@ const FAQ_CATEGORIES_EN: FaqCategory[] = [
       {
         id: "which-venues",
         q: "Which wheelchair-accessible venues can I find — restaurants, hotels, cafés?",
-        a: "Restaurants, cafés & ice cream shops, bars, pubs, beer gardens, fast food / snack bars, hotels, hostels, holiday apartments, museums, theatres, cinemas, libraries, galleries and attractions.",
+        a: "Restaurants, cafés & ice cream shops, bars, pubs, beer gardens, fast food / snack bars, hotels, hostels, holiday apartments, museums, theatres, cinemas, libraries, galleries, attractions and zoos — plus everyday places such as pharmacies, doctor's offices, dentists, veterinarians, hospitals, drugstores, supermarkets, bakeries, hairdressers, banks and post offices.",
       },
       {
         id: "free",
@@ -54,6 +54,29 @@ const FAQ_CATEGORIES_EN: FaqCategory[] = [
         id: "find-nearby",
         q: "How do I find wheelchair-accessible restaurants or cafés near me?",
         a: "Tap the location button (⌖) next to the search field and allow location access. Accessible Places automatically detects your position and searches for accessible restaurants, cafés or other venues in your immediate vicinity — no need to type a location.",
+      },
+      {
+        id: "all-categories",
+        q: "Which types of places are searched when I select “All”?",
+        a: (
+          <>
+            <p>
+              With the &ldquo;All&rdquo; chip, Accessible Places searches the following 27 place categories at once:
+            </p>
+            <p className="mt-2">
+              <strong className="font-semibold text-foreground">Food &amp; drink:</strong> Restaurant, Café &amp; Ice Cream, Bar, Pub, Beer Garden, Fast Food ·{" "}
+              <strong className="font-semibold text-foreground">Accommodation:</strong> Hotel, Hostel, Apartment ·{" "}
+              <strong className="font-semibold text-foreground">Culture &amp; leisure:</strong> Museum, Theater, Cinema, Library, Gallery, Attraction, Zoo/Aquarium ·{" "}
+              <strong className="font-semibold text-foreground">Health:</strong> Pharmacy, Doctor&apos;s Office, Dentist, Veterinarian, Hospital ·{" "}
+              <strong className="font-semibold text-foreground">Everyday:</strong> Drugstore, Supermarket, Bakery, Hairdresser, Bank, Post Office
+            </p>
+            <p className="mt-2">
+              The visible category chips are just a selection of the most popular categories — &ldquo;All&rdquo; goes beyond them. Not included are the quick-search chips 🅿 Parking and 🚻 Toilets: they start a separate search for parking spots or toilets and are not place categories.
+            </p>
+          </>
+        ),
+        schemaText:
+          "With the “All” chip, Accessible Places searches the following 27 place categories at once: food & drink (restaurant, café & ice cream, bar, pub, beer garden, fast food), accommodation (hotel, hostel, apartment), culture & leisure (museum, theater, cinema, library, gallery, attraction, zoo/aquarium), health (pharmacy, doctor's office, dentist, veterinarian, hospital) and everyday places (drugstore, supermarket, bakery, hairdresser, bank, post office). The visible category chips are just a selection of the most popular categories — “All” goes beyond them. Not included are the quick-search chips 🅿 Parking and 🚻 Toilets: they start a separate search for parking spots or toilets and are not place categories.",
       },
       {
         id: "international-search",
