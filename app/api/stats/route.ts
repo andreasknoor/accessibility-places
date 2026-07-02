@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { timingSafeEqual }           from "crypto"
 import { getStats, resetStats }      from "@/lib/stats"
+import { getTopUsers }               from "@/lib/user-stats"
 import type { StatsResult, StatsResponse, SourceStats } from "@/lib/stats"
+import type { TopUser } from "@/lib/user-stats"
 
 function safeEqual(a: string, b: string): boolean {
   const ba = Buffer.from(a)
@@ -44,7 +46,51 @@ function formatHour(h: string): string {
   return `${monthNames[parseInt(m, 10) - 1]} ${parseInt(d, 10)}, ${y}, ${hour}:00`
 }
 
-function renderHtml({ sources: stats, oldestHour }: StatsResponse): string {
+const PLATFORM_BADGES: Record<string, { label: string; color: string }> = {
+  ios:     { label: "iOS",     color: "#60a5fa" },
+  android: { label: "Android", color: "#34d399" },
+  web:     { label: "Web",     color: "#a78bfa" },
+}
+
+// All values are write-validated (uid = UUID regex, platform = whitelist) and
+// dates are server-generated, so this table needs no HTML escaping.
+function renderTopUsers(topUsers: TopUser[]): string {
+  if (topUsers.length === 0) return ""
+  const rows = topUsers.map((u, i) => {
+    const badge = PLATFORM_BADGES[u.platform ?? ""] ?? { label: u.platform ?? "–", color: "#9ca3af" }
+    return `
+      <tr>
+        <td style="padding:12px 16px;color:#6b7280">${i + 1}</td>
+        <td style="padding:12px 16px"><code>${u.uid.slice(0, 8)}…</code></td>
+        <td style="padding:12px 16px;text-align:right;font-weight:600">${fmt(u.searches)}</td>
+        <td style="padding:12px 16px;text-align:right;color:#9ca3af">${u.firstSeen ?? "–"}</td>
+        <td style="padding:12px 16px;text-align:right;color:#9ca3af">${u.lastSeen ?? "–"}</td>
+        <td style="padding:12px 16px;text-align:right">
+          <span style="background:${badge.color}22;color:${badge.color};padding:2px 8px;border-radius:4px;font-weight:600">${badge.label}</span>
+        </td>
+      </tr>`
+  }).join("")
+  return `
+<h2 style="font-size:1rem;font-weight:600;letter-spacing:0.05em;color:#e5e7eb;margin-top:40px">👥 Top ${topUsers.length} Users</h2>
+<p class="subtitle">Anonymous random IDs · searches counted server-side · 180-day retention since last visit</p>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>User ID</th>
+        <th>Searches</th>
+        <th>First seen</th>
+        <th>Last seen</th>
+        <th>Platform</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+</div>`
+}
+
+function renderHtml({ sources: stats, oldestHour }: StatsResponse, topUsers: TopUser[]): string {
   const entries = SOURCE_ORDER
     .map(id => ({ id, s: stats[id as keyof StatsResult] }))
     .filter(e => e.s != null) as { id: string; s: NonNullable<StatsResult[keyof StatsResult]> }[]
@@ -179,6 +225,8 @@ ${entries.length === 0 ? `
 </div>
 `}
 
+${renderTopUsers(topUsers)}
+
 <div class="legend">
   <span class="leg"><span class="dot" style="background:#10b981"></span>&lt; 1 % — OK</span>
   <span class="leg"><span class="dot" style="background:#f59e0b"></span>1–5 % — Elevated</span>
@@ -211,15 +259,15 @@ export async function GET(req: NextRequest): Promise<Response> {
     return NextResponse.json({ ok: false, error: "KV not configured" }, { status: 503 })
   }
 
-  const stats = await getStats()
+  const [stats, topUsers] = await Promise.all([getStats(), getTopUsers(20)])
 
   if (req.nextUrl.searchParams.get("format") === "html") {
-    return new Response(renderHtml(stats), {
+    return new Response(renderHtml(stats, topUsers), {
       headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
     })
   }
 
-  return NextResponse.json({ ok: true, ...stats }, {
+  return NextResponse.json({ ok: true, ...stats, topUsers }, {
     headers: { "Cache-Control": "no-store" },
   })
 }

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server"
 import type { SearchParams, SearchResult, SourceId, FilterDebug, A11yValue, Place } from "@/lib/types"
 import { startAdapterTasks }            from "@/lib/adapters"
 import { trackCall, trackError, trackDuration } from "@/lib/stats"
+import { trackUserSearch } from "@/lib/user-stats"
 import { findMatch, filterByNameHint }  from "@/lib/matching/match"
 import { mergePlaces, passesFilters, finalisePlaceConfidence, computeFilteredConfidence, countLimited } from "@/lib/matching/merge"
 import { fetchOsmDisabledParking, fetchOsmAccessibleAmenities } from "@/lib/adapters/osm"
@@ -224,6 +225,11 @@ export async function POST(req: NextRequest) {
   if (gpRateLimited) {
     sources.google_places = false
   }
+
+  // Anonymous top-users stat (opt-out; validated fire-and-forget, never in
+  // fetchAllSources so SEO ISR renders don't count). Counted here, after all
+  // input validation, so only requests that actually run a search increment.
+  trackUserSearch(rawBody.userId, rawBody.platform)
 
   const encoder = new TextEncoder()
 

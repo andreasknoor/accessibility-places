@@ -402,6 +402,8 @@ const de: Translations = {
     parkingRadiusHint: "Wird beim Tippen auf 🅿️ oder 🚻 als Startradius verwendet. Im Filterbereich kannst du den Umkreis danach jederzeit anpassen.",
     internationalMode:     "Internationale Suche (Beta)",
     internationalModeHint: "Suche auch außerhalb von DACH (Frankreich, Großbritannien, Niederlande, Spanien, Italien, USA). Datenlage variiert je nach Land und ist außerhalb großer Städte oft dünn.",
+    usageStats:            "Anonyme Nutzungsstatistik",
+    usageStatsHint:        "Zählt deine Suchen unter einer zufälligen ID — ohne IP-Adresse, Suchbegriffe oder Standort. Beim Ausschalten wird die ID sofort gelöscht. Details in der Datenschutzerklärung.",
   },
 }
 

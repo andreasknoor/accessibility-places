@@ -26,6 +26,10 @@ export interface AppSettings {
   // When on, geocoding + OSM endpoint choice widen to the allowlist; DACH searches
   // are unaffected (still use the private server + all sources).
   internationalMode:  boolean
+  // Opt-out: anonymous usage statistics (random ID in localStorage + per-search
+  // counter in Redis; no IP, no queries, no coordinates). Turning this off deletes
+  // the local ID and stops sending — see docs/plans/top-users-stats.md.
+  usageStats:         boolean
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -40,6 +44,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   publicToiletsOnly:  false,
   parkingRadiusKm:    4.0,
   internationalMode:  false,
+  usageStats:         true,
 }
 
 // Mirrors CHIPS in ChatPanel.tsx. Each entry carries its stable `cat` key, so the

@@ -378,5 +378,7 @@ export interface Translations {
     parkingRadiusHint: string
     internationalMode:     string
     internationalModeHint: string
+    usageStats:            string
+    usageStatsHint:        string
   }
 }

@@ -65,6 +65,20 @@ export default function DatenschutzPage() {
               ausschließlich lokal im Gerätespeicher (localStorage) abgelegt und nicht
               an Server übermittelt.
             </p>
+
+            <h3 className="font-medium text-foreground mt-3 mb-1">Anonyme Nutzungsstatistik</h3>
+            <p>
+              Um besonders aktive Nutzung zu erkennen, wird beim ersten App-Start eine
+              zufällig erzeugte Kennung (UUID) im Gerätespeicher (localStorage)
+              abgelegt. Bei jeder Suche werden diese Kennung, ein Suchzähler, das Datum
+              des ersten und letzten Besuchs (nur Tagesdatum) sowie die App-Variante
+              (iOS, Android, Web) serverseitig gespeichert. Die Kennung enthält keine
+              Geräte- oder Personenmerkmale; IP-Adresse, Suchbegriffe und Standort
+              werden dabei nicht gespeichert. Einträge werden 180 Tage nach dem
+              letzten Besuch automatisch gelöscht. Du kannst die Statistik jederzeit in
+              den Einstellungen (&ldquo;Anonyme Nutzungsstatistik&rdquo;) deaktivieren —
+              dabei wird die Kennung sofort von deinem Gerät gelöscht.
+            </p>
           </section>
 
           <section>

@@ -201,6 +201,12 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
                 onChange={(v) => onUpdate({ internationalMode: v })}
               />
             </Row>
+            <Row label={ts.usageStats} hint={ts.usageStatsHint}>
+              <Toggle
+                value={settings.usageStats}
+                onChange={(v) => onUpdate({ usageStats: v })}
+              />
+            </Row>
           </div>
 
           {/* ── Map & Parking ── */}

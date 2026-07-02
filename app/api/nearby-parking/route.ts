@@ -2,6 +2,7 @@ import { NextRequest } from "next/server"
 import { fetchOsmAccessibleAmenities } from "@/lib/adapters/osm"
 import { dedupeToiletFeatures } from "@/lib/matching/nearby-parking"
 import { ipFromRequest, isRateLimited, rateLimitResponse } from "@/lib/rate-limit"
+import { trackUserSearch } from "@/lib/user-stats"
 import type { AmenityType } from "@/lib/types"
 
 const RADIUS_MIN_KM = 0.05
@@ -28,6 +29,12 @@ export async function GET(req: NextRequest) {
   const radiusKm = Number.isFinite(radiusRaw)
     ? Math.min(Math.max(radiusRaw, RADIUS_MIN_KM), RADIUS_MAX_KM)
     : 0.3
+
+  // Anonymous top-users stat (amenity searches count too — decision in
+  // docs/plans/top-users-stats.md). The uid in the URL makes responses per-user;
+  // identical repeats within the 5-min browser-cache window aren't recounted,
+  // which is an accepted undercount.
+  trackUserSearch(searchParams.get("uid"), searchParams.get("pf"))
 
   // International mode (opt-in): outside DACH the region-aware endpoint choice
   // drops the DACH-only private Overpass server, which would otherwise win the

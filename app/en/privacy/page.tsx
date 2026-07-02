@@ -65,6 +65,20 @@ export default function PrivacyPage() {
               in local device storage (localStorage) and are not transmitted to any
               server.
             </p>
+
+            <h3 className="font-medium text-foreground mt-3 mb-1">Anonymous usage statistics</h3>
+            <p>
+              To recognise particularly active usage, a randomly generated identifier
+              (UUID) is stored in local device storage (localStorage) on first launch.
+              With every search, this identifier, a search counter, the dates of the
+              first and most recent visit (day only), and the app variant (iOS,
+              Android, Web) are stored server-side. The identifier contains no device
+              or personal characteristics; IP address, search terms, and location are
+              not stored. Entries are deleted automatically 180 days after the last
+              visit. You can disable the statistic at any time in the settings
+              (&ldquo;Anonymous usage statistics&rdquo;) — this immediately deletes the
+              identifier from your device.
+            </p>
           </section>
 
           <section>

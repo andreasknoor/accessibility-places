@@ -52,12 +52,12 @@ describe("SettingsSheet", () => {
     const onUpdate = vi.fn()
     renderSheet({ ...DEFAULT_APP_SETTINGS, autoZoom: true }, onUpdate)
     fireEvent.click(screen.getByRole("button", { name: /Einstellungen/i }))
-    // autoZoom toggle is the first switch (aria-checked=true)
-    const autoZoomSwitch = screen
-      .getAllByRole("switch")
-      .find((el) => el.getAttribute("aria-checked") === "true")
-    expect(autoZoomSwitch).toBeDefined()
-    fireEvent.click(autoZoomSwitch!)
+    // Locate the switch by its row label (robust against other toggles being
+    // added/reordered — usageStats also defaults to checked).
+    const label = screen.getByText("Automatischer Zoom nach Suche")
+    const row = label.parentElement!.parentElement! // <p> → label wrapper → Row root
+    const autoZoomSwitch = within(row).getByRole("switch")
+    fireEvent.click(autoZoomSwitch)
     expect(onUpdate).toHaveBeenCalledWith({ autoZoom: false })
   })
 

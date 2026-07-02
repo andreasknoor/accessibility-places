@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from "react"
-import { track } from "@/lib/analytics"
+import { track, getPlatform } from "@/lib/analytics"
+import { getUserId, clearUserStats, incrementLocalSearchCount } from "@/lib/user-id"
 import * as Sentry from "@sentry/nextjs"
 import { SlidersHorizontal, ChevronRight, ChevronLeft } from "lucide-react"
 import dynamic from "next/dynamic"
@@ -436,11 +437,13 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
     setSourceStates(initial)
 
+    if (settings.usageStats) incrementLocalSearchCount()
+
     try {
       const res = await fetch("/api/search", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ userQuery: query, radiusKm: radiusKmOverride ?? radiusKm, filters: { ...filters, ...filtersOverride }, sources: { ...sources, ...sourcesOverride }, locale, coordinates: coords, nameHint, placeSearch, international: settings.internationalMode }),
+        body:    JSON.stringify({ userQuery: query, radiusKm: radiusKmOverride ?? radiusKm, filters: { ...filters, ...filtersOverride }, sources: { ...sources, ...sourcesOverride }, locale, coordinates: coords, nameHint, placeSearch, international: settings.internationalMode, userId: getUserId(settings.usageStats), platform: getPlatform() }),
         signal:  controller.signal,
       })
 
@@ -910,9 +913,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       setAmenityRadiusKm(radius)
       updateSettings({ parkingRadiusKm: radius })
     }
+    if (settings.usageStats) incrementLocalSearchCount()
+    const uid = getUserId(settings.usageStats)
+    const uidParams = uid ? `&uid=${uid}&pf=${getPlatform()}` : ""
     try {
       const res = await fetch(
-        `/api/nearby-parking?lat=${center.lat}&lon=${center.lon}&radius=${radius}&types=${type}${settings.internationalMode ? "&intl=1" : ""}`,
+        `/api/nearby-parking?lat=${center.lat}&lon=${center.lon}&radius=${radius}&types=${type}${settings.internationalMode ? "&intl=1" : ""}${uidParams}`,
         { signal: controller.signal },
       )
       const spots: AmenityFeature[] = res.ok ? await res.json() : []
@@ -1182,6 +1188,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       if (patch.internationalMode === true) {
         setSources((s) => ({ ...s, google_places: true, acceslibre: true }))
       }
+    }
+    if (patch.usageStats === false) {
+      // Opt-out: forget the anonymous ID + local counter immediately.
+      clearUserStats()
     }
   }, [updateSettings])
 

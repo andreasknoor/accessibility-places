@@ -15,7 +15,7 @@ function currentHour(): string {
 // KV env vars are absent (adapters must not crash when stats are unconfigured).
 let _redis: Redis | null | undefined = undefined
 
-function getRedis(): Redis | null {
+export function getRedis(): Redis | null {
   if (_redis !== undefined) return _redis
   if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
     _redis = null

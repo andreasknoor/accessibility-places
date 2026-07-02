@@ -15,7 +15,7 @@ type Props = Record<string, AllowedValue>
 // tagged dimension is the only reliable way any analytics tool can tell platforms
 // apart — see docs/analytics for the rationale.
 let cached: string | undefined
-function platform(): string {
+export function getPlatform(): string {
   if (cached === undefined) {
     try { cached = Capacitor.getPlatform() } catch { cached = "web" }
   }
@@ -37,7 +37,7 @@ type UmamiGlobal = { track: (event: string, data?: Record<string, unknown>) => v
  * are independent — failure or absence of one never affects the other.
  */
 export function track(event: string, props?: Props): void {
-  const enriched = { ...props, platform: platform() }
+  const enriched = { ...props, platform: getPlatform() }
   vercelTrack(event, enriched)
   try {
     const umami = (globalThis as unknown as { umami?: UmamiGlobal }).umami
