@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { timingSafeEqual }           from "crypto"
 import { getStats, resetStats }      from "@/lib/stats"
-import { getTopUsers }               from "@/lib/user-stats"
+import { getTopUsers, resetUserStats } from "@/lib/user-stats"
 import type { StatsResult, StatsResponse, SourceStats } from "@/lib/stats"
 import type { TopUser } from "@/lib/user-stats"
 
@@ -163,7 +163,8 @@ function renderHtml({ sources: stats, oldestHour }: StatsResponse, topUsers: Top
   .empty-icon { font-size: 2.5rem; margin-bottom: 12px }
   .empty-title { font-size: 1rem; color: #9ca3af; margin-bottom: 6px }
   .empty-hint { font-size: 0.8rem; line-height: 1.6 }
-  .reset-btn { position: fixed; bottom: 24px; right: 24px; background: #7f1d1d; color: #fca5a5; border: 1px solid #991b1b; border-radius: 6px; padding: 10px 18px; font: inherit; font-size: 0.8rem; cursor: pointer; letter-spacing: 0.03em }
+  .reset-bar { position: fixed; bottom: 24px; right: 24px; display: flex; gap: 10px }
+  .reset-btn { background: #7f1d1d; color: #fca5a5; border: 1px solid #991b1b; border-radius: 6px; padding: 10px 18px; font: inherit; font-size: 0.8rem; cursor: pointer; letter-spacing: 0.03em }
   .reset-btn:hover { background: #991b1b; color: #fee2e2 }
 </style>
 </head>
@@ -233,14 +234,24 @@ ${renderTopUsers(topUsers)}
   <span class="leg"><span class="dot" style="background:#ef4444"></span>&gt; 5 % — Critical</span>
 </div>
 
+<div class="reset-bar">
 <button class="reset-btn" onclick="
-  if (!confirm('Permanently delete all statistics?\\n\\nThis cannot be undone.')) return;
+  if (!confirm('Permanently delete all ADAPTER statistics?\\n\\nUser stats are kept. This cannot be undone.')) return;
   const token = new URLSearchParams(location.search).get('token') ?? '';
   fetch('/api/stats?token=' + encodeURIComponent(token), { method: 'DELETE' })
     .then(r => r.json())
     .then(d => { alert(d.deleted + ' keys deleted.'); location.reload(); })
     .catch(() => alert('Reset failed.'));
-">Reset statistics</button>
+">Reset adapter stats</button>
+<button class="reset-btn" onclick="
+  if (!confirm('Permanently delete all USER statistics?\\n\\nAdapter stats are kept. This cannot be undone.')) return;
+  const token = new URLSearchParams(location.search).get('token') ?? '';
+  fetch('/api/stats?token=' + encodeURIComponent(token) + '&target=users', { method: 'DELETE' })
+    .then(r => r.json())
+    .then(d => { alert(d.deleted + ' keys deleted.'); location.reload(); })
+    .catch(() => alert('Reset failed.'));
+">Reset user stats</button>
+</div>
 </body>
 </html>`
 }
@@ -278,6 +289,10 @@ export async function DELETE(req: NextRequest): Promise<Response> {
   const token = req.nextUrl.searchParams.get("token") ?? ""
   if (!safeEqual(token, secret)) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 })
   if (!process.env.KV_REST_API_URL) return NextResponse.json({ ok: false, error: "KV not configured" }, { status: 503 })
-  const deleted = await resetStats()
+  // ?target=users clears only the anonymous user stats; default clears only
+  // the adapter stats — the two datasets are reset independently.
+  const deleted = req.nextUrl.searchParams.get("target") === "users"
+    ? await resetUserStats()
+    : await resetStats()
   return NextResponse.json({ ok: true, deleted }, { headers: { "Cache-Control": "no-store" } })
 }

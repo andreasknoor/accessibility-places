@@ -20,11 +20,13 @@ const redisMock = {
   zrange:   vi.fn(),
   hgetall:  vi.fn(),
   zrem:     vi.fn().mockResolvedValue(1),
+  scan:     vi.fn(),
+  del:      vi.fn().mockResolvedValue(1),
 }
 
 vi.mock("@/lib/stats", () => ({ getRedis: () => redisMock }))
 
-import { trackUserSearch, getTopUsers } from "@/lib/user-stats"
+import { trackUserSearch, getTopUsers, resetUserStats } from "@/lib/user-stats"
 
 const UID = "01234567-89ab-4cde-8f01-23456789abcd"
 
@@ -95,5 +97,21 @@ describe("getTopUsers", () => {
   it("returns [] when the zset is empty", async () => {
     redisMock.zrange.mockResolvedValue([])
     expect(await getTopUsers(20)).toEqual([])
+  })
+})
+
+describe("resetUserStats", () => {
+  it("deletes the ranking zset and every user hash", async () => {
+    redisMock.scan.mockResolvedValue([0, [`user:${UID}`, "user:other"]])
+    const deleted = await resetUserStats()
+    expect(deleted).toBe(3) // zset + 2 hashes
+    expect(redisMock.del).toHaveBeenCalledWith("users:by_searches", `user:${UID}`, "user:other")
+  })
+
+  it("deletes only the zset key when no user hashes exist", async () => {
+    redisMock.scan.mockResolvedValue([0, []])
+    const deleted = await resetUserStats()
+    expect(deleted).toBe(1)
+    expect(redisMock.del).toHaveBeenCalledWith("users:by_searches")
   })
 })

@@ -47,6 +47,24 @@ export function trackUserSearch(uid: unknown, platform: unknown): void {
   trackUserSearchInternal(uid, platform).catch(() => {/* non-fatal */})
 }
 
+// Deletes all user statistics (the cumulative ranking + every per-user hash).
+// Separate from resetStats() so the adapter stats and the user stats can be
+// cleared independently from the dashboard.
+export async function resetUserStats(): Promise<number> {
+  const redis = getRedis()
+  if (!redis) return 0
+  let cursor = 0
+  const keys: string[] = [ZSET_KEY]
+  do {
+    const [nextCursor, batch] = await redis.scan(cursor, { match: "user:*", count: 100 })
+    cursor = Number(nextCursor)
+    keys.push(...batch)
+  } while (cursor !== 0)
+  for (let i = 0; i < keys.length; i += 100)
+    await redis.del(...keys.slice(i, i + 100))
+  return keys.length
+}
+
 export interface TopUser {
   uid:       string
   searches:  number
