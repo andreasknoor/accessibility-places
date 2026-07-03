@@ -43,7 +43,10 @@ function normaliseForMatch(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "")
 }
 
-export function inferCategories(query: string): Category[] {
+// Matched categories only — [] when nothing matches (no all-categories
+// fallback). Used by inferCategories and by the location fallback below to
+// recognise category words.
+function matchedCategories(query: string): Category[] {
   const lower = normaliseForMatch(query)
   const found: Category[] = []
   for (const [cat, hints] of Object.entries(CATEGORY_HINTS) as [Category, string[]][]) {
@@ -57,6 +60,11 @@ export function inferCategories(query: string): Category[] {
       return new RegExp(pattern, "i").test(lower)
     })) found.push(cat)
   }
+  return found
+}
+
+export function inferCategories(query: string): Category[] {
+  const found = matchedCategories(query)
   return found.length > 0 ? found : [...ALL_CATEGORIES]
 }
 
@@ -90,7 +98,15 @@ export function extractLocationFallback(query: string): string {
 
   const words      = stripped.split(/\s+/)
   const capitalised = words.filter((w) => /^[A-ZÄÖÜ]/.test(w))
-  const loc        = capitalised.slice(-2).join(" ") || stripped
+  // Drop recognised category words from the location candidates: "Arzt
+  // Frankenthal" (typed without "in") must geocode "Frankenthal", not the
+  // full string — Nominatim knows no place called "Arzt Frankenthal"
+  // (free-text-matrix finding, 2026-07-03). When ALL capitalised words are
+  // category terms (the city "Essen"), keep them: a bare city name must not
+  // be stripped into an empty query.
+  const nonCategory = capitalised.filter((w) => matchedCategories(w).length === 0)
+  const candidates  = nonCategory.length > 0 ? nonCategory : capitalised
+  const loc        = candidates.slice(-2).join(" ") || stripped
   return cc ? `${loc} (${cc})` : loc
 }
 

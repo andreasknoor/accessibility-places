@@ -22,6 +22,15 @@ describe("extractLocationFallback", () => {
     expect(result).toContain("München")
   })
 
+  it("drops recognised category words from the no-'in' fallback (matrix finding)", () => {
+    expect(extractLocationFallback("Arzt Frankenthal")).toBe("Frankenthal")
+    expect(extractLocationFallback("Hotels Berlin")).toBe("Berlin")
+  })
+
+  it("keeps a bare city name even when it doubles as a category word", () => {
+    expect(extractLocationFallback("Essen")).toBe("Essen")
+  })
+
   it("stops at 'mit' connector", () => {
     const result = extractLocationFallback("Restaurants in Wien mit Rollstuhltoilette")
     expect(result).toBe("Wien")
@@ -291,6 +300,7 @@ describe("parseQuery — client query shapes", () => {
     ["Essen",                             "Essen",                   ["restaurant"]],
     // Regression shapes from the Frankenthal bug (pre-v9.30 buildQuery nesting
     // and the poisoned-restore form): the full free text becomes the location.
+    ["Arzt Frankenthal",                  "Frankenthal",             ["doctors"]],  // ohne "in" — Kategorienwort wird gestrippt
     ["Arztpraxen in Artz in Frankenthal", "Artz in Frankenthal",     ["doctors"]],
     ["in Artz in Frankenthal",            "Artz in Frankenthal",     "all"],
   ])("%s → location %j", (query, expectedLoc, expectedCats) => {

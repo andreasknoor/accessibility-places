@@ -138,13 +138,11 @@ describe.skipIf(process.env.FREETEXT_MATRIX !== "1")("free-text matrix (LIVE)", 
     { query: "Frankenthal",                expect: (f) => expectInBbox(f, BBOX.frankenthal, "Frankenthal") },
     {
       query: "Arzt Frankenthal",
-      // KNOWN QUIRK (matrix finding, 2026-07-03): without "in" the
-      // capitalised-word fallback keeps the category word in the location
-      // ("Arzt Frankenthal") and Nominatim finds nothing. Users typing
-      // "<Kategorie> <Ort>" get 'location not found' for a valid town.
-      // Fix candidate: strip recognised category hints from the fallback.
-      expect: (f) => expectNotFound(f, "Arzt Frankenthal"),
-      note: "QUIRK: ohne 'in' wandert das Kategorienwort in die Ortssuche → not_found",
+      // Matrix finding 2026-07-03, fixed in v9.33: category words are now
+      // stripped from the no-'in' location fallback, so this geocodes
+      // "Frankenthal" and searches doctors there.
+      expect: (f) => expectInBbox(f, BBOX.frankenthal, "Arzt Frankenthal"),
+      note: "ohne 'in' — Kategorienwort wird aus der Ortssuche gestrippt",
     },
 
     // ── Berlin Mitte (existiert, Stadtteil) ──────────────────────────────────
