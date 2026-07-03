@@ -381,3 +381,42 @@ describe("POST /api/search — stats tracking", () => {
     expect(trackError).toHaveBeenCalledWith("osm")
   })
 })
+
+// ─── Geocode failure modes (not-found vs. transient upstream failure) ────────
+
+describe("POST /api/search — geocode failure codes", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function geocodeReq(ip: string): NextRequest {
+    // No `coordinates` → the route must geocode via (mocked) Nominatim.
+    const { coordinates: _c, ...body } = BASE_BODY
+    return new NextRequest("http://localhost/api/search", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json", "x-forwarded-for": ip },
+      body:    JSON.stringify(body),
+    })
+  }
+
+  it("emits fatal code location_not_found when Nominatim knows no such place", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => [] }))
+    const events = await parseEvents(await POST(geocodeReq("geo-test-1")))
+    const fatal = events.find((e) => e.type === "fatal")
+    expect(fatal?.code).toBe("location_not_found")
+  })
+
+  it("emits fatal code geocoding_unavailable on a Nominatim 429", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 429 }))
+    const events = await parseEvents(await POST(geocodeReq("geo-test-2")))
+    const fatal = events.find((e) => e.type === "fatal")
+    expect(fatal?.code).toBe("geocoding_unavailable")
+  })
+
+  it("emits fatal code geocoding_unavailable on a network failure", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("fetch failed")))
+    const events = await parseEvents(await POST(geocodeReq("geo-test-3")))
+    const fatal = events.find((e) => e.type === "fatal")
+    expect(fatal?.code).toBe("geocoding_unavailable")
+  })
+})

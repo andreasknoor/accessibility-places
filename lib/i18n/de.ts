@@ -40,6 +40,8 @@ const de: Translations = {
     noSearchYet:           "Gib oben einen Ort ein – oder suche direkt nach Name.",
     errorGeneric:  "Ein Fehler ist aufgetreten. Bitte erneut versuchen.",
     errorTimeout:  "Die Suche hat zu lange gedauert. Eine Datenquelle antwortet gerade nicht – bitte erneut versuchen.",
+    errorLocationNotFound:     "Ort nicht gefunden. Bitte Schreibweise prüfen oder einen größeren Ort in der Nähe versuchen.",
+    errorGeocodingUnavailable: "Die Ortssuche ist gerade überlastet. Bitte in einer Minute erneut versuchen.",
     modeText:      "Überall",
     modeNearby:    "In der Nähe",
     modeTextSub:   "Stadt & Kategorie",

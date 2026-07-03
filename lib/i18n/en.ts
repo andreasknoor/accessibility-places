@@ -40,6 +40,8 @@ const en: Translations = {
     noSearchYet:           "Enter a city above – or search directly by name.",
     errorGeneric:  "An error occurred. Please try again.",
     errorTimeout:  "The search took too long. A data source is not responding right now — please try again.",
+    errorLocationNotFound:     "Location not found. Please check the spelling or try a larger place nearby.",
+    errorGeocodingUnavailable: "Location lookup is overloaded right now. Please try again in a minute.",
     modeText:      "Anywhere",
     modeNearby:    "Nearby",
     modeTextSub:   "City & category",

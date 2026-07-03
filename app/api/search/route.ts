@@ -56,11 +56,22 @@ function isGooglePlacesRateLimited(ip: string, requested: boolean): boolean {
 
 // ─── Internal geocoding ──────────────────────────────────────────────────────
 
+// "not_found" = Nominatim answered and knows no such place (permanent — the
+// user should fix the query). "unavailable" = Nominatim itself failed
+// (429/5xx/timeout/network; transient — the user should simply retry). The
+// two must surface as different errors: a rate-limited Nominatim shown as
+// "location not found" reads as a permanent failure and sends users into a
+// reload loop that keeps the rate limit alive.
+type GeocodeResult =
+  | { lat: number; lon: number; label: string }
+  | "not_found"
+  | "unavailable"
+
 async function geocode(
   locationQuery: string,
   signal: AbortSignal,
   international = false,
-): Promise<{ lat: number; lon: number; label: string } | null> {
+): Promise<GeocodeResult> {
   const url = `${NOMINATIM_ENDPOINT}/search?q=${encodeURIComponent(locationQuery)}&format=json&limit=1&countrycodes=${countryCodesParam(international)}`
   try {
     trackCall("nominatim")
@@ -70,17 +81,17 @@ async function geocode(
     })
     if (!res.ok) {
       trackError("nominatim")
-      return null
+      return "unavailable"
     }
     const data = await res.json()
-    if (!data[0]) return null  // "not found" is a valid response, not an error
+    if (!data[0]) return "not_found"  // valid answer: no such place
     const lat = parseFloat(data[0].lat)
     const lon = parseFloat(data[0].lon)
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return "not_found"
     return { lat, lon, label: data[0].display_name }
   } catch {
     trackError("nominatim")
-    return null
+    return "unavailable"
   }
 }
 
@@ -131,7 +142,7 @@ function stripRaw(places: Place[]): Place[] {
 type StreamEvent =
   | { type: "source"; sourceId: SourceId; status: "ok" | "error"; count?: number; error?: string; durationMs: number }
   | { type: "result"; payload: SearchResult }
-  | { type: "fatal";  error: string }
+  | { type: "fatal";  error: string; code?: "location_not_found" | "geocoding_unavailable" }
 
 // ─── Route handler (NDJSON streaming) ──────────────────────────────────────
 
@@ -271,8 +282,13 @@ export async function POST(req: NextRequest) {
         } else {
           const geocoded = await geocode(parsed.locationQuery, signal, international)
           if (signal.aborted) { controller.close(); return }
-          if (!geocoded) {
-            emit({ type: "fatal", error: `Location not found: "${parsed.locationQuery}"` })
+          if (geocoded === "unavailable") {
+            emit({ type: "fatal", error: "Geocoding temporarily unavailable — please retry", code: "geocoding_unavailable" })
+            controller.close()
+            return
+          }
+          if (geocoded === "not_found") {
+            emit({ type: "fatal", error: `Location not found: "${parsed.locationQuery}"`, code: "location_not_found" })
             controller.close()
             return
           }

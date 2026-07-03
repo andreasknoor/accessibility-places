@@ -38,6 +38,8 @@ export interface Translations {
     noSearchYet:           string
     errorGeneric:  string
     errorTimeout:  string
+    errorLocationNotFound:      string
+    errorGeocodingUnavailable:  string
     modeText:      string
     modeNearby:    string
     modeTextSub:   string

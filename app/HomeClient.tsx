@@ -545,7 +545,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
               return next
             })
           } else if (event.type === "fatal") {
-            throw new Error(event.error as string)
+            const fatal = new Error(event.error as string) as Error & { code?: string }
+            fatal.code = event.code as string | undefined
+            throw fatal
           }
         }
       }
@@ -560,7 +562,13 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       // state. A timeout also aborts the controller, but must NOT bail silently:
       // it surfaces an error and clears loading below.
       if (controller.signal.aborted && !timedOut) return
-      setError(timedOut ? t.chat.errorTimeout : t.chat.errorGeneric)
+      const fatalCode = (err as { code?: string })?.code
+      setError(
+        timedOut                                  ? t.chat.errorTimeout
+        : fatalCode === "location_not_found"      ? t.chat.errorLocationNotFound
+        : fatalCode === "geocoding_unavailable"   ? t.chat.errorGeocodingUnavailable
+        : t.chat.errorGeneric,
+      )
       // Sources still "loading" never answered (timeout, 429, network error, …) —
       // mark them as errored so the FilterPanel shows the warning and the
       // results-header retry button appears (gated on hasSourceError), instead of
@@ -572,12 +580,21 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         }
         return next
       })
-      console.error(err)
+      // Known geocoding outcomes are expected operating conditions, not app
+      // bugs — log as warning so the dev overlay doesn't trap the session in a
+      // red error screen on every auto-restored search while Nominatim is
+      // rate-limiting.
+      if (fatalCode === "location_not_found" || fatalCode === "geocoding_unavailable") console.warn(err)
+      else console.error(err)
       const e = err instanceof Error ? err : new Error(String(err))
       // Report to GlitchTip (caught here, so it would not be picked up by the
       // SDK's global handlers). A timeout is a strong signal that a source is
       // stalling server-side — tag it so it stands out from generic failures.
-      Sentry.captureException(e, { tags: { context: "search", reason: timedOut ? "timeout" : "error" } })
+      // Known geocoding outcomes are expected (typos, Nominatim rate limits) —
+      // don't flood the tracker with them.
+      if (fatalCode !== "location_not_found" && fatalCode !== "geocoding_unavailable") {
+        Sentry.captureException(e, { tags: { context: "search", reason: timedOut ? "timeout" : "error" } })
+      }
     } finally {
       clearTimeout(timeoutId)
       // Clear the loading flag for the current request OR a timed-out one. An
