@@ -258,3 +258,45 @@ describe("inferCategories — expanded hints", () => {
     expect(inferCategories("Currywurst")).toContain("fast_food")
   })
 })
+
+// ─── Query-shape matrix (Ebene 1 of the free-text matrix tests) ──────────────
+//
+// parseQuery over the exact query shapes the client produces (chip prefix,
+// "in <ort>" all-categories form, raw text, restore paths). Documents for each
+// shape WHICH string goes to Nominatim and WHICH categories are searched —
+// the composition layer where the "Arztpraxen in Artz in Frankenthal" class
+// of bugs lives.
+
+describe("parseQuery — client query shapes", () => {
+  const ALL = 27 // all-categories fallback size
+
+  it.each([
+    // [query, expected locationQuery, expected categories ("all" = fallback)]
+    ["Restaurants in Frankenthal",        "Frankenthal",             ["restaurant"]],
+    ["Arzt in Frankenthal",               "Frankenthal",             ["doctors"]],
+    ["Artz in Frankenthal",               "Frankenthal",             "all"],        // typo → no hint
+    ["in Frankenthal",                    "Frankenthal",             "all"],
+    ["Frankenthal",                       "Frankenthal",             "all"],
+    ["in Berlin Mitte",                   "Berlin Mitte",            "all"],
+    ["Arzt in Berlin Mitte",              "Berlin Mitte",            ["doctors"]],
+    // Ort mit "in" im Namen — KNOWN QUIRK: the in-regex is case-insensitive,
+    // so the raw form loses the town and geocodes only "der Oberpfalz".
+    // Documented current behaviour, not the desired one.
+    ["Weiden in der Oberpfalz",           "der Oberpfalz",           "all"],
+    ["in Weiden in der Oberpfalz",        "Weiden in der Oberpfalz", "all"],
+    ["Arzt in Weiden in der Oberpfalz",   "Weiden in der Oberpfalz", ["doctors"]],
+    // City that doubles as a category word: raw form triggers the hint (known
+    // quirk — the UI avoids it by sending "in <ort>" for known-pure locations).
+    ["in Essen",                          "Essen",                   "all"],
+    ["Essen",                             "Essen",                   ["restaurant"]],
+    // Regression shapes from the Frankenthal bug (pre-v9.30 buildQuery nesting
+    // and the poisoned-restore form): the full free text becomes the location.
+    ["Arztpraxen in Artz in Frankenthal", "Artz in Frankenthal",     ["doctors"]],
+    ["in Artz in Frankenthal",            "Artz in Frankenthal",     "all"],
+  ])("%s → location %j", (query, expectedLoc, expectedCats) => {
+    const parsed = parseQuery(query)
+    expect(parsed.locationQuery).toBe(expectedLoc)
+    if (expectedCats === "all") expect(parsed.categories).toHaveLength(ALL)
+    else expect(parsed.categories).toEqual(expectedCats)
+  })
+})
