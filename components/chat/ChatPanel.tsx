@@ -741,7 +741,14 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     // No chip → send the raw text; parseQuery scopes categories from the part
     // before "in" ("Sushi in Berlin") or falls back to all categories.
     if (!label) return loc.trim()
-    return loc.trim() ? `${label} in ${loc.trim()}` : label
+    const trimmed = loc.trim()
+    // Text that carries its own "in <location>" structure is a complete query —
+    // prefixing the chip label would nest two "in"s ("Arztpraxen in Arzt in
+    // Frankenthal"), and parseQuery would then geocode "Arzt in Frankenthal"
+    // as the location, which fails. The typed text wins over the chip; the
+    // chip prefix applies to bare location inputs only.
+    if (/\bin\s+/i.test(trimmed)) return trimmed
+    return trimmed ? `${label} in ${trimmed}` : label
   }
 
   function submit() {

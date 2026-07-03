@@ -537,6 +537,18 @@ describe("ChatPanel all-categories chip", () => {
     expect(onSearch).toHaveBeenCalledWith("Hotels in Berlin", undefined, undefined)
   })
 
+  it("submit with a chip but 'in'-structured text sends the raw text (typed query wins)", () => {
+    // "Arztpraxen in Arzt in Frankenthal" would make parseQuery geocode
+    // "Arzt in Frankenthal" as the location → 'location not found'.
+    const onSearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} isLoading={false} initialMode="text" />)
+    const hotelChip = screen.getAllByRole("radio").find((b) => b.textContent?.includes("Hotels"))!
+    fireEvent.click(hotelChip)
+    fireEvent.change(getInput(), { target: { value: "Arzt in Frankenthal" } })
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+    expect(onSearch).toHaveBeenCalledWith("Arzt in Frankenthal", undefined, undefined)
+  })
+
   it("area pick with 'Alle' sends 'in <display>' so city names never become category hints", async () => {
     const onSearch = vi.fn()
     mockFetch([area("Essen", "Essen (DE)")])
