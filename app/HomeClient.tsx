@@ -475,9 +475,14 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
           if (event.type === "source") {
             const sid = event.sourceId as SourceId
+            // Known machine codes → localized message; anything else is shown
+            // as-is (upstream error strings are already short and technical).
+            const errText = event.error === "rate_limited"
+              ? t.results.sourceRateLimited
+              : event.error as string
             const update: SourceState = event.status === "ok"
               ? { status: "ok",    rawCount: event.count as number, durationMs: event.durationMs as number }
-              : { status: "error", error: event.error as string,    durationMs: event.durationMs as number }
+              : { status: "error", error: errText,                  durationMs: event.durationMs as number }
             setSourceStates((prev) => ({ ...prev, [sid]: update }))
           } else if (event.type === "result") {
             // Result arrived — the stream is no longer at risk of stalling.

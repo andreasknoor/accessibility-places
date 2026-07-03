@@ -29,8 +29,9 @@ function isExpectedAdapterError(errStr: string): boolean {
 
 const RATE_LIMIT_WINDOW_MS      = 60_000  // 1 minute
 const RATE_LIMIT_MAX_REQUESTS   = 30      // general: max 30 searches/min per IP
-const RATE_LIMIT_GP_MAX         = 3       // Google Places: max 3 searches/min per IP
-                                          // (each search fans out to N category calls)
+const RATE_LIMIT_GP_MAX         = 5       // Google Places: max 5 searches/min per IP
+                                          // (each search fans out to up to 9 upstream
+                                          // calls: 3 categories × 3 Text Search pages)
 
 const ipWindows   = new Map<string, number[]>()
 const ipGpWindows = new Map<string, number[]>()
@@ -341,7 +342,8 @@ export async function POST(req: NextRequest) {
 
         // ── 4. Fire all adapters ──────────────────────────────────────────────
         if (gpRateLimited) {
-          emit({ type: "source", sourceId: "google_places", status: "error", error: "Rate limited", durationMs: 0 })
+          // Stable machine code — the client maps it to a localized message.
+          emit({ type: "source", sourceId: "google_places", status: "error", error: "rate_limited", durationMs: 0 })
         }
         // Set of public Overpass endpoints — labels OSM stats as public vs. the
         // private Hetzner mirror. Defined here so the per-source diagnostics

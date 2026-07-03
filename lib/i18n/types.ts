@@ -134,6 +134,7 @@ export interface Translations {
     detailsCollapse:      string
     noResultsArea:        string
     networkError:         string
+    sourceRateLimited:    string
     intlNotice:           string
     noResultsFiltered:    (n: number) => string
     filterBlockedBy:      string

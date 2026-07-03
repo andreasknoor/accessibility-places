@@ -158,6 +158,7 @@ const de: Translations = {
     detailsCollapse:       "Weniger",
     noResultsArea:         "Keine Orte in diesem Bereich gefunden.",
     networkError:          "Netzwerkfehler",
+    sourceRateLimited:     "Kurze Pause: zu viele Suchen in der letzten Minute. Ab der nächsten Suche liefert diese Quelle wieder mit.",
     intlNotice:            "Außerhalb der DACH-Region kann die Datenlage eingeschränkt sein.",
     noResultsFiltered:     (n: number) => `${n} Ort${n !== 1 ? "e" : ""} gefunden – keiner erfüllt alle aktiven Filter.`,
     filterBlockedBy:       "Hauptausschlussgrund:",

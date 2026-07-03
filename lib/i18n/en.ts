@@ -158,6 +158,7 @@ const en: Translations = {
     detailsCollapse:       "Less",
     noResultsArea:         "No places found in this area.",
     networkError:          "Network error",
+    sourceRateLimited:     "Short break: too many searches in the last minute. This source will be back for your next search.",
     intlNotice:            "Outside the DACH region, data coverage may be limited.",
     noResultsFiltered:     (n: number) => `${n} place${n !== 1 ? "s" : ""} found – none match all active filters.`,
     filterBlockedBy:       "Main reason for exclusion:",
