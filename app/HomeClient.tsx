@@ -569,6 +569,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         : fatalCode === "geocoding_unavailable"   ? t.chat.errorGeocodingUnavailable
         : t.chat.errorGeneric,
       )
+      // A failed search must never be auto-replayed: the session restore also
+      // fires on plain reloads (sessionStorage survives them), so a persisted
+      // failing query turns into an error loop the user cannot reload out of
+      // (reload → replay → same error). Next successful search re-persists.
+      clearSearchRun()
       // Sources still "loading" never answered (timeout, 429, network error, …) —
       // mark them as errored so the FilterPanel shows the warning and the
       // results-header retry button appears (gated on hasSourceError), instead of
