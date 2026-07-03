@@ -100,6 +100,8 @@ const BBOX = {
   // The two Neustadts the PLZ cases must tell apart:
   neustadtWstr: { minLat: 49.28, maxLat: 49.42, minLon: 8.05,  maxLon: 8.25 },  // a.d. Weinstraße (67433)
   neustadtSachs:{ minLat: 50.95, maxLat: 51.10, minLon: 14.10, maxLon: 14.32 }, // in Sachsen (01844)
+  zuerich:      { minLat: 47.32, maxLat: 47.44, minLon: 8.45,  maxLon: 8.63 },  // CH, 4-stellige PLZ
+  salzburg:     { minLat: 47.75, maxLat: 47.87, minLon: 12.98, maxLon: 13.13 }, // AT, 4-stellige PLZ
 } as const
 
 function expectInBbox(fired: Fired, box: { minLat: number; maxLat: number; minLon: number; maxLon: number }, query: string) {
@@ -201,6 +203,9 @@ describe.skipIf(process.env.FREETEXT_MATRIX !== "1")("free-text matrix (LIVE)", 
     { query: "Restaurants in 67433 Neustadt", expect: (f) => expectInBbox(f, BBOX.neustadtWstr,  "Restaurants in 67433 Neustadt") },
     { query: "01844 Neustadt",                expect: (f) => expectInBbox(f, BBOX.neustadtSachs, "01844 Neustadt"),  note: "PLZ waehlt Neustadt in Sachsen — Disambiguierungs-Beweis" },
     { query: "Arzt 67433 Neustadt",           expect: (f) => expectInBbox(f, BBOX.neustadtWstr,  "Arzt 67433 Neustadt"), note: "Kategorie + PLZ ohne 'in'" },
+    // 4-stellige PLZ (AT/CH) — das \d{4,5}-Token-Muster deckt beide Formate ab.
+    { query: "8004 Zürich",                   expect: (f) => expectInBbox(f, BBOX.zuerich,  "8004 Zürich"),        note: "CH, 4-stellige PLZ" },
+    { query: "Arzt in 5020 Salzburg",         expect: (f) => expectInBbox(f, BBOX.salzburg, "Arzt in 5020 Salzburg"), note: "AT, 4-stellige PLZ mit Kategorie" },
 
     // ── Regressionsformen aus dem Frankenthal-Bug ────────────────────────────
     {

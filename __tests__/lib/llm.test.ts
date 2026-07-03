@@ -311,6 +311,8 @@ describe("parseQuery — client query shapes", () => {
     ["67433 Neustadt",                    "67433 Neustadt",          "all"],
     ["Restaurants in 67433 Neustadt",     "67433 Neustadt",          ["restaurant"]],
     ["Arzt 67433 Neustadt",               "67433 Neustadt",          ["doctors"]],
+    ["8004 Zürich",                       "8004 Zürich",             "all"],        // 4-stellige CH-PLZ
+    ["Arzt in 5020 Salzburg",             "5020 Salzburg",           ["doctors"]],  // 4-stellige AT-PLZ
     ["Arztpraxen in Artz in Frankenthal", "Artz in Frankenthal",     ["doctors"]],
     ["in Artz in Frankenthal",            "Artz in Frankenthal",     "all"],
   ])("%s → location %j", (query, expectedLoc, expectedCats) => {
