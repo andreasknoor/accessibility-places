@@ -101,6 +101,58 @@ describe("emptyAttribute", () => {
 // ─── mergePlaces ─────────────────────────────────────────────────────────────
 
 describe("mergePlaces", () => {
+  it("same-source duplicate with unknown must not erase a known value (Google duplicate entries)", () => {
+    // Google carries duplicate entries of one venue with different data
+    // completeness; the sparse duplicate merging in second must not wipe the
+    // richer duplicate's entrance=yes (found via the Frankenthal case, #35).
+    const rich = makePlace({
+      id: "google_places:full",
+      accessibility: {
+        entrance: buildAttribute("google_places", "yes", "true", {}),
+        toilet:   buildAttribute("google_places", "yes", "true", {}),
+        parking:  emptyAttribute(),
+      },
+      sourceRecords: [{ sourceId: "google_places", externalId: "full", fetchedAt: "", raw: {} }],
+    })
+    const sparse = makePlace({
+      id: "google_places:dupe",
+      accessibility: {
+        entrance: buildAttribute("google_places", "unknown", "null", {}),
+        toilet:   buildAttribute("google_places", "yes", "true", {}),
+        parking:  emptyAttribute(),
+      },
+      sourceRecords: [{ sourceId: "google_places", externalId: "dupe", fetchedAt: "", raw: {} }],
+    })
+
+    const merged = mergePlaces(rich, sparse)
+    expect(merged.accessibility.entrance.value).toBe("yes")
+    expect(merged.accessibility.toilet.value).toBe("yes")
+  })
+
+  it("same-source known value still replaces an unknown one (reverse order)", () => {
+    const sparse = makePlace({
+      id: "google_places:dupe",
+      accessibility: {
+        entrance: buildAttribute("google_places", "unknown", "null", {}),
+        toilet:   emptyAttribute(),
+        parking:  emptyAttribute(),
+      },
+      sourceRecords: [{ sourceId: "google_places", externalId: "dupe", fetchedAt: "", raw: {} }],
+    })
+    const rich = makePlace({
+      id: "google_places:full",
+      accessibility: {
+        entrance: buildAttribute("google_places", "yes", "true", {}),
+        toilet:   emptyAttribute(),
+        parking:  emptyAttribute(),
+      },
+      sourceRecords: [{ sourceId: "google_places", externalId: "full", fetchedAt: "", raw: {} }],
+    })
+
+    const merged = mergePlaces(sparse, rich)
+    expect(merged.accessibility.entrance.value).toBe("yes")
+  })
+
   it("merges two agreeing sources → higher confidence, no conflict", () => {
     const a = makePlace({
       id: "a",

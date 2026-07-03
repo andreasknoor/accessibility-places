@@ -17,10 +17,17 @@ function mergeAttribute(
   existing: AccessibilityAttribute,
   incoming: SourceAttribution,
 ): AccessibilityAttribute {
-  // Avoid double-adding same source
+  // Avoid double-adding same source. When the same source appears twice (a
+  // source can carry duplicate entries of one venue — Google notably does),
+  // the incoming attribution replaces the existing one — EXCEPT when that
+  // would overwrite a known value with "unknown": the sparser duplicate must
+  // never erase what the richer duplicate already contributed.
   const alreadyPresent = existing.sources.some((s) => s.sourceId === incoming.sourceId)
   const sources: SourceAttribution[] = alreadyPresent
-    ? existing.sources.map((s) => (s.sourceId === incoming.sourceId ? incoming : s))
+    ? existing.sources.map((s) =>
+        s.sourceId === incoming.sourceId && (incoming.value !== "unknown" || s.value === "unknown")
+          ? incoming
+          : s)
     : [...existing.sources, incoming]
 
   return computeAttribute(sources, existing.details, incoming.details)

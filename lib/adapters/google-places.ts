@@ -186,6 +186,10 @@ function toPlace(item: any, category: Category): Place | null {
 // lowest-weight supplementary source, never the only one).
 const GOOGLE_MAX_CATEGORIES = 3
 
+// Upper bound on Text Search pagination per category (Google's own maximum:
+// 3 pages × 20). Worst case per search: 3 categories × 3 pages = 9 requests.
+const GOOGLE_MAX_PAGES = 3
+
 export async function fetchGooglePlaces(params: SearchParams): Promise<Place[]> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY
   if (!apiKey) {
@@ -205,6 +209,7 @@ export async function fetchGooglePlaces(params: SearchParams): Promise<Place[]> 
     "places.types",
     "places.primaryType",
     "places.photos",
+    "nextPageToken", // top-level, required for pagination — a mask of only places.* omits it
   ].join(",")
 
   const results = await Promise.all(
@@ -226,26 +231,42 @@ export async function fetchGooglePlaces(params: SearchParams): Promise<Place[]> 
       }
 
       try {
-        const res = await fetch(BASE_URL, {
-          method:  "POST",
-          headers: {
-            "Content-Type":     "application/json",
-            "X-Goog-Api-Key":   apiKey,
-            "X-Goog-FieldMask": FIELD_MASK,
-          },
-          body:   JSON.stringify(body),
-          signal: params.signal
-            ? AbortSignal.any([params.signal, AbortSignal.timeout(15_000)])
-            : AbortSignal.timeout(15_000),
-        })
+        // Adaptive pagination: Text Search pages up to 3 × 20 results via
+        // nextPageToken (sequential by design — the token comes with the
+        // previous response). Follow-up pages are fetched only while a token
+        // is present, so sparse categories stay at one request and only
+        // truncated ones pay for more. Dense categories need this: Google
+        // often carries duplicate entries of one venue with different data
+        // completeness, and the richer duplicate may sit beyond the first 20
+        // (seen live with the Frankenthal doctors case, #35).
+        const items: unknown[] = []
+        let pageToken: string | undefined
+        for (let page = 0; page < GOOGLE_MAX_PAGES; page++) {
+          const res = await fetch(BASE_URL, {
+            method:  "POST",
+            headers: {
+              "Content-Type":     "application/json",
+              "X-Goog-Api-Key":   apiKey,
+              "X-Goog-FieldMask": FIELD_MASK,
+            },
+            body:   JSON.stringify(pageToken ? { ...body, pageToken } : body),
+            signal: params.signal
+              ? AbortSignal.any([params.signal, AbortSignal.timeout(15_000)])
+              : AbortSignal.timeout(15_000),
+          })
 
-        if (!res.ok) {
-          console.error(`[google-places] Error ${res.status} for category ${category}`)
-          return [] as Place[]
+          if (!res.ok) {
+            console.error(`[google-places] Error ${res.status} for category ${category} (page ${page + 1})`)
+            break // keep whatever earlier pages returned
+          }
+
+          const json = await res.json()
+          items.push(...(json.places ?? []))
+          pageToken = json.nextPageToken
+          if (!pageToken) break
         }
 
-        const json = await res.json()
-        return (json.places ?? []).flatMap((item: unknown) => {
+        return items.flatMap((item: unknown) => {
           const place = toPlace(item, category)
           if (!place) return []
           // Type post-filter: the relevance query may surface adjacent trades

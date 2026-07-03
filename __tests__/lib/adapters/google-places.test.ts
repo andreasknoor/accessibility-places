@@ -239,6 +239,54 @@ describe("fetchGooglePlaces", () => {
     expect(result.map((p) => p.name)).toEqual(["Nah"])
   })
 
+  it("follows nextPageToken up to 3 pages and aggregates results", async () => {
+    const page = (name: string, token?: string) => ({
+      ok: true,
+      json: async () => ({
+        places: [makeGooglePlace({ id: name, displayName: { text: name } })],
+        ...(token ? { nextPageToken: token } : {}),
+      }),
+    })
+    const mockFetch = vi.fn()
+      .mockResolvedValueOnce(page("Seite1", "tok-1"))
+      .mockResolvedValueOnce(page("Seite2", "tok-2"))
+      .mockResolvedValueOnce(page("Seite3", "tok-3")) // token on the last page must be ignored (cap)
+    vi.stubGlobal("fetch", mockFetch)
+
+    const result = await fetchGooglePlaces(BASE_PARAMS)
+    expect(mockFetch).toHaveBeenCalledTimes(3)
+    expect(result.map((p) => p.name)).toEqual(["Seite1", "Seite2", "Seite3"])
+    // Follow-up requests carry the token from the previous response, same query otherwise
+    const body2 = JSON.parse(mockFetch.mock.calls[1][1].body as string)
+    expect(body2.pageToken).toBe("tok-1")
+    expect(body2.textQuery).toBe("Restaurant")
+    const body3 = JSON.parse(mockFetch.mock.calls[2][1].body as string)
+    expect(body3.pageToken).toBe("tok-2")
+  })
+
+  it("stops after one page when no nextPageToken is returned (adaptive)", async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ places: [makeGooglePlace()] }),
+    })
+    vi.stubGlobal("fetch", mockFetch)
+    await fetchGooglePlaces(BASE_PARAMS)
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps earlier pages when a follow-up page errors", async () => {
+    const mockFetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ places: [makeGooglePlace()], nextPageToken: "tok-1" }),
+      })
+      .mockResolvedValueOnce({ ok: false, status: 500 })
+    vi.stubGlobal("fetch", mockFetch)
+    const result = await fetchGooglePlaces(BASE_PARAMS)
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+    expect(result).toHaveLength(1)
+  })
+
   it("combines user signal with timeout so client disconnect aborts the fetch (Bug 3)", async () => {
     const controller = new AbortController()
     let capturedSignal: AbortSignal | undefined
