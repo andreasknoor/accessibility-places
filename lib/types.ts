@@ -212,6 +212,8 @@ export interface SearchParams {
   // Opt-in international mode: when true and the search centre is outside DACH,
   // the OSM adapter races public mirrors only (skips the DACH-only private server).
   international?: boolean
+  // UI locale — picks the language of the Google Text Search query terms.
+  locale?: "de" | "en"
 }
 
 // ─── LLM query parse result ────────────────────────────────────────────────

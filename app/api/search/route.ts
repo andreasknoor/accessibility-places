@@ -320,6 +320,7 @@ export async function POST(req: NextRequest) {
           nameHint:    nameHint || undefined,
           placeSearch: placeSearch || undefined,
           international,
+          locale:      locale === "en" ? "en" : "de",
         }
 
         // ── 4. Fire all adapters ──────────────────────────────────────────────

@@ -187,6 +187,58 @@ describe("fetchGooglePlaces", () => {
     expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
+  it("calls the Text Search endpoint with a German query term by default", async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ places: [] }) })
+    vi.stubGlobal("fetch", mockFetch)
+    await fetchGooglePlaces({ ...BASE_PARAMS, categories: ["doctors"] })
+    const [url, init] = mockFetch.mock.calls[0]
+    expect(url).toBe("https://places.googleapis.com/v1/places:searchText")
+    const body = JSON.parse(init.body as string)
+    expect(body.textQuery).toBe("Arzt")
+    expect(body.pageSize).toBe(20)
+    expect(body.locationBias.circle.radius).toBe(2000)
+    expect(body.includedTypes).toBeUndefined()
+  })
+
+  it("uses the English query term when locale is en", async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ places: [] }) })
+    vi.stubGlobal("fetch", mockFetch)
+    await fetchGooglePlaces({ ...BASE_PARAMS, categories: ["doctors"], locale: "en" })
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body as string)
+    expect(body.textQuery).toBe("doctor")
+  })
+
+  it("drops results whose types don't match the category (relevance-query noise)", async () => {
+    const physio = makeGooglePlace({ displayName: { text: "Physiopraxis" }, types: ["physiotherapist"], primaryType: "physiotherapist" })
+    const doctor = makeGooglePlace({ displayName: { text: "Hausarztzentrum" }, types: ["doctor", "health"], primaryType: "doctor" })
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ places: [physio, doctor] }),
+    }))
+    const result = await fetchGooglePlaces({ ...BASE_PARAMS, categories: ["doctors"] })
+    expect(result.map((p) => p.name)).toEqual(["Hausarztzentrum"])
+  })
+
+  it("keeps results without any type info (defensive leniency)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ places: [makeGooglePlace()] }), // fixture carries no types
+    }))
+    const result = await fetchGooglePlaces({ ...BASE_PARAMS, categories: ["doctors"] })
+    expect(result).toHaveLength(1)
+  })
+
+  it("clips results beyond the search radius (locationBias is soft)", async () => {
+    const near = makeGooglePlace({ displayName: { text: "Nah" } })                                    // ~130 m
+    const far  = makeGooglePlace({ displayName: { text: "Fern" }, location: { latitude: 52.62, longitude: 13.405 } }) // ~11 km
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ places: [near, far] }),
+    }))
+    const result = await fetchGooglePlaces(BASE_PARAMS) // radiusKm: 2
+    expect(result.map((p) => p.name)).toEqual(["Nah"])
+  })
+
   it("combines user signal with timeout so client disconnect aborts the fetch (Bug 3)", async () => {
     const controller = new AbortController()
     let capturedSignal: AbortSignal | undefined

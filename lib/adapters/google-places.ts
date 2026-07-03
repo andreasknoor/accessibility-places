@@ -1,7 +1,17 @@
 /**
  * Google Places API (New) adapter
  * API key required: set GOOGLE_PLACES_API_KEY in .env.local
- * Docs: https://developers.google.com/maps/documentation/places/web-service/nearby-search
+ * Docs: https://developers.google.com/maps/documentation/places/web-service/text-search
+ *
+ * Uses Text Search (not Nearby Search) for the category path: Nearby ranks by
+ * POPULARITY within a hard 20-result cap, which systematically buries small
+ * venues in dense categories — verified live: a doctor's practice with full
+ * wheelchair data was absent even from the top 20 within 1 km of its own
+ * address. Text Search ranks by relevance to a localized query term and
+ * surfaced the same practice at position 1. Trade-offs handled below:
+ * `locationBias` is soft (results are distance-clipped to the search radius)
+ * and Text Search takes no type *list* (results are post-filtered against
+ * CATEGORY_TYPES).
  */
 import type {
   Place,
@@ -11,9 +21,42 @@ import type {
   SeatingDetails,
 } from "../types"
 import { buildAttribute } from "../matching/merge"
+import { haversineMeters } from "../matching/nearby-parking"
 import { nanoid } from "../utils"
 
-const BASE_URL = "https://places.googleapis.com/v1/places:searchNearby"
+const BASE_URL = "https://places.googleapis.com/v1/places:searchText"
+
+// Localized query terms for Text Search — the term steers the relevance
+// ranking, so it should name the category the way a local user would.
+const CATEGORY_QUERY: Record<Category, { de: string; en: string }> = {
+  cafe:        { de: "Café Eisdiele",   en: "cafe ice cream" },
+  restaurant:  { de: "Restaurant",      en: "restaurant" },
+  bar:         { de: "Bar",             en: "bar" },
+  pub:         { de: "Kneipe",          en: "pub" },
+  biergarten:  { de: "Biergarten",      en: "beer garden" },
+  fast_food:   { de: "Imbiss",          en: "fast food" },
+  hotel:       { de: "Hotel",           en: "hotel" },
+  hostel:      { de: "Hostel",          en: "hostel" },
+  apartment:   { de: "Ferienwohnung",   en: "holiday apartment" },
+  museum:      { de: "Museum",          en: "museum" },
+  theater:     { de: "Theater",         en: "theater" },
+  cinema:      { de: "Kino",            en: "cinema" },
+  library:     { de: "Bibliothek",      en: "library" },
+  gallery:     { de: "Galerie",         en: "art gallery" },
+  attraction:  { de: "Sehenswürdigkeit", en: "tourist attraction" },
+  pharmacy:    { de: "Apotheke",        en: "pharmacy" },
+  doctors:     { de: "Arzt",            en: "doctor" },
+  dentist:     { de: "Zahnarzt",        en: "dentist" },
+  veterinary:  { de: "Tierarzt",        en: "veterinarian" },
+  hospital:    { de: "Krankenhaus",     en: "hospital" },
+  chemist:     { de: "Drogerie",        en: "drugstore" },
+  supermarket: { de: "Supermarkt",      en: "supermarket" },
+  bakery:      { de: "Bäckerei",        en: "bakery" },
+  hairdresser: { de: "Friseur",         en: "hairdresser" },
+  bank:        { de: "Bank",            en: "bank" },
+  post_office: { de: "Post",            en: "post office" },
+  zoo:         { de: "Zoo",             en: "zoo" },
+}
 
 const CATEGORY_TYPES: Record<Category, string[]> = {
   // Merged category: ice cream parlours (no dedicated ice_cream type — ice_cream_shop
@@ -56,6 +99,17 @@ function boolToValue(v: boolean | null | undefined): A11yValue {
   if (v === true)  return "yes"
   if (v === false) return "no"
   return "unknown"
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function matchesCategoryTypes(item: any, category: Category): boolean {
+  const types: string[] = [
+    ...(Array.isArray(item?.types) ? item.types : []),
+    item?.primaryType ?? "",
+  ].filter(Boolean)
+  if (types.length === 0) return true
+  const allowed = CATEGORY_TYPES[category]
+  return types.some((t) => allowed.includes(t))
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -155,10 +209,15 @@ export async function fetchGooglePlaces(params: SearchParams): Promise<Place[]> 
 
   const results = await Promise.all(
     params.categories.slice(0, GOOGLE_MAX_CATEGORIES).map(async (category) => {
+      // Text Search accepts only a single includedType (Nearby took a list),
+      // so type scoping happens via the post-filter below instead.
       const body = {
-        includedTypes:       CATEGORY_TYPES[category],
-        maxResultCount:      20,
-        locationRestriction: {
+        textQuery:    CATEGORY_QUERY[category][params.locale === "en" ? "en" : "de"],
+        pageSize:     20,
+        // locationBias is a soft preference, not a hard boundary (Text Search
+        // only supports rectangles for locationRestriction) — out-of-radius
+        // results are distance-clipped after the fetch.
+        locationBias: {
           circle: {
             center: { latitude: params.location.lat, longitude: params.location.lon },
             radius: params.radiusKm * 1000,
@@ -188,7 +247,17 @@ export async function fetchGooglePlaces(params: SearchParams): Promise<Place[]> 
         const json = await res.json()
         return (json.places ?? []).flatMap((item: unknown) => {
           const place = toPlace(item, category)
-          return place ? [place] : []
+          if (!place) return []
+          // Type post-filter: the relevance query may surface adjacent trades
+          // (e.g. "Arzt" → physiotherapists). Keep only results whose Google
+          // types intersect the category's type set; results without any type
+          // info pass (defensive — real responses always carry types).
+          if (!matchesCategoryTypes(item, category)) return []
+          // Distance clip: locationBias is soft, so trim results beyond the
+          // actual search radius.
+          const distM = haversineMeters(params.location, place.coordinates)
+          if (distM > params.radiusKm * 1000) return []
+          return [place]
         }) as Place[]
       } catch {
         return [] as Place[]
