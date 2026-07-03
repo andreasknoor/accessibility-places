@@ -88,8 +88,11 @@ export function extractLocationFallback(query: string): string {
   const cc         = ccMatch?.[1] ?? ""
   const stripped   = cc ? query.slice(0, query.lastIndexOf(ccMatch![0])).trimEnd() : query
 
+  // Leading char class and body accept digits so postal-code locations work
+  // ("Restaurants in 67433 Neustadt" — the PLZ disambiguates between the many
+  // towns sharing a name; Nominatim resolves "PLZ Ort" queries natively).
   const match = stripped.match(
-    /\bin\s+([A-ZÄÖÜ][a-zA-ZäöüÄÖÜß\s\-,]+?)(?:\s*$|\s+(?:und|oder|mit|für|nahe|near|and|or|with)\b)/i,
+    /\bin\s+([A-ZÄÖÜ0-9][a-zA-Z0-9äöüÄÖÜß\s\-,]+?)(?:\s*$|\s+(?:und|oder|mit|für|nahe|near|and|or|with)\b)/i,
   )
   if (match) {
     const loc = match[1].trim()
@@ -97,7 +100,9 @@ export function extractLocationFallback(query: string): string {
   }
 
   const words      = stripped.split(/\s+/)
-  const capitalised = words.filter((w) => /^[A-ZÄÖÜ]/.test(w))
+  // Location candidates: capitalised words plus postal codes (4 digits AT/CH,
+  // 5 digits DE) — "67433 Neustadt" must reach Nominatim with the PLZ intact.
+  const capitalised = words.filter((w) => /^[A-ZÄÖÜ]/.test(w) || /^\d{4,5}$/.test(w))
   // Drop recognised category words from the location candidates: "Arzt
   // Frankenthal" (typed without "in") must geocode "Frankenthal", not the
   // full string — Nominatim knows no place called "Arzt Frankenthal"

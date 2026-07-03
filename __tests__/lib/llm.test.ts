@@ -27,6 +27,12 @@ describe("extractLocationFallback", () => {
     expect(extractLocationFallback("Hotels Berlin")).toBe("Berlin")
   })
 
+  it("keeps postal codes as location tokens (PLZ disambiguation)", () => {
+    expect(extractLocationFallback("67433 Neustadt")).toBe("67433 Neustadt")
+    expect(extractLocationFallback("Restaurants in 67433 Neustadt")).toBe("67433 Neustadt")
+    expect(extractLocationFallback("Arzt 67433 Neustadt")).toBe("67433 Neustadt")
+  })
+
   it("keeps a bare city name even when it doubles as a category word", () => {
     expect(extractLocationFallback("Essen")).toBe("Essen")
   })
@@ -301,6 +307,10 @@ describe("parseQuery — client query shapes", () => {
     // Regression shapes from the Frankenthal bug (pre-v9.30 buildQuery nesting
     // and the poisoned-restore form): the full free text becomes the location.
     ["Arzt Frankenthal",                  "Frankenthal",             ["doctors"]],  // ohne "in" — Kategorienwort wird gestrippt
+    // PLZ-Disambiguierung: die Postleitzahl muss die Ortssuche erreichen.
+    ["67433 Neustadt",                    "67433 Neustadt",          "all"],
+    ["Restaurants in 67433 Neustadt",     "67433 Neustadt",          ["restaurant"]],
+    ["Arzt 67433 Neustadt",               "67433 Neustadt",          ["doctors"]],
     ["Arztpraxen in Artz in Frankenthal", "Artz in Frankenthal",     ["doctors"]],
     ["in Artz in Frankenthal",            "Artz in Frankenthal",     "all"],
   ])("%s → location %j", (query, expectedLoc, expectedCats) => {

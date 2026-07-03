@@ -97,6 +97,9 @@ const BBOX = {
   weiden:      { minLat: 49.55, maxLat: 49.78, minLon: 12.05, maxLon: 12.30 },
   essen:       { minLat: 51.34, maxLat: 51.54, minLon: 6.89,  maxLon: 7.14 },
   dach:        { minLat: 45.82, maxLat: 55.06, minLon: 5.87,  maxLon: 17.17 },
+  // The two Neustadts the PLZ cases must tell apart:
+  neustadtWstr: { minLat: 49.28, maxLat: 49.42, minLon: 8.05,  maxLon: 8.25 },  // a.d. Weinstraße (67433)
+  neustadtSachs:{ minLat: 50.95, maxLat: 51.10, minLon: 14.10, maxLon: 14.32 }, // in Sachsen (01844)
 } as const
 
 function expectInBbox(fired: Fired, box: { minLat: number; maxLat: number; minLon: number; maxLon: number }, query: string) {
@@ -191,6 +194,13 @@ describe.skipIf(process.env.FREETEXT_MATRIX !== "1")("free-text matrix (LIVE)", 
       expect: (f) => expectInBbox(f, BBOX.essen, "Essen"),
       note: "QUIRK: Kategorie wird restaurant (Hint 'essen'), Ort bleibt korrekt",
     },
+
+    // ── PLZ-Disambiguierung (Doppelnamen per Postleitzahl aufloesen) ─────────
+    { query: "67433 Neustadt",                expect: (f) => expectInBbox(f, BBOX.neustadtWstr,  "67433 Neustadt"),  note: "PLZ waehlt Neustadt a.d. Weinstrasse" },
+    { query: "in 67433 Neustadt",             expect: (f) => expectInBbox(f, BBOX.neustadtWstr,  "in 67433 Neustadt") },
+    { query: "Restaurants in 67433 Neustadt", expect: (f) => expectInBbox(f, BBOX.neustadtWstr,  "Restaurants in 67433 Neustadt") },
+    { query: "01844 Neustadt",                expect: (f) => expectInBbox(f, BBOX.neustadtSachs, "01844 Neustadt"),  note: "PLZ waehlt Neustadt in Sachsen — Disambiguierungs-Beweis" },
+    { query: "Arzt 67433 Neustadt",           expect: (f) => expectInBbox(f, BBOX.neustadtWstr,  "Arzt 67433 Neustadt"), note: "Kategorie + PLZ ohne 'in'" },
 
     // ── Regressionsformen aus dem Frankenthal-Bug ────────────────────────────
     {
