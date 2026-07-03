@@ -70,8 +70,10 @@ function renderTopUsers(topUsers: TopUser[]): string {
   if (topUsers.length === 0) return ""
   const rows = topUsers.map((u, i) => {
     const badge = PLATFORM_BADGES[u.platform ?? ""] ?? { label: u.platform ?? "–", color: "#9ca3af" }
+    // data-* attributes are the sort/filter keys (uid/platform write-validated,
+    // dates/searches server-generated — safe to embed unescaped).
     return `
-      <tr>
+      <tr data-rank="${i + 1}" data-uid="${u.uid}" data-searches="${u.searches}" data-first="${u.firstSeen ?? ""}" data-last="${u.lastSeen ?? ""}" data-platform="${u.platform ?? ""}">
         <td style="padding:12px 16px;color:#6b7280">${i + 1}</td>
         <td style="padding:12px 16px"><code>${u.uid.slice(0, 8)}…</code></td>
         <td style="padding:8px 16px">
@@ -86,23 +88,33 @@ function renderTopUsers(topUsers: TopUser[]): string {
         </td>
       </tr>`
   }).join("")
+  const pfCounts: Record<string, number> = {}
+  for (const u of topUsers) pfCounts[u.platform ?? ""] = (pfCounts[u.platform ?? ""] ?? 0) + 1
+  const filterButtons = ["", "ios", "android", "web"].map((pf) => {
+    const label = pf === "" ? "Alle" : PLATFORM_BADGES[pf].label
+    const count = pf === "" ? topUsers.length : (pfCounts[pf] ?? 0)
+    return `<button class="pf-filter${pf === "" ? " active" : ""}" data-pf="${pf}">${label} (${count})</button>`
+  }).join("")
   return `
 <h2 style="font-size:1rem;font-weight:600;letter-spacing:0.05em;color:#e5e7eb;margin-top:40px">👥 Top ${topUsers.length} Users</h2>
-<p class="subtitle">Anonymous random IDs · searches counted server-side · 180-day retention since last visit · comments save on Enter</p>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+  <p class="subtitle">Anonymous random IDs · searches counted server-side · 180-day retention since last visit · comments save on Enter</p>
+  <div class="pf-bar">${filterButtons}</div>
+</div>
 <div class="table-wrap">
   <table>
     <thead>
       <tr>
-        <th>#</th>
-        <th>User ID</th>
-        <th>Comment</th>
-        <th>Searches</th>
-        <th>First seen</th>
-        <th>Last seen</th>
-        <th>Platform</th>
+        <th class="sortable" data-key="rank">#</th>
+        <th class="sortable" data-key="uid">User ID</th>
+        <th class="sortable" data-key="comment">Comment</th>
+        <th class="sortable" data-key="searches">Searches</th>
+        <th class="sortable" data-key="first">First seen</th>
+        <th class="sortable" data-key="last">Last seen</th>
+        <th class="sortable" data-key="platform">Platform</th>
       </tr>
     </thead>
-    <tbody>${rows}</tbody>
+    <tbody id="users-tbody">${rows}</tbody>
   </table>
 </div>
 <div class="section-footer" style="justify-content:flex-end">
@@ -135,6 +147,39 @@ function renderTopUsers(topUsers: TopUser[]): string {
           setTimeout(() => input.classList.remove('saved'), 1500);
         })
         .catch(() => input.classList.add('save-error'));
+    });
+  });
+
+  // Column sorting — client-side over the ≤50 rendered rows. Sort keys come
+  // from the row's data-* attributes; the comment column reads the live input
+  // value so unsaved edits sort correctly too.
+  const usersTbody = document.getElementById('users-tbody');
+  document.querySelectorAll('th.sortable').forEach((th) => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.key;
+      const dir = th.dataset.dir === 'asc' ? 'desc' : 'asc';
+      document.querySelectorAll('th.sortable').forEach((o) => delete o.dataset.dir);
+      th.dataset.dir = dir;
+      const numeric = key === 'rank' || key === 'searches';
+      const val = (tr) => key === 'comment'
+        ? (tr.querySelector('.comment-input')?.value ?? '').toLowerCase()
+        : numeric ? Number(tr.dataset[key]) : (tr.dataset[key] ?? '');
+      [...usersTbody.querySelectorAll('tr')]
+        .sort((a, b) => { const x = val(a), y = val(b); return (x < y ? -1 : x > y ? 1 : 0) * (dir === 'asc' ? 1 : -1); })
+        .forEach((tr) => usersTbody.appendChild(tr));
+    });
+  });
+
+  // Platform filter — hides non-matching rows (sorting keeps working on the
+  // full set; hidden rows simply stay hidden wherever they land).
+  document.querySelectorAll('.pf-filter').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.pf-filter').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      const pf = btn.dataset.pf;
+      usersTbody.querySelectorAll('tr').forEach((tr) => {
+        tr.style.display = (!pf || tr.dataset.platform === pf) ? '' : 'none';
+      });
     });
   });
 </script>`
@@ -213,6 +258,14 @@ function renderHtml({ sources: stats, oldestHour }: StatsResponse, topUsers: Top
   .empty-icon { font-size: 2.5rem; margin-bottom: 12px }
   .empty-title { font-size: 1rem; color: #9ca3af; margin-bottom: 6px }
   .empty-hint { font-size: 0.8rem; line-height: 1.6 }
+  th.sortable { cursor: pointer; user-select: none }
+  th.sortable:hover { color: #e5e7eb }
+  th.sortable[data-dir="asc"]::after  { content: " ▲"; color: #6b7280 }
+  th.sortable[data-dir="desc"]::after { content: " ▼"; color: #6b7280 }
+  .pf-bar { display: flex; gap: 6px }
+  .pf-filter { background: #1f2937; color: #9ca3af; border: 1px solid #374151; border-radius: 6px; padding: 5px 10px; font: inherit; font-size: 0.72rem; cursor: pointer; letter-spacing: 0.03em }
+  .pf-filter:hover { color: #e5e7eb }
+  .pf-filter.active { background: #374151; color: #e5e7eb; border-color: #4b5563 }
   .comment-input { width: 100%; min-width: 160px; background: #111827; color: #e5e7eb; border: 1px solid #374151; border-radius: 4px; padding: 6px 8px; font: inherit; font-size: 0.8rem }
   .comment-input:focus { outline: none; border-color: #6b7280 }
   .comment-input.saved { border-color: #10b981 }
