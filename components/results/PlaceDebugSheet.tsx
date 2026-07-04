@@ -115,7 +115,11 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
   function handleShareLink() {
     hapticLight()
     const url = buildPlaceDeepLink(place)
-    void shareOrCopy({ title: place.name, text: place.name, url, dialogTitle: place.name }).then((outcome) => {
+    // Deliberately NO `text` field: share targets concatenate text and url
+    // (some without a separator), producing a broken link like
+    // "…&cat=doctorsHausarztzentrum am Metznerpark…". The name already rides
+    // in `title`; the url must stay the only body payload.
+    void shareOrCopy({ title: place.name, url, dialogTitle: place.name }).then((outcome) => {
       if (outcome === "failed") return // user cancelled the share sheet — no feedback
       hapticSuccess()
       setShareFeedback(outcome)
