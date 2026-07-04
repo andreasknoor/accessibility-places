@@ -151,11 +151,11 @@ describe("FilterPanel — amenity mode radius (finding F4: parkingRadiusKm must 
     )
   }
 
-  it("uses the small amenity-scale slider range (0.05–5 km), not the venue range (1–50 km)", () => {
+  it("uses the amenity-scale slider range (0.05–25 km, matching the server cap), not the venue range (1–50 km)", () => {
     renderAmenityPanel("parking", 2)
     const slider = screen.getByTestId("radius-slider")
     expect(slider).toHaveAttribute("min", "0.05")
-    expect(slider).toHaveAttribute("max", "5")
+    expect(slider).toHaveAttribute("max", "25")
   })
 
   it("commits via onAmenityRadius, never onRadius, while an amenity search is active", () => {

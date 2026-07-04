@@ -659,9 +659,14 @@ export async function fetchOsmAccessibleAmenities(
 
   const t0 = Date.now()
   try {
+    // Client abort must outlast the QL [timeout:30] above: at the 25 km max
+    // radius a dense-area query can run long (measured ~15 s over Berlin
+    // Mitte), and aborting client-side before the server's own deadline
+    // discards completed Overpass work and shows a false "nothing found".
+    // With 32 s the server verdict (result or its timeout error) always wins.
     const sig = () => signal
-      ? AbortSignal.any([signal, AbortSignal.timeout(20_000)])
-      : AbortSignal.timeout(20_000)
+      ? AbortSignal.any([signal, AbortSignal.timeout(32_000)])
+      : AbortSignal.timeout(32_000)
 
     const { features, winner } = await Promise.any(
       endpointsForCoordinates(lat, lon, international).map(async (endpoint) => {

@@ -145,7 +145,7 @@ describe("clampAmenityRadiusKm", () => {
   })
 
   it("clamps above the maximum", () => {
-    expect(clampAmenityRadiusKm(10)).toBe(AMENITY_RADIUS_MAX_KM)
+    expect(clampAmenityRadiusKm(99)).toBe(AMENITY_RADIUS_MAX_KM)
   })
 
   it("passes through an in-range value", () => {
@@ -205,9 +205,11 @@ describe("venueViewportOrigin / amenityViewportOrigin — map-viewport-as-search
     expect(snapVenueRadiusKm(7.96)).toBe(8)
   })
 
-  it("snaps + clamps the amenity radius into the 0.05-5km domain", () => {
-    // 8.4 km viewport on the amenity chip is clamped down to the 5 km amenity max.
-    expect(amenityViewportOrigin(vp)?.radiusKm).toBe(AMENITY_RADIUS_MAX_KM)
+  it("snaps + clamps the amenity radius into the 0.05-25km domain", () => {
+    // 8.4 km viewport passes through since the client max matches the server
+    // cap (25 km) — the point of "search this area" on a zoomed-out map.
+    expect(amenityViewportOrigin(vp)?.radiusKm).toBe(8.4)
+    expect(amenityViewportOrigin({ center: vp.center, radiusKm: 80 })?.radiusKm).toBe(AMENITY_RADIUS_MAX_KM)
     expect(amenityViewportOrigin({ center: vp.center, radiusKm: 0.3478 })?.radiusKm).toBe(0.3)
     expect(amenityViewportOrigin({ center: vp.center, radiusKm: 0.001 })?.radiusKm).toBe(AMENITY_RADIUS_MIN_KM)
   })

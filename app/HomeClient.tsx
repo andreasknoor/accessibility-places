@@ -24,8 +24,8 @@ import { clampAmenityRadiusKm, snapAmenityRadiusKm, snapVenueRadiusKm, rerunTarg
 import { SEO_CATEGORY_SLUGS, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
-import { useSettings, loadSettings, DEFAULT_APP_SETTINGS } from "@/lib/settings"
-import { markMountAndIsReturning, clearReturningFlag, loadActiveMode, saveActiveMode, loadSearchRun, saveSearchRun, clearSearchRun, clearSessionSearch } from "@/lib/session-restore"
+import { useSettings, loadSettings, DEFAULT_APP_SETTINGS, SETTINGS_PARKING_RADIUS_MAX_KM } from "@/lib/settings"
+import { markMountAndIsReturning, clearReturningFlag, loadActiveMode, saveActiveMode, loadSearchRun, saveSearchRun, clearSearchRun, clearSearchInput, clearSessionSearch } from "@/lib/session-restore"
 import { getCurrentPosition, getBestPosition, isGeolocationAvailable } from "@/lib/native/geolocation"
 import { consumePendingNativeAction } from "@/lib/native/actions"
 import { cn } from "@/lib/utils"
@@ -128,6 +128,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [lastQuery,     setLastQuery]    = useState<string | undefined>()
   const [lastCoords,    setLastCoords]   = useState<{ lat: number; lon: number } | undefined>()
   const [lastNameHint,  setLastNameHint] = useState<string | undefined>()
+  // True once the CURRENT lastQuery completed with a result event. Gates the
+  // run persistence below: only successful searches are replayable on a return
+  // mount / reload — a failing query must never enter the replay loop.
+  const [lastSearchOk,  setLastSearchOk] = useState(false)
   // Venue name when the last search was a specific-venue lookup (placeSearch).
   // Drives the "Results for <name>" banner; undefined for area searches.
   const [placeSearchName, setPlaceSearchName] = useState<string | undefined>()
@@ -351,9 +355,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   }, [chatMode, initialCity, isPlaceDeepLink])
 
   // Session restore — persist just enough to replay the last search (no results
-  // array). Only records a real search (a query or a place lookup).
+  // array). Only records a real search (a query or a place lookup) and only
+  // AFTER it succeeded (lastSearchOk): a search that starts and fails keeps the
+  // previous successful run in the store instead of poisoning it.
   useEffect(() => {
     if (!sessionPersistReadyRef.current || initialCity || isPlaceDeepLink) return
+    if (!lastSearchOk) return
     const placeSearch = placeSearchName != null
     if (!lastQuery && !placeSearch) return
     saveSearchRun({
@@ -363,7 +370,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       nameHint:    lastNameHint ?? null,
       placeSearch,
     })
-  }, [lastQuery, lastCoords, lastNameHint, placeSearchName, chatMode, initialCity, isPlaceDeepLink])
+  }, [lastSearchOk, lastQuery, lastCoords, lastNameHint, placeSearchName, chatMode, initialCity, isPlaceDeepLink])
 
   // Lock the document scroll for the home route only (the app is a fixed-height
   // shell with its own internal scroll regions). Without this the native iOS
@@ -394,7 +401,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
   }, [])
 
-  const handleSearch = useCallback(async (query: string, radiusKmOverride?: number, coords?: { lat: number; lon: number }, nameHint?: string, filtersOverride?: Partial<SearchFilters>, sourcesOverride?: Partial<ActiveSources>, placeSearch?: boolean) => {
+  const handleSearch = useCallback(async (query: string, radiusKmOverride?: number, coords?: { lat: number; lon: number }, nameHint?: string, filtersOverride?: Partial<SearchFilters>, sourcesOverride?: Partial<ActiveSources>, placeSearch?: boolean, isReplay?: boolean) => {
     // Cancel any in-flight search so its NDJSON stream cannot overwrite this one's state.
     searchAbortRef.current?.abort()
     const controller = new AbortController()
@@ -410,6 +417,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setLastQuery(query)
     setLastCoords(coords)
     setLastNameHint(nameHint)
+    setLastSearchOk(false)  // success-gates the run persistence (see persist effect)
     setPlaceSearchName(placeSearch ? nameHint : undefined)
     setIsLoading(true)
     setError(undefined)
@@ -457,6 +465,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       const decoder = new TextDecoder()
       let buffer    = ""
       let placesReceived = false
+      let resultReceived = false
 
       // eslint-disable-next-line no-constant-condition
       while (true) {
@@ -488,6 +497,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             // Result arrived — the stream is no longer at risk of stalling.
             clearTimeout(timeoutId)
             const data = event.payload as SearchResult
+            resultReceived = true
             placesReceived = data.places.length > 0
             setPlaces(data.places)
             setParkingSpots(data.parkingSpots ?? [])
@@ -562,6 +572,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         track("place_not_found", { reason: "no_data" })
         setError(t.chat.placeNoData(nameHint ?? ""))
       }
+      // Mark this run as replayable ONLY once a result actually arrived (a
+      // 0-hit result is still a valid, replayable search). The abort guard
+      // matters: a newer search already set the flag to false for ITS run —
+      // a stale success must not flip it back and persist the wrong query.
+      if (resultReceived && !controller.signal.aborted) setLastSearchOk(true)
     } catch (err) {
       // Aborted by a newer search — silently bail; the newer request owns the UI
       // state. A timeout also aborts the controller, but must NOT bail silently:
@@ -574,11 +589,14 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         : fatalCode === "geocoding_unavailable"   ? t.chat.errorGeocodingUnavailable
         : t.chat.errorGeneric,
       )
-      // A failed search must never be auto-replayed: the session restore also
-      // fires on plain reloads (sessionStorage survives them), so a persisted
-      // failing query turns into an error loop the user cannot reload out of
-      // (reload → replay → same error). Next successful search re-persists.
-      clearSearchRun()
+      // The run store is success-gated (persisted only when lastSearchOk flips
+      // true), so a failing MANUAL query never enters it — and the previous
+      // successful run stays replayable (reload after a typo replays the last
+      // good search instead of nothing). The one gap gating can't cover: a run
+      // that was successful at save time but fails deterministically on replay
+      // (backend changed, stale pre-gating entry). Clearing on a failed REPLAY
+      // closes that loop without touching manual-search failures.
+      if (isReplay) clearSearchRun()
       // Sources still "loading" never answered (timeout, 429, network error, …) —
       // mark them as errored so the FilterPanel shows the warning and the
       // results-header retry button appears (gated on hasSourceError), instead of
@@ -678,7 +696,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setChatMode(settings.defaultSearchMode ?? "nearby")
     setSortBy(settings.sortOrder)
     setFilterCollapsed(true)
-    try { localStorage.removeItem("ap_last_search") } catch { /* ignore */ }
+    clearSearchInput()
     try { localStorage.removeItem("ap_visited") } catch { /* ignore */ }
     clearSessionSearch()  // full reset: drop restorable mode + last search
     // Clean up any deep-link or SEO params from the URL without a page reload
@@ -814,6 +832,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       undefined,
       undefined,
       run.placeSearch || undefined,
+      true, // isReplay: a failed replay clears the run so reloads can't loop on it
     )
   // Run once on mount — restore inputs are read from sessionStorage.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -887,6 +906,14 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // (via the existing /api/nearby-parking endpoint) around `coords` and shows them
   // as the primary results — list cards + map markers. Replaces venue results
   // (single-select). `panned` is set when re-run via "search this area" so the map
+  // The ONLY way to persist the amenity START radius (settings.parkingRadiusKm):
+  // clamps to the settings slider's range so a one-off large live search (the
+  // live slider goes up to 25 km) never becomes the stored default. Every
+  // parkingRadiusKm writer must go through this.
+  const persistParkingStartRadius = useCallback((km: number) => {
+    updateSettings({ parkingRadiusKm: Math.min(km, SETTINGS_PARKING_RADIUS_MAX_KM) })
+  }, [updateSettings])
+
   // does not re-fit. Aborts any in-flight fetch so a stale response can't win.
   const handleAmenitySearch = useCallback(async (
     type: AmenityType,
@@ -938,7 +965,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     if (radiusKmOverride != null && panned) {
       radius = snapAmenityRadiusKm(radiusKmOverride)
       setAmenityRadiusKm(radius)
-      updateSettings({ parkingRadiusKm: radius })
+      persistParkingStartRadius(radius)
     }
     if (settings.usageStats) incrementLocalSearchCount()
     const uid = getUserId(settings.usageStats)
@@ -959,7 +986,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     } finally {
       if (amenityAbortRef.current === controller) setIsLoading(false)
     }
-  }, [gpsCoords, amenityRadiusKm, settings.internationalMode, noneFoundFor, updateSettings])
+  }, [gpsCoords, amenityRadiusKm, settings.internationalMode, noneFoundFor, persistParkingStartRadius, settings.usageStats])
 
   // "Search this area" during an amenity search: re-fetch the active amenity type
   // at the panned map centre. Recorded as `panned` so the map fit no longer forces
@@ -972,9 +999,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     // raw centre→corner float with 10+ decimals).
     const snapped = snapAmenityRadiusKm(viewportRadiusKm)
     setAmenityRadiusKm(snapped)
-    updateSettings({ parkingRadiusKm: snapped })
+    persistParkingStartRadius(snapped)
     void handleAmenitySearch(amenitySearch, center, snapped, center)
-  }, [amenitySearch, handleAmenitySearch, updateSettings])
+  }, [amenitySearch, handleAmenitySearch, persistParkingStartRadius])
 
   // Committed from FilterPanel's amenity radius slider (fires once, on release —
   // never per drag tick, finding F3). Persists to settings.parkingRadiusKm so the
@@ -982,9 +1009,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const handleAmenityRadiusCommit = useCallback((km: number) => {
     const clamped = clampAmenityRadiusKm(km)
     setAmenityRadiusKm(clamped)
-    updateSettings({ parkingRadiusKm: clamped })
+    persistParkingStartRadius(clamped)
     if (amenitySearch && searchCenter) void handleAmenitySearch(amenitySearch, searchCenter, clamped)
-  }, [amenitySearch, searchCenter, handleAmenitySearch, updateSettings])
+  }, [amenitySearch, searchCenter, handleAmenitySearch, persistParkingStartRadius])
 
   // Dedicated "expand radius" for the amenity empty state — always available
   // whenever an amenity search is active, independent of any leftover venue
@@ -994,9 +1021,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     if (!amenitySearch || !searchCenter) return
     const next = clampAmenityRadiusKm(amenityRadiusKm * 2)
     setAmenityRadiusKm(next)
-    updateSettings({ parkingRadiusKm: next })
+    persistParkingStartRadius(next)
     void handleAmenitySearch(amenitySearch, searchCenter, next)
-  }, [amenitySearch, searchCenter, amenityRadiusKm, handleAmenitySearch, updateSettings])
+  }, [amenitySearch, searchCenter, amenityRadiusKm, handleAmenitySearch, persistParkingStartRadius])
 
   // Leave amenity mode without running a search (e.g. tapping "Alle" while no
   // location is set, so no venue search fires to clear it).

@@ -1,11 +1,22 @@
-// Per-tab session restore (sessionStorage) so that returning to the home page
-// from a static page (FAQ/Impressum → "Zurück", which is a forward <Link href="/">
-// that remounts HomeClient) restores the active search mode and re-runs the last
-// search, instead of replaying the splash + firing a fresh "nearby" auto-search.
+// Single owner of BOTH "last search" restore layers — they are related but
+// deliberately different, and keeping them in one module is what stops them
+// from drifting apart (they used to live in two places and diverged):
 //
-// Scope is sessionStorage (per tab, cleared on tab close) on purpose — we restore
-// within a browsing session, not stale results days later. All access is guarded
-// (SSR has no sessionStorage; private mode / quota can throw).
+//  1. INPUT restore (localStorage, `ap_last_search`): the raw text + chip the
+//     user last typed/picked. Cross-session, device-wide. Only pre-fills the
+//     search UI on the next visit — never executes anything.
+//  2. RUN replay (sessionStorage, `ap_last_search_run`): the built query +
+//     coords of the last SUCCESSFUL search. Per tab, survives reloads. On a
+//     return mount (static page → back, or a reload) HomeClient re-executes it.
+//     Persisted only after a search succeeded — a failing query must never
+//     enter the replay loop (reload → replay → same error).
+//
+// The rest is per-tab session restore (sessionStorage) so that returning to the
+// home page from a static page (FAQ/Impressum → "Zurück", which is a forward
+// <Link href="/"> that remounts HomeClient) restores the active search mode,
+// instead of replaying the splash + firing a fresh "nearby" auto-search.
+//
+// All access is guarded (SSR has no storage; private mode / quota can throw).
 
 const K_SESSION   = "ap_home_session"   // set once per tab once HomeClient has mounted
 const K_RETURNING = "ap_returning_now"  // ephemeral: "1" when THIS mount is a return
@@ -14,9 +25,41 @@ const K_SEARCH    = "ap_last_search_run" // enough to replay handleSearch(...)
 const K_NEARBY    = "ap_nearby_location" // located district + coords (nearby mode UI)
 const K_SPLASH    = "ap_splash_shown"   // SplashOverlay: shown once per tab session
 
+const K_INPUT = "ap_last_search" // localStorage: raw input text + chip (layer 1)
+
 function ss(): Storage | null {
   try { return typeof window !== "undefined" ? window.sessionStorage : null } catch { return null }
 }
+
+function ls(): Storage | null {
+  try { return typeof window !== "undefined" ? window.localStorage : null } catch { return null }
+}
+
+// ─── Layer 1: input restore (localStorage) ───────────────────────────────────
+
+// `cat` is the stable Category key of the selected chip (null = "Alle").
+// Legacy installs stored a positional `idx` instead — ChatPanel migrates it on
+// load via legacyChipIdxToCat, so loadSearchInput returns the raw parsed shape.
+export type SearchInput = { cat: string | null; loc: string }
+
+export function saveSearchInput(input: SearchInput): void {
+  try { ls()?.setItem(K_INPUT, JSON.stringify(input)) } catch { /* ignore (quota) */ }
+}
+
+export function loadSearchInput(): (Partial<SearchInput> & { idx?: number | null }) | null {
+  try {
+    const raw = ls()?.getItem(K_INPUT)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === "object" ? parsed : null
+  } catch { return null }
+}
+
+export function clearSearchInput(): void {
+  try { ls()?.removeItem(K_INPUT) } catch { /* ignore */ }
+}
+
+// ─── Layer 2 + mode/nearby restore (sessionStorage) ──────────────────────────
 
 export type SearchRun = {
   chatMode:    "text" | "nearby"

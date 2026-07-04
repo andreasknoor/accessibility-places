@@ -9,7 +9,7 @@ import { useIsMobile } from "@/hooks/useIsMobile"
 import { cn } from "@/lib/utils"
 import { extractQuotedName } from "@/lib/llm"
 import { loadSettings, legacyChipIdxToCat } from "@/lib/settings"
-import { isReturningNow, loadSearchRun, loadActiveMode, saveNearbyLocation, loadNearbyLocation } from "@/lib/session-restore"
+import { isReturningNow, loadSearchRun, loadActiveMode, saveNearbyLocation, loadNearbyLocation, saveSearchInput, loadSearchInput, clearSearchInput } from "@/lib/session-restore"
 import { getCurrentPosition, isGeolocationAvailable, watchPosition, clearWatchPosition, type GeoWatchId } from "@/lib/native/geolocation"
 import DevConsole from "@/components/easter-eggs/DevConsole"
 import type { AmenityType, Category } from "@/lib/types"
@@ -296,15 +296,14 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       return
     }
     try {
-      const saved = localStorage.getItem("ap_last_search")
-      if (saved) {
-        const parsed = JSON.parse(saved)
+      const parsed = loadSearchInput()
+      if (parsed) {
         const loc = parsed.loc
         // New format stores the stable category key `cat`; legacy entries stored a
         // positional `idx` — translate those once via the same table as the settings
         // migration. `cat: null` / `idx: null` means an explicit "Alle" choice.
         const hasCat = "cat" in parsed
-        const savedCat: Category | null = hasCat ? parsed.cat : legacyChipIdxToCat(parsed.idx)
+        const savedCat: Category | null = hasCat ? (parsed.cat as Category | null) : legacyChipIdxToCat(parsed.idx)
         const explicitAlle = hasCat ? parsed.cat === null : parsed.idx === null
         const restoredIdx = chipIdxForCat(savedCat)
         if (restoredIdx !== undefined) {
@@ -788,7 +787,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     }
     // Default for raw free text: area search (conservative — never silently
     // routes typed text to a venue lookup; venues are reached via the dropdown).
-    try { localStorage.setItem("ap_last_search", JSON.stringify({ cat: selectedIdx != null ? CHIPS[selectedIdx].cat : null, loc: location.trim() })) } catch { /* ignore */ }
+    saveSearchInput({ cat: selectedIdx != null ? CHIPS[selectedIdx].cat : null, loc: location.trim() })
     track("search_freetext", { category: selectedIdx != null ? CHIPS[selectedIdx].cat : "alle" })
     onSearch(buildQuery(rest), undefined, quoted || undefined)
   }
@@ -820,7 +819,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     pickedVenueRef.current = null
     setVenuePicked(false)
     setLocation(newLocation)
-    try { localStorage.setItem("ap_last_search", JSON.stringify({ cat: selectedIdx != null ? CHIPS[selectedIdx].cat : null, loc: newLocation.trim() })) } catch { /* ignore */ }
+    saveSearchInput({ cat: selectedIdx != null ? CHIPS[selectedIdx].cat : null, loc: newLocation.trim() })
     // A picked area is known to be a pure location — "in <display>" keeps an
     // all-categories search from re-parsing category terms out of city names.
     onSearch(selectedIdx === null ? `in ${s.display}` : buildQuery(s.display), undefined, quoted || undefined)
@@ -993,7 +992,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                   setLocation("")
                   setSuggestions([])
                   setShowSuggestions(false)
-                  try { localStorage.removeItem("ap_last_search") } catch { /* ignore */ }
+                  clearSearchInput()
                   inputRef.current?.focus()
                 }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"

@@ -80,6 +80,13 @@ export function legacyChipIdxToCat(idx: number | null | undefined): Category | n
   return LEGACY_CHIP_IDX_TO_CAT[idx] ?? null
 }
 
+// Upper bound of the persisted amenity START radius (parkingRadiusKm) — the
+// single source for the SettingsSheet slider max AND every write site in
+// HomeClient. The LIVE amenity slider goes up to AMENITY_RADIUS_MAX_KM (25 km,
+// lib/search-ui.ts) for one-off searches; a one-off large search must never
+// become the persisted default, so writers clamp to this bound.
+export const SETTINGS_PARKING_RADIUS_MAX_KM = 5.0
+
 const SETTINGS_KEY = "ap_settings"
 
 export function loadSettings(): AppSettings {

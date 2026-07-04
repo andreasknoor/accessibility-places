@@ -5,7 +5,7 @@ import { useFocusTrap } from "@/hooks/useFocusTrap"
 import { createPortal } from "react-dom"
 import { Settings, Check, Search, Map, SlidersHorizontal } from "lucide-react"
 import { useTranslations, useLocale } from "@/lib/i18n"
-import { SETTING_CHIPS, DEFAULT_APP_SETTINGS } from "@/lib/settings"
+import { SETTING_CHIPS, DEFAULT_APP_SETTINGS, SETTINGS_PARKING_RADIUS_MAX_KM } from "@/lib/settings"
 import { cn } from "@/lib/utils"
 import { track } from "@/lib/analytics"
 import type { AppSettings } from "@/lib/settings"
@@ -241,7 +241,7 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
             <Row label={ts.parkingRadius} hint={ts.parkingRadiusHint}>
               <SliderInput
                 min={0.05}
-                max={5.0}
+                max={SETTINGS_PARKING_RADIUS_MAX_KM}
                 step={0.05}
                 value={settings.parkingRadiusKm}
                 onChange={(v) => onUpdate({ parkingRadiusKm: v })}

@@ -57,7 +57,12 @@ export function amenitySpotKey(spot: { osmId?: string; lat: number; lon: number 
 }
 
 export const AMENITY_RADIUS_MIN_KM = 0.05
-export const AMENITY_RADIUS_MAX_KM = 5.0
+// Matches the /api/nearby-parking server cap (RADIUS_MAX_KM = 25), which was
+// raised precisely so "search this area" can cover a zoomed-out map viewport —
+// the old 5 km client clamp silently cut that capability off again. The
+// AppSettings start radius (parkingRadiusKm) keeps its own smaller 0.05–5
+// range; this bound governs the live slider and viewport-derived searches.
+export const AMENITY_RADIUS_MAX_KM = 25.0
 
 export function clampAmenityRadiusKm(km: number): number {
   return Math.min(Math.max(km, AMENITY_RADIUS_MIN_KM), AMENITY_RADIUS_MAX_KM)

@@ -27,6 +27,17 @@ describe("extractLocationFallback", () => {
     expect(extractLocationFallback("Hotels Berlin")).toBe("Berlin")
   })
 
+  it("strips multi-word category hints ('Fast Food Berlin' must not become 'Food Berlin')", () => {
+    expect(extractLocationFallback("Fast Food Berlin")).toBe("Berlin")
+    expect(extractLocationFallback("Fast Food in Hamburg")).toBe("Hamburg")
+  })
+
+  it("multi-word hint + category-word city: the ambiguous city survives ('Fast Food Essen')", () => {
+    // Phrase-flagged tokens (certainly categorial) are dropped before
+    // word-flagged ones (possibly a city) — review finding, 2026-07-04.
+    expect(extractLocationFallback("Fast Food Essen")).toBe("Essen")
+  })
+
   it("keeps postal codes as location tokens (PLZ disambiguation)", () => {
     expect(extractLocationFallback("67433 Neustadt")).toBe("67433 Neustadt")
     expect(extractLocationFallback("Restaurants in 67433 Neustadt")).toBe("67433 Neustadt")
@@ -307,6 +318,8 @@ describe("parseQuery — client query shapes", () => {
     // Regression shapes from the Frankenthal bug (pre-v9.30 buildQuery nesting
     // and the poisoned-restore form): the full free text becomes the location.
     ["Arzt Frankenthal",                  "Frankenthal",             ["doctors"]],  // ohne "in" — Kategorienwort wird gestrippt
+    ["Fast Food Berlin",                  "Berlin",                  ["fast_food"]], // Mehrwort-Hint wird als Paar gestrippt
+    ["Fast Food Essen",                   "Essen",                   ["restaurant", "fast_food"]], // Kategorienwort-Stadt ueberlebt die Phrase
     // PLZ-Disambiguierung: die Postleitzahl muss die Ortssuche erreichen.
     ["67433 Neustadt",                    "67433 Neustadt",          "all"],
     ["Restaurants in 67433 Neustadt",     "67433 Neustadt",          ["restaurant"]],

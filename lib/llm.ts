@@ -43,6 +43,15 @@ function normaliseForMatch(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "")
 }
 
+// Hints spanning multiple words ("fast food") — matched against adjacent word
+// pairs in extractLocationFallback, since the per-word category check cannot
+// see them. Trimmed first so hints with only a trailing space ("dm ") do not
+// qualify (they would wrongly flag the following word, e.g. a city).
+const MULTIWORD_HINTS: string[] = Object.values(CATEGORY_HINTS)
+  .flat()
+  .map((h) => normaliseForMatch(h).trim())
+  .filter((h) => h.includes(" "))
+
 // Matched categories only — [] when nothing matches (no all-categories
 // fallback). Used by inferCategories and by the location fallback below to
 // recognise category words.
@@ -100,17 +109,33 @@ export function extractLocationFallback(query: string): string {
   }
 
   const words      = stripped.split(/\s+/)
+  // Two tiers of category flags per word, because their certainty differs:
+  //  - wordFlag: a single word matches a hint ("Arzt") — but this is AMBIGUOUS,
+  //    the word can be a city that doubles as a category term ("Essen").
+  //  - phraseFlag: the word is part of an adjacent pair matching a multi-word
+  //    hint ("Fast Food") — near-certainly categorial, never a city name.
+  const wordFlag   = words.map((w) => matchedCategories(w).length > 0)
+  const phraseFlag = words.map(() => false)
+  for (let i = 0; i + 1 < words.length; i++) {
+    const pair = normaliseForMatch(`${words[i]} ${words[i + 1]}`)
+    if (MULTIWORD_HINTS.some((h) => pair.startsWith(h))) {
+      phraseFlag[i] = true
+      phraseFlag[i + 1] = true
+    }
+  }
   // Location candidates: capitalised words plus postal codes (4 digits AT/CH,
   // 5 digits DE) — "67433 Neustadt" must reach Nominatim with the PLZ intact.
-  const capitalised = words.filter((w) => /^[A-ZÄÖÜ]/.test(w) || /^\d{4,5}$/.test(w))
-  // Drop recognised category words from the location candidates: "Arzt
-  // Frankenthal" (typed without "in") must geocode "Frankenthal", not the
-  // full string — Nominatim knows no place called "Arzt Frankenthal"
-  // (free-text-matrix finding, 2026-07-03). When ALL capitalised words are
-  // category terms (the city "Essen"), keep them: a bare city name must not
-  // be stripped into an empty query.
-  const nonCategory = capitalised.filter((w) => matchedCategories(w).length === 0)
-  const candidates  = nonCategory.length > 0 ? nonCategory : capitalised
+  const isLocToken  = (w: string) => /^[A-ZÄÖÜ]/.test(w) || /^\d{4,5}$/.test(w)
+  const capitalised = words.filter(isLocToken)
+  // Drop recognised category words, preferring the least-ambiguous survivors:
+  //  1. tokens with no category flag at all ("Arzt Frankenthal" → "Frankenthal");
+  //  2. else tokens that are only word-flagged — those may be cities like
+  //     "Essen" ("Fast Food Essen" → "Essen", not "Food Essen");
+  //  3. else keep everything (bare "Essen", or a pure category phrase) — a bare
+  //     city name must not be stripped into an empty query.
+  const unflagged  = words.filter((w, i) => isLocToken(w) && !wordFlag[i] && !phraseFlag[i])
+  const wordOnly   = words.filter((w, i) => isLocToken(w) && !phraseFlag[i])
+  const candidates = unflagged.length > 0 ? unflagged : wordOnly.length > 0 ? wordOnly : capitalised
   const loc        = candidates.slice(-2).join(" ") || stripped
   return cc ? `${loc} (${cc})` : loc
 }
