@@ -357,7 +357,7 @@ const en: Translations = {
   },
   intlHint: {
     titleFull:     "Enable international search",
-    bodyFull:      "You appear to be outside the DACH region. Enable international search to find places in your country.",
+    bodyFull:      "By default, this app searches in Germany, Austria and Switzerland. Enable international search to find places in your country.",
     titleLimited:  "International search (limited)",
     bodyLimited:   "Your country isn't fully supported yet. Searching nearby by location works, but searching by place name does not yet.",
     activate:      "Enable",
@@ -404,7 +404,7 @@ const en: Translations = {
     parkingRadius:     "Default search radius 🅿️ & 🚻",
     parkingRadiusHint: "Used as the initial radius when you tap 🅿️ or 🚻.",
     internationalMode:     "International search (Beta)",
-    internationalModeHint: "Search beyond the DACH region (France, United Kingdom, Netherlands, Spain, Italy, USA). Data coverage varies by country and is often sparse outside major cities.",
+    internationalModeHint: "Search beyond Germany, Austria and Switzerland (France, United Kingdom, Netherlands, Spain, Italy, USA). Data coverage varies by country and is often sparse outside major cities.",
     usageStats:            "Anonymous usage statistics",
     usageStatsHint:        "Counts your searches under a random ID — no IP address, search terms, or location. Turning this off deletes the ID immediately. Details in the privacy policy.",
   },

@@ -357,7 +357,7 @@ const de: Translations = {
   },
   intlHint: {
     titleFull:     "Internationale Suche aktivieren",
-    bodyFull:      "Du scheinst außerhalb der DACH-Region zu sein. Aktiviere die internationale Suche, um Orte in deinem Land zu finden.",
+    bodyFull:      "Diese App sucht standardmäßig in Deutschland, Österreich und der Schweiz. Aktiviere die internationale Suche, um Orte in deinem Land zu finden.",
     titleLimited:  "Internationale Suche (eingeschränkt)",
     bodyLimited:   "Dein Land wird noch nicht vollständig unterstützt. Die Umgebungssuche per Standort funktioniert, die Suche nach Ortsnamen jedoch noch nicht.",
     activate:      "Aktivieren",
@@ -404,7 +404,7 @@ const de: Translations = {
     parkingRadius:     "Standard-Suchradius 🅿️ & 🚻",
     parkingRadiusHint: "Wird beim Tippen auf 🅿️ oder 🚻 als Startradius verwendet.",
     internationalMode:     "Internationale Suche (Beta)",
-    internationalModeHint: "Suche auch außerhalb von DACH (Frankreich, Großbritannien, Niederlande, Spanien, Italien, USA). Datenlage variiert je nach Land und ist außerhalb großer Städte oft dünn.",
+    internationalModeHint: "Suche auch außerhalb von Deutschland, Österreich und der Schweiz (Frankreich, Großbritannien, Niederlande, Spanien, Italien, USA). Datenlage variiert je nach Land und ist außerhalb großer Städte oft dünn.",
     usageStats:            "Anonyme Nutzungsstatistik",
     usageStatsHint:        "Zählt deine Suchen unter einer zufälligen ID — ohne IP-Adresse, Suchbegriffe oder Standort. Beim Ausschalten wird die ID sofort gelöscht. Details in der Datenschutzerklärung.",
   },
