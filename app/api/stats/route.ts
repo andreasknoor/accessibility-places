@@ -369,7 +369,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     return NextResponse.json({ ok: false, error: "KV not configured" }, { status: 503 })
   }
 
-  const [stats, topUsers] = await Promise.all([getStats(), getTopUsers(50)])
+  const [stats, topUsers] = await Promise.all([getStats(), getTopUsers(100)])
 
   if (req.nextUrl.searchParams.get("format") === "html") {
     return new Response(renderHtml(stats, topUsers), {
