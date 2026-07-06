@@ -45,6 +45,10 @@ export const metadata: Metadata = {
   },
   other: {
     "mobile-web-app-capable": "yes",
+    // iOS Smart App Banner (Safari-only, never shown in the standalone PWA or
+    // the native WKWebView): offers "Get"/"Open" for the App Store listing.
+    // App ID from https://apps.apple.com/de/app/accessible-places-app/id6781726948.
+    "apple-itunes-app": "app-id=6781726948",
   },
 }
 
