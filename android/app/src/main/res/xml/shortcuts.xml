@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Static App Shortcuts (long-press on the launcher icon). Mirrors the iOS
+  UIApplicationShortcutItems in ios/App/App/Info.plist — same two actions
+  (parking/toilet), same labels, so both platforms offer identical shortcuts.
+  MainActivity reads the shortcut's action string and stores it under the
+  @capacitor/preferences key "ap_pending_native_action" (lib/native/actions.ts
+  reads it back on the web side; that bridge already existed for iOS).
+-->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="parking"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_parking"
+        android:shortcutShortLabel="@string/shortcut_parking_short"
+        android:shortcutLongLabel="@string/shortcut_parking_long">
+        <intent
+            android:action="org.accessibleplaces.app.SHORTCUT_PARKING"
+            android:targetPackage="org.accessibleplaces.app"
+            android:targetClass="org.accessibleplaces.app.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="toilet"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_toilet"
+        android:shortcutShortLabel="@string/shortcut_toilet_short"
+        android:shortcutLongLabel="@string/shortcut_toilet_long">
+        <intent
+            android:action="org.accessibleplaces.app.SHORTCUT_TOILET"
+            android:targetPackage="org.accessibleplaces.app"
+            android:targetClass="org.accessibleplaces.app.MainActivity" />
+    </shortcut>
+</shortcuts>
