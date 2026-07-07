@@ -171,17 +171,27 @@ function renderTopUsers(topUsers: TopUser[]): string {
   });
 
   // Platform filter — hides non-matching rows (sorting keeps working on the
-  // full set; hidden rows simply stay hidden wherever they land).
+  // full set; hidden rows simply stay hidden wherever they land). The active
+  // filter rides in the URL (?pf=web) via history.replaceState, so a reload
+  // (which keeps the address bar) restores it, and the filtered view is a
+  // shareable link — no localStorage needed for a server-rendered page.
+  function applyPlatformFilter(pf) {
+    document.querySelectorAll('.pf-filter').forEach((b) => b.classList.toggle('active', b.dataset.pf === pf));
+    usersTbody.querySelectorAll('tr').forEach((tr) => {
+      tr.style.display = (!pf || tr.dataset.platform === pf) ? '' : 'none';
+    });
+  }
   document.querySelectorAll('.pf-filter').forEach((btn) => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.pf-filter').forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
       const pf = btn.dataset.pf;
-      usersTbody.querySelectorAll('tr').forEach((tr) => {
-        tr.style.display = (!pf || tr.dataset.platform === pf) ? '' : 'none';
-      });
+      applyPlatformFilter(pf);
+      const url = new URL(location.href);
+      if (pf) url.searchParams.set('pf', pf); else url.searchParams.delete('pf');
+      history.replaceState(null, '', url);
     });
   });
+  const initialPf = new URLSearchParams(location.search).get('pf') ?? '';
+  if (initialPf) applyPlatformFilter(initialPf);
 </script>`
 }
 
