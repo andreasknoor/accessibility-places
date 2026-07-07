@@ -137,6 +137,37 @@ function textColor(confidence: number): string {
   return CONFIDENCE_TEXT_COLORS[confidenceLabel(confidence)]
 }
 
+// Value-text colours for a criterion row (yes/limited/no/unknown) — matches
+// PlaceDebugSheet's VALUE_COLORS (text-green-600/amber-600/red-600/zinc-400)
+// so the same place reads the same way on the map popup and in the detail
+// sheet. Kept separate from CONFIDENCE_TEXT_COLORS: the value colour answers
+// "what is the answer", the confidence chip (below) answers "how sure are we".
+const VALUE_TEXT_COLORS: Record<string, string> = {
+  yes:     "#16a34a", // green-600
+  limited: "#d97706", // amber-600
+  no:      "#dc2626", // red-600
+  unknown: "#a1a1aa", // zinc-400
+}
+
+// Compact confidence chip for a popup criterion row (dot + short word) —
+// the popup counterpart of PlaceDebugSheet's ReliabilityPill, shrunk to fit
+// the narrow popup width. Omitted entirely for "unknown" values (no
+// confidence to show). Chip background/border reuse the existing confidence
+// colour scales so it visually matches the pin/header confidence styling.
+const CHIP_BG: Record<"high" | "medium" | "low", string> = {
+  high: "#f0fdf4", medium: "#fffbeb", low: "#fef2f2",
+}
+const CHIP_BORDER: Record<"high" | "medium" | "low", string> = {
+  high: "#bbf7d0", medium: "#fde68a", low: "#fecaca",
+}
+// shortLabels come from lib/i18n (trusted, per the popup XSS rule — only
+// OSM-sourced strings need esc()), so no escaping here.
+function confidenceChip(confidence: number, shortLabels: { high: string; medium: string; low: string }): string {
+  const level = confidenceLabel(confidence)
+  return `<span style="display:inline-flex;align-items:center;gap:3px;border-radius:999px;padding:0 5px;font-size:9px;font-weight:700;line-height:15px;border:1px solid ${CHIP_BORDER[level]};background:${CHIP_BG[level]};color:${CONFIDENCE_TEXT_COLORS[level]};margin-left:6px;white-space:nowrap">` +
+    `<span style="width:5px;height:5px;border-radius:50%;background:${CONFIDENCE_COLORS[level]};flex-shrink:0"></span>${shortLabels[level]}</span>`
+}
+
 // ─── Shared popup styling (venue / parking / WC) ──────────────────────────────
 // All three map popups use one layout: a flush left accent bar (host/confidence
 // colour) + an icon badge header + an aligned key/value grid + a footer with
@@ -165,11 +196,12 @@ function popupShell(bar: string, inner: string): string {
 }
 
 // One label/value row for the popup key/value grid. `dot` draws a leading status
-// dot (used by the venue criteria); `color` tints the value text.
-function popupRow(label: string, value: string, opts: { color?: string; dot?: string } = {}): string {
+// dot; `color` tints the value text; `chip` appends trailing HTML (the compact
+// confidence chip on venue criteria — see confidenceChip()).
+function popupRow(label: string, value: string, opts: { color?: string; dot?: string; chip?: string } = {}): string {
   const valStyle = `font-size:12px;font-weight:600;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px${opts.color ? `;color:${opts.color}` : ""}`
   const dotEl = opts.dot ? `<span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${opts.dot};display:inline-block"></span>` : ""
-  return `<span style="font-size:11px;color:#71717a">${label}</span><span style="${valStyle}">${dotEl}${value}</span>`
+  return `<span style="font-size:11px;color:#71717a">${label}</span><span style="${valStyle}">${dotEl}${value}${opts.chip ?? ""}</span>`
 }
 
 // Parking marker colours per tier.
@@ -901,9 +933,9 @@ export default function MapView({
           </div>
           <div style="${POPUP_SUB}">${meta}</div>
           <div style="${POPUP_KV}">
-            ${popupRow(t.criteria.entrance, t.a11y[ent.value] ?? ent.value, { color: textColor(ent.confidence), dot: markerColor(ent.confidence) })}
-            ${popupRow(t.criteria.toilet,   t.a11y[toi.value] ?? toi.value, { color: textColor(toi.confidence), dot: markerColor(toi.confidence) })}
-            ${popupRow(t.criteria.parking,  parkingText,                    { color: textColor(par.confidence), dot: markerColor(par.confidence) })}
+            ${popupRow(t.criteria.entrance, t.a11y[ent.value] ?? ent.value, { color: VALUE_TEXT_COLORS[ent.value], chip: ent.value !== "unknown" ? confidenceChip(ent.confidence, t.map.confidenceShort) : undefined })}
+            ${popupRow(t.criteria.toilet,   t.a11y[toi.value] ?? toi.value, { color: VALUE_TEXT_COLORS[toi.value], chip: toi.value !== "unknown" ? confidenceChip(toi.confidence, t.map.confidenceShort) : undefined })}
+            ${popupRow(t.criteria.parking,  parkingText,                    { color: VALUE_TEXT_COLORS[par.value], chip: par.value !== "unknown" ? confidenceChip(par.confidence, t.map.confidenceShort) : undefined })}
           </div>
           <div style="${POPUP_FOOTER}">
             <button data-show-details style="${POPUP_CTA}">${esc(t.map.showDetails)}</button>

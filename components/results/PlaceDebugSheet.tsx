@@ -18,6 +18,7 @@ import { useTranslations, useLocale } from "@/lib/i18n"
 import { buildPlaceDeepLink } from "@/lib/place-link"
 import { openTallyPopup } from "@/lib/tally"
 import { track } from "@/lib/analytics"
+import { confidenceLabel } from "@/lib/matching/merge"
 import { cn } from "@/lib/utils"
 import type { Place, SourceId, ParkingDetails, EntranceDetails, ToiletDetails, SeatingDetails } from "@/lib/types"
 
@@ -31,6 +32,32 @@ const VALUE_COLORS: Record<string, string> = {
   limited: "text-amber-600",
   no:      "text-red-600",
   unknown: "text-zinc-400",
+}
+
+// Per-criterion reliability pill (proposal A2): surfaces the confidence the app
+// already computes for each accessibility attribute, so a value resting on a
+// single weak source (e.g. Google-only) reads as "Unsicher" instead of an
+// authoritative green "Ja". Purely presentational — no merge/filter change.
+const CONF_PILL: Record<"high" | "medium" | "low", string> = {
+  high:   "bg-green-50 text-green-700 border-green-200",
+  medium: "bg-amber-50 text-amber-700 border-amber-200",
+  low:    "bg-red-50 text-red-700 border-red-200",
+}
+const CONF_DOT: Record<"high" | "medium" | "low", string> = {
+  high:   "bg-green-600",
+  medium: "bg-amber-600",
+  low:    "bg-red-600",
+}
+
+function ReliabilityPill({ confidence }: { confidence: number }) {
+  const t     = useTranslations()
+  const level = confidenceLabel(confidence)
+  return (
+    <span className={cn("inline-flex items-center gap-1 rounded-full border px-1.5 py-px text-[10px] font-semibold ml-1.5 align-middle whitespace-nowrap", CONF_PILL[level])}>
+      <span className={cn("w-1.5 h-1.5 rounded-full", CONF_DOT[level])} aria-hidden />
+      {t.results.confidence[level]}
+    </span>
+  )
 }
 
 const PRICE_LEVEL: Record<string, string> = {
@@ -452,6 +479,7 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
                     <span className={cn("font-medium", VALUE_COLORS[attr.value])}>
                       {t.a11y[attr.value]}
                     </span>
+                    {attr.value !== "unknown" && <ReliabilityPill confidence={attr.confidence} />}
                     {attr.sources.length > 0 && (
                       <span className="text-muted-foreground ml-1.5">
                         · {attr.sources.map((s) => SOURCE_LABELS[s.sourceId]).join(", ")}
@@ -471,6 +499,7 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
               <span className={cn("font-medium", VALUE_COLORS[parkingAttr.value])}>
                 {parkingValueLabel}
               </span>
+              {parkingAttr.value !== "unknown" && <ReliabilityPill confidence={parkingAttr.confidence} />}
               {parkingAttr.sources.length > 0 && (
                 <span className="text-muted-foreground ml-1.5">
                   · {parkingAttr.sources.map((s) => SOURCE_LABELS[s.sourceId]).join(", ")}

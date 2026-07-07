@@ -106,6 +106,7 @@ export interface Translations {
     expandRadius:      string
     expandRadiusYes:   string
     conflict:          string
+    lowConfidenceHint: string
     primarySource:     string
     noData:            string
     websiteLink:       string
@@ -210,6 +211,11 @@ export interface Translations {
     exitFullscreen:         string
     source:                 string
     confidence:             string
+    confidenceShort: {
+      high:   string
+      medium: string
+      low:    string
+    }
     showInResults:          string
     showDetails:            string
     parkingSpot:            string

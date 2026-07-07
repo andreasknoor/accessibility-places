@@ -60,6 +60,7 @@ export default function A11yAttribute({ label, attr, detailType, showDetails }: 
       tone={attr.value}
       label={label}
       value={valueLabel}
+      confidence={attr.confidence}
       rows={rows}
       note={description}
       headerExtra={attr.conflict

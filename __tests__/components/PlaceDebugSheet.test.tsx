@@ -147,6 +147,34 @@ describe("PlaceDebugSheet accessibility section", () => {
     expect(screen.getByText(/75%/)).toBeInTheDocument()
   })
 
+  it("shows a per-criterion reliability pill for known values, not for unknown (proposal A2)", () => {
+    // Fixture: entrance yes @0.75 → "Verlässlich"; toilet unknown → no pill;
+    // a lone weak source (Google @0.35) on toilet → "Unsicher".
+    renderSheet(makePlace({
+      accessibility: {
+        entrance: { value: "yes", confidence: 0.75, conflict: false, sources: [{ sourceId: "osm", value: "yes", rawValue: "yes", reliabilityWeight: 0.75 }], details: {} },
+        toilet:   { value: "yes", confidence: 0.35, conflict: false, sources: [{ sourceId: "google_places", value: "yes", rawValue: "true", reliabilityWeight: 0.35 }], details: {} },
+        parking:  { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
+      },
+    }))
+    // entrance → Verlässlich, toilet → Unsicher; both pills present
+    expect(screen.getByText("Verlässlich")).toBeInTheDocument()
+    expect(screen.getByText("Unsicher")).toBeInTheDocument()
+  })
+
+  it("shows no reliability pill when every criterion is unknown", () => {
+    renderSheet(makePlace({
+      accessibility: {
+        entrance: { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
+        toilet:   { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
+        parking:  { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
+      },
+    }))
+    expect(screen.queryByText("Verlässlich")).toBeNull()
+    expect(screen.queryByText("Mittel")).toBeNull()
+    expect(screen.queryByText("Unsicher")).toBeNull()
+  })
+
   it("shows seating row only when seating data is present", () => {
     renderSheet()
     expect(screen.queryByText("Sitzplätze")).toBeNull()
