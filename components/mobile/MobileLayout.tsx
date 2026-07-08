@@ -442,20 +442,36 @@ export default function MobileLayout({
               )}
             </div>
           )}
-          {/* Amenity count pill — same affordance during a WC/parking search, so
-              the distance-sorted spot list is one tap (and one Tab-stop) away.
-              The visible "N Parkplätze/WCs" text is the button's accessible name. */}
-          {amenityActiveBool && !isLoading && (amenityResults?.length ?? 0) > 0 && (
-            <button
-              onClick={() => { hapticLight(); setActiveTab("results") }}
+          {/* Amenity count pill + (when available) the focus-mode "search this
+              area" pill, flowing side-by-side — same row layout as the venue
+              pills above, so the two can never overlap (see MapView's
+              hideSearchHereButton / onPanned wiring for the focus-mode side). */}
+          {amenityActiveBool && ((!isLoading && (amenityResults?.length ?? 0) > 0) || searchHereRun) && (
+            <div
               className={cn(
-                "absolute top-3 left-14 z-[1000] flex items-center gap-1.5 rounded-full bg-card/95 backdrop-blur-sm border border-border shadow-md px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors",
+                "absolute top-3 left-14 z-[1000] flex items-center gap-1.5 transition-opacity",
                 mapPopupOpen && "opacity-0 pointer-events-none",
               )}
             >
-              <List className="w-3.5 h-3.5 text-primary shrink-0" />
-              <span>{t.results.amenityCount(amenityResults!.length)}</span>
-            </button>
+              {!isLoading && (amenityResults?.length ?? 0) > 0 && (
+                <button
+                  onClick={() => { hapticLight(); setActiveTab("results") }}
+                  className="flex items-center gap-1.5 rounded-full bg-card/95 backdrop-blur-sm border border-border shadow-md px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                >
+                  <List className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span>{t.results.amenityCount(amenityResults!.length)}</span>
+                </button>
+              )}
+              {searchHereRun && (
+                <button
+                  onClick={() => { hapticLight(); searchHereRun() }}
+                  className="flex items-center gap-1.5 rounded-full bg-card/95 backdrop-blur-sm border border-border shadow-md px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                >
+                  <Search className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
+                  <span>{t.map.searchHereFocus}</span>
+                </button>
+              )}
+            </div>
           )}
           {mapMounted && (
             <MapView

@@ -324,6 +324,7 @@ export default function MapView({
   const userLocationRef     = useRef(userLocation)
   const searchCenterRef     = useRef(center)
   const onSearchHereRef     = useRef(onSearchHere)
+  const onFocusSearchHereRef = useRef(onFocusSearchHere)
   const onPannedRef         = useRef(onPanned)
   const onViewportChangeRef = useRef(onViewportChange)
   const focusModeRef        = useRef(focusMode)
@@ -335,22 +336,43 @@ export default function MapView({
   useEffect(() => { userLocationRef.current = userLocation }, [userLocation])
   useEffect(() => { searchCenterRef.current = center }, [center])
   useEffect(() => { onSearchHereRef.current = onSearchHere }, [onSearchHere])
+  useEffect(() => { onFocusSearchHereRef.current = onFocusSearchHere }, [onFocusSearchHere])
   useEffect(() => { focusModeRef.current = focusMode }, [focusMode])
 
   // Floating "search here" button state — set when user pans away from search centre.
   const [searchHereCenter, setSearchHereCenter] = useState<{ lat: number; lon: number } | null>(null)
   // Report pan availability to the parent so it can render the "search here" pill
-  // inline next to the count pill (mobile). The runner computes the viewport
-  // radius at click time. Suppressed in focus mode (that path keeps its own
-  // always-centred control).
+  // inline next to the count pill (mobile) — for both the venue path and the
+  // amenity focus-mode path, so neither ever collides with a count pill the
+  // parent renders at the same spot (see MobileLayout). The runner computes
+  // the viewport radius at click time.
   useEffect(() => {
     const notify  = onPannedRef.current
     const report  = onViewportChangeRef.current
+
+    if (focusMode) {
+      // Focus-mode "search this area" is always available while focus layers
+      // are active — unlike the venue pill, it's not gated by a pan.
+      if (onFocusSearchHereRef.current) {
+        notify?.(() => {
+          const map = mapInst.current
+          if (!map) return
+          const c = map.getCenter()
+          const radiusKm = c.distanceTo(map.getBounds().getNorthEast()) / 1000
+          onFocusSearchHereRef.current?.({ lat: c.lat, lon: c.lng }, radiusKm)
+        })
+      } else {
+        notify?.(null)
+      }
+      report?.(null)
+      return
+    }
+
     // A pending pan exists only when searchHereCenter is set by a genuine moveend
     // (see the moveend handler: it requires searchCenterRef so this never fires on
-    // a cold map) and we are not in focus mode. The pill and the viewport-origin
-    // report are driven by the exact same condition, so they can never diverge.
-    const panPending = !!(searchHereCenter && onSearchHereRef.current && !focusMode)
+    // a cold map). The pill and the viewport-origin report are driven by the
+    // exact same condition, so they can never diverge.
+    const panPending = !!(searchHereCenter && onSearchHereRef.current)
     if (panPending && searchHereCenter) {
       const map = mapInst.current
       const viewportRadiusKm = map
@@ -1242,8 +1264,11 @@ export default function MapView({
 
       {/* Focus-mode "search this area": always available while focus layers are
           active. Re-fetches the amenity layers at the current map centre, so the
-          user can look beyond their GPS radius without leaving focus mode. */}
-      {focusMode && onFocusSearchHere && (
+          user can look beyond their GPS radius without leaving focus mode.
+          Hidden when hideSearchHereButton (mobile) — the parent renders this
+          inline next to the amenity count pill instead (via onPanned), same as
+          the venue "search here" pill, so the two can never overlap. */}
+      {focusMode && onFocusSearchHere && !hideSearchHereButton && (
         <div className={`absolute top-3 left-1/2 -translate-x-1/2 z-[1000] transition-opacity ${popupOpen ? "opacity-0 pointer-events-none" : ""}`}>
           <button
             onClick={() => {
