@@ -4,4 +4,11 @@
     <string name="title_activity_main">Accessible Places</string>
     <string name="package_name">org.accessibleplaces.app</string>
     <string name="custom_url_scheme">org.accessibleplaces.app</string>
+
+    <!-- App Shortcuts (res/xml/shortcuts.xml) — mirrors the iOS
+         UIApplicationShortcutItems titles/subtitles in Info.plist. -->
+    <string name="shortcut_parking_short">Parkplatz</string>
+    <string name="shortcut_parking_long">Rollstuhl-Parkplatz in der Nähe</string>
+    <string name="shortcut_toilet_short">Rollstuhl-WC</string>
+    <string name="shortcut_toilet_long">Rollstuhl-WC in der Nähe</string>
 </resources>
