@@ -22,6 +22,27 @@
             <meta-data
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
+            <!--
+              Verified App Links (Android's counterpart to iOS Universal Links,
+              scoped identically — see the AASA comment in
+              public/.well-known/assetlinks.json's sibling apple-app-site-association).
+              Android intent-filters can't match on query params like iOS's AASA
+              "components" can, so this narrows by exact path instead: only "/",
+              "/en" and "/en/" ever carry a place-detail deep link (selectLat=…);
+              every other path (SEO city/category pages, static pages) is left out,
+              so those keep opening in the browser. @capacitor/app already fires
+              "appUrlOpen" for a matching ACTION_VIEW intent on Android — the
+              existing web-side listener (app/HomeClient.tsx) handles the rest,
+              no native Java change needed.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="accessible-places.org" android:path="/" />
+                <data android:scheme="https" android:host="accessible-places.org" android:path="/en" />
+                <data android:scheme="https" android:host="accessible-places.org" android:path="/en/" />
+            </intent-filter>
         </activity>
 
         <provider
