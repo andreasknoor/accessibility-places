@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 
 // Fake Upstash client: pipeline chain + the read/prune commands used by user-stats.
 const execMock   = vi.fn().mockResolvedValue([])
@@ -31,7 +31,7 @@ const redisMock = {
 
 vi.mock("@/lib/stats", () => ({ getRedis: () => redisMock }))
 
-import { trackUserSearch, getTopUsers, resetUserStats, setUserComment, COMMENT_MAX_LENGTH } from "@/lib/user-stats"
+import { trackUserSearch, getTopUsers, resetUserStats, setUserComment, isStreakActive, COMMENT_MAX_LENGTH } from "@/lib/user-stats"
 
 const UID = "01234567-89ab-4cde-8f01-23456789abcd"
 
@@ -52,6 +52,8 @@ beforeEach(() => {
   redisMock.hdel.mockResolvedValue(1)
   redisMock.ttl.mockResolvedValue(1000)
   redisMock.expire.mockResolvedValue(1)
+  redisMock.hgetall.mockResolvedValue(null) // trackUserSearchInternal's read-before-write; default = brand-new user
+  vi.useRealTimers()
 })
 
 describe("trackUserSearch validation", () => {
@@ -79,16 +81,95 @@ describe("trackUserSearch validation", () => {
   })
 })
 
+describe("streak tracking", () => {
+  afterEach(() => vi.useRealTimers())
+
+  it("starts a brand-new user at streak 1", async () => {
+    redisMock.hgetall.mockResolvedValue(null)
+    trackUserSearch(UID, "web")
+    await flush()
+    expect(pipeline.hset).toHaveBeenCalledWith(`user:${UID}`, expect.objectContaining({ curStreak: 1, bestStreak: 1 }))
+  })
+
+  it("does not extend the streak on a repeat search the same day", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] }).setSystemTime(new Date("2026-07-09T12:00:00Z"))
+    redisMock.hgetall.mockResolvedValue({ lastSeen: "2026-07-09", curStreak: "3", bestStreak: "5" })
+    trackUserSearch(UID, "web")
+    await flush()
+    expect(pipeline.hset).toHaveBeenCalledWith(`user:${UID}`, expect.objectContaining({ curStreak: 3, bestStreak: 5 }))
+  })
+
+  it("extends the streak by one on a consecutive-day search", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] }).setSystemTime(new Date("2026-07-09T12:00:00Z"))
+    redisMock.hgetall.mockResolvedValue({ lastSeen: "2026-07-08", curStreak: "3", bestStreak: "5" })
+    trackUserSearch(UID, "web")
+    await flush()
+    expect(pipeline.hset).toHaveBeenCalledWith(`user:${UID}`, expect.objectContaining({ curStreak: 4, bestStreak: 5 }))
+  })
+
+  it("resets the streak to 1 after a gap, but keeps the best streak", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] }).setSystemTime(new Date("2026-07-09T12:00:00Z"))
+    redisMock.hgetall.mockResolvedValue({ lastSeen: "2026-07-05", curStreak: "6", bestStreak: "6" })
+    trackUserSearch(UID, "web")
+    await flush()
+    expect(pipeline.hset).toHaveBeenCalledWith(`user:${UID}`, expect.objectContaining({ curStreak: 1, bestStreak: 6 }))
+  })
+
+  it("raises the best streak once the current streak surpasses it", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] }).setSystemTime(new Date("2026-07-09T12:00:00Z"))
+    redisMock.hgetall.mockResolvedValue({ lastSeen: "2026-07-08", curStreak: "6", bestStreak: "6" })
+    trackUserSearch(UID, "web")
+    await flush()
+    expect(pipeline.hset).toHaveBeenCalledWith(`user:${UID}`, expect.objectContaining({ curStreak: 7, bestStreak: 7 }))
+  })
+})
+
+describe("isStreakActive", () => {
+  beforeEach(() => vi.useFakeTimers({ toFake: ["Date"] }).setSystemTime(new Date("2026-07-09T12:00:00Z")))
+  afterEach(() => vi.useRealTimers())
+
+  it("is active when the last search was today", () => {
+    expect(isStreakActive("2026-07-09")).toBe(true)
+  })
+
+  it("is active when the last search was yesterday", () => {
+    expect(isStreakActive("2026-07-08")).toBe(true)
+  })
+
+  it("is inactive after a gap of 2+ days", () => {
+    expect(isStreakActive("2026-07-07")).toBe(false)
+  })
+
+  it("is inactive when there is no lastSeen", () => {
+    expect(isStreakActive(null)).toBe(false)
+  })
+})
+
 describe("getTopUsers", () => {
   it("returns users with hash data, ordered by the zset", async () => {
     redisMock.zrange.mockResolvedValue([UID, 42])
-    redisMock.hgetall.mockResolvedValue({ firstSeen: "2026-06-01", lastSeen: "2026-07-02", platform: "ios" })
+    redisMock.hgetall.mockResolvedValue({
+      firstSeen: "2026-06-01", lastSeen: "2026-07-02", platform: "ios",
+      curStreak: "3", bestStreak: "7",
+    })
 
     const users = await getTopUsers(20)
     expect(redisMock.zrange).toHaveBeenCalledWith("users:by_searches", 0, 39, { rev: true, withScores: true })
     expect(users).toEqual([
-      { uid: UID, searches: 42, firstSeen: "2026-06-01", lastSeen: "2026-07-02", platform: "ios", comment: null },
+      {
+        uid: UID, searches: 42, firstSeen: "2026-06-01", lastSeen: "2026-07-02", platform: "ios", comment: null,
+        curStreak: 3, bestStreak: 7,
+      },
     ])
+  })
+
+  it("defaults streak fields to 0 for hashes predating the streak feature", async () => {
+    redisMock.zrange.mockResolvedValue([UID, 42])
+    redisMock.hgetall.mockResolvedValue({ firstSeen: "2026-06-01", lastSeen: "2026-07-02", platform: "ios" })
+
+    const users = await getTopUsers(20)
+    expect(users[0].curStreak).toBe(0)
+    expect(users[0].bestStreak).toBe(0)
   })
 
   it("prunes zset members whose hash has expired", async () => {

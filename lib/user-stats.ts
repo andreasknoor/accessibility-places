@@ -25,14 +25,49 @@ function today(): string {
   return new Date().toISOString().slice(0, 10) // YYYY-MM-DD
 }
 
+function dayBefore(day: string): string {
+  const d = new Date(day + "T00:00:00Z")
+  d.setUTCDate(d.getUTCDate() - 1)
+  return d.toISOString().slice(0, 10)
+}
+
+// A streak is still "alive" if the user's last search was today or yesterday
+// (UTC) — one missed day breaks it. Used at render time to zero out a stale
+// curStreak for users who haven't returned since; the stored value itself
+// stays frozen until their next search recomputes it.
+export function isStreakActive(lastSeen: string | null): boolean {
+  if (!lastSeen) return false
+  const day = today()
+  return lastSeen === day || lastSeen === dayBefore(day)
+}
+
 async function trackUserSearchInternal(uid: string, platform: string): Promise<void> {
   const redis = getRedis()
   if (!redis) return
   const userKey = `user:${uid}`
+  const day = today()
+
+  // Read-before-write: streak continuation depends on the previous lastSeen,
+  // which the unconditional pipeline below is about to overwrite.
+  const prev = await redis.hgetall<Record<string, string>>(userKey)
+  const prevLastSeen = prev?.lastSeen ?? null
+  const prevCur  = Number(prev?.curStreak) || 0
+  const prevBest = Number(prev?.bestStreak) || 0
+
+  // Same-day repeat searches don't extend the streak further; a gap of 2+
+  // days resets it to 1. Two concurrent first-searches-of-the-day from the
+  // same user could double-increment here — accepted as harmless and rare
+  // rather than paying for a Lua script's atomicity.
+  const curStreak =
+    prevLastSeen === day            ? (prevCur || 1) :
+    prevLastSeen === dayBefore(day) ? prevCur + 1 :
+    1
+  const bestStreak = Math.max(prevBest, curStreak)
+
   await redis.pipeline()
     .zincrby(ZSET_KEY, 1, uid)
-    .hsetnx(userKey, "firstSeen", today())
-    .hset(userKey, { lastSeen: today(), platform })
+    .hsetnx(userKey, "firstSeen", day)
+    .hset(userKey, { lastSeen: day, platform, curStreak, bestStreak })
     .expire(userKey, TTL_SECONDS)
     .exec()
 }
@@ -95,12 +130,14 @@ export async function setUserComment(uid: unknown, comment: unknown): Promise<bo
 }
 
 export interface TopUser {
-  uid:       string
-  searches:  number
-  firstSeen: string | null
-  lastSeen:  string | null
-  platform:  string | null
-  comment:   string | null
+  uid:        string
+  searches:   number
+  firstSeen:  string | null
+  lastSeen:   string | null
+  platform:   string | null
+  comment:    string | null
+  curStreak:  number
+  bestStreak: number
 }
 
 export async function getTopUsers(limit = 20): Promise<TopUser[]> {
@@ -132,12 +169,14 @@ export async function getTopUsers(limit = 20): Promise<TopUser[]> {
       return
     }
     users.push({
-      uid:       c.uid,
-      searches:  c.searches,
-      firstSeen: h.firstSeen ?? null,
-      lastSeen:  h.lastSeen ?? null,
-      platform:  h.platform ?? null,
-      comment:   h.comment ?? null,
+      uid:        c.uid,
+      searches:   c.searches,
+      firstSeen:  h.firstSeen ?? null,
+      lastSeen:   h.lastSeen ?? null,
+      platform:   h.platform ?? null,
+      comment:    h.comment ?? null,
+      curStreak:  Number(h.curStreak) || 0,
+      bestStreak: Number(h.bestStreak) || 0,
     })
   })
 

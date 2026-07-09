@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { timingSafeEqual }           from "crypto"
 import { getStats, resetStats }      from "@/lib/stats"
-import { getTopUsers, resetUserStats, setUserComment, COMMENT_MAX_LENGTH } from "@/lib/user-stats"
+import { getTopUsers, resetUserStats, setUserComment, isStreakActive, COMMENT_MAX_LENGTH } from "@/lib/user-stats"
 import type { StatsResult, StatsResponse, SourceStats } from "@/lib/stats"
 import type { TopUser } from "@/lib/user-stats"
 
@@ -70,10 +70,15 @@ function renderTopUsers(topUsers: TopUser[]): string {
   if (topUsers.length === 0) return ""
   const rows = topUsers.map((u, i) => {
     const badge = PLATFORM_BADGES[u.platform ?? ""] ?? { label: u.platform ?? "–", color: "#9ca3af" }
+    // A stored curStreak stays frozen after the user's last search — only
+    // show it as "current" while the streak hasn't actually lapsed yet.
+    const streakActive = isStreakActive(u.lastSeen)
+    const displayCur = streakActive ? u.curStreak : 0
+    const fire = streakActive && u.curStreak > 0 ? "🔥 " : ""
     // data-* attributes are the sort/filter keys (uid/platform write-validated,
-    // dates/searches server-generated — safe to embed unescaped).
+    // dates/searches/streaks server-generated — safe to embed unescaped).
     return `
-      <tr data-rank="${i + 1}" data-uid="${u.uid}" data-searches="${u.searches}" data-first="${u.firstSeen ?? ""}" data-last="${u.lastSeen ?? ""}" data-platform="${u.platform ?? ""}">
+      <tr data-rank="${i + 1}" data-uid="${u.uid}" data-searches="${u.searches}" data-first="${u.firstSeen ?? ""}" data-last="${u.lastSeen ?? ""}" data-platform="${u.platform ?? ""}" data-streak="${u.bestStreak}">
         <td style="padding:12px 16px;color:#6b7280">${i + 1}</td>
         <td style="padding:12px 16px"><code>${u.uid.slice(0, 8)}…</code></td>
         <td style="padding:8px 16px">
@@ -81,6 +86,7 @@ function renderTopUsers(topUsers: TopUser[]): string {
                  maxlength="${COMMENT_MAX_LENGTH}" placeholder="…" spellcheck="false">
         </td>
         <td style="padding:12px 16px;text-align:right;font-weight:600">${fmt(u.searches)}</td>
+        <td style="padding:12px 16px;text-align:right;color:#9ca3af">${fire}${displayCur}d / ${u.bestStreak}d</td>
         <td style="padding:12px 16px;text-align:right;color:#9ca3af">${u.firstSeen ?? "–"}</td>
         <td style="padding:12px 16px;text-align:right;color:#9ca3af">${u.lastSeen ?? "–"}</td>
         <td style="padding:12px 16px;text-align:right">
@@ -109,6 +115,7 @@ function renderTopUsers(topUsers: TopUser[]): string {
         <th class="sortable" data-key="uid">User ID</th>
         <th class="sortable" data-key="comment">Comment</th>
         <th class="sortable" data-key="searches">Searches</th>
+        <th class="sortable" data-key="streak">Streak</th>
         <th class="sortable" data-key="first">First seen</th>
         <th class="sortable" data-key="last">Last seen</th>
         <th class="sortable" data-key="platform">Platform</th>
@@ -160,7 +167,7 @@ function renderTopUsers(topUsers: TopUser[]): string {
       const dir = th.dataset.dir === 'asc' ? 'desc' : 'asc';
       document.querySelectorAll('th.sortable').forEach((o) => delete o.dataset.dir);
       th.dataset.dir = dir;
-      const numeric = key === 'rank' || key === 'searches';
+      const numeric = key === 'rank' || key === 'searches' || key === 'streak';
       const val = (tr) => key === 'comment'
         ? (tr.querySelector('.comment-input')?.value ?? '').toLowerCase()
         : numeric ? Number(tr.dataset[key]) : (tr.dataset[key] ?? '');
