@@ -82,6 +82,32 @@ export function trackUserSearch(uid: unknown, platform: unknown): void {
   trackUserSearchInternal(uid, platform).catch(() => {/* non-fatal */})
 }
 
+async function trackUserOpenInternal(uid: string, platform: string): Promise<void> {
+  const redis = getRedis()
+  if (!redis) return
+  const userKey = `user:${uid}`
+  const day = today()
+  await redis.pipeline()
+    .hsetnx(userKey, "firstSeen", day)
+    .hincrby(userKey, "opens", 1)
+    .hset(userKey, { lastOpen: day, platform })
+    .expire(userKey, TTL_SECONDS)
+    .exec()
+}
+
+// App-open ping (POST /api/ping) — counts users who open the app even if they
+// never run a search. Unlike trackUserSearch this IS awaited by its caller:
+// the ping route has no streaming body keeping the instance alive, so a
+// fire-and-forget write would be dropped when Vercel Fluid freezes the
+// instance at response end. Deliberately does NOT touch `lastSeen` (that field
+// means "last search" and feeds the streak display — an open must not revive a
+// lapsed streak) and does not enter the searches ranking zset.
+export async function trackUserOpen(uid: unknown, platform: unknown): Promise<void> {
+  if (typeof uid !== "string" || !UUID_RE.test(uid)) return
+  if (typeof platform !== "string" || !PLATFORMS.has(platform)) return
+  try { await trackUserOpenInternal(uid, platform) } catch { /* non-fatal */ }
+}
+
 // Deletes all user statistics (the cumulative ranking + every per-user hash).
 // Separate from resetStats() so the adapter stats and the user stats can be
 // cleared independently from the dashboard.
@@ -132,6 +158,7 @@ export async function setUserComment(uid: unknown, comment: unknown): Promise<bo
 export interface TopUser {
   uid:        string
   searches:   number
+  opens:      number
   firstSeen:  string | null
   lastSeen:   string | null
   platform:   string | null
@@ -171,6 +198,7 @@ export async function getTopUsers(limit = 20): Promise<TopUser[]> {
     users.push({
       uid:        c.uid,
       searches:   c.searches,
+      opens:      Number(h.opens) || 0,
       firstSeen:  h.firstSeen ?? null,
       lastSeen:   h.lastSeen ?? null,
       platform:   h.platform ?? null,
@@ -184,4 +212,48 @@ export async function getTopUsers(limit = 20): Promise<TopUser[]> {
     redis.zrem(ZSET_KEY, ...expired).catch(() => {/* prune retry next read */})
   }
   return users.slice(0, limit)
+}
+
+export interface UserTotals {
+  total:         number
+  neverSearched: number
+  byPlatform:    Record<string, number>
+}
+
+// Full-population aggregate for the dashboard header — unlike getTopUsers this
+// counts EVERY known user (open-only users included), not just the top-N of the
+// searches ranking. Population = existing user:<uid> hashes; Redis TTL is the
+// authority on who still counts (zset members can outlive their hash, so the
+// zset is only consulted for search membership, never counted itself).
+export async function getUserTotals(): Promise<UserTotals> {
+  const redis = getRedis()
+  if (!redis) return { total: 0, neverSearched: 0, byPlatform: {} }
+
+  let cursor = 0
+  const keys: string[] = []
+  do {
+    const [nextCursor, batch] = await redis.scan(cursor, { match: "user:*", count: 100 })
+    cursor = Number(nextCursor)
+    keys.push(...batch)
+  } while (cursor !== 0)
+  if (keys.length === 0) return { total: 0, neverSearched: 0, byPlatform: {} }
+
+  const searched = new Set(await redis.zrange<string[]>(ZSET_KEY, 0, -1))
+
+  const platforms: (string | null)[] = []
+  for (let i = 0; i < keys.length; i += 100) {
+    const chunk = keys.slice(i, i + 100)
+    const p = redis.pipeline()
+    chunk.forEach((k) => p.hget(k, "platform"))
+    platforms.push(...await p.exec<(string | null)[]>())
+  }
+
+  const byPlatform: Record<string, number> = {}
+  let neverSearched = 0
+  keys.forEach((k, i) => {
+    const pf = platforms[i] ?? "unknown"
+    byPlatform[pf] = (byPlatform[pf] ?? 0) + 1
+    if (!searched.has(k.slice("user:".length))) neverSearched++
+  })
+  return { total: keys.length, neverSearched, byPlatform }
 }

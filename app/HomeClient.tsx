@@ -1058,6 +1058,35 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
   }, [])
 
+  // Anonymous app-open ping (top-users stats): counts users who open the app
+  // even if they never run a search — the search-driven counter can't see
+  // them. Deduped to once per calendar day via localStorage; visibilitychange
+  // re-checks so a long-lived WebView that comes back to the foreground on a
+  // later day still pings. Same uid + opt-out as the search counter. The
+  // dedupe key is written before the fetch — a failed ping is lost for the
+  // day rather than retried (harmless for a coarse counter, avoids bursts).
+  useEffect(() => {
+    function ping() {
+      if (document.visibilityState === "hidden") return
+      const uid = getUserId(settings.usageStats)
+      if (!uid) return
+      const day = new Date().toISOString().slice(0, 10)
+      try {
+        if (localStorage.getItem("ap_last_ping") === day) return
+        localStorage.setItem("ap_last_ping", day)
+      } catch { return }
+      fetch("/api/ping", {
+        method:    "POST",
+        headers:   { "Content-Type": "application/json" },
+        body:      JSON.stringify({ userId: uid, platform: getPlatform() }),
+        keepalive: true,
+      }).catch(() => {/* non-fatal */})
+    }
+    ping()
+    document.addEventListener("visibilitychange", ping)
+    return () => document.removeEventListener("visibilitychange", ping)
+  }, [settings.usageStats])
+
   // Native bridges (iOS/Android shell):
   //  1. Quick Action — reads the action stored by AppDelegate
   //     (UIApplicationShortcutItem) via @capacitor/preferences. Rather than

@@ -70,7 +70,8 @@ export default function DatenschutzPage() {
             <p>
               Um besonders aktive Nutzung zu erkennen, wird beim ersten App-Start eine
               zufällig erzeugte Kennung (UUID) im Gerätespeicher (localStorage)
-              abgelegt. Bei jeder Suche werden diese Kennung, ein Suchzähler, das Datum
+              abgelegt. Beim Öffnen der App (höchstens einmal pro Kalendertag) und bei
+              jeder Suche werden diese Kennung, ein Start- bzw. Suchzähler, das Datum
               des ersten und letzten Besuchs (nur Tagesdatum) sowie die App-Variante
               (iOS, Android, Web) serverseitig gespeichert. Die Kennung enthält keine
               Geräte- oder Personenmerkmale; IP-Adresse, Suchbegriffe und Standort

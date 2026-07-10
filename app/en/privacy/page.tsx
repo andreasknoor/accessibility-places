@@ -70,7 +70,8 @@ export default function PrivacyPage() {
             <p>
               To recognise particularly active usage, a randomly generated identifier
               (UUID) is stored in local device storage (localStorage) on first launch.
-              With every search, this identifier, a search counter, the dates of the
+              When the app is opened (at most once per calendar day) and with every
+              search, this identifier, an open/search counter, the dates of the
               first and most recent visit (day only), and the app variant (iOS,
               Android, Web) are stored server-side. The identifier contains no device
               or personal characteristics; IP address, search terms, and location are

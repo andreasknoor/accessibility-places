@@ -7,12 +7,16 @@ const pipeline   = {
   zincrby: vi.fn(),
   hsetnx:  vi.fn(),
   hset:    vi.fn(),
+  hincrby: vi.fn(),
+  hget:    vi.fn(),
   expire:  vi.fn(),
   exec:    execMock,
 }
 pipeline.zincrby.mockReturnValue(pipeline)
 pipeline.hsetnx.mockReturnValue(pipeline)
 pipeline.hset.mockReturnValue(pipeline)
+pipeline.hincrby.mockReturnValue(pipeline)
+pipeline.hget.mockReturnValue(pipeline)
 pipeline.expire.mockReturnValue(pipeline)
 
 const redisMock = {
@@ -31,7 +35,7 @@ const redisMock = {
 
 vi.mock("@/lib/stats", () => ({ getRedis: () => redisMock }))
 
-import { trackUserSearch, getTopUsers, resetUserStats, setUserComment, isStreakActive, COMMENT_MAX_LENGTH } from "@/lib/user-stats"
+import { trackUserSearch, trackUserOpen, getTopUsers, getUserTotals, resetUserStats, setUserComment, isStreakActive, COMMENT_MAX_LENGTH } from "@/lib/user-stats"
 
 const UID = "01234567-89ab-4cde-8f01-23456789abcd"
 
@@ -45,6 +49,8 @@ beforeEach(() => {
   pipeline.zincrby.mockReturnValue(pipeline)
   pipeline.hsetnx.mockReturnValue(pipeline)
   pipeline.hset.mockReturnValue(pipeline)
+  pipeline.hincrby.mockReturnValue(pipeline)
+  pipeline.hget.mockReturnValue(pipeline)
   pipeline.expire.mockReturnValue(pipeline)
   execMock.mockResolvedValue([])
   redisMock.exists.mockResolvedValue(1)
@@ -78,6 +84,39 @@ describe("trackUserSearch validation", () => {
     trackUserSearch(uid, platform)
     await flush()
     expect(redisMock.pipeline).not.toHaveBeenCalled()
+  })
+})
+
+describe("trackUserOpen", () => {
+  it("tracks a valid open: increments the opens counter, never the searches zset", async () => {
+    await trackUserOpen(UID, "android")
+    expect(pipeline.hsetnx).toHaveBeenCalledWith(`user:${UID}`, "firstSeen", expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/))
+    expect(pipeline.hincrby).toHaveBeenCalledWith(`user:${UID}`, "opens", 1)
+    expect(pipeline.hset).toHaveBeenCalledWith(`user:${UID}`, expect.objectContaining({ platform: "android", lastOpen: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) }))
+    expect(pipeline.expire).toHaveBeenCalledWith(`user:${UID}`, 180 * 24 * 60 * 60)
+    expect(pipeline.zincrby).not.toHaveBeenCalled()
+  })
+
+  it("does not touch lastSeen (an open must not revive a lapsed streak)", async () => {
+    await trackUserOpen(UID, "android")
+    const hsetFields = pipeline.hset.mock.calls[0][1] as Record<string, unknown>
+    expect(hsetFields).not.toHaveProperty("lastSeen")
+    expect(hsetFields).not.toHaveProperty("curStreak")
+  })
+
+  it.each([
+    ["non-uuid string", "not-a-uuid", "web"],
+    ["missing uid", undefined, "web"],
+    ["unknown platform", UID, "windows"],
+    ["non-string platform", UID, null],
+  ])("drops %s", async (_label, uid, platform) => {
+    await trackUserOpen(uid, platform)
+    expect(redisMock.pipeline).not.toHaveBeenCalled()
+  })
+
+  it("swallows redis errors (never throws into the route)", async () => {
+    execMock.mockRejectedValueOnce(new Error("redis down"))
+    await expect(trackUserOpen(UID, "web")).resolves.toBeUndefined()
   })
 })
 
@@ -157,7 +196,7 @@ describe("getTopUsers", () => {
     expect(redisMock.zrange).toHaveBeenCalledWith("users:by_searches", 0, 39, { rev: true, withScores: true })
     expect(users).toEqual([
       {
-        uid: UID, searches: 42, firstSeen: "2026-06-01", lastSeen: "2026-07-02", platform: "ios", comment: null,
+        uid: UID, searches: 42, opens: 0, firstSeen: "2026-06-01", lastSeen: "2026-07-02", platform: "ios", comment: null,
         curStreak: 3, bestStreak: 7,
       },
     ])
@@ -188,6 +227,39 @@ describe("getTopUsers", () => {
   it("returns [] when the zset is empty", async () => {
     redisMock.zrange.mockResolvedValue([])
     expect(await getTopUsers(20)).toEqual([])
+  })
+})
+
+describe("getUserTotals", () => {
+  const UID2 = "22222222-2222-4222-8222-222222222222"
+
+  it("counts all user hashes, split by platform and search membership", async () => {
+    redisMock.scan.mockResolvedValue([0, [`user:${UID}`, `user:${UID2}`]])
+    redisMock.zrange.mockResolvedValue([UID])                 // only UID ever searched
+    execMock.mockResolvedValue(["android", "ios"])            // pipelined hget platform
+
+    const totals = await getUserTotals()
+    expect(redisMock.zrange).toHaveBeenCalledWith("users:by_searches", 0, -1)
+    expect(totals).toEqual({
+      total: 2,
+      neverSearched: 1,                                       // UID2 has a hash but no zset entry
+      byPlatform: { android: 1, ios: 1 },
+    })
+  })
+
+  it("buckets hashes without a platform field as unknown", async () => {
+    redisMock.scan.mockResolvedValue([0, [`user:${UID}`]])
+    redisMock.zrange.mockResolvedValue([])
+    execMock.mockResolvedValue([null])
+
+    const totals = await getUserTotals()
+    expect(totals.byPlatform).toEqual({ unknown: 1 })
+    expect(totals.neverSearched).toBe(1)
+  })
+
+  it("returns zeros when no user hashes exist", async () => {
+    redisMock.scan.mockResolvedValue([0, []])
+    expect(await getUserTotals()).toEqual({ total: 0, neverSearched: 0, byPlatform: {} })
   })
 })
 

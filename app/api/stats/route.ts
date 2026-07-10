@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { timingSafeEqual }           from "crypto"
 import { getStats, resetStats }      from "@/lib/stats"
-import { getTopUsers, resetUserStats, setUserComment, isStreakActive, COMMENT_MAX_LENGTH } from "@/lib/user-stats"
+import { getTopUsers, getUserTotals, resetUserStats, setUserComment, isStreakActive, COMMENT_MAX_LENGTH } from "@/lib/user-stats"
 import type { StatsResult, StatsResponse, SourceStats } from "@/lib/stats"
-import type { TopUser } from "@/lib/user-stats"
+import type { TopUser, UserTotals } from "@/lib/user-stats"
 
 function safeEqual(a: string, b: string): boolean {
   const ba = Buffer.from(a)
@@ -66,8 +66,17 @@ function esc(s: string): string {
     .replace(/'/g, "&#39;")
 }
 
-function renderTopUsers(topUsers: TopUser[]): string {
-  if (topUsers.length === 0) return ""
+function renderTopUsers(topUsers: TopUser[], totals: UserTotals): string {
+  if (topUsers.length === 0 && totals.total === 0) return ""
+  // Full-population line — unlike the per-table filter buttons this covers ALL
+  // known users (open-only users included), not just the rendered top-N.
+  const pfTotal = (pf: string) => totals.byPlatform[pf] ?? 0
+  const totalsLine = `${fmt(totals.total)} users total · ${fmt(totals.neverSearched)} never searched (opens only) · iOS ${fmt(pfTotal("ios"))} · Android ${fmt(pfTotal("android"))} · Web ${fmt(pfTotal("web"))}`
+  if (topUsers.length === 0) {
+    return `
+<h2 style="font-size:1rem;font-weight:600;letter-spacing:0.05em;color:#e5e7eb;margin-top:40px">👥 Users</h2>
+<p class="subtitle">${totalsLine}</p>`
+  }
   const rows = topUsers.map((u, i) => {
     const badge = PLATFORM_BADGES[u.platform ?? ""] ?? { label: u.platform ?? "–", color: "#9ca3af" }
     // A stored curStreak stays frozen after the user's last search — only
@@ -78,7 +87,7 @@ function renderTopUsers(topUsers: TopUser[]): string {
     // data-* attributes are the sort/filter keys (uid/platform write-validated,
     // dates/searches/streaks server-generated — safe to embed unescaped).
     return `
-      <tr data-rank="${i + 1}" data-uid="${u.uid}" data-searches="${u.searches}" data-first="${u.firstSeen ?? ""}" data-last="${u.lastSeen ?? ""}" data-platform="${u.platform ?? ""}" data-streak="${u.bestStreak}">
+      <tr data-rank="${i + 1}" data-uid="${u.uid}" data-searches="${u.searches}" data-opens="${u.opens}" data-first="${u.firstSeen ?? ""}" data-last="${u.lastSeen ?? ""}" data-platform="${u.platform ?? ""}" data-streak="${u.bestStreak}">
         <td style="padding:12px 16px;color:#6b7280">${i + 1}</td>
         <td style="padding:12px 16px"><code>${u.uid.slice(0, 8)}…</code></td>
         <td style="padding:8px 16px">
@@ -86,6 +95,7 @@ function renderTopUsers(topUsers: TopUser[]): string {
                  maxlength="${COMMENT_MAX_LENGTH}" placeholder="…" spellcheck="false">
         </td>
         <td style="padding:12px 16px;text-align:right;font-weight:600">${fmt(u.searches)}</td>
+        <td style="padding:12px 16px;text-align:right;color:#9ca3af">${u.opens > 0 ? fmt(u.opens) : "–"}</td>
         <td style="padding:12px 16px;text-align:right;color:#9ca3af">${fire}${displayCur}d / ${u.bestStreak}d</td>
         <td style="padding:12px 16px;text-align:right;color:#9ca3af">${u.firstSeen ?? "–"}</td>
         <td style="padding:12px 16px;text-align:right;color:#9ca3af">${u.lastSeen ?? "–"}</td>
@@ -103,8 +113,9 @@ function renderTopUsers(topUsers: TopUser[]): string {
   }).join("")
   return `
 <h2 style="font-size:1rem;font-weight:600;letter-spacing:0.05em;color:#e5e7eb;margin-top:40px">👥 Top ${topUsers.length} Users</h2>
+<p class="subtitle" style="margin-bottom:6px">${totalsLine}</p>
 <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
-  <p class="subtitle">Anonymous random IDs · searches counted server-side · 180-day retention since last visit · comments save on Enter</p>
+  <p class="subtitle">Anonymous random IDs · searches + daily opens counted server-side · 180-day retention since last visit · comments save on Enter</p>
   <div class="pf-bar">${filterButtons}</div>
 </div>
 <div class="table-wrap">
@@ -115,6 +126,7 @@ function renderTopUsers(topUsers: TopUser[]): string {
         <th class="sortable" data-key="uid">User ID</th>
         <th class="sortable" data-key="comment">Comment</th>
         <th class="sortable" data-key="searches">Searches</th>
+        <th class="sortable" data-key="opens">Opens</th>
         <th class="sortable" data-key="streak">Streak</th>
         <th class="sortable" data-key="first">First seen</th>
         <th class="sortable" data-key="last">Last seen</th>
@@ -167,7 +179,7 @@ function renderTopUsers(topUsers: TopUser[]): string {
       const dir = th.dataset.dir === 'asc' ? 'desc' : 'asc';
       document.querySelectorAll('th.sortable').forEach((o) => delete o.dataset.dir);
       th.dataset.dir = dir;
-      const numeric = key === 'rank' || key === 'searches' || key === 'streak';
+      const numeric = key === 'rank' || key === 'searches' || key === 'opens' || key === 'streak';
       const val = (tr) => key === 'comment'
         ? (tr.querySelector('.comment-input')?.value ?? '').toLowerCase()
         : numeric ? Number(tr.dataset[key]) : (tr.dataset[key] ?? '');
@@ -202,7 +214,7 @@ function renderTopUsers(topUsers: TopUser[]): string {
 </script>`
 }
 
-function renderHtml({ sources: stats, oldestHour }: StatsResponse, topUsers: TopUser[]): string {
+function renderHtml({ sources: stats, oldestHour }: StatsResponse, topUsers: TopUser[], userTotals: UserTotals): string {
   const entries = SOURCE_ORDER
     .map(id => ({ id, s: stats[id as keyof StatsResult] }))
     .filter(e => e.s != null) as { id: string; s: NonNullable<StatsResult[keyof StatsResult]> }[]
@@ -367,7 +379,7 @@ ${entries.length === 0 ? `
   ">Reset adapter stats</button>
 </div>
 
-${renderTopUsers(topUsers)}
+${renderTopUsers(topUsers, userTotals)}
 </body>
 </html>`
 }
@@ -386,15 +398,15 @@ export async function GET(req: NextRequest): Promise<Response> {
     return NextResponse.json({ ok: false, error: "KV not configured" }, { status: 503 })
   }
 
-  const [stats, topUsers] = await Promise.all([getStats(), getTopUsers(100)])
+  const [stats, topUsers, userTotals] = await Promise.all([getStats(), getTopUsers(100), getUserTotals()])
 
   if (req.nextUrl.searchParams.get("format") === "html") {
-    return new Response(renderHtml(stats, topUsers), {
+    return new Response(renderHtml(stats, topUsers, userTotals), {
       headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
     })
   }
 
-  return NextResponse.json({ ok: true, ...stats, topUsers }, {
+  return NextResponse.json({ ok: true, ...stats, topUsers, userTotals }, {
     headers: { "Cache-Control": "no-store" },
   })
 }
