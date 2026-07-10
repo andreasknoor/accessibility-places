@@ -997,9 +997,11 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                     signal lives in this dot + the short label; the district is a
                     de-emphasised suffix, dropped entirely on narrow screens (the
                     tooltip/SR text above keeps the full wording). */}
+                {/* blue-500 = the map's user-location dot (#3b82f6, MapView) — the
+                    pulse IS that dot, so the two surfaces read as one signal. */}
                 <span className="relative flex w-2 h-2 shrink-0" aria-hidden>
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75 animate-ping motion-reduce:animate-none" />
-                  <span className="relative inline-flex w-2 h-2 rounded-full bg-green-500" />
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75 animate-ping motion-reduce:animate-none" />
+                  <span className="relative inline-flex w-2 h-2 rounded-full bg-blue-500" />
                 </span>
                 <span className="truncate">
                   {t.chat.nearbyAction}
