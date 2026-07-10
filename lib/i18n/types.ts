@@ -30,7 +30,12 @@ export interface Translations {
     amenityRowLabel:    string
     useLocation:        string
     clearLocation:      string
+    clearInput:         string
     locationActive:     (district: string) => string
+    // Variant-B search row: inline "Nearby" action inside the field + the
+    // short placeholder shown while the green location token occupies the field.
+    nearbyAction:       string
+    nearbyTokenPlaceholder: string
     send:          string
     thinking:      string
     noResults:        string
