@@ -990,11 +990,21 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                 which would render this token dark inside the light UI. */}
             {showLocationToken && (
               <span
-                className="flex items-center gap-1 shrink-0 max-w-[60%] rounded-full border border-green-200 bg-green-50 text-green-700 pl-2 pr-0.5 py-0.5 text-xs font-medium"
+                className="flex items-center gap-1.5 shrink-0 max-w-[60%] rounded-full border border-green-200 bg-green-50 text-green-700 pl-2 pr-0.5 py-0.5 text-xs font-medium"
                 title={t.chat.locationActive(district!)}
               >
-                <LocateFixed className="w-3 h-3 shrink-0" aria-hidden />
-                <span className="truncate">{t.chat.nearbyAction} · {district}</span>
+                {/* Live pulse — the learned "live location" metaphor. The GPS-active
+                    signal lives in this dot + the short label; the district is a
+                    de-emphasised suffix, dropped entirely on narrow screens (the
+                    tooltip/SR text above keeps the full wording). */}
+                <span className="relative flex w-2 h-2 shrink-0" aria-hidden>
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75 animate-ping motion-reduce:animate-none" />
+                  <span className="relative inline-flex w-2 h-2 rounded-full bg-green-500" />
+                </span>
+                <span className="truncate">
+                  {t.chat.nearbyAction}
+                  <span className="hidden sm:inline font-normal text-green-700/60"> · {district}</span>
+                </span>
                 <button
                   type="button"
                   onClick={clearLocationToken}
