@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, Fragment } from "react"
-import { Send, Loader2, LocateFixed, X, Coffee, UtensilsCrossed, Beer, BookOpen, Hotel, Landmark, Film, Library, GalleryHorizontal, Star, IceCream, MapPin } from "lucide-react"
+import { Search, Loader2, LocateFixed, X, Coffee, UtensilsCrossed, Beer, BookOpen, Hotel, Landmark, Film, Library, GalleryHorizontal, Star, IceCream, MapPin } from "lucide-react"
 import { track } from "@/lib/analytics"
 import { Button } from "@/components/ui/button"
 import { useTranslations, useLocale } from "@/lib/i18n"
@@ -267,6 +267,13 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // (the panned viewport, not the GPS fix). nearbyPhase itself is untouched, so the
   // badge returns once the pan is cleared (panned back / new search recentres the map).
   const showNearbyBadge = district !== null && !panPending
+  // The visible location token (variant B): additionally steps back while the
+  // user types — the field then shows only the typed text, and the token
+  // returns when the field is cleared. nearbyPhase is NOT touched by typing;
+  // the semantic exit still happens at submit / suggestion-pick time
+  // (exitNearbyState), because exiting on the first keystroke would fire
+  // onModeChange("text") → clearSearchState and wipe on-screen results.
+  const showLocationToken = showNearbyBadge && !location
 
   // Sync mode when HomeClient corrects chatMode post-hydration via useLayoutEffect.
   // Maps legacy "place" initialMode to "text" (place mode was removed in v4.13).
@@ -759,7 +766,16 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       setLocation("")
       return
     }
-    if (!location.trim()) return
+    if (!location.trim()) {
+      // Empty field with an active GPS fix (the green location token): "Suchen"
+      // re-runs the nearby search at the fix — consistent with the token saying
+      // "searching around <district>". Without a fix an empty submit stays a no-op
+      // (the button is disabled then; Enter can still reach this path).
+      if (typeof nearbyPhase === "object" && showNearbyBadge) {
+        onSearch(nearbyQuery(chipLabel(selectedIdx), nearbyPhase.district), { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
+      }
+      return
+    }
     setSuggestions([])
     setShowSuggestions(false)
     // Suppress the suggestions effect from re-firing when biasCoords changes
@@ -936,22 +952,71 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           (Überall / In der Nähe) are gone — the "nearby" intent is now the inline
           ⌖ button below; typing/picking a suggestion expresses "search there".
           Internal `mode` state is unchanged (issue #28). ── */}
-      <div className="flex gap-2 items-center">
-          {/* Unified search input — areas, venues, and quoted name filters */}
-          <div className="relative flex-1">
+      <div className="flex items-center">
+          {/* Unified search input — the single answer to "where is searched":
+              typed text, a picked venue, or the green GPS location token
+              (search-row variant B). The Suchen button docks directly onto the
+              field; the old standalone ⌖ button between them is gone — its
+              intent lives on as the labelled inline "In der Nähe" action that
+              only renders while the field is empty, so it can never destroy
+              typed text. */}
+          <div className="relative flex-1 min-w-0">
             {inputPulse && (
               <span
-                className="absolute inset-0 rounded-md ring-2 ring-primary animate-pulse pointer-events-none"
+                className="absolute inset-0 rounded-l-md ring-2 ring-primary animate-pulse pointer-events-none z-10"
                 style={{ animationIterationCount: 2 }}
                 onAnimationEnd={() => setInputPulse(false)}
                 aria-hidden
               />
             )}
+            <div
+              className={cn(
+                "flex items-center gap-1.5 h-[38px] w-full rounded-l-md border border-r-0 bg-background pl-3 pr-1.5",
+                "focus-within:ring-1 focus-within:ring-ring",
+                isMobile ? "border-primary" : "border-input",
+                isLoading && "opacity-50",
+              )}
+            >
             {venuePicked && (
-              <MapPin
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-primary pointer-events-none"
-                aria-hidden
-              />
+              <MapPin className="w-4 h-4 text-primary shrink-0" aria-hidden />
+            )}
+            {/* Active GPS fix as a readable location token IN the field. Hidden
+                (not cleared) while text is typed or a pan is pending — same
+                reversible pattern as the old badge: nearbyPhase stays untouched,
+                only the visible signal steps back so the display always matches
+                what a search would actually use. */}
+            {/* No dark: variants here — the app is light-only (no .dark theme in
+                globals.css), and Tailwind's default dark: fires on the OS setting,
+                which would render this token dark inside the light UI. */}
+            {showLocationToken && (
+              <span
+                className="flex items-center gap-1.5 shrink-0 max-w-[60%] rounded-full border border-green-200 bg-green-50 text-green-700 pl-2 pr-0.5 py-0.5 text-xs font-medium"
+                title={t.chat.locationActive(district!)}
+              >
+                {/* Live pulse — the learned "live location" metaphor. The GPS-active
+                    signal lives in this dot + the short label; the district is a
+                    de-emphasised suffix, dropped entirely on narrow screens (the
+                    tooltip/SR text above keeps the full wording). */}
+                {/* blue-500 = the map's user-location dot (#3b82f6, MapView) — the
+                    pulse IS that dot, so the two surfaces read as one signal. */}
+                <span className="relative flex w-2 h-2 shrink-0" aria-hidden>
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75 animate-ping motion-reduce:animate-none" />
+                  <span className="relative inline-flex w-2 h-2 rounded-full bg-blue-500" />
+                </span>
+                <span className="truncate">
+                  {t.chat.nearbyAction}
+                  <span className="hidden sm:inline font-normal text-green-700/60"> · {district}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={clearLocationToken}
+                  disabled={isLoading}
+                  aria-label={t.chat.clearLocation}
+                  className="shrink-0 rounded-full p-0.5 hover:bg-green-100 transition-colors disabled:opacity-50"
+                >
+                  <X className="w-3 h-3" aria-hidden />
+                </button>
+              </span>
             )}
             <input
               ref={inputRef}
@@ -960,7 +1025,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
               onKeyDown={handleKeyDown}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
               onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-              placeholder={t.chat.unifiedPlaceholder}
+              placeholder={showLocationToken ? t.chat.nearbyTokenPlaceholder : t.chat.unifiedPlaceholder}
               disabled={isLoading}
               autoFocus={autoFocus}
               role="combobox"
@@ -975,12 +1040,10 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                 // whole app being ~20% too wide with the footer clipped). Desktop
                 // keeps the denser 14px. Do NOT "fix" this with maximum-scale/
                 // user-scalable=no — pinch-zoom must stay enabled (WCAG 1.4.4).
-                "w-full rounded-md border bg-background px-3 py-2 text-base md:text-sm h-[38px]",
-                "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
-                "focus-visible:ring-ring disabled:opacity-50",
-                isMobile ? "border-primary" : "border-input",
-                location ? "pr-7" : "",
-                venuePicked ? "pl-8" : "",
+                // Border/ring live on the flex container (focus-within) so the
+                // token and inline action sit inside the visual field.
+                "flex-1 min-w-0 h-full bg-transparent text-base md:text-sm",
+                "placeholder:text-muted-foreground focus:outline-none disabled:opacity-50",
               )}
             />
             {location && (
@@ -995,12 +1058,32 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                   clearSearchInput()
                   inputRef.current?.focus()
                 }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Clear"
+                className="shrink-0 p-1 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label={t.chat.clearInput}
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-3.5 h-3.5" aria-hidden />
               </button>
             )}
+            {/* Labelled inline "In der Nähe" action — the GPS entry point. Only
+                rendered while the field is empty and no token is showing: with
+                text present the ✕ takes its place, so tapping it can never
+                silently discard a typed query (old ⌖ bug). */}
+            {!location && !showLocationToken && (
+              <button
+                type="button"
+                onClick={onLocateTap}
+                disabled={isLoading}
+                aria-label={t.chat.useLocation}
+                aria-busy={nearbyPhase === "locating"}
+                className="shrink-0 flex items-center gap-1 rounded px-1.5 py-1 text-xs font-medium text-primary-strong hover:bg-primary/10 transition-colors disabled:opacity-50"
+              >
+                {nearbyPhase === "locating"
+                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden />
+                  : <LocateFixed className="w-3.5 h-3.5" aria-hidden />}
+                {t.chat.nearbyAction}
+              </button>
+            )}
+            </div>
 
             {/* Grouped autocomplete dropdown: areas first, then venues */}
             {showSuggestions && suggestions.length > 0 && (
@@ -1061,45 +1144,11 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             )}
           </div>
 
-          {/* Inline ⌖ — the "nearby" intent as a one-tap action (no mode tab).
-              When a GPS fix is active: green tint + square checkbox badge in the
-              top-right corner; tapping clears the fix. No fix: normal button. */}
-          <button
-            type="button"
-            onClick={showNearbyBadge ? clearLocationToken : onLocateTap}
-            disabled={isLoading}
-            aria-label={showNearbyBadge ? t.chat.clearLocation : t.chat.useLocation}
-            title={showNearbyBadge ? t.chat.locationActive(district!) : undefined}
-            aria-busy={nearbyPhase === "locating"}
-            className={cn(
-              "relative shrink-0 h-[38px] w-[38px] flex items-center justify-center rounded-md border transition-colors disabled:opacity-50 cursor-pointer",
-              showNearbyBadge
-                ? "border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
-                : !location.trim()
-                  ? "border-primary bg-primary/10 text-primary-strong hover:bg-primary/20"
-                  : "border-input bg-background text-muted-foreground hover:text-foreground hover:bg-muted",
-            )}
-          >
-            {nearbyPhase === "locating"
-              ? <Loader2 className="w-4 h-4 animate-spin" />
-              : <LocateFixed className="w-4 h-4" />}
-            {showNearbyBadge && (
-              <span
-                className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-sm bg-green-500 border-2 border-white flex items-center justify-center"
-                aria-hidden
-              >
-                <svg viewBox="0 0 10 10" className="w-2 h-2 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="1.5,5 4,7.5 8.5,2.5" />
-                </svg>
-              </span>
-            )}
-          </button>
-
           <Button
             onClick={submit}
-            disabled={isLoading || !location.trim()}
+            disabled={isLoading || (!location.trim() && !showNearbyBadge)}
             size="sm"
-            className="shrink-0 relative overflow-hidden"
+            className="shrink-0 relative overflow-hidden rounded-l-none h-[38px]"
           >
             {isLoading && (
               <span
@@ -1111,7 +1160,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             <span className="relative z-10 inline-flex items-center gap-1.5">
               {isLoading
                 ? <Loader2 className="w-4 h-4 animate-spin" />
-                : <Send className="w-4 h-4" />
+                : <Search className="w-4 h-4" />
               }
               {isLoading ? t.chat.thinking : t.chat.send}
             </span>

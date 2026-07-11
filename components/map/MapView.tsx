@@ -446,8 +446,11 @@ export default function MapView({
     if (!ul) return
     lastProgrammaticMoveRef.current = Date.now()
     mapInst.current.setView([ul.lat, ul.lon], 14, { animate: false })  // ~2 km radius visible
-    // Option 2: show "search here" explicitly if a previous search exists
-    if (onSearchHereRef.current) {
+    // Option 2: show "search here" explicitly if a previous search exists.
+    // Not in focus mode — there the focus "search this area" pill is always
+    // available, and setting the venue pill state here would leave a stale
+    // pill behind when the user exits the amenity search.
+    if (onSearchHereRef.current && !focusModeRef.current) {
       setSearchHereCenter({ lat: ul.lat, lon: ul.lon })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1200,8 +1203,11 @@ export default function MapView({
 
       {/* Locate button — pan to user's GPS position, then offer "search here".
           Sits left of the fullscreen toggle on desktop; on mobile (no toggle) it
-          takes the top-right corner itself. */}
-      {onLocate && !focusMode && (
+          takes the top-right corner itself. Also shown in amenity focus mode
+          (since the amenity chips became first-class search, v8.62): the pan
+          combines with the always-available focus "search this area" pill, so
+          it no longer risks silently exiting the parking/WC view. */}
+      {onLocate && (
         <div className={`absolute top-3 z-[1000] flex flex-col items-end gap-1 transition-opacity ${showFullscreenToggle ? "right-14" : "right-3"} ${popupOpen ? "opacity-0 pointer-events-none" : ""}`}>
           <Button
             variant="secondary"

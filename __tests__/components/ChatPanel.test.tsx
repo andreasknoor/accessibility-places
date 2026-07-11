@@ -49,7 +49,9 @@ function mockFetch(suggestions: MockSuggestion[]) {
 }
 
 function getInput() {
-  return screen.getByPlaceholderText(/Ort oder Name|Place or name/i) as HTMLInputElement
+  // By role, not placeholder — the placeholder switches to the short "… oder
+  // Ort eintippen" variant while the GPS location token occupies the field.
+  return screen.getByRole("combobox") as HTMLInputElement
 }
 
 beforeEach(() => {
@@ -429,13 +431,13 @@ describe("ChatPanel quoted-name syntax", () => {
 describe("ChatPanel clear button", () => {
   it("is hidden when input is empty", () => {
     renderPanel()
-    expect(screen.queryByRole("button", { name: /clear/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /Eingabe löschen/ })).not.toBeInTheDocument()
   })
 
   it("appears when input has text", () => {
     renderPanel()
     fireEvent.change(getInput(), { target: { value: "Berlin" } })
-    expect(screen.getByRole("button", { name: /clear/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Eingabe löschen/ })).toBeInTheDocument()
   })
 
   it("clears the input and closes the dropdown on click", async () => {
@@ -444,10 +446,64 @@ describe("ChatPanel clear button", () => {
     fireEvent.change(getInput(), { target: { value: "Berlin" } })
     await act(() => vi.runAllTimersAsync())
 
-    fireEvent.mouseDown(screen.getByRole("button", { name: /clear/i }))
+    fireEvent.mouseDown(screen.getByRole("button", { name: /Eingabe löschen/ }))
     expect(getInput().value).toBe("")
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: /clear/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /Eingabe löschen/ })).not.toBeInTheDocument()
+  })
+})
+
+// ─── Location token in the field (search-row variant B) ─────────────────────
+
+describe("ChatPanel location token (search-row variant B)", () => {
+  it("shows the district as a visible token after a locate; its ✕ clears the fix", async () => {
+    simulateGpsSuccess(48.14, 11.56, "Maxvorstadt")
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
+    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
+    await act(() => vi.runAllTimersAsync())
+    expect(screen.getByText(/Maxvorstadt/)).toBeInTheDocument()
+
+    // ✕ on the token drops the fix and brings the inline nearby action back.
+    fireEvent.click(screen.getByRole("button", { name: "Standort entfernen" }))
+    expect(screen.queryByText(/Maxvorstadt/)).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Standort verwenden" })).toBeInTheDocument()
+  })
+
+  it("typing hides the token WITHOUT dropping the fix; clearing the text brings it back", async () => {
+    simulateGpsSuccess(48.14, 11.56, "Maxvorstadt")
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
+    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
+    await act(() => vi.runAllTimersAsync())
+    expect(screen.getByText(/Maxvorstadt/)).toBeInTheDocument()
+
+    // Typing: token steps back visually (same reversible pattern as panPending) …
+    fireEvent.change(getInput(), { target: { value: "Ber" } })
+    expect(screen.queryByText(/Maxvorstadt/)).not.toBeInTheDocument()
+
+    // … and returns when the text is cleared — the fix was never dropped.
+    fireEvent.mouseDown(screen.getByRole("button", { name: /Eingabe löschen/ }))
+    expect(screen.getByText(/Maxvorstadt/)).toBeInTheDocument()
+  })
+
+  it("Suchen with an empty field and an active fix re-runs the nearby search", async () => {
+    simulateGpsSuccess(48.14, 11.56, "Maxvorstadt")
+    const onSearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} isLoading={false} initialMode="text" />)
+    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
+    await act(() => vi.runAllTimersAsync())
+    onSearch.mockClear()
+
+    const searchBtn = screen.getByRole("button", { name: "Suchen" })
+    expect(searchBtn).not.toBeDisabled()
+    fireEvent.click(searchBtn)
+    expect(onSearch).toHaveBeenCalledWith("in Maxvorstadt", { lat: 48.14, lon: 11.56 })
+  })
+
+  it("the inline nearby action is not rendered while text is in the field (no accidental text loss)", () => {
+    renderPanel()
+    expect(screen.getByRole("button", { name: "Standort verwenden" })).toBeInTheDocument()
+    fireEvent.change(getInput(), { target: { value: "Berlin" } })
+    expect(screen.queryByRole("button", { name: "Standort verwenden" })).not.toBeInTheDocument()
   })
 })
 
