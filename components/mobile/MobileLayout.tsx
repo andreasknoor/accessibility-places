@@ -206,13 +206,20 @@ export default function MobileLayout({
   // count pill so the two never overlap on small screens.
   const [searchHereRun, setSearchHereRun] = useState<(() => void) | null>(null)
 
+  // Badge colours invert on the active tab: once the tab itself becomes a
+  // solid bg-primary block (Variante 3 tab bar), a bg-primary count badge
+  // would blend straight into it — swap to an inverted (background-coloured)
+  // pill so the count stays legible in both states.
   const allTabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "results", label: t.results.title ?? "Ergebnisse", icon: <List className="w-5 h-5" /> },
     { id: "map",     label: t.results.showMap ?? "Karte",     icon: (
       <span className="relative">
         <Map className="w-5 h-5" />
         {hasSearched && !isLoading && resultCount > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-[1.125rem] h-[1.125rem] rounded-full bg-primary text-primary-foreground text-[10px] font-bold leading-none flex items-center justify-center px-1">
+          <span className={cn(
+            "absolute -top-1.5 -right-1.5 min-w-[1.125rem] h-[1.125rem] rounded-full text-[10px] font-bold leading-none flex items-center justify-center px-1",
+            activeTab === "map" ? "bg-background text-primary" : "bg-primary text-primary-foreground",
+          )}>
             {resultCount > 99 ? "99+" : resultCount}
           </span>
         )}
@@ -222,7 +229,10 @@ export default function MobileLayout({
       <span className="relative">
         <SlidersHorizontal className="w-5 h-5" />
         {activeFilterCount > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-[1.125rem] h-[1.125rem] rounded-full bg-red-500 text-white text-[10px] font-bold leading-none flex items-center justify-center px-1">
+          <span className={cn(
+            "absolute -top-1.5 -right-1.5 min-w-[1.125rem] h-[1.125rem] rounded-full text-[10px] font-bold leading-none flex items-center justify-center px-1",
+            activeTab === "filter" ? "bg-background text-red-500" : "bg-red-500 text-white",
+          )}>
             {activeFilterCount}
           </span>
         )}
@@ -558,8 +568,12 @@ export default function MobileLayout({
         </button>
       </footer>
 
-      {/* ── Bottom tab bar ── */}
-      <nav className="flex border-t border-border bg-card shrink-0 safe-area-inset-bottom">
+      {/* ── Bottom tab bar (Variante 3, "vollflächiger Block"): the active tab
+          is a solid filled button with a lifted shadow, like a pressed key;
+          inactive tabs sit flat on the tray and only shade in on hover/touch.
+          Strongest active/inactive contrast of three prototyped options —
+          picked because it stays unambiguous without relying on colour alone. ── */}
+      <nav className="flex gap-1.5 border-t border-border bg-muted shrink-0 p-1 pb-[calc(0.25rem+env(safe-area-inset-bottom))]">
         {tabs.map((tab) => {
           // Amenity search shows real results (list cards + map markers), so all
           // tabs stay usable — no special gating.
@@ -570,11 +584,11 @@ export default function MobileLayout({
               onClick={() => { hapticLight(); track("tab_switch", { tab: tab.id }); setActiveTab(tab.id) }}
               disabled={disabled}
               className={cn(
-                "flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors",
+                "flex-1 flex flex-col items-center justify-center gap-1 py-1.5 rounded-xl text-xs transition-colors",
                 disabled && "opacity-40 pointer-events-none",
                 activeTab === tab.id
-                  ? "text-primary font-medium"
-                  : "text-muted-foreground hover:text-foreground",
+                  ? "bg-primary text-primary-foreground font-semibold shadow-md"
+                  : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
               )}
               aria-current={activeTab === tab.id ? "page" : undefined}
             >
