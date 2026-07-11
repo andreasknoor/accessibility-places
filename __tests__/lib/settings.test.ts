@@ -101,3 +101,26 @@ describe("loadSettings", () => {
     expect(loadSettings().defaultSearchMode).toBeNull()
   })
 })
+
+// ─── SETTING_CHIPS completeness (regression: a category could otherwise be
+// silently unreachable from the default-chip picker with no type/test error,
+// since it's a plain Category[] order list, not a Record<Category, …>) ──────
+
+describe("SETTING_CHIPS completeness", () => {
+  it("covers every Category exactly once", async () => {
+    const { SETTING_CHIPS } = await import("@/lib/settings")
+    const { ALL_CATEGORIES } = await import("@/lib/llm")
+    const cats = SETTING_CHIPS.map((c) => c.cat)
+    expect(new Set(cats).size).toBe(cats.length) // no duplicates
+    expect([...cats].sort()).toEqual([...ALL_CATEGORIES].sort())
+  })
+
+  it("every chip has a non-empty icon and DE/EN label", async () => {
+    const { SETTING_CHIPS } = await import("@/lib/settings")
+    for (const chip of SETTING_CHIPS) {
+      expect(chip.icon).toBeTruthy()
+      expect(chip.de).toBeTruthy()
+      expect(chip.en).toBeTruthy()
+    }
+  })
+})

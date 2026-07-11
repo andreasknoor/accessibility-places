@@ -56,6 +56,18 @@ const CATEGORY_QUERY: Record<Category, { de: string; en: string }> = {
   bank:        { de: "Bank",            en: "bank" },
   post_office: { de: "Post",            en: "post office" },
   zoo:         { de: "Zoo",             en: "zoo" },
+  camp_site:       { de: "Campingplatz",  en: "campsite" },
+  swimming_pool:   { de: "Schwimmbad",    en: "swimming pool" },
+  fitness_centre:  { de: "Fitnessstudio", en: "fitness center" },
+  playground:      { de: "Spielplatz",    en: "playground" },
+  park:            { de: "Park",          en: "park" },
+  physiotherapist: { de: "Physiotherapie", en: "physiotherapist" },
+  medical_supply:  { de: "Sanitätshaus",  en: "medical supply store" },
+  hearing_aids:    { de: "Hörakustiker",  en: "hearing aids" },
+  optician:        { de: "Optiker",       en: "optician" },
+  townhall:          { de: "Rathaus",         en: "town hall" },
+  place_of_worship:  { de: "Gotteshaus",      en: "place of worship" },
+  railway_station:   { de: "Bahnhof",         en: "train station" },
 }
 
 const CATEGORY_TYPES: Record<Category, string[]> = {
@@ -91,6 +103,23 @@ const CATEGORY_TYPES: Record<Category, string[]> = {
   bank:        ["bank"],
   post_office: ["post_office"],
   zoo:         ["zoo", "aquarium"],
+  camp_site:       ["campground", "rv_park"],
+  fitness_centre:  ["gym"],
+  physiotherapist: ["physiotherapist"],
+  park:            ["park"],
+  townhall:          ["city_hall", "local_government_office"],
+  place_of_worship:  ["church", "mosque", "synagogue", "hindu_temple", "place_of_worship"],
+  railway_station:   ["train_station", "transit_station", "subway_station"],
+  hearing_aids:      ["hearing_aid_store"],
+  // Best-effort: no confirmed dedicated Table A type for these three — Google's
+  // broader `types` field on a Place resource sometimes still carries a
+  // descriptive tag matching the category name even when it isn't a filterable
+  // includedType. If this under-returns in practice, these are the first
+  // candidates to revisit against the current Table A list.
+  swimming_pool:   ["swimming_pool"],
+  playground:      ["playground"],
+  optician:        ["optician"],
+  medical_supply:  ["medical_supply"],
 }
 
 // ─── Boolean option → A11yValue ────────────────────────────────────────────

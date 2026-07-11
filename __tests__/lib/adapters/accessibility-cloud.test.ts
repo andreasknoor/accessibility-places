@@ -267,6 +267,31 @@ describe("fetchAccessibilityCloud", () => {
     expect(p.category).toBe("zoo")
   })
 
+  it("maps a plain 'park' category to the park category", async () => {
+    const feature = {
+      _id: "park1",
+      geometry: { type: "Point", coordinates: [13.0, 52.0] },
+      properties: { name: "Stadtpark", category: "park", address: {} },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ features: [feature] }) }))
+    const [p] = await fetchAccessibilityCloud(BASE_PARAMS)
+    expect(p.category).toBe("park")
+  })
+
+  it("does NOT map 'parkplatz' (German for parking lot) or 'car_park' to the park category", async () => {
+    // Regression: a plain .includes("park") check would misclassify these
+    // parking-facility categories as the walkable "park" category — neither
+    // maps to any known Category, so both records are dropped (mapCategory
+    // returns undefined → toPlace returns null).
+    const features = [
+      { _id: "pp", geometry: { type: "Point", coordinates: [13.0, 52.0] }, properties: { name: "Parkplatz Mitte", category: "parkplatz", address: {} } },
+      { _id: "cp", geometry: { type: "Point", coordinates: [13.0, 52.0] }, properties: { name: "Car Park", category: "car_park", address: {} } },
+    ]
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ features }) }))
+    const result = await fetchAccessibilityCloud(BASE_PARAMS)
+    expect(result).toEqual([])
+  })
+
   it("handles toilet details with grab bars", async () => {
     const feature = {
       _id: "t1",

@@ -2,7 +2,7 @@ import type { SourceId, Category } from "./types"
 
 // User-visible app version, shown in the header next to the subtitle.
 // Bump on every meaningful release.
-export const APP_VERSION = "9.53"
+export const APP_VERSION = "9.54"
 
 // Tally form IDs for the per-place "report data error" flow (PlaceDebugSheet).
 // Empty string = feature hidden. Fill in after creating the DE/EN forms in
@@ -203,8 +203,15 @@ export const NOMINATIM_ENDPOINT =
   process.env.NOMINATIM_ENDPOINT?.replace(/\/$/, "") ??
   "https://nominatim.openstreetmap.org"
 
-// OSM category → amenity/tourism tags
-export const CATEGORY_OSM_TAGS: Record<Category, { amenity?: readonly string[]; tourism?: readonly string[]; shop?: readonly string[] }> = {
+// OSM category → amenity/tourism/shop/leisure/healthcare/railway tags
+export const CATEGORY_OSM_TAGS: Record<Category, {
+  amenity?:    readonly string[]
+  tourism?:    readonly string[]
+  shop?:       readonly string[]
+  leisure?:    readonly string[]
+  healthcare?: readonly string[]
+  railway?:    readonly string[]
+}> = {
   cafe:        { amenity: ["cafe", "ice_cream"] },  // merged: ice cream parlours are often only tagged amenity=cafe
   restaurant:  { amenity: ["restaurant"] },
   bar:         { amenity: ["bar"] },
@@ -214,6 +221,7 @@ export const CATEGORY_OSM_TAGS: Record<Category, { amenity?: readonly string[]; 
   hotel:       { tourism: ["hotel", "motel", "guest_house"] },
   hostel:      { tourism: ["hostel"] },
   apartment:   { tourism: ["apartment"] },
+  camp_site:   { tourism: ["camp_site", "caravan_site"] },
   museum:      { tourism: ["museum"] },
   theater:     { amenity: ["theatre"] },
   cinema:      { amenity: ["cinema"] },
@@ -232,4 +240,15 @@ export const CATEGORY_OSM_TAGS: Record<Category, { amenity?: readonly string[]; 
   bank:        { amenity: ["bank"] },
   post_office: { amenity: ["post_office"] },
   zoo:         { tourism: ["zoo", "aquarium"] },
+  swimming_pool:   { leisure: ["swimming_pool", "water_park"] },
+  fitness_centre:  { leisure: ["fitness_centre"] },
+  playground:      { leisure: ["playground"] },
+  park:            { leisure: ["park"] },
+  physiotherapist: { healthcare: ["physiotherapist"] },
+  medical_supply:  { shop: ["medical_supply"] },
+  hearing_aids:    { shop: ["hearing_aids"] },
+  optician:        { shop: ["optician"] },
+  townhall:          { amenity: ["townhall"] },
+  place_of_worship:  { amenity: ["place_of_worship"] },
+  railway_station:   { railway: ["station", "halt"] },
 }

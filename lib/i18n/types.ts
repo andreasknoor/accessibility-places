@@ -1,3 +1,5 @@
+import type { Category } from "../types"
+
 export interface Translations {
   app: {
     title:     string
@@ -22,6 +24,9 @@ export interface Translations {
     suggestGroupAreas:  string
     suggestGroupVenues: string
     chipAll:            string
+    // Drill-in category chips (Konzept A): a group chip opens its subcategories
+    // in place of the row; "←" returns to the group list.
+    chipBack:            string
     // Amenity search chips (single-select, at the front of the chip strip).
     chipParking:        string
     chipToilet:         string
@@ -292,7 +297,26 @@ export interface Translations {
     bank:        string
     post_office: string
     zoo:         string
+    camp_site:       string
+    swimming_pool:   string
+    fitness_centre:  string
+    playground:      string
+    park:            string
+    physiotherapist: string
+    medical_supply:  string
+    hearing_aids:    string
+    optician:        string
+    townhall:          string
+    place_of_worship:  string
+    railway_station:   string
   }
+  // Chip-specific short/plural phrasing for the legacy chip set (the original
+  // 12 pre-drill-in chips) — distinct from `categories` above, which is
+  // singular "category badge" wording (e.g. "Hotel" vs. chip "Hotels").
+  // Categories without an entry here fall back to `categories[cat]`. Typed
+  // over the full Category union (not just the legacy 12) so callers can
+  // index it directly with any Category — no `as keyof typeof` cast needed.
+  chipLabels: Partial<Record<Category, string>>
   info: {
     basicInfo:      string
     address:        string

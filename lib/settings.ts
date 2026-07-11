@@ -2,6 +2,9 @@
 
 import { useState, useCallback, useEffect } from "react"
 import type { Category } from "@/lib/types"
+import { CATEGORY_ICONS } from "@/lib/category-icons"
+import de from "@/lib/i18n/de"
+import en from "@/lib/i18n/en"
 
 export interface AppSettings {
   defaultSearchMode:  "text" | "nearby" | null  // null = no preference (app default)
@@ -47,23 +50,32 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   usageStats:         true,
 }
 
-// Mirrors CHIPS in ChatPanel.tsx. Each entry carries its stable `cat` key, so the
-// two arrays no longer need to share a positional index — only their visible order
-// should match for consistency. The default-chip picker stores `cat`, never an index.
-export const SETTING_CHIPS: { cat: Category; icon: string; de: string; en: string }[] = [
-  { cat: "restaurant", icon: "🍽", de: "Restaurants",       en: "Restaurants"   },
-  { cat: "cafe",       icon: "☕", de: "Cafés & Eis",        en: "Cafés & Ice Cream" },
-  { cat: "hotel",      icon: "🏨", de: "Hotels",            en: "Hotels"        },
-  { cat: "biergarten", icon: "🍻", de: "Biergärten",        en: "Beer Gardens"  },
-  { cat: "pub",        icon: "🍺", de: "Kneipen",           en: "Pubs"          },
-  { cat: "museum",     icon: "🏛", de: "Museen",            en: "Museums"       },
-  { cat: "theater",    icon: "🎭", de: "Theater",           en: "Theaters"      },
-  { cat: "cinema",     icon: "🎬", de: "Kinos",             en: "Cinemas"       },
-  { cat: "bar",        icon: "🍸", de: "Bars",              en: "Bars"          },
-  { cat: "attraction", icon: "🗺",  de: "Sehenswürdigkeiten", en: "Attractions" },
-  { cat: "pharmacy",   icon: "💊", de: "Apotheken",         en: "Pharmacies"    },
-  { cat: "doctors",    icon: "🩺", de: "Arztpraxen",        en: "Doctors"       },
+// Every category the default-chip picker (SettingsSheet, a plain <select>) can
+// offer, in a fixed display order (legacy-12 first for continuity, then the
+// remaining categories grouped loosely by theme). Label text prefers the
+// chip-specific `chipLabels` override (the legacy dozen's short/plural
+// phrasing) and falls back to the singular `categories` badge text — same
+// precedence as ChatPanel's drill-in chips. The default-chip picker stores
+// `cat`, never a positional index, so this list can be reordered freely.
+const SETTING_CHIP_ORDER: Category[] = [
+  "restaurant", "cafe", "hotel", "biergarten", "pub", "museum", "theater",
+  "cinema", "bar", "attraction", "pharmacy", "doctors",
+  "fast_food", "hostel", "apartment", "camp_site",
+  "library", "gallery", "zoo",
+  "dentist", "veterinary", "hospital", "chemist",
+  "physiotherapist", "medical_supply", "hearing_aids", "optician",
+  "supermarket", "bakery", "hairdresser", "bank", "post_office",
+  "swimming_pool", "fitness_centre", "playground", "park",
+  "townhall", "place_of_worship", "railway_station",
 ]
+
+export const SETTING_CHIPS: { cat: Category; icon: string; de: string; en: string }[] =
+  SETTING_CHIP_ORDER.map((cat) => ({
+    cat,
+    icon: CATEGORY_ICONS[cat] ?? "📍",
+    de:   de.chipLabels[cat] ?? de.categories[cat],
+    en:   en.chipLabels[cat] ?? en.categories[cat],
+  }))
 
 // Pre-merge positional chip order (with the now-removed "Eisdielen" at index 8),
 // used once to translate a legacy persisted `defaultChipIdx` into a stable category

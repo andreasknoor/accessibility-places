@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { render, screen, fireEvent, act, within } from "@testing-library/react"
-import ChatPanel from "@/components/chat/ChatPanel"
+import ChatPanel, { CHIP_GROUPS } from "@/components/chat/ChatPanel"
+import { ALL_CATEGORIES, inferCategories } from "@/lib/llm"
+import de from "@/lib/i18n/de"
 
 vi.mock("@/lib/i18n", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/i18n")>()
@@ -34,6 +36,20 @@ function venue(name: string, display = name, coords: { lat: number | null; lon: 
 
 function renderPanel(onSearch = vi.fn(), isLoading = false, onPlaceSearch = vi.fn()) {
   return render(<ChatPanel onSearch={onSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} initialMode="text" />)
+}
+
+// Drill-in category chips (Konzept A): leaf category chips (e.g. "Hotels")
+// only render once their group ("Unterkunft") is open. Opens the group by
+// clicking its level-1 chip — this also selects the whole group as a
+// side effect (openGroupChip), same as a real user tap.
+function openChipGroup(groupText: string) {
+  const group = screen.getAllByRole("radio").find((b) => b.textContent?.includes(groupText))!
+  fireEvent.click(group)
+  return group
+}
+
+function closeChipGroup() {
+  fireEvent.click(screen.getByRole("button", { name: "Zurück" }))
 }
 
 function mockFetch(suggestions: MockSuggestion[]) {
@@ -354,6 +370,7 @@ describe("ChatPanel autocomplete — selection", () => {
     fireEvent.mouseDown(screen.getByRole("option", { name: /Bierpumpe/ }))
     expect(onPlaceSearch).toHaveBeenCalledWith("Bierpumpe", { lat: 51.54, lon: 6.42 })
 
+    openChipGroup("Gastronomie")
     const chip = screen.getAllByRole("radio").find((b) => b.textContent?.includes("Restaurants"))!
     // Chips stay enabled — they are the escape hatch out of the venue lookup.
     expect(chip).not.toBeDisabled()
@@ -524,10 +541,14 @@ describe("ChatPanel initialChipCat restore", () => {
     localStorage.setItem("ap_last_search", JSON.stringify({ idx: 1, loc: "Berlin" }))
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" initialChipCat="hotel" />)
     const buttons = screen.getAllByRole("radio")
+    // cafe is selected → its group chip ("Gastronomie") shows the composite
+    // label and is active; hotel is not selected → its group chip
+    // ("Unterkunft") stays plain and inactive (Hotels only appears once
+    // opened, which is exactly what "not selected" means here).
     const cafeChip  = buttons.find((b) => b.textContent?.includes("Cafés"))
-    const hotelChip = buttons.find((b) => b.textContent?.includes("Hotels"))
+    const stayChip  = buttons.find((b) => b.textContent?.includes("Unterkunft"))
     expect(cafeChip).toHaveClass("bg-primary")
-    expect(hotelChip).not.toHaveClass("bg-primary")
+    expect(stayChip).not.toHaveClass("bg-primary")
   })
 
   it("falls back to initialChipCat when saved idx is invalid", () => {
@@ -542,10 +563,10 @@ describe("ChatPanel initialChipCat restore", () => {
     localStorage.clear()
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
     const buttons = screen.getAllByRole("radio")
-    const alleChip       = buttons.find((b) => b.textContent?.includes("Alle"))
-    const restaurantChip = buttons.find((b) => b.textContent?.includes("Restaurants"))
+    const alleChip  = buttons.find((b) => b.textContent?.includes("Alle"))
+    const gastroChip = buttons.find((b) => b.textContent?.includes("Gastronomie"))
     expect(alleChip).toHaveClass("bg-primary")
-    expect(restaurantChip).not.toHaveClass("bg-primary")
+    expect(gastroChip).not.toHaveClass("bg-primary")
   })
 
   it("restores a saved null chip ('Alle') without falling back to a category", () => {
@@ -562,17 +583,21 @@ describe("ChatPanel initialChipCat restore", () => {
 describe("ChatPanel all-categories chip", () => {
   it("clicking a category chip and then 'Alle' returns to the all-categories state", () => {
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
-    const buttons = screen.getAllByRole("radio")
-    const hotelChip = buttons.find((b) => b.textContent?.includes("Hotels"))!
-    const alleChip  = buttons.find((b) => b.textContent?.includes("Alle"))!
-
+    openChipGroup("Unterkunft")
+    const hotelChip = screen.getAllByRole("radio").find((b) => b.textContent?.includes("Hotels"))!
     fireEvent.click(hotelChip)
     expect(hotelChip).toHaveClass("bg-primary")
+
+    // "Alle" only lives on the collapsed (level-1) row — back out first.
+    closeChipGroup()
+    const stayChip = screen.getAllByRole("radio").find((b) => b.textContent?.includes("Unterkunft"))!
+    const alleChip = screen.getAllByRole("radio").find((b) => b.textContent?.includes("Alle"))!
+    expect(stayChip).toHaveClass("bg-primary")
     expect(alleChip).not.toHaveClass("bg-primary")
 
     fireEvent.click(alleChip)
     expect(alleChip).toHaveClass("bg-primary")
-    expect(hotelChip).not.toHaveClass("bg-primary")
+    expect(stayChip).not.toHaveClass("bg-primary")
   })
 
   it("submit with 'Alle' sends the raw text without a chip-label prefix", () => {
@@ -586,6 +611,7 @@ describe("ChatPanel all-categories chip", () => {
   it("submit with a selected chip prefixes the chip label", () => {
     const onSearch = vi.fn()
     render(<ChatPanel onSearch={onSearch} isLoading={false} initialMode="text" />)
+    openChipGroup("Unterkunft")
     const hotelChip = screen.getAllByRole("radio").find((b) => b.textContent?.includes("Hotels"))!
     fireEvent.click(hotelChip)
     fireEvent.change(getInput(), { target: { value: "Berlin" } })
@@ -598,6 +624,7 @@ describe("ChatPanel all-categories chip", () => {
     // "Arzt in Frankenthal" as the location → 'location not found'.
     const onSearch = vi.fn()
     render(<ChatPanel onSearch={onSearch} isLoading={false} initialMode="text" />)
+    openChipGroup("Unterkunft")
     const hotelChip = screen.getAllByRole("radio").find((b) => b.textContent?.includes("Hotels"))!
     fireEvent.click(hotelChip)
     fireEvent.change(getInput(), { target: { value: "Arzt in Frankenthal" } })
@@ -793,6 +820,7 @@ describe("ChatPanel GPS resolution", () => {
     // Picking a chip now refines the searched area (Berlin), NOT the GPS fix (Munich).
     // (Clear the locate's own initial nearby search first so we assert only the chip.)
     onSearch.mockClear()
+    openChipGroup("Gastronomie")
     const chip = screen.getAllByRole("radio").find((b) => b.textContent?.includes("Restaurants"))!
     fireEvent.click(chip)
     expect(onSearch).toHaveBeenCalledWith(expect.stringMatching(/Restaurant/), { lat: 52.5, lon: 13.4 })
@@ -854,7 +882,7 @@ describe("ChatPanel single-field UI", () => {
 
   it("chip strip is visible in text mode", () => {
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
-    expect(screen.getByText(/Restaurants/)).toBeInTheDocument()
+    expect(screen.getByText(/Gastronomie/)).toBeInTheDocument()
   })
 
   it("initialMode='place' falls back to text mode with the unified input visible", () => {
@@ -889,7 +917,7 @@ describe("ChatPanel single-field UI", () => {
 describe("ChatPanel amenity chips", () => {
   it("renders the parking and WC chips alongside the venue chips", () => {
     render(<ChatPanel onSearch={vi.fn()} onAmenitySearch={vi.fn()} isLoading={false} initialMode="text" />)
-    expect(screen.getByText(/🍽 Restaurants/)).toBeInTheDocument()
+    expect(screen.getByText(/🍽 Gastronomie/)).toBeInTheDocument()
     expect(screen.getByRole("radio", { name: /🅿/ })).toBeInTheDocument()
     expect(screen.getByRole("radio", { name: /🚻/ })).toBeInTheDocument()
   })
@@ -924,7 +952,7 @@ describe("ChatPanel amenity chips — accessibility (finding F5 / B2 two-row lay
     // Category row (label "Kategorie") holds Alle + venue chips, not the amenity chips.
     const categoryGroup = screen.getByRole("radiogroup", { name: "Kategorie" })
     expect(within(categoryGroup).getByRole("radio", { name: new RegExp(`^${"Alle"}`) })).toBeInTheDocument()
-    expect(within(categoryGroup).getByRole("radio", { name: /Restaurants/ })).toBeInTheDocument()
+    expect(within(categoryGroup).getByRole("radio", { name: /Gastronomie/ })).toBeInTheDocument()
     expect(within(categoryGroup).queryByRole("radio", { name: /🅿/ })).not.toBeInTheDocument()
     // Amenity quick-find row (label "Schnellsuche") holds the two amenity chips.
     const amenityGroup = screen.getByRole("radiogroup", { name: "Schnellsuche" })
@@ -938,7 +966,7 @@ describe("ChatPanel amenity chips — accessibility (finding F5 / B2 two-row lay
     )
     expect(screen.getByRole("radio", { name: /🅿/ })).toHaveAttribute("aria-checked", "true")
     expect(screen.getByRole("radio", { name: /🚻/ })).toHaveAttribute("aria-checked", "false")
-    expect(screen.getByRole("radio", { name: /Restaurants/ })).toHaveAttribute("aria-checked", "false")
+    expect(screen.getByRole("radio", { name: /Gastronomie/ })).toHaveAttribute("aria-checked", "false")
   })
 
   it("marks 'Alle' as checked and both amenity chips as unchecked when no amenity is active and no category is selected", () => {
@@ -1178,5 +1206,72 @@ describe("ChatPanel amenity chips — loading indicator while locating (finding 
     fireEvent.click(chip)
     expect(chip).toHaveAttribute("aria-busy", "true")
     expect(screen.getByRole("radio", { name: /🚻/ })).toHaveAttribute("aria-busy", "false")
+  })
+})
+
+// ─── CHIP_GROUPS completeness (regression: a plain Category[] list, not a
+// Record<Category,…>, so a category left out of every group would compile
+// fine and just become silently unreachable from the chip UI) ────────────────
+
+describe("CHIP_GROUPS completeness", () => {
+  it("covers every Category in exactly one group", () => {
+    const cats = CHIP_GROUPS.flatMap((g) => g.cats)
+    expect(new Set(cats).size).toBe(cats.length) // no duplicates across groups
+    expect([...cats].sort()).toEqual([...ALL_CATEGORIES].sort())
+  })
+
+  it("every group's 'whole group' blob classifies to exactly its own members (no missing, no extra)", () => {
+    // Mirrors ChatPanel's groupLabel(): concatenate each member's chip text
+    // and check the server-side inferCategories reconstructs the same set —
+    // this is the mechanism "Alle <Gruppe>" relies on with zero API changes.
+    for (const group of CHIP_GROUPS) {
+      const blob = group.cats.map((cat) => de.chipLabels[cat] ?? de.categories[cat]).join(" ")
+      const result = inferCategories(blob)
+      expect([...result].sort()).toEqual([...group.cats].sort())
+    }
+  })
+})
+
+// ─── Regression: reopening a group while an amenity search is active must
+// exit amenity mode even when the group already "contains" the last-picked
+// venue category (previously openGroupChip silently skipped applySelection
+// in that case, leaving the amenity results on screen with no new fetch) ────
+
+describe("ChatPanel drill-in chips — reopening a group while an amenity search is active", () => {
+  it("exits amenity mode and re-fires the venue search when reopening the group of the already-selected category", () => {
+    const onSearch = vi.fn()
+    const onExitAmenity = vi.fn()
+    const { rerender } = render(
+      <ChatPanel
+        onSearch={onSearch}
+        onExitAmenity={onExitAmenity}
+        isLoading={false}
+        initialMode="text"
+        activeSearchCoords={{ lat: 52.5, lon: 13.4 }}
+      />,
+    )
+    openChipGroup("Unterkunft")
+    fireEvent.click(screen.getAllByRole("radio").find((b) => b.textContent?.includes("Hotels"))!)
+    closeChipGroup()
+    onSearch.mockClear()
+    onExitAmenity.mockClear()
+
+    // Parent now shows an amenity search (e.g. the user tapped 🅿 afterwards).
+    rerender(
+      <ChatPanel
+        onSearch={onSearch}
+        onExitAmenity={onExitAmenity}
+        isLoading={false}
+        initialMode="text"
+        activeSearchCoords={{ lat: 52.5, lon: 13.4 }}
+        amenityActive="parking"
+      />,
+    )
+
+    // Reopening "Unterkunft" (which already contains the stale "hotel" pick)
+    // must still exit amenity mode and re-run a venue search.
+    openChipGroup("Unterkunft");
+    expect(onExitAmenity).toHaveBeenCalled()
+    expect(onSearch).toHaveBeenCalledWith(expect.stringMatching(/Hotel/), { lat: 52.5, lon: 13.4 })
   })
 })

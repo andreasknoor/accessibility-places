@@ -64,17 +64,24 @@ export function buildOverpassQuery(params: SearchParams): string {
   }
 
   // ── Category-driven query ─────────────────────────────────────────────────
-  // Collect all amenity, tourism, and shop values across requested categories
-  const amenityVals = new Set<string>()
-  const tourismVals = new Set<string>()
-  const shopVals    = new Set<string>()
+  // Collect all amenity, tourism, shop, leisure, healthcare, and railway
+  // values across requested categories
+  const amenityVals    = new Set<string>()
+  const tourismVals    = new Set<string>()
+  const shopVals       = new Set<string>()
+  const leisureVals    = new Set<string>()
+  const healthcareVals = new Set<string>()
+  const railwayVals    = new Set<string>()
 
   for (const cat of categories) {
     const tags = CATEGORY_OSM_TAGS[cat]
     if (!tags) continue
-    tags.amenity?.forEach((v) => amenityVals.add(v))
-    tags.tourism?.forEach((v) => tourismVals.add(v))
-    tags.shop?.forEach((v)    => shopVals.add(v))
+    tags.amenity?.forEach((v)    => amenityVals.add(v))
+    tags.tourism?.forEach((v)    => tourismVals.add(v))
+    tags.shop?.forEach((v)       => shopVals.add(v))
+    tags.leisure?.forEach((v)    => leisureVals.add(v))
+    tags.healthcare?.forEach((v) => healthcareVals.add(v))
+    tags.railway?.forEach((v)    => railwayVals.add(v))
   }
 
   // Pre-filter: when at least one accessibility criterion is active and unknown
@@ -105,9 +112,12 @@ export function buildOverpassQuery(params: SearchParams): string {
   }
 
   const clauses: string[] = []
-  if (amenityVals.size > 0) addClauses("amenity", [...amenityVals].join("|"))
-  if (tourismVals.size > 0) addClauses("tourism", [...tourismVals].join("|"))
-  if (shopVals.size    > 0) addClauses("shop",    [...shopVals].join("|"))
+  if (amenityVals.size    > 0) addClauses("amenity",    [...amenityVals].join("|"))
+  if (tourismVals.size    > 0) addClauses("tourism",    [...tourismVals].join("|"))
+  if (shopVals.size       > 0) addClauses("shop",       [...shopVals].join("|"))
+  if (leisureVals.size    > 0) addClauses("leisure",    [...leisureVals].join("|"))
+  if (healthcareVals.size > 0) addClauses("healthcare", [...healthcareVals].join("|"))
+  if (railwayVals.size    > 0) addClauses("railway",    [...railwayVals].join("|"))
 
   if (clauses.length === 0) return ""
 
@@ -142,9 +152,12 @@ export function osmParking(tags: Record<string, string>): A11yValue {
 }
 
 function osmCategory(tags: Record<string, string>): Category {
-  const amenity = tags["amenity"] ?? ""
-  const tourism = tags["tourism"] ?? ""
-  const shop    = tags["shop"]    ?? ""
+  const amenity    = tags["amenity"]    ?? ""
+  const tourism    = tags["tourism"]    ?? ""
+  const shop       = tags["shop"]       ?? ""
+  const leisure    = tags["leisure"]    ?? ""
+  const healthcare = tags["healthcare"] ?? ""
+  const railway    = tags["railway"]    ?? ""
   if (amenity === "cafe")                                              return "cafe"
   if (amenity === "restaurant")                                        return "restaurant"
   if (amenity === "bar")                                               return "bar"
@@ -154,6 +167,7 @@ function osmCategory(tags: Record<string, string>): Category {
   if (["hotel","motel","guest_house"].includes(tourism))               return "hotel"
   if (tourism === "hostel")                                            return "hostel"
   if (tourism === "apartment")                                         return "apartment"
+  if (["camp_site","caravan_site"].includes(tourism))                  return "camp_site"
   if (tourism === "museum")                                            return "museum"
   if (amenity === "theatre")                                           return "theater"
   if (amenity === "cinema")                                            return "cinema"
@@ -172,6 +186,17 @@ function osmCategory(tags: Record<string, string>): Category {
   if (amenity === "bank")                                              return "bank"
   if (amenity === "post_office")                                       return "post_office"
   if (tourism === "zoo" || tourism === "aquarium")                     return "zoo"
+  if (["swimming_pool","water_park"].includes(leisure))                return "swimming_pool"
+  if (leisure === "fitness_centre")                                    return "fitness_centre"
+  if (leisure === "playground")                                       return "playground"
+  if (leisure === "park")                                              return "park"
+  if (healthcare === "physiotherapist")                                return "physiotherapist"
+  if (shop === "medical_supply")                                       return "medical_supply"
+  if (shop === "hearing_aids")                                         return "hearing_aids"
+  if (shop === "optician")                                             return "optician"
+  if (amenity === "townhall")                                          return "townhall"
+  if (amenity === "place_of_worship")                                  return "place_of_worship"
+  if (["station","halt"].includes(railway))                            return "railway_station"
   return "attraction"
 }
 

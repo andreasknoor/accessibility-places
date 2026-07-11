@@ -35,23 +35,42 @@ export function intersectsSwitzerland(lat: number, lon: number, radiusKm: number
 
 // ─── Category mapping ─────────────────────────────────────────────────────
 
-// Our Category → Ginto category key (multiple of ours may share one Ginto key)
-const TO_GINTO: Partial<Record<Category, string>> = {
-  cafe:        "restaurant",
-  restaurant:  "restaurant",
-  bar:         "restaurant",
-  pub:         "restaurant",
-  biergarten:  "restaurant",
-  fast_food:   "restaurant",
-  hotel:       "hotel",
-  hostel:      "group_house",
-  apartment:   "holiday_home",
-  museum:      "museum",
-  gallery:     "museum",
-  theater:     "theatre",
-  cinema:      "cinema",
-  library:     "library",
-  attraction:  "landmark",
+// Our Category → Ginto category keys (multiple of ours may share one Ginto
+// key, and one of ours may span several Ginto keys). Categories with no
+// confirmed Ginto counterpart are omitted — a request for only those
+// categories skips the Ginto call entirely (see the empty-array guard below)
+// rather than sending an unfiltered `categories: []`, which Ginto does not
+// treat as a filter. Keep in sync with FROM_GINTO below.
+const TO_GINTO: Partial<Record<Category, string[]>> = {
+  cafe:        ["restaurant"],
+  restaurant:  ["restaurant"],
+  bar:         ["restaurant"],
+  pub:         ["restaurant"],
+  biergarten:  ["restaurant"],
+  fast_food:   ["restaurant"],
+  hotel:       ["hotel"],
+  hostel:      ["group_house"],
+  apartment:   ["holiday_home"],
+  museum:      ["museum"],
+  gallery:     ["museum"],
+  theater:     ["theatre"],
+  cinema:      ["cinema"],
+  library:     ["library"],
+  attraction:  ["landmark"],
+  pharmacy:    ["pharmacy"],
+  doctors:     ["doctor"],
+  dentist:     ["dentist"],
+  veterinary:  ["veterinary"],
+  hospital:    ["hospital"],
+  supermarket: ["supermarket"],
+  bakery:      ["bakery"],
+  hairdresser: ["hairdresser"],
+  bank:        ["bank"],
+  post_office: ["post_office"],
+  zoo:         ["zoo", "aquarium"],
+  park:        ["park"],
+  // The 11 other new categories (v9.55) have no confirmed Ginto category key
+  // yet — verify against the Ginto GraphQL schema before adding them here.
 }
 
 // Ginto category key → our Category (best-fit)
@@ -67,7 +86,7 @@ const FROM_GINTO: Record<string, Category> = {
   landmark:     "attraction",
   zoo:          "zoo",
   aquarium:     "zoo",
-  park:         "attraction",
+  park:         "park",
   pharmacy:     "pharmacy",
   doctor:       "doctors",
   dentist:      "dentist",
@@ -210,8 +229,14 @@ export async function fetchGinto(params: SearchParams): Promise<Place[]> {
 
   // Build Ginto category list from requested categories (deduplicated)
   const gintoCategories = params.categories?.length
-    ? [...new Set(params.categories.map((c) => TO_GINTO[c]).filter((g): g is string => Boolean(g)))]
+    ? [...new Set(params.categories.flatMap((c) => TO_GINTO[c] ?? []))]
     : undefined   // undefined = no category filter → all entries
+
+  // Specific categories requested but none has a Ginto counterpart (e.g. a
+  // chemist-only or camp_site-only search): skip the call rather than sending
+  // `categories: []`, which Ginto does not treat as a filter — it would
+  // return unrelated entries.
+  if (gintoCategories && gintoCategories.length === 0) return []
 
   const baseVars = {
     lat:        params.location.lat,

@@ -88,6 +88,15 @@ const FROM_ACCESLIBRE: Partial<Record<string, Category>> = {
   "bureau-de-poste":                   "post_office",
   "glacier":                           "cafe",  // merged: ice cream → cafe
   "confiserie":                        "cafe",  // merged: ice cream → cafe
+  // The 12 categories added in v9.55 (camp_site, swimming_pool, fitness_centre,
+  // playground, park, physiotherapist, medical_supply, hearing_aids, optician,
+  // townhall, place_of_worship, railway_station) have no entry yet — their
+  // real `activite` slugs need verifying against GET /api/activites/ before
+  // adding them here. Until then a request scoped to only these categories
+  // falls through to the unfiltered "all categories" fetch (see isAllCategories
+  // below is NOT triggered by this — TO_ACCESLIBRE[cat] is simply undefined,
+  // so `slugs` stays empty and fetchAllPages(undefined) runs unfiltered,
+  // same as the pre-existing "no category maps to AccèsLibre" fallback).
 }
 
 // Reverse map (our Category → AccèsLibre activite slugs), derived from

@@ -145,6 +145,22 @@ function mapCategory(props: any): Category | undefined {
   if (cat.includes("bank"))                                                            return "bank"
   if (cat.includes("post_office") || cat.includes("postamt") || cat.includes("post office")) return "post_office"
   if (cat.includes("zoo") || cat.includes("aquarium") || cat.includes("tierpark"))   return "zoo"
+  if (cat.includes("camp_site") || cat.includes("caravan_site") || cat.includes("campingplatz")) return "camp_site"
+  if (cat.includes("swimming_pool") || cat.includes("schwimmbad") || cat.includes("water_park")) return "swimming_pool"
+  if (cat.includes("fitness_centre") || cat.includes("fitness_center") || cat.includes("fitnessstudio")) return "fitness_centre"
+  if (cat.includes("playground") || cat.includes("spielplatz"))                     return "playground"
+  // Word-boundary match (not .includes): a plain substring check would also
+  // catch "parkplatz" (German for parking lot) or "car_park" — both parking
+  // facilities, not the walkable "park" category. Neither contains "park" as
+  // a standalone word (letters/underscore are \w, so no \b forms mid-word).
+  if (/\bpark\b/i.test(cat))                                                         return "park"
+  if (cat.includes("physiotherapist") || cat.includes("physiotherapie"))            return "physiotherapist"
+  if (cat.includes("medical_supply") || cat.includes("sanitätshaus"))               return "medical_supply"
+  if (cat.includes("hearing_aids") || cat.includes("hörakustiker"))                 return "hearing_aids"
+  if (cat.includes("optician") || cat.includes("optiker"))                          return "optician"
+  if (cat.includes("townhall") || cat.includes("town_hall") || cat.includes("rathaus")) return "townhall"
+  if (cat.includes("place_of_worship") || cat.includes("kirche") || cat.includes("church")) return "place_of_worship"
+  if (cat.includes("railway_station") || cat.includes("train_station") || cat.includes("bahnhof")) return "railway_station"
   return undefined
 }
 

@@ -31,7 +31,7 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
       {
         id: "which-venues",
         q: "Welche barrierefreien Orte kann ich finden — Restaurants, Hotels, Cafés?",
-        a: "Restaurants, Cafés & Eisdielen, Bars, Kneipen, Biergärten, Imbisse, Hotels, Hostels, Ferienwohnungen, Museen, Theater, Kinos, Bibliotheken, Galerien, Sehenswürdigkeiten und Zoos — sowie Alltagsorte wie Apotheken, Arztpraxen, Zahnärzte, Tierärzte, Krankenhäuser, Drogerien, Supermärkte, Bäckereien, Friseure, Banken und Postfilialen.",
+        a: "Restaurants, Cafés & Eisdielen, Bars, Kneipen, Biergärten, Imbisse, Hotels, Hostels, Ferienwohnungen, Campingplätze, Museen, Theater, Kinos, Bibliotheken, Galerien, Sehenswürdigkeiten und Zoos — Alltagsorte wie Apotheken, Arztpraxen, Zahnärzte, Tierärzte, Krankenhäuser, Drogerien, Supermärkte, Bäckereien, Friseure, Banken und Postfilialen — sowie Schwimmbäder, Fitnessstudios, Spielplätze, Parks, Physiotherapiepraxen, Sanitätshäuser, Hörakustiker, Optiker, Rathäuser, Gotteshäuser und Bahnhöfe.",
       },
       {
         id: "free",
@@ -61,14 +61,16 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
         a: (
           <>
             <p>
-              Mit dem Chip &bdquo;Alle&ldquo; durchsucht Accessible Places folgende 27 Orts-Kategorien gleichzeitig:
+              Mit dem Chip &bdquo;Alle&ldquo; durchsucht Accessible Places folgende 39 Orts-Kategorien gleichzeitig, unterteilt in 7 Gruppen (dieselben, die auch beim Aufklappen eines Kategorie-Chips erscheinen):
             </p>
             <p className="mt-2">
               <strong className="font-semibold text-foreground">Gastronomie:</strong> Restaurant, Café &amp; Eis, Bar, Kneipe/Pub, Biergarten, Imbiss/Fast Food ·{" "}
-              <strong className="font-semibold text-foreground">Übernachtung:</strong> Hotel, Hostel, Ferienwohnung ·{" "}
-              <strong className="font-semibold text-foreground">Kultur &amp; Freizeit:</strong> Museum, Theater, Kino, Bibliothek, Galerie, Sehenswürdigkeit, Zoo/Tierpark ·{" "}
-              <strong className="font-semibold text-foreground">Gesundheit:</strong> Apotheke, Arztpraxis, Zahnarzt, Tierarzt, Krankenhaus ·{" "}
-              <strong className="font-semibold text-foreground">Alltag:</strong> Drogerie, Supermarkt, Bäckerei, Friseur, Bank, Post
+              <strong className="font-semibold text-foreground">Unterkunft:</strong> Hotel, Hostel, Ferienwohnung, Campingplatz ·{" "}
+              <strong className="font-semibold text-foreground">Kultur:</strong> Museum, Theater, Kino, Bibliothek, Galerie, Sehenswürdigkeit, Zoo/Tierpark ·{" "}
+              <strong className="font-semibold text-foreground">Sport &amp; Freizeit:</strong> Schwimmbad, Fitnessstudio, Spielplatz, Park ·{" "}
+              <strong className="font-semibold text-foreground">Gesundheit:</strong> Apotheke, Arztpraxis, Zahnarzt, Tierarzt, Krankenhaus, Drogerie, Physiotherapie, Sanitätshaus, Hörakustiker, Optiker ·{" "}
+              <strong className="font-semibold text-foreground">Alltag:</strong> Supermarkt, Bäckerei, Friseur, Bank, Post ·{" "}
+              <strong className="font-semibold text-foreground">Öffentlich &amp; Unterwegs:</strong> Rathaus, Gotteshaus, Bahnhof
             </p>
             <p className="mt-2">
               Die sichtbaren Kategorie-Chips sind also nur eine Auswahl der beliebtesten Kategorien — &bdquo;Alle&ldquo; geht darüber hinaus. Nicht enthalten sind die Schnellsuche-Chips 🅿 Parken und 🚻 WC: Sie starten eine eigene Suche nach Parkplätzen bzw. WCs und sind keine Orts-Kategorie.
@@ -76,7 +78,7 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
           </>
         ),
         schemaText:
-          "Mit dem Chip „Alle“ durchsucht Accessible Places folgende 27 Orts-Kategorien gleichzeitig: Gastronomie (Restaurant, Café & Eis, Bar, Kneipe/Pub, Biergarten, Imbiss/Fast Food), Übernachtung (Hotel, Hostel, Ferienwohnung), Kultur & Freizeit (Museum, Theater, Kino, Bibliothek, Galerie, Sehenswürdigkeit, Zoo/Tierpark), Gesundheit (Apotheke, Arztpraxis, Zahnarzt, Tierarzt, Krankenhaus) und Alltag (Drogerie, Supermarkt, Bäckerei, Friseur, Bank, Post). Die sichtbaren Kategorie-Chips sind nur eine Auswahl der beliebtesten Kategorien — „Alle“ geht darüber hinaus. Nicht enthalten sind die Schnellsuche-Chips 🅿 Parken und 🚻 WC: Sie starten eine eigene Suche nach Parkplätzen bzw. WCs und sind keine Orts-Kategorie.",
+          "Mit dem Chip „Alle“ durchsucht Accessible Places folgende 39 Orts-Kategorien gleichzeitig, unterteilt in 7 Gruppen: Gastronomie (Restaurant, Café & Eis, Bar, Kneipe/Pub, Biergarten, Imbiss/Fast Food), Unterkunft (Hotel, Hostel, Ferienwohnung, Campingplatz), Kultur (Museum, Theater, Kino, Bibliothek, Galerie, Sehenswürdigkeit, Zoo/Tierpark), Sport & Freizeit (Schwimmbad, Fitnessstudio, Spielplatz, Park), Gesundheit (Apotheke, Arztpraxis, Zahnarzt, Tierarzt, Krankenhaus, Drogerie, Physiotherapie, Sanitätshaus, Hörakustiker, Optiker), Alltag (Supermarkt, Bäckerei, Friseur, Bank, Post) und Öffentlich & Unterwegs (Rathaus, Gotteshaus, Bahnhof). Die sichtbaren Kategorie-Chips sind nur eine Auswahl der beliebtesten Kategorien — „Alle“ geht darüber hinaus. Nicht enthalten sind die Schnellsuche-Chips 🅿 Parken und 🚻 WC: Sie starten eine eigene Suche nach Parkplätzen bzw. WCs und sind keine Orts-Kategorie.",
       },
       {
         id: "international-search",

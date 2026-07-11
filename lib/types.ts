@@ -17,11 +17,14 @@ export type SourceId =
 
 export type Category =
   | "cafe" | "restaurant" | "bar" | "pub" | "biergarten" | "fast_food"
-  | "hotel" | "hostel" | "apartment"
+  | "hotel" | "hostel" | "apartment" | "camp_site"
   | "museum" | "theater" | "cinema" | "library" | "gallery" | "attraction"
   | "pharmacy" | "doctors" | "dentist" | "veterinary" | "hospital"
   | "chemist" | "supermarket" | "bakery" | "hairdresser"
   | "bank" | "post_office" | "zoo"
+  | "swimming_pool" | "fitness_centre" | "playground" | "park"
+  | "physiotherapist" | "medical_supply" | "hearing_aids" | "optician"
+  | "townhall" | "place_of_worship" | "railway_station"
 
 // ─── Sub-attributes per criterion ──────────────────────────────────────────
 

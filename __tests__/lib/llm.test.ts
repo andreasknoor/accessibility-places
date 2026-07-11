@@ -228,13 +228,13 @@ describe("parseQuery", () => {
 
   it("'in <city>' (no category part) returns all categories", () => {
     const r = parseQuery("in Berlin")
-    expect(r.categories.length).toBe(27)
+    expect(r.categories.length).toBe(39)
     expect(r.locationQuery).toBe("Berlin")
   })
 
   it("does not infer categories from the location part: city 'Essen' is not a restaurant hint", () => {
     const r = parseQuery("in Essen")
-    expect(r.categories.length).toBe(27)
+    expect(r.categories.length).toBe(39)
     expect(r.locationQuery).toBe("Essen")
   })
 
@@ -247,7 +247,7 @@ describe("parseQuery", () => {
   it("plain city name without 'in' geocodes as location", () => {
     const r = parseQuery("Berlin")
     expect(r.locationQuery).toBe("Berlin")
-    expect(r.categories.length).toBe(27)
+    expect(r.categories.length).toBe(39)
   })
 
   it("free text with category term and 'in' scopes correctly ('Sushi in Hamburg')", () => {
@@ -294,7 +294,7 @@ describe("inferCategories — expanded hints", () => {
 // of bugs lives.
 
 describe("parseQuery — client query shapes", () => {
-  const ALL = 27 // all-categories fallback size
+  const ALL = 39 // all-categories fallback size
 
   it.each([
     // [query, expected locationQuery, expected categories ("all" = fallback)]
@@ -333,5 +333,40 @@ describe("parseQuery — client query shapes", () => {
     expect(parsed.locationQuery).toBe(expectedLoc)
     if (expectedCats === "all") expect(parsed.categories).toHaveLength(ALL)
     else expect(parsed.categories).toEqual(expectedCats)
+  })
+})
+
+// ─── Category chip self-classification (regression) ──────────────────────────
+// Every category's own chip label (the text a user sees and would type/submit
+// via a chip) must classify back to EXACTLY that one category. A silent break
+// here (inferCategories finding zero matches) falls back to ALL_CATEGORIES —
+// the category's chip then behaves like "Alle" instead of filtering. Bit us
+// for "Park" (DE+EN), "Veterinarian" (EN) and "Fitness Center" (EN) — this
+// test would have caught all three before they shipped.
+
+import de from "@/lib/i18n/de"
+import en from "@/lib/i18n/en"
+import { ALL_CATEGORIES } from "@/lib/llm"
+import type { Category } from "@/lib/types"
+
+describe("category chip labels self-classify", () => {
+  const dicts = [["de", de], ["en", en]] as const
+
+  for (const [localeName, dict] of dicts) {
+    for (const cat of ALL_CATEGORIES) {
+      it(`[${localeName}] "${dict.chipLabels[cat] ?? dict.categories[cat]}" (${cat}) classifies to exactly itself`, () => {
+        const label = dict.chipLabels[cat] ?? dict.categories[cat]
+        expect(inferCategories(label)).toEqual([cat])
+      })
+    }
+  }
+
+  it("known collision risks still resolve to no match (fall back to all categories), not to 'park'", () => {
+    // These are AmenityType/parking-facility words, not the walkable park
+    // category — inferCategories should NOT single them out as "park".
+    for (const risky of ["Parkplatz", "Parkhaus", "Parking"]) {
+      const result = inferCategories(risky)
+      expect(result).not.toEqual(["park" as Category])
+    }
   })
 })

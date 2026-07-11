@@ -4,7 +4,8 @@ import { useState, useRef, useEffect, Fragment } from "react"
 import { Search, Loader2, LocateFixed, X, Coffee, UtensilsCrossed, Beer, BookOpen, Hotel, Landmark, Film, Library, GalleryHorizontal, Star, IceCream, MapPin } from "lucide-react"
 import { track } from "@/lib/analytics"
 import { Button } from "@/components/ui/button"
-import { useTranslations, useLocale } from "@/lib/i18n"
+import { useTranslations, useLocale, getTranslations, type Locale } from "@/lib/i18n"
+import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { cn } from "@/lib/utils"
 import { extractQuotedName } from "@/lib/llm"
@@ -85,24 +86,71 @@ interface Props {
   panPending?: boolean
 }
 
-// Each chip carries its stable `cat` key. Identity/persistence (default chip, last
-// search, SEO deep-link) is by `cat`, never by array position — so this list can be
-// reordered or trimmed without breaking saved preferences. Mirror order in
-// SETTING_CHIPS (settings.ts) for visual consistency only.
-const CHIPS: { cat: Category; icon: string; de: string; en: string }[] = [
-  { cat: "restaurant", icon: "🍽", de: "Restaurants",       en: "Restaurants"   },
-  { cat: "cafe",       icon: "☕", de: "Cafés & Eis",        en: "Cafés & Ice Cream" },
-  { cat: "hotel",      icon: "🏨", de: "Hotels",            en: "Hotels"        },
-  { cat: "biergarten", icon: "🍻", de: "Biergärten",        en: "Beer Gardens"  },
-  { cat: "pub",        icon: "🍺", de: "Kneipen",           en: "Pubs"          },
-  { cat: "museum",     icon: "🏛", de: "Museen",            en: "Museums"       },
-  { cat: "theater",    icon: "🎭", de: "Theater",           en: "Theaters"      },
-  { cat: "cinema",     icon: "🎬", de: "Kinos",             en: "Cinemas"       },
-  { cat: "bar",        icon: "🍸", de: "Bars",              en: "Bars"          },
-  { cat: "attraction", icon: "🗺",  de: "Sehenswürdigkeiten", en: "Attractions" },
-  { cat: "pharmacy",   icon: "💊", de: "Apotheken",         en: "Pharmacies"    },
-  { cat: "doctors",    icon: "🩺", de: "Arztpraxen",        en: "Doctors"       },
+// Two-level category chips (drill-in, "Konzept A"): a group chip replaces the
+// row with its subcategories; a "←" chip returns to the group list. Every
+// Category belongs to exactly one group. Group labels are short enough that
+// hardcoding them here (rather than a full i18n entry per group) mirrors the
+// pre-existing precedent of the old flat CHIPS array; leaf chip text is
+// derived from i18n (chipText below), never hardcoded.
+interface ChipGroup {
+  id:   string
+  icon: string
+  de:   string
+  en:   string
+  cats: Category[]
+}
+
+// Exported for a completeness test only (every Category must appear in
+// exactly one group) — not part of the component's runtime public API.
+export const CHIP_GROUPS: ChipGroup[] = [
+  { id: "gastro",  icon: "🍽", de: "Gastronomie",            en: "Food & Drink",
+    cats: ["restaurant", "cafe", "bar", "pub", "biergarten", "fast_food"] },
+  { id: "stay",    icon: "🏨", de: "Unterkunft",             en: "Accommodation",
+    cats: ["hotel", "hostel", "apartment", "camp_site"] },
+  { id: "culture", icon: "🎭", de: "Kultur",                 en: "Culture",
+    cats: ["museum", "theater", "cinema", "library", "gallery", "attraction", "zoo"] },
+  { id: "sport",   icon: "🤸", de: "Sport & Freizeit",       en: "Sport & Leisure",
+    cats: ["swimming_pool", "fitness_centre", "playground", "park"] },
+  { id: "health",  icon: "🩺", de: "Gesundheit",             en: "Health",
+    cats: ["pharmacy", "doctors", "dentist", "veterinary", "hospital", "chemist",
+           "physiotherapist", "medical_supply", "hearing_aids", "optician"] },
+  { id: "daily",   icon: "🛒", de: "Alltag",                 en: "Everyday",
+    cats: ["supermarket", "bakery", "hairdresser", "bank", "post_office"] },
+  { id: "public",  icon: "🏛", de: "Öffentlich & Unterwegs", en: "Public & Transit",
+    cats: ["townhall", "place_of_worship", "railway_station"] },
 ]
+
+// Flat, ordered list of every category chip across all groups — selectedIdx
+// indexes into this exactly as it indexed into the old flat CHIPS array, so
+// every persistence/deep-link/tracking call site keyed on "CHIPS[idx].cat"
+// keeps working unchanged.
+const CHIPS: { cat: Category }[] = CHIP_GROUPS.flatMap((g) => g.cats.map((cat) => ({ cat })))
+
+function chipIcon(cat: Category): string {
+  return CATEGORY_ICONS[cat] ?? "📍"
+}
+
+// Leaf chip text: prefers the chip-specific `chipLabels` override (the legacy
+// dozen's short/plural phrasing, e.g. "Hotels"), falls back to the singular
+// `categories` badge text used elsewhere in the app (e.g. "Park").
+function chipText(cat: Category, loc: Locale): string {
+  const t = getTranslations(loc)
+  return t.chipLabels[cat] ?? t.categories[cat]
+}
+
+// Text blob representing "every category in this group" — reuses the same
+// regex-based category inference the server already runs on any chip label
+// (lib/llm.ts inferCategories matches each category's own hints independently,
+// so a blob of every member's chip text ends up classified as all of them, no
+// server-side change required). See docs: whole-group selection is transient
+// UI state only — it is NOT persisted as a distinct value (session-restore /
+// SEO deep-links / the settings default-chip still only know single
+// categories), so it degrades gracefully to "Alle" across a reload.
+function groupLabel(groupId: string, loc: Locale): string {
+  const group = CHIP_GROUPS.find((g) => g.id === groupId)
+  if (!group) return ""
+  return group.cats.map((cat) => chipText(cat, loc)).join(" ")
+}
 
 // Chip array index for a stable category key, or -1 / undefined when the category
 // has no chip (→ treated as "Alle"). The single place that converts the external
@@ -112,6 +160,23 @@ function chipIdxForCat(cat: Category | null | undefined): number | undefined {
   const i = CHIPS.findIndex((c) => c.cat === cat)
   return i >= 0 ? i : undefined
 }
+
+function groupIdForCat(cat: Category): string | undefined {
+  return CHIP_GROUPS.find((g) => g.cats.includes(cat))?.id
+}
+
+const CHIP_BASE_CLS  = "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50"
+const CHIP_ACTIVE_CLS = "bg-primary text-primary-foreground"
+const CHIP_IDLE_CLS   = "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+
+// ── Drill-in "bracket" container (visual grouping, Variante 1): the open
+// group's subcategories are drawn as belonging to ONE physical object — a
+// rounded, tinted pill that visually contains a dark, non-interactive group
+// label (icon + name) plus "Alle" and every subcategory chip. Only the "←"
+// chip stays outside; everything else is unmistakably "inside" the group. ──
+const BRACKET_CLS       = "flex-none flex items-center gap-1.5 bg-muted border border-border rounded-full pl-1 pr-1.5 py-1"
+const BRACKET_LABEL_CLS = "flex-none inline-flex items-center gap-1.5 bg-foreground text-background rounded-full px-3 py-1.5 text-xs font-bold whitespace-nowrap"
+const BRACKET_CHIP_IDLE_CLS = "bg-transparent text-foreground hover:bg-background/70"
 
 type Mode        = "text" | "nearby"
 type NearbyPhase = "idle" | "locating" | { district: string; lat: number; lon: number } | "error"
@@ -208,6 +273,15 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // null = "Alle" (all categories, the default) — chips are optional scope
   // shortcuts, not a mandatory pre-selection.
   const [selectedIdx,    setSelectedIdx]    = useState<number | null>(null)
+  // Whole-group selection ("Alle <Gruppe>", drill-in Konzept A) — mutually
+  // exclusive with selectedIdx (exactly one of the two is non-null, or both
+  // null for "Alle"). Transient: never persisted as a distinct value, see
+  // groupLabel's doc comment above.
+  const [selectedGroup,  setSelectedGroup]  = useState<string | null>(null)
+  // Which group's subcategory row is currently shown in place of the group
+  // list (null = collapsed, showing "Alle" + all group chips). Purely local
+  // UI state — not persisted, not read by any search/tracking logic.
+  const [openGroup,      setOpenGroup]      = useState<string | null>(null)
   const [suggestions,    setSuggestions]    = useState<UnifiedSuggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [highlightedIdx, setHighlightedIdx] = useState(-1)
@@ -224,6 +298,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const [amenityLocating,    setAmenityLocating]    = useState<AmenityType | null>(null)
   const [amenityLocateError, setAmenityLocateError] = useState<string | null>(null)
   const selectedIdxRef       = useRef<number | null>(null)
+  const selectedGroupRef     = useRef<string | null>(null)
   // True once the startup category has been definitively established — by a SEO
   // deep-link, a restored last search, the user's default-category setting, or a
   // manual chip pick. Gates the async default-chip effect so it applies the
@@ -259,6 +334,9 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // closure-captured snapshot.
   const localeRef         = useRef(locale)
 
+  // Precomputed (not looked up inline in JSX) so the drill-in chip row below
+  // is a plain conditional, not a closure-creating IIFE.
+  const openGroupDef = openGroup ? CHIP_GROUPS.find((g) => g.id === openGroup) ?? null : null
   const district = typeof nearbyPhase === "object" ? nearbyPhase.district : null
   // The green "at my location" badge reflects whether the map is currently centred on
   // the GPS fix. A pending pan (panPending) means the user has moved the search centre
@@ -491,9 +569,17 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     setVenuePicked(false)
   }
 
-  function chipLabel(idx: number | null, loc: string = locale): string | null {
+  function chipLabel(idx: number | null, loc: Locale = locale): string | null {
     if (idx === null) return null
-    return loc === "de" ? CHIPS[idx].de : CHIPS[idx].en
+    return chipText(CHIPS[idx].cat, loc)
+  }
+
+  // Resolves the active selection (single category OR whole group) to a query
+  // label string. Mirrors chipLabel's signature so existing call sites only
+  // need `selectedIdx` swapped for a no-arg call.
+  function selectionLabel(loc: Locale = locale): string | null {
+    if (selectedGroup) return groupLabel(selectedGroup, loc)
+    return chipLabel(selectedIdx, loc)
   }
 
   // Query for a coordinates-backed nearby search. With no chip, "in <district>"
@@ -516,9 +602,9 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
 
   // Keep the parent's "search here" query in sync with the visible chip selection.
   useEffect(() => {
-    onCategoryQueryChange?.(categoryQuery(chipLabel(selectedIdx)))
+    onCategoryQueryChange?.(categoryQuery(selectionLabel()))
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedIdx, locale])
+  }, [selectedIdx, selectedGroup, locale])
 
   function switchMode(next: Mode) {
     clearPickState()
@@ -663,8 +749,15 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       })
   }
 
-  function selectChip(idx: number | null) {
-    track("chip_select", { category: idx != null ? CHIPS[idx].cat : "alle", mode })
+  // Shared selection logic for both a single-category pick (idx set, groupId
+  // null) and a whole-group pick (groupId set, idx null) — exactly one is
+  // non-null, or both null for "Alle". Persistence/tracking call sites read
+  // `selectedIdx` only, so a whole-group pick degrades to "Alle" on reload —
+  // see groupLabel's doc comment.
+  function applySelection(idx: number | null, groupId: string | null) {
+    const label   = groupId ? groupLabel(groupId, locale) : chipLabel(idx)
+    const trackCat = groupId ? `group:${groupId}` : (idx != null ? CHIPS[idx].cat : "alle")
+    track("chip_select", { category: trackCat, mode })
     // Leaving amenity mode: a venue/"Alle" chip is single-select with the amenity
     // chips. If no search ends up firing (text mode, no location), the parent still
     // needs to clear amenityActive so the highlight returns to this chip.
@@ -677,7 +770,8 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     chipResolvedRef.current = true
     setSelectedIdx(idx)
     selectedIdxRef.current = idx
-    const label = chipLabel(idx)
+    setSelectedGroup(groupId)
+    selectedGroupRef.current = groupId
     // Highest-priority spatial intent: the user has panned the map (the "search
     // here" pill is showing, so getViewportOrigin returns the visible viewport) and
     // wants THIS area searched — even in nearby mode, where the active GPS fix would
@@ -690,7 +784,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     const chipIsUserTyped = !!location && location !== programmaticLocRef.current && !!chipTyped
     const vp = chipIsUserTyped ? null : venueViewportOrigin(getViewportOrigin?.())
     if (vp) {
-      track("viewport_chip_search", { category: idx != null ? CHIPS[idx].cat : "alle", radius_km: Math.round(vp.radiusKm) })
+      track("viewport_chip_search", { category: trackCat, radius_km: Math.round(vp.radiusKm) })
       if (mode === "nearby") exitNearbyState()
       pickedVenueRef.current = null
       setVenuePicked(false)
@@ -742,8 +836,42 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     }
   }
 
+  function selectChip(idx: number | null) {
+    applySelection(idx, null)
+  }
+
+  function selectGroupWhole(groupId: string) {
+    applySelection(null, groupId)
+  }
+
+  // Group chip tap (level 1 → level 2): opens the subcategory row. If the
+  // active selection isn't already inside this group, selecting the whole
+  // group is the natural default (mirrors tapping straight into "Alle X").
+  function openGroupChip(groupId: string) {
+    setOpenGroup(groupId)
+    const activeCat = selectedIdx != null ? CHIPS[selectedIdx].cat : null
+    const alreadyInGroup = selectedGroup === groupId || (activeCat != null && groupIdForCat(activeCat) === groupId)
+    if (!alreadyInGroup) {
+      selectGroupWhole(groupId)
+    } else if (amenityActive != null) {
+      // The existing selection already belongs to this group, so selection
+      // itself wouldn't change — but an amenity search (parking/WC) is
+      // currently showing. Re-apply the existing pick so opening the group
+      // also exits amenity mode and re-fires the venue search, exactly like
+      // tapping any other venue chip already does (applySelection always
+      // calls onExitAmenity). Without this, opening the group leaves the
+      // amenity results on screen with no way to tell they're now stale.
+      if (activeCat != null) selectChip(selectedIdx)
+      else selectGroupWhole(groupId)
+    }
+  }
+
+  function closeGroupChip() {
+    setOpenGroup(null)
+  }
+
   function buildQuery(loc: string) {
-    const label = chipLabel(selectedIdx)
+    const label = selectionLabel()
     // No chip → send the raw text; parseQuery scopes categories from the part
     // before "in" ("Sushi in Berlin") or falls back to all categories.
     if (!label) return loc.trim()
@@ -772,7 +900,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       // "searching around <district>". Without a fix an empty submit stays a no-op
       // (the button is disabled then; Enter can still reach this path).
       if (typeof nearbyPhase === "object" && showNearbyBadge) {
-        onSearch(nearbyQuery(chipLabel(selectedIdx), nearbyPhase.district), { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
+        onSearch(nearbyQuery(selectionLabel(), nearbyPhase.district), { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
       }
       return
     }
@@ -804,7 +932,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     // Default for raw free text: area search (conservative — never silently
     // routes typed text to a venue lookup; venues are reached via the dropdown).
     saveSearchInput({ cat: selectedIdx != null ? CHIPS[selectedIdx].cat : null, loc: location.trim() })
-    track("search_freetext", { category: selectedIdx != null ? CHIPS[selectedIdx].cat : "alle" })
+    track("search_freetext", { category: selectedGroup ? `group:${selectedGroup}` : (selectedIdx != null ? CHIPS[selectedIdx].cat : "alle") })
     onSearch(buildQuery(rest), undefined, quoted || undefined)
   }
 
@@ -838,7 +966,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     saveSearchInput({ cat: selectedIdx != null ? CHIPS[selectedIdx].cat : null, loc: newLocation.trim() })
     // A picked area is known to be a pure location — "in <display>" keeps an
     // all-categories search from re-parsing category terms out of city names.
-    onSearch(selectedIdx === null ? `in ${s.display}` : buildQuery(s.display), undefined, quoted || undefined)
+    onSearch(selectedIdx === null && selectedGroup === null ? `in ${s.display}` : buildQuery(s.display), undefined, quoted || undefined)
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -901,7 +1029,9 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           } else {
             // Read locale from a ref so a fix that arrives after the user switched
             // language still uses the current value.
-            const label = chipLabel(selectedIdxRef.current, localeRef.current)
+            const label = selectedGroupRef.current
+              ? groupLabel(selectedGroupRef.current, localeRef.current)
+              : chipLabel(selectedIdxRef.current, localeRef.current)
             onSearch(nearbyQuery(label, d), { lat, lon })
           }
         } catch {
@@ -1177,53 +1307,111 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
         <p role="alert" className="text-xs text-destructive">{t.chat.locationError}</p>
       )}
 
-      {/* ── Chip strip (B2, issue #28): two visually distinct rows so the three
-          kinds of control no longer read as one undifferentiated scroll.
-          Row 1 = venue categories ("what kind of place"); Row 2 = amenity
-          quick-find actions ("find parking / a WC at this location"). Layout only.
-          Chips are identified by their `cat` key, so `CHIPS` / `SETTING_CHIPS` order
-          is cosmetic now (no positional index contract); amenity chips and „Alle"
-          stay pseudo-chips outside `CHIPS`. Each row is its own single-select
-          radiogroup. ── */}
+      {/* ── Chip strip (B2, issue #28; drill-in "Konzept A" for categories added
+          v9.55): two visually distinct rows so the three kinds of control no
+          longer read as one undifferentiated scroll. Row 1 = venue categories
+          ("what kind of place"), two levels: level 1 shows "Alle" + one chip
+          per group; tapping a group chip REPLACES the row with that group's
+          subcategories ("Alle <Gruppe>" first, then each category) plus a
+          leading "←" chip back to level 1. Row 2 = amenity quick-find actions
+          (parking / WC). Layout only. Chips are identified by their `cat` key,
+          so `CHIPS` / `SETTING_CHIPS` order is cosmetic (no positional index
+          contract); amenity chips and „Alle" stay pseudo-chips outside `CHIPS`.
+          Each row is its own single-select radiogroup — the level switch does
+          not change that, it just changes which chips it contains. ── */}
 
-      {/* Row 1 — venue categories */}
+      {/* Row 1 — venue categories (drill-in) */}
       <div
         role="radiogroup"
         aria-label={t.chat.chipsGroupLabel}
         className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none] -mx-4 px-4"
       >
-        <button
-          key="all"
-          role="radio"
-          onClick={() => selectChip(null)}
-          disabled={isLoading}
-          aria-checked={amenityActive == null && selectedIdx === null}
-          className={cn(
-            "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
-            amenityActive == null && selectedIdx === null
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
-          )}
-        >
-          {t.chat.chipAll}
-        </button>
-        {CHIPS.map((chip, idx) => (
-          <button
-            key={chip.de}
-            role="radio"
-            onClick={() => selectChip(idx)}
-            disabled={isLoading}
-            aria-checked={amenityActive == null && idx === selectedIdx}
-            className={cn(
-              "shrink-0 text-xs px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap disabled:opacity-50",
-              amenityActive == null && idx === selectedIdx
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
-            )}
-          >
-            {chip.icon} {locale === "de" ? chip.de : chip.en}
-          </button>
-        ))}
+        {openGroup === null ? (
+          <>
+            <button
+              key="all"
+              role="radio"
+              onClick={() => selectChip(null)}
+              disabled={isLoading}
+              aria-checked={amenityActive == null && selectedIdx === null && selectedGroup === null}
+              className={cn(
+                CHIP_BASE_CLS,
+                amenityActive == null && selectedIdx === null && selectedGroup === null
+                  ? CHIP_ACTIVE_CLS
+                  : CHIP_IDLE_CLS,
+              )}
+            >
+              {t.chat.chipAll}
+            </button>
+            {CHIP_GROUPS.map((group) => {
+              const activeCat = selectedIdx != null ? CHIPS[selectedIdx].cat : null
+              const catInGroup = activeCat != null && group.cats.includes(activeCat)
+              const isActive = amenityActive == null && (selectedGroup === group.id || catInGroup)
+              const groupText = locale === "de" ? group.de : group.en
+              const label = catInGroup ? `${groupText} · ${chipText(activeCat!, locale)}` : groupText
+              return (
+                <button
+                  key={group.id}
+                  role="radio"
+                  onClick={() => openGroupChip(group.id)}
+                  disabled={isLoading}
+                  aria-checked={isActive}
+                  className={cn(CHIP_BASE_CLS, isActive ? CHIP_ACTIVE_CLS : CHIP_IDLE_CLS)}
+                >
+                  {group.icon} {label} <span aria-hidden="true">›</span>
+                </button>
+              )
+            })}
+          </>
+        ) : openGroupDef ? (
+          <>
+            <button
+              key="back"
+              type="button"
+              onClick={closeGroupChip}
+              disabled={isLoading}
+              aria-label={t.chat.chipBack}
+              className={cn(CHIP_BASE_CLS, CHIP_IDLE_CLS, "font-semibold")}
+            >
+              ←
+            </button>
+            <div className={BRACKET_CLS}>
+              <span className={BRACKET_LABEL_CLS}>
+                {openGroupDef.icon} {locale === "de" ? openGroupDef.de : openGroupDef.en}
+              </span>
+              <button
+                key="group-all"
+                role="radio"
+                onClick={() => selectGroupWhole(openGroupDef.id)}
+                disabled={isLoading}
+                aria-checked={amenityActive == null && selectedGroup === openGroupDef.id}
+                className={cn(
+                  CHIP_BASE_CLS,
+                  amenityActive == null && selectedGroup === openGroupDef.id ? CHIP_ACTIVE_CLS : BRACKET_CHIP_IDLE_CLS,
+                )}
+              >
+                {t.chat.chipAll}
+              </button>
+              {openGroupDef.cats.map((cat) => {
+                const idx = chipIdxForCat(cat)
+                if (idx === undefined) return null
+                const isActive = amenityActive == null && selectedIdx === idx
+                return (
+                  <button
+                    key={cat}
+                    role="radio"
+                    onClick={() => selectChip(idx)}
+                    disabled={isLoading}
+                    aria-checked={isActive}
+                    className={cn(CHIP_BASE_CLS, isActive ? CHIP_ACTIVE_CLS : BRACKET_CHIP_IDLE_CLS)}
+                  >
+                    {chipIcon(cat)} {chipText(cat, locale)}
+                  </button>
+                )
+              })}
+            </div>
+          </>
+        ) : null}
       </div>
 
       {/* Row 2 — amenity quick-find actions (parking / WC). The labelled lead-in

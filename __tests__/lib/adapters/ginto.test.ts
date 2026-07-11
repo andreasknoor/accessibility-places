@@ -264,3 +264,63 @@ describe("Ginto sourceRecord metadata", () => {
     expect(places[0].gintoUrl).toBe("https://www.ginto.guide/entries/abc-123")
   })
 })
+
+// ─── outgoing category filter ─────────────────────────────────────────────────
+
+function sentCategories(): unknown {
+  const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>
+  const body = JSON.parse(fetchMock.mock.calls[0][1].body as string)
+  return body.variables.categories
+}
+
+describe("Ginto outgoing category filter", () => {
+  it("maps an everyday category to its Ginto key (pharmacy → pharmacy)", async () => {
+    mockFetch(BASE_NODE)
+    await fetchGinto({ ...BASE_PARAMS, categories: ["pharmacy"] })
+    expect(sentCategories()).toEqual(["pharmacy"])
+  })
+
+  it("maps doctors to Ginto's doctor key", async () => {
+    mockFetch(BASE_NODE)
+    await fetchGinto({ ...BASE_PARAMS, categories: ["doctors"] })
+    expect(sentCategories()).toEqual(["doctor"])
+  })
+
+  it("fans zoo out to zoo + aquarium", async () => {
+    mockFetch(BASE_NODE)
+    await fetchGinto({ ...BASE_PARAMS, categories: ["zoo"] })
+    expect(sentCategories()).toEqual(["zoo", "aquarium"])
+  })
+
+  it("deduplicates shared Ginto keys (cafe + bar → one restaurant)", async () => {
+    mockFetch(BASE_NODE)
+    await fetchGinto({ ...BASE_PARAMS, categories: ["cafe", "bar"] })
+    expect(sentCategories()).toEqual(["restaurant"])
+  })
+
+  it("sends no category filter for an all-categories search", async () => {
+    mockFetch(BASE_NODE)
+    await fetchGinto({ ...BASE_PARAMS, categories: [] })
+    expect(sentCategories()).toBeUndefined()
+  })
+
+  it("skips the call entirely when no requested category maps to Ginto (chemist)", async () => {
+    mockFetch(BASE_NODE)
+    const places = await fetchGinto({ ...BASE_PARAMS, categories: ["chemist"] })
+    expect(places).toEqual([])
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+  })
+
+  it("maps park to its own Ginto category key (no longer bucketed under attraction)", async () => {
+    mockFetch(BASE_NODE)
+    await fetchGinto({ ...BASE_PARAMS, categories: ["park"] })
+    expect(sentCategories()).toEqual(["park"])
+  })
+
+  it("skips the call for a category with no Ginto mapping yet (swimming_pool)", async () => {
+    mockFetch(BASE_NODE)
+    const places = await fetchGinto({ ...BASE_PARAMS, categories: ["swimming_pool"] })
+    expect(places).toEqual([])
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+  })
+})
