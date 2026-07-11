@@ -173,8 +173,14 @@ const CHIP_IDLE_CLS   = "bg-muted text-muted-foreground hover:bg-muted/80 hover:
 // group's subcategories are drawn as belonging to ONE physical object — a
 // rounded, tinted pill that visually contains a dark, non-interactive group
 // label (icon + name) plus "Alle" and every subcategory chip. Only the "←"
-// chip stays outside; everything else is unmistakably "inside" the group. ──
-const BRACKET_CLS       = "flex-none flex items-center gap-1.5 bg-muted border border-border rounded-full pl-1 pr-1.5 py-1"
+// chip stays outside; everything else is unmistakably "inside" the group.
+// Deliberately NO vertical padding here: the chips/label inside already
+// carry their own py-1.5 (CHIP_BASE_CLS / BRACKET_LABEL_CLS) — adding more
+// on the wrapper would stack on top of that and make the whole chip row
+// visibly taller only while a group is open (the row height jump this
+// comment is here to prevent from regressing). Horizontal padding is fine:
+// it doesn't affect row height. ──
+const BRACKET_CLS       = "flex-none flex items-center gap-1.5 bg-muted border border-border rounded-full pl-1 pr-1.5"
 const BRACKET_LABEL_CLS = "flex-none inline-flex items-center gap-1.5 bg-foreground text-background rounded-full px-3 py-1.5 text-xs font-bold whitespace-nowrap"
 const BRACKET_CHIP_IDLE_CLS = "bg-transparent text-foreground hover:bg-background/70"
 
