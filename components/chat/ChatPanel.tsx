@@ -7,7 +7,7 @@ import { useTranslations, useLocale, getTranslations, type Locale } from "@/lib/
 import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { cn } from "@/lib/utils"
-import { extractQuotedName } from "@/lib/llm"
+import { extractQuotedName, parseQuery } from "@/lib/llm"
 import { loadSettings, legacyChipIdxToCat } from "@/lib/settings"
 import { isReturningNow, loadSearchRun, loadActiveMode, saveNearbyLocation, loadNearbyLocation, saveSearchInput, loadSearchInput, clearSearchInput } from "@/lib/session-restore"
 import { getCurrentPosition, isGeolocationAvailable, watchPosition, clearWatchPosition, type GeoWatchId } from "@/lib/native/geolocation"
@@ -945,9 +945,43 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     }
     // Default for raw free text: area search (conservative — never silently
     // routes typed text to a venue lookup; venues are reached via the dropdown).
-    saveSearchInput({ cat: selectedIdx != null ? CHIPS[selectedIdx].cat : null, loc: location.trim() })
-    track("search_freetext", { category: selectedGroup ? `group:${selectedGroup}` : (selectedIdx != null ? CHIPS[selectedIdx].cat : "alle") })
-    onSearch(buildQuery(rest), undefined, quoted || undefined)
+    // Build the query with the CURRENT chip selection before touching any chip
+    // state below — buildQuery's typed-text-wins guard depends on the query
+    // text, not on chip state, but re-deriving it after a state change could
+    // still double-prefix a query that has no "in" of its own.
+    const builtQuery = buildQuery(rest)
+
+    // Sync the chip display to what this query will actually search server-side
+    // (lib/llm's parseQuery — the exact function the API route also calls, so
+    // no risk of drifting from what the server infers) — otherwise a typed
+    // category word ("Restaurants in Berlin Charlottenburg") leaves the chip
+    // row showing "Alle" while the results are already filtered to Restaurant.
+    // Only representable outcomes get a chip: exactly one category → its chip;
+    // exactly one group's full member set → that group; anything else (no
+    // hint matched, or a multi-category mix with no matching group) → "Alle",
+    // same as today.
+    const { categories: parsedCategories } = parseQuery(builtQuery)
+    let targetIdx: number | null = null
+    let targetGroup: string | null = null
+    if (parsedCategories.length === 1) {
+      const idx = chipIdxForCat(parsedCategories[0])
+      if (idx !== undefined) targetIdx = idx
+    } else if (parsedCategories.length > 1) {
+      const set = new Set(parsedCategories)
+      const matchedGroup = CHIP_GROUPS.find(
+        (g) => g.cats.length === parsedCategories.length && g.cats.every((c) => set.has(c)),
+      )
+      if (matchedGroup) targetGroup = matchedGroup.id
+    }
+    setSelectedIdx(targetIdx)
+    selectedIdxRef.current = targetIdx
+    setSelectedGroup(targetGroup)
+    selectedGroupRef.current = targetGroup
+    setOpenGroup(null)
+
+    saveSearchInput({ cat: targetIdx != null ? CHIPS[targetIdx].cat : null, loc: location.trim() })
+    track("search_freetext", { category: targetGroup ? `group:${targetGroup}` : (targetIdx != null ? CHIPS[targetIdx].cat : "alle") })
+    onSearch(builtQuery, undefined, quoted || undefined)
   }
 
   function selectSuggestion(s: UnifiedSuggestion) {

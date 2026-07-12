@@ -1334,3 +1334,73 @@ describe("ChatPanel drill-in chips — reopening a group while an amenity search
     expect(onSearch).toHaveBeenCalledWith(expect.stringMatching(/Hotel/), { lat: 52.5, lon: 13.4 })
   })
 })
+
+// ─── Chip display sync with typed free text (regression) ────────────────────
+// Typing a category word directly into the field (no chip click) previously
+// left the chip row showing "Alle" even though the server-side parseQuery
+// filters the results to a specific category — a visible lie about what was
+// actually searched. submit() now re-derives the same categories client-side
+// (via the shared lib/llm parseQuery) and syncs the chip display to match.
+
+describe("ChatPanel chip sync with typed free text", () => {
+  it("activates the matching single-category chip after a plain-text submit", () => {
+    const onSearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "Restaurants in Berlin Charlottenburg" } })
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+    expect(onSearch).toHaveBeenCalledWith("Restaurants in Berlin Charlottenburg", undefined, undefined)
+
+    const gastroChip = screen.getAllByRole("radio").find((b) => b.textContent?.includes("Gastronomie"))!
+    expect(gastroChip).toHaveClass("bg-primary")
+    expect(gastroChip.textContent).toMatch(/Restaurants/)
+  })
+
+  it("activates the matching whole-group chip when every member category is mentioned", () => {
+    const onSearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} isLoading={false} initialMode="text" />)
+    // Concatenation of every "Unterkunft" member's own chip label — the same
+    // mechanism ChatPanel's own groupLabel() uses for "Alle <Gruppe>".
+    fireEvent.change(getInput(), { target: { value: "Hotels Hostels Ferienwohnungen Campingplätze in Köln" } })
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+
+    const stayChip = screen.getAllByRole("radio").find((b) => b.textContent?.includes("Unterkunft"))!
+    expect(stayChip).toHaveClass("bg-primary")
+  })
+
+  it("falls back to 'Alle' for an ambiguous multi-category query with no matching group", () => {
+    const onSearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "Restaurants und Cafés in Hamburg" } })
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+
+    const alleChip = screen.getAllByRole("radio").find((b) => b.textContent?.includes("Alle"))!
+    expect(alleChip).toHaveClass("bg-primary")
+  })
+
+  it("re-syncs off a stale chip when typed 'in'-structured text overrides it with a different category", () => {
+    // Companion to the existing "typed query wins" test: the query text was
+    // already correct (Arzt, not Hotels), but the chip used to stay stuck on
+    // the old "Hotels" pick — now it follows the text that actually ran.
+    const onSearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} isLoading={false} initialMode="text" />)
+    openChipGroup("Unterkunft")
+    fireEvent.click(screen.getAllByRole("radio").find((b) => b.textContent?.includes("Hotels"))!)
+    fireEvent.change(getInput(), { target: { value: "Arzt in Frankenthal" } })
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+    expect(onSearch).toHaveBeenCalledWith("Arzt in Frankenthal", undefined, undefined)
+
+    const healthChip = screen.getAllByRole("radio").find((b) => b.textContent?.includes("Gesundheit"))!
+    expect(healthChip).toHaveClass("bg-primary")
+    expect(healthChip.textContent).toMatch(/Arztpraxen/)
+  })
+
+  it("keeps 'Alle' active when no category hint matches the typed text", () => {
+    const onSearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "Berlin Mitte" } })
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+
+    const alleChip = screen.getAllByRole("radio").find((b) => b.textContent?.includes("Alle"))!
+    expect(alleChip).toHaveClass("bg-primary")
+  })
+})
