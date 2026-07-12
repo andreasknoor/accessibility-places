@@ -40,6 +40,12 @@ describe("buildOverpassQuery", () => {
     expect(q).toContain("13.405")
   })
 
+  it("caps results at 2000, not 200 — 200 silently truncated even a default-radius single-category search in a dense city (v9.68)", () => {
+    const q = buildOverpassQuery(BASE_PARAMS)
+    expect(q).toContain("out 2000 center tags;")
+    expect(q).not.toContain("out 200 center tags;")
+  })
+
   it("uses regex filter for amenity values", () => {
     const q = buildOverpassQuery(BASE_PARAMS)
     expect(q).toContain("amenity~")
@@ -145,6 +151,12 @@ describe("buildOverpassQuery — placeSearch branch", () => {
     const q = buildOverpassQuery(PLACE_PARAMS)
     // 'H' → '[hH]', space passes through
     expect(q).toContain("[hH][oO][tT][eE][lL]")
+  })
+
+  it("caps results at 2000, not 200, matching the category-driven query's fix (v9.68)", () => {
+    const q = buildOverpassQuery(PLACE_PARAMS)
+    expect(q).toContain("out 2000 center tags;")
+    expect(q).not.toContain("out 200 center tags;")
   })
 
   it("uses the correct radius from radiusKm", () => {

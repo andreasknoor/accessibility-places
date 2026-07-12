@@ -60,7 +60,10 @@ export function buildOverpassQuery(params: SearchParams): string {
     const regex  = buildOverpassNameRegex(params.nameHint)
     const around = `(around:${r},${lat},${lon})`
     const nf     = `["name"~"${regex}"]`
-    return `[out:json][timeout:12];(node${nf}${around};way${nf}${around};relation${nf}${around};);out 200 center tags;`
+    // out 2000 — see the category-driven query below for why 200 was too low
+    // (kept in sync for defense-in-depth, though a name-regex match at a small
+    // radius rarely approaches even 200).
+    return `[out:json][timeout:12];(node${nf}${around};way${nf}${around};relation${nf}${around};);out 2000 center tags;`
   }
 
   // ── Category-driven query ─────────────────────────────────────────────────
@@ -122,7 +125,20 @@ export function buildOverpassQuery(params: SearchParams): string {
   if (clauses.length === 0) return ""
 
   // timeout:12 — fail fast so the parallel endpoint race can declare a winner.
-  return `[out:json][timeout:12];(${clauses.join("")});out 200 center tags;`
+  // out 2000 (was 200 until v9.68) — 200 was silently truncating even the
+  // app's own DEFAULT_RADIUS_KM=5 search for a single dense category: a live
+  // test against overpass-api.de found 2224 real "restaurant" elements within
+  // 5km of central Berlin, so out 200 discarded ~91% of raw candidates before
+  // matching/merging or the accessibility filter ever ran (issue found via a
+  // data-quality question, not a bug report). Matches the fix already applied
+  // to the sibling disabled-parking (out 2000) and standalone-WC (out 1000)
+  // queries below, which hit the identical failure mode earlier. 2000 doesn't
+  // fully close the gap at Berlin-density for a single popular category
+  // (2224 > 2000), but raising further risks the 20s client-side abort —
+  // out 5000 took ~14s for this one category alone in testing, and the
+  // all-categories query (39 unioned category tags in one request) is already
+  // materially slower than a single-category query at the same radius.
+  return `[out:json][timeout:12];(${clauses.join("")});out 2000 center tags;`
 }
 
 // ─── OSM tag → A11yValue mapping ──────────────────────────────────────────
