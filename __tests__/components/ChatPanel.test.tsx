@@ -544,6 +544,21 @@ describe("ChatPanel location token (search-row variant B)", () => {
     fireEvent.change(getInput(), { target: { value: "Berlin" } })
     expect(screen.queryByRole("button", { name: "Standort verwenden" })).not.toBeInTheDocument()
   })
+
+  it("the location token itself is a Tab-focusable/clickable button that re-runs the nearby search — not just reachable via Enter", async () => {
+    simulateGpsSuccess(48.14, 11.56, "Maxvorstadt")
+    const onSearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} isLoading={false} initialMode="text" />)
+    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
+    await act(() => vi.runAllTimersAsync())
+    onSearch.mockClear()
+
+    // The token's label (not its ✕) is its own accessible, clickable control —
+    // distinct from "Standort entfernen" (the ✕) — restoring the Tab-reachable
+    // affordance the removed "Suchen" button used to provide in this exact state.
+    fireEvent.click(screen.getByRole("button", { name: "Suche um Maxvorstadt" }))
+    expect(onSearch).toHaveBeenCalledWith("in Maxvorstadt", { lat: 48.14, lon: 11.56 })
+  })
 })
 
 // ─── initialChipCat / defaultChipCat restore ────────────────────────────────
@@ -968,6 +983,77 @@ describe("ChatPanel single-field UI", () => {
     rerender(<ChatPanel onSearch={vi.fn()} isLoading initialMode="text" />)
     expect(screen.queryByRole("button", { name: /Eingabe löschen/ })).not.toBeInTheDocument()
     expect(screen.getByRole("status", { name: "Suche läuft …" })).toBeInTheDocument()
+  })
+
+  it("Enter on desktop does NOT blur the input — keyboard users keep focus after a search (matchMedia mocked to desktop)", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "Berlin" } })
+    getInput().focus()
+    expect(document.activeElement).toBe(getInput())
+
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+    expect(document.activeElement).toBe(getInput())
+  })
+
+  it("Enter on mobile DOES blur the input, so the on-screen keyboard closes", () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: true, media: query, onchange: null,
+      addListener: () => {}, removeListener: () => {},
+      addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
+    }))
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "Berlin" } })
+    getInput().focus()
+
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+    expect(document.activeElement).not.toBe(getInput())
+  })
+
+  it("a blur→refocus within the close delay keeps the dropdown open (no stale-timer race)", async () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "x" } }) // 1 char — freetext row only, no fetch yet
+    expect(screen.getByRole("listbox")).toBeInTheDocument()
+
+    fireEvent.blur(getInput())
+    await act(() => vi.advanceTimersByTimeAsync(50))
+    expect(screen.getByRole("listbox")).toBeInTheDocument() // still open, close not yet due
+
+    fireEvent.focus(getInput()) // must cancel the pending close
+    await act(() => vi.advanceTimersByTimeAsync(100)) // past the original 150ms mark
+    expect(screen.getByRole("listbox")).toBeInTheDocument() // NOT slammed shut while focused
+  })
+
+  it("blurring away for real still closes the dropdown after the delay", async () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "x" } })
+    expect(screen.getByRole("listbox")).toBeInTheDocument()
+
+    fireEvent.blur(getInput())
+    await act(() => vi.advanceTimersByTimeAsync(150))
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+  })
+
+  it("blur resets aria-activedescendant along with the dropdown, even when a suggestion was highlighted", async () => {
+    mockFetch([area("Berlin")])
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "Ber" } })
+    await act(() => vi.runAllTimersAsync())
+    fireEvent.keyDown(getInput(), { key: "ArrowDown" })
+    expect(getInput()).toHaveAttribute("aria-activedescendant", "unified-opt-0")
+
+    fireEvent.blur(getInput())
+    await act(() => vi.advanceTimersByTimeAsync(150))
+
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+    expect(getInput()).not.toHaveAttribute("aria-activedescendant")
+    expect(document.getElementById("unified-opt-0")).toBeNull()
+  })
+
+  it("the 'accessible places' easter egg still opens the dev console on Enter (single check, now only in submit())", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "accessible places" } })
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+    expect(screen.getByText(/ACCESSIBLE PLACES/)).toBeInTheDocument()
   })
 })
 

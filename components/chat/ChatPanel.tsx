@@ -311,6 +311,11 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const chipResolvedRef      = useRef(false)
   const debounceRef          = useRef<ReturnType<typeof setTimeout>>(undefined)
   const suggestAbortRef      = useRef<AbortController>(undefined)
+  // Cancellable handle for onBlur's dropdown-close delay (see closeDropdown
+  // below) — without cancelling it, a blur→refocus within the 150ms window
+  // reopens the dropdown and then the stale timer immediately closes it again
+  // out from under the now-focused user.
+  const blurCloseRef         = useRef<ReturnType<typeof setTimeout>>(undefined)
   const locatingRef          = useRef(false)
   // Set when an amenity chip is tapped while a "Nearby" locate (handleLocate) is
   // already in flight (nearbyPhase === "locating") — e.g. tapping "In der Nähe
@@ -486,12 +491,13 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Stop watchPosition on unmount
+  // Stop watchPosition and any pending dropdown-close timer on unmount
   useEffect(() => {
     return () => {
       if (watchIdRef.current !== null) {
         clearWatchPosition(watchIdRef.current)
       }
+      clearTimeout(blurCloseRef.current)
     }
   }, [])
 
@@ -576,6 +582,27 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     programmaticLocRef.current = ""
     pickedVenueRef.current = null
     setVenuePicked(false)
+  }
+
+  // Dropdown close on blur: delayed (not immediate) so a mousedown on a
+  // dropdown row — which blurs the input just before its own click handler
+  // runs — doesn't close the dropdown out from under that click. Cancellable
+  // via blurCloseRef so a blur→refocus within the delay window (e.g. tapping
+  // another control and coming straight back) doesn't leave a stale timer
+  // that force-closes a dropdown the user just reopened. Also resets
+  // highlightedIdx, matching Escape's own close (line ~1041) — otherwise
+  // aria-activedescendant can keep pointing at a highlighted option's id
+  // after that option's <li> has unmounted.
+  function scheduleDropdownClose() {
+    clearTimeout(blurCloseRef.current)
+    blurCloseRef.current = setTimeout(() => {
+      setShowSuggestions(false)
+      setHighlightedIdx(-1)
+    }, 150)
+  }
+
+  function cancelDropdownClose() {
+    clearTimeout(blurCloseRef.current)
   }
 
   function chipLabel(idx: number | null, loc: Locale = locale): string | null {
@@ -898,9 +925,13 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     if (isLoading) return
     // No-submit-button redesign: submit() is now the only place a search
     // starts from (Enter, the freetext dropdown row, or — for the empty+GPS-fix
-    // case — Enter alone). Blur so the mobile keyboard closes and doesn't hide
-    // the results that are about to load; harmless when called from a mouse click.
-    inputRef.current?.blur()
+    // case — Enter alone). Blur on mobile only, so the on-screen keyboard closes
+    // and doesn't hide the results that are about to load. Desktop keyboard/
+    // screen-reader users reach submit() exclusively via Enter, and there is no
+    // on-screen keyboard to dismiss there — blurring would just drop focus to
+    // <body> with nothing to restore it, forcing a Tab/click back into the
+    // field to refine or re-run the query.
+    if (isMobile) inputRef.current?.blur()
     clearTimeout(debounceRef.current)
     suggestAbortRef.current?.abort()
     if (location.trim().toLowerCase() === "accessible places") {
@@ -1041,16 +1072,11 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
         return
       }
     }
-    if (e.key === "Enter") {
-      // Easter Egg #5: trigger DevConsole on Enter, not on every keystroke —
-      // on mobile the keyboard is still open when typing, so we wait for Enter.
-      if (location.trim().toLowerCase() === "accessible places") {
-        setShowDevConsole(true)
-        setLocation("")
-        return
-      }
-      submit()
-    }
+    // Easter Egg #5: the "accessible places" check lives in submit() itself
+    // (its own first branch) — submit() is called unconditionally here so
+    // there is exactly one copy of the check, reached whether or not the
+    // dropdown intercepted this Enter above.
+    if (e.key === "Enter") submit()
   }
 
   function handleLocate() {
@@ -1129,9 +1155,14 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // way for a mouse/touch user to trigger a search. `showSuggestions` is the
   // open/closed switch (set by onChange/onFocus/onBlur/Escape/selection/submit);
   // suggestion data arriving no longer opens or closes it (see the fetch effect).
+  // showDropdown reduces to `showSuggestions && freetextEligible`: `suggestions`
+  // can only be non-empty for a query of (quote-stripped) length >= 2, which
+  // always implies `freetextEligible` — onChange sets `location` and
+  // `showSuggestions` together, so there's no render where stale non-empty
+  // suggestions combine with showSuggestions=true and freetextEligible=false.
   const trimmedLocation = location.trim()
   const freetextEligible = trimmedLocation.length > 0
-  const showDropdown = showSuggestions && (freetextEligible || suggestions.length > 0)
+  const showDropdown = showSuggestions && freetextEligible
 
   return (
     <>
@@ -1177,23 +1208,36 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                 which would render this token dark inside the light UI. */}
             {showLocationToken && (
               <span
-                className="flex items-center gap-1.5 shrink-0 max-w-[60%] rounded-full border border-green-200 bg-green-50 text-green-700 pl-2 pr-0.5 py-0.5 text-xs font-medium"
-                title={t.chat.locationActive(district!)}
+                className="flex items-center gap-0.5 shrink-0 max-w-[60%] rounded-full border border-green-200 bg-green-50 text-green-700 pr-0.5 py-0.5 text-xs font-medium"
               >
+                {/* Re-runs the nearby search at the fix — the empty-field "Suchen"
+                    equivalent (submit()'s own empty+GPS-fix branch), now reachable
+                    as a labelled, Tab-focusable/clickable control instead of only
+                    via Enter (the docked "Suchen" button used to be enabled, and
+                    therefore Tab-reachable, in exactly this state). */}
                 {/* Live pulse — the learned "live location" metaphor. The GPS-active
                     signal lives in this dot + the short label; the district is a
                     de-emphasised suffix, dropped entirely on narrow screens (the
                     tooltip/SR text above keeps the full wording). */}
                 {/* blue-500 = the map's user-location dot (#3b82f6, MapView) — the
                     pulse IS that dot, so the two surfaces read as one signal. */}
-                <span className="relative flex w-2 h-2 shrink-0" aria-hidden>
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75 animate-ping motion-reduce:animate-none" />
-                  <span className="relative inline-flex w-2 h-2 rounded-full bg-blue-500" />
-                </span>
-                <span className="truncate">
-                  {t.chat.nearbyAction}
-                  <span className="hidden sm:inline font-normal text-green-700/60"> · {district}</span>
-                </span>
+                <button
+                  type="button"
+                  onClick={submit}
+                  disabled={isLoading}
+                  title={t.chat.locationActive(district!)}
+                  aria-label={t.chat.locationActive(district!)}
+                  className="flex items-center gap-1.5 min-w-0 rounded-full pl-2 pr-1 py-0.5 hover:bg-green-100 transition-colors disabled:opacity-50 disabled:hover:bg-transparent"
+                >
+                  <span className="relative flex w-2 h-2 shrink-0" aria-hidden>
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75 animate-ping motion-reduce:animate-none" />
+                    <span className="relative inline-flex w-2 h-2 rounded-full bg-blue-500" />
+                  </span>
+                  <span className="truncate">
+                    {t.chat.nearbyAction}
+                    <span className="hidden sm:inline font-normal text-green-700/60"> · {district}</span>
+                  </span>
+                </button>
                 <button
                   type="button"
                   onClick={clearLocationToken}
@@ -1219,8 +1263,8 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                 setShowSuggestions(v.trim().length > 0)
               }}
               onKeyDown={handleKeyDown}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-              onFocus={() => { if (freetextEligible || suggestions.length > 0) setShowSuggestions(true) }}
+              onBlur={scheduleDropdownClose}
+              onFocus={() => { cancelDropdownClose(); if (freetextEligible) setShowSuggestions(true) }}
               placeholder={showLocationToken ? t.chat.nearbyTokenPlaceholder : t.chat.unifiedPlaceholder}
               disabled={isLoading}
               autoFocus={autoFocus}
