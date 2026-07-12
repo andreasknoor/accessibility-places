@@ -4,7 +4,7 @@
 
 ## Place pin markers
 
-Each result renders as a teardrop pin (`svgMarker`) whose circular head is filled with the confidence colour (green/amber/red) and shows the category emoji from `CATEGORY_ICONS`; the tip is anchored exactly on the coordinate. Selected markers scale up. This replaced the uniform ♿ circle once the app grew to 28 categories — a single wheelchair glyph no longer disambiguated venue type.
+Each result renders as a teardrop pin (`svgMarker`) whose circular head is filled with the confidence colour (vivid signal green/yellow/red — tile contrast comes from the thick white outline, not from dark fills) and shows the category emoji from `CATEGORY_ICONS`; the tip is anchored exactly on the coordinate. Selected markers scale up and get a dark slate ring (not blue — that would collide with the parking marker colour). This replaced the uniform ♿ circle once the app grew to 28 categories — a single wheelchair glyph no longer disambiguated venue type.
 
 ## Marker clustering
 

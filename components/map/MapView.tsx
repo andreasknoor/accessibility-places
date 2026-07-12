@@ -114,15 +114,18 @@ interface Props {
   onPopupOpenChange?: (open: boolean) => void
 }
 
+// "Pop" scale: maximum-saturation signal colours; marker/tile contrast comes
+// from the thick white pin outline (see svgMarker), not from dark fills.
 const CONFIDENCE_COLORS = {
-  high:   "#22c55e",   // green-500 — for markers, bars, decorative dots (vivid)
-  medium: "#eab308",   // yellow-500
-  low:    "#ef4444",   // red-500
+  high:   "#00c853",   // signal green — for markers, bars, decorative dots (vivid)
+  medium: "#ffd600",   // signal yellow
+  low:    "#ff1744",   // signal red
 }
 
 // WCAG AA-passing colours for confidence text on a white popup background.
-// markerColor() values (#22c55e/#eab308/#ef4444) fail 4.5:1 on white, so
-// text uses a darker shade while dots/bars keep the vivid marker colour.
+// markerColor() values (#00c853/#ffd600/#ff1744) fail 4.5:1 on white, so
+// text uses a darker shade of the same hue family while dots/bars keep the
+// vivid marker colour.
 const CONFIDENCE_TEXT_COLORS = {
   high:   "#15803d",   // green-700  5.02:1 ✓
   medium: "#a16207",   // amber-700  4.92:1 ✓
@@ -205,11 +208,12 @@ function popupRow(label: string, value: string, opts: { color?: string; dot?: st
 }
 
 // Parking marker colours per tier.
-// "strong" (reserved disabled bays) = blue "P"; "weak" (wheelchair=yes lot) = amber with dark "P"
-// (white-on-amber fails contrast — this is an accessibility app).
+// "strong" (reserved disabled bays) = signal blue "P"; "weak" (wheelchair=yes
+// lot) = signal orange with dark "P" (white-on-orange fails contrast — this is
+// an accessibility app).
 const PARKING_TIER_STYLE: Record<AmenityTier, { fill: string; text: string }> = {
-  strong: { fill: "#1d4ed8", text: "white"   }, // blue-700, white P
-  weak:   { fill: "#eab308", text: "#1f2937" }, // yellow-500, dark P
+  strong: { fill: "#2979ff", text: "white"   }, // signal blue, white P
+  weak:   { fill: "#ff9100", text: "#1f2937" }, // signal orange, dark P
 }
 
 function svgParkingMarker(tier: AmenityTier = "strong") {
@@ -220,20 +224,21 @@ function svgParkingMarker(tier: AmenityTier = "strong") {
   </svg>`
 }
 
-// WC marker colours encode the HOST type (not the tier): standalone public WCs
-// = green, WCs inside a venue = violet — analogous to the parking blue/yellow
-// split. The tier (designated vs. yes) is shown in the popup instead. Each has a
-// darker border of its own hue so it reads as a solid badge on the map tiles.
+// WC marker colours encode the HOST type (not the tier) within one magenta
+// family: standalone public WCs = solid magenta, WCs inside a venue = light
+// fill with a magenta border ("solid = public, light = inside a building").
+// The tier (designated vs. yes) is shown in the popup instead. `accent` is the
+// popup bar/badge colour — the venue fill is too light to serve as an accent.
 type ToiletHost = "standalone" | "venue"
-const TOILET_HOST_STYLE: Record<ToiletHost, { fill: string; stroke: string }> = {
-  standalone: { fill: "#166534", stroke: "#14532d" }, // green-800 / green-900 border
-  venue:      { fill: "#7c3aed", stroke: "#5b21b6" }, // violet-600 / violet-800 border
+const TOILET_HOST_STYLE: Record<ToiletHost, { fill: string; stroke: string; strokeW: number; accent: string }> = {
+  standalone: { fill: "#be185d", stroke: "#9d174d", strokeW: 3,   accent: "#be185d" }, // pink-700 / pink-800 border
+  venue:      { fill: "#fce7f3", stroke: "#be185d", strokeW: 2.5, accent: "#be185d" }, // pink-100 / pink-700 border
 }
 
 function svgToiletMarker(host: ToiletHost = "standalone") {
-  const { fill, stroke } = TOILET_HOST_STYLE[host]
+  const { fill, stroke, strokeW } = TOILET_HOST_STYLE[host]
   return `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 30 30">
-    <rect x="1.5" y="1.5" width="27" height="27" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="3"/>
+    <rect x="1.5" y="1.5" width="27" height="27" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="${strokeW}"/>
     <text x="15" y="22" text-anchor="middle" font-size="16">🚻</text>
   </svg>`
 }
@@ -246,8 +251,11 @@ const PROGRAMMATIC_MOVE_WINDOW_MS = 700
 function svgMarker(color: string, selected: boolean, emoji: string) {
   const w      = selected ? 41 : 30
   const h      = selected ? 54 : 39
-  const stroke = selected ? "#1d4ed8" : "#fff"
-  const sw     = selected ? 2.5 : 1.5
+  // Selection ring is dark slate (not blue — would collide with the parking
+  // marker blue). The thick white outline on unselected pins is what separates
+  // the vivid fills from same-hue map tiles (forest green, water blue).
+  const stroke = selected ? "#0f172a" : "#fff"
+  const sw     = 2.5
   // Pin shape: circular head (center ≈ 13,12) tapering to a tip at (13,32)
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 26 34">
     <path d="M13,1.5 C7.2,1.5 2.5,6.2 2.5,12 C2.5,19.5 13,32.5 13,32.5 C13,32.5 23.5,19.5 23.5,12 C23.5,6.2 18.8,1.5 13,1.5 Z"
@@ -798,7 +806,7 @@ export default function MapView({
     for (const spot of toiletSpots ?? []) {
       const tier: AmenityTier = spot.tier === "weak" ? "weak" : "strong"
       const host: ToiletHost  = spot.host?.kind === "venue" ? "venue" : "standalone"
-      const accent = TOILET_HOST_STYLE[host].fill
+      const accent = TOILET_HOST_STYLE[host].accent
       const icon = L.divIcon({
         html:        svgToiletMarker(host),
         className:   "",
@@ -1337,7 +1345,7 @@ export default function MapView({
                 className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
                 <span className={`w-[0.95rem] h-[0.95rem] rounded-[0.2rem] border-[1.5px] flex items-center justify-center shrink-0 transition-colors
-                  ${showToilets ? "bg-green-700 border-green-700" : "border-current"}`}>
+                  ${showToilets ? "bg-pink-700 border-pink-700" : "border-current"}`}>
                   {showToilets && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3.5} aria-hidden />}
                 </span>
                 <span aria-hidden>🚻</span>
