@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, Fragment } from "react"
 import { Search, Loader2, LocateFixed, X, Coffee, UtensilsCrossed, Beer, BookOpen, Hotel, Landmark, Film, Library, GalleryHorizontal, Star, IceCream, MapPin } from "lucide-react"
 import { track } from "@/lib/analytics"
-import { Button } from "@/components/ui/button"
 import { useTranslations, useLocale, getTranslations, type Locale } from "@/lib/i18n"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { useIsMobile } from "@/hooks/useIsMobile"
@@ -531,7 +530,13 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   }, [exitNearbyTrigger])
 
 
-  // Fetch unified autocomplete suggestions (areas + venues, Photon via backend proxy)
+  // Fetch unified autocomplete suggestions (areas + venues, Photon via backend proxy).
+  // Deliberately does NOT toggle `showSuggestions` — dropdown visibility is now
+  // fully decoupled from fetch results (no-submit-button redesign): the always-
+  // present freetext row must stay visible whether or not the API returns
+  // anything, so opening/closing is owned by onChange/onFocus/onBlur/Escape/
+  // selection/submit instead. This effect only ever updates the `suggestions`
+  // data array.
   useEffect(() => {
     // Skip fetch for programmatically set values (restore / suggestion pick) —
     // stays suppressed across re-renders until the user actually edits the field.
@@ -542,7 +547,6 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
 
     if (query.length < 2) {
       setSuggestions([])
-      setShowSuggestions(false)
       return
     }
 
@@ -558,7 +562,6 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
         if (!res.ok) return
         const data: UnifiedSuggestion[] = await res.json()
         setSuggestions(data)
-        setShowSuggestions(data.length > 0)
         setHighlightedIdx(-1)
       } catch { /* ignore — covers AbortError and network errors */ }
     }, 300)
@@ -893,6 +896,11 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
 
   function submit() {
     if (isLoading) return
+    // No-submit-button redesign: submit() is now the only place a search
+    // starts from (Enter, the freetext dropdown row, or — for the empty+GPS-fix
+    // case — Enter alone). Blur so the mobile keyboard closes and doesn't hide
+    // the results that are about to load; harmless when called from a mouse click.
+    inputRef.current?.blur()
     clearTimeout(debounceRef.current)
     suggestAbortRef.current?.abort()
     if (location.trim().toLowerCase() === "accessible places") {
@@ -976,7 +984,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (showSuggestions && suggestions.length > 0) {
+    if (showDropdown) {
       if (e.key === "ArrowDown") {
         e.preventDefault()
         setHighlightedIdx((i) => Math.min(i + 1, suggestions.length - 1))
@@ -1079,27 +1087,36 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const firstAreaIdx  = suggestions.findIndex((s) => s.kind === "area")
   const firstVenueIdx = suggestions.findIndex((s) => s.kind === "venue")
 
+  // No-submit-button redesign: the dropdown's first row is always "run this
+  // input as typed" (mirrors Enter, which already falls through to submit()
+  // whenever nothing is highlighted — see handleKeyDown). It renders whenever
+  // there is text to search for, independent of whether the suggest API
+  // returned anything — an empty/failed fetch must not remove the only visible
+  // way for a mouse/touch user to trigger a search. `showSuggestions` is the
+  // open/closed switch (set by onChange/onFocus/onBlur/Escape/selection/submit);
+  // suggestion data arriving no longer opens or closes it (see the fetch effect).
+  const trimmedLocation = location.trim()
+  const freetextEligible = trimmedLocation.length > 0
+  const showDropdown = showSuggestions && (freetextEligible || suggestions.length > 0)
+
   return (
     <>
     {showDevConsole && <DevConsole onClose={() => setShowDevConsole(false)} />}
     <div className="flex flex-col gap-3 p-4 border-b border-border bg-card relative z-20">
 
-      {/* ── Unified search field (always visible). The old top-level mode tabs
-          (Überall / In der Nähe) are gone — the "nearby" intent is now the inline
-          ⌖ button below; typing/picking a suggestion expresses "search there".
-          Internal `mode` state is unchanged (issue #28). ── */}
-      <div className="flex items-center">
-          {/* Unified search input — the single answer to "where is searched":
-              typed text, a picked venue, or the green GPS location token
-              (search-row variant B). The Suchen button docks directly onto the
-              field; the old standalone ⌖ button between them is gone — its
-              intent lives on as the labelled inline "In der Nähe" action that
-              only renders while the field is empty, so it can never destroy
-              typed text. */}
-          <div className="relative flex-1 min-w-0">
+      {/* ── Unified search field (always visible). No submit button (Google Maps
+          model, replacing the earlier docked "Suchen" button): a search starts
+          from Enter, the always-present "search for <text>" dropdown row, a
+          venue/area suggestion, a category chip, or "Hier suchen" on the map —
+          submit() is the single function all of these funnel into. The old
+          top-level mode tabs (Überall / In der Nähe) are gone too — the
+          "nearby" intent is the inline ⌖ action below; typing/picking a
+          suggestion expresses "search there". Internal `mode` state is
+          unchanged (issue #28). ── */}
+      <div className="relative">
             {inputPulse && (
               <span
-                className="absolute inset-0 rounded-l-md ring-2 ring-primary animate-pulse pointer-events-none z-10"
+                className="absolute inset-0 rounded-md ring-2 ring-primary animate-pulse pointer-events-none z-10"
                 style={{ animationIterationCount: 2 }}
                 onAnimationEnd={() => setInputPulse(false)}
                 aria-hidden
@@ -1107,7 +1124,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             )}
             <div
               className={cn(
-                "flex items-center gap-1.5 h-[38px] w-full rounded-l-md border border-r-0 bg-background pl-3 pr-1.5",
+                "flex items-center gap-1.5 h-[38px] w-full rounded-md border bg-background pl-3 pr-1.5",
                 "focus-within:ring-1 focus-within:ring-ring",
                 isMobile ? "border-primary" : "border-input",
                 isLoading && "opacity-50",
@@ -1157,18 +1174,34 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             <input
               ref={inputRef}
               value={location}
-              onChange={(e) => { clearPickState(); setLocation(e.target.value); setHighlightedIdx(-1) }}
+              onChange={(e) => {
+                clearPickState()
+                const v = e.target.value
+                setLocation(v)
+                setHighlightedIdx(-1)
+                // Open (or close, if cleared back to empty) the dropdown immediately —
+                // don't wait for the suggest fetch, so the freetext row is available
+                // to a mouse/touch user the instant there's something to search for.
+                setShowSuggestions(v.trim().length > 0)
+              }}
               onKeyDown={handleKeyDown}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-              onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+              onFocus={() => { if (freetextEligible || suggestions.length > 0) setShowSuggestions(true) }}
               placeholder={showLocationToken ? t.chat.nearbyTokenPlaceholder : t.chat.unifiedPlaceholder}
               disabled={isLoading}
               autoFocus={autoFocus}
+              // "search" so mobile keyboards label the return key accordingly —
+              // there is no other submit affordance left to label.
+              enterKeyHint="search"
               role="combobox"
-              aria-expanded={showSuggestions && suggestions.length > 0}
+              aria-expanded={showDropdown}
               aria-controls="unified-suggest-list"
               aria-autocomplete="list"
-              aria-activedescendant={highlightedIdx >= 0 ? `unified-opt-${highlightedIdx}` : undefined}
+              aria-activedescendant={
+                highlightedIdx >= 0 ? `unified-opt-${highlightedIdx}`
+                : showDropdown && freetextEligible ? "unified-opt-freetext"
+                : undefined
+              }
               className={cn(
                 // text-base (16px) on mobile prevents iOS Safari/WKWebView from
                 // auto-zooming the viewport on focus (it zooms any input < 16px and
@@ -1182,7 +1215,16 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                 "placeholder:text-muted-foreground focus:outline-none disabled:opacity-50",
               )}
             />
-            {location && (
+            {/* Right-side field action — exactly one of three, in priority order:
+                a spinner while the search that just started is in flight (no
+                submit button left to carry that state); else the ✕ once there's
+                text to clear; else the labelled inline "In der Nähe" GPS action,
+                which only renders on a genuinely empty field (with text present
+                the ✕ takes its place, so tapping it can never silently discard a
+                typed query — the old ⌖ bug). */}
+            {isLoading ? (
+              <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin text-muted-foreground" aria-hidden />
+            ) : location ? (
               <button
                 type="button"
                 onMouseDown={(e) => {
@@ -1199,12 +1241,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
               >
                 <X className="w-3.5 h-3.5" aria-hidden />
               </button>
-            )}
-            {/* Labelled inline "In der Nähe" action — the GPS entry point. Only
-                rendered while the field is empty and no token is showing: with
-                text present the ✕ takes its place, so tapping it can never
-                silently discard a typed query (old ⌖ bug). */}
-            {!location && !showLocationToken && (
+            ) : !showLocationToken ? (
               <button
                 type="button"
                 onClick={onLocateTap}
@@ -1218,16 +1255,48 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                   : <LocateFixed className="w-3.5 h-3.5" aria-hidden />}
                 {t.chat.nearbyAction}
               </button>
-            )}
+            ) : null}
             </div>
 
-            {/* Grouped autocomplete dropdown: areas first, then venues */}
-            {showSuggestions && suggestions.length > 0 && (
+            {/* Grouped autocomplete dropdown: an always-present "search for <text>"
+                row first (the mouse/touch equivalent of Enter — see submit()),
+                then areas, then venues. The freetext row renders independent of
+                the suggest API result, so a mouse/touch user always has a visible
+                way to trigger a search even with no suggestions (empty result,
+                failed fetch, or a query too short to look up). */}
+            {showDropdown && (
               <ul
                 role="listbox"
                 id="unified-suggest-list"
                 className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg overflow-hidden"
               >
+                {freetextEligible && (
+                  <li
+                    id="unified-opt-freetext"
+                    role="option"
+                    aria-selected={highlightedIdx === -1}
+                    onMouseDown={(e) => { e.preventDefault(); submit() }}
+                    className={cn(
+                      "px-3 py-2 text-sm cursor-pointer transition-colors flex items-center gap-2",
+                      highlightedIdx === -1
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted",
+                      suggestions.length > 0 && "border-b border-border",
+                    )}
+                  >
+                    <Search className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                    <span className="flex-1 truncate">{t.chat.suggestSearchFor(trimmedLocation)}</span>
+                    <span
+                      className={cn(
+                        "text-xs shrink-0",
+                        highlightedIdx === -1 ? "text-primary-foreground/70" : "text-muted-foreground",
+                      )}
+                      aria-hidden
+                    >
+                      ↵
+                    </span>
+                  </li>
+                )}
                 {suggestions.map((s, i) => {
                   const commaIdx = s.display.indexOf(",")
                   const splitAt  = commaIdx !== -1 ? commaIdx : s.display.lastIndexOf(" (")
@@ -1278,30 +1347,21 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                 })}
               </ul>
             )}
-          </div>
+      </div>
 
-          <Button
-            onClick={submit}
-            disabled={isLoading || (!location.trim() && !showNearbyBadge)}
-            size="sm"
-            className="shrink-0 relative overflow-hidden rounded-l-none h-[38px]"
-          >
-            {isLoading && (
-              <span
-                className="absolute inset-y-0 left-0 pointer-events-none"
-                style={{ width: 0, background: "rgba(255,255,255,0.45)", animation: "btn-progress 30s linear forwards" }}
-                aria-hidden
-              />
-            )}
-            <span className="relative z-10 inline-flex items-center gap-1.5">
-              {isLoading
-                ? <Loader2 className="w-4 h-4 animate-spin" />
-                : <Search className="w-4 h-4" />
-              }
-              {isLoading ? t.chat.thinking : t.chat.send}
-            </span>
-          </Button>
+      {/* Search-in-progress indicator — replaces the old button's spinner+label
+          now that there is no button to carry it. Indeterminate sliding bar
+          (same .animate-loading-bar keyframes MobileLayout used for its own,
+          now-redundant copy — removed there in favour of this single instance,
+          which covers both the mobile and desktop ChatPanel instantiation).
+          role="status" gives it an implicit polite live region, announced once
+          when isLoading turns true; completion is announced separately by
+          ResultsList's own live region. */}
+      {isLoading && (
+        <div className="h-0.5 overflow-hidden rounded-full bg-primary/15" role="status" aria-label={t.chat.thinking}>
+          <div className="h-full w-1/4 rounded-full bg-primary animate-loading-bar" />
         </div>
+      )}
 
       {nearbyPhase === "locating" && (
         <p role="status" className="flex items-center gap-1.5 text-xs text-muted-foreground">

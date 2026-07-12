@@ -25,6 +25,9 @@ const en: Translations = {
     unifiedPlaceholder: 'Place or name, e.g. "Restaurants in Berlin" or "Hotel Adlon"',
     suggestGroupAreas:  "Areas",
     suggestGroupVenues: "Places",
+    // Always-present first dropdown row (no-submit-button redesign): runs the
+    // exact input as typed, same as pressing Enter. `q` is the raw field value.
+    suggestSearchFor:   (q: string) => `Search for "${q}"`,
     chipAll:            "All",
     chipBack:            "Back",
     chipParking:        "Parking",
@@ -37,7 +40,6 @@ const en: Translations = {
     locationActive:     (district: string) => `Searching around ${district}`,
     nearbyAction:       "Nearby",
     nearbyTokenPlaceholder: "… or type a place",
-    send: "Search",
     thinking: "Searching …",
     noResults:        "No matching places found.",
     noSearchYetTitle:      "What are you looking for?",

@@ -25,6 +25,9 @@ const de: Translations = {
     unifiedPlaceholder: 'Ort oder Name, z. B. „Restaurants in Berlin" oder „Hotel Adlon"',
     suggestGroupAreas:  "Orte",
     suggestGroupVenues: "Lokationen",
+    // Always-present first dropdown row (no-submit-button redesign): runs the
+    // exact input as typed, same as pressing Enter. `q` is the raw field value.
+    suggestSearchFor:   (q: string) => `Nach „${q}" suchen`,
     chipAll:            "Alle",
     chipBack:            "Zurück",
     chipParking:        "Parken",
@@ -37,7 +40,6 @@ const de: Translations = {
     locationActive:     (district: string) => `Suche um ${district}`,
     nearbyAction:       "In der Nähe",
     nearbyTokenPlaceholder: "… oder Ort eintippen",
-    send: "Suchen",
     thinking: "Suche läuft …",
     noResults:        "Keine passenden Orte gefunden.",
     noSearchYetTitle:      "Wonach suchst du?",

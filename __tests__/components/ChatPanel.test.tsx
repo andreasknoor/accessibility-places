@@ -122,16 +122,21 @@ describe("ChatPanel autocomplete — trigger", () => {
     expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1)
   })
 
-  it("clears suggestions when input drops below 2 chars", async () => {
+  it("clears fetched suggestions but keeps the dropdown open (freetext row) when input drops below 2 chars", async () => {
     mockFetch([area("Berlin")])
     renderPanel()
     fireEvent.change(getInput(), { target: { value: "Berlin" } })
     await act(() => vi.runAllTimersAsync())
-    expect(screen.getByRole("listbox")).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "Berlin" })).toBeInTheDocument()
 
     fireEvent.change(getInput(), { target: { value: "B" } })
     await act(() => vi.runAllTimersAsync())
-    expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+    // The fetched suggestion is gone …
+    expect(screen.queryByRole("option", { name: "Berlin" })).not.toBeInTheDocument()
+    // … but the dropdown itself stays open: the always-present freetext row
+    // ("search for B") is a mouse/touch user's only way to trigger a search,
+    // and must not disappear just because the suggest API has nothing to show.
+    expect(screen.getByRole("listbox")).toBeInTheDocument()
   })
 })
 
@@ -164,24 +169,31 @@ describe("ChatPanel autocomplete — grouped dropdown", () => {
     await act(() => vi.runAllTimersAsync())
     const headers = [screen.getByText("Orte"), screen.getByText("Lokationen")]
     expect(headers[0].compareDocumentPosition(headers[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    // headers are not selectable options
-    expect(screen.getAllByRole("option")).toHaveLength(2)
+    // headers are not selectable options — 3 = the always-present freetext row + 1 area + 1 venue
+    expect(screen.getAllByRole("option")).toHaveLength(3)
   })
 
-  it("hides dropdown when API returns empty array", async () => {
+  it("shows only the freetext row (no group headers) when the API returns empty array", async () => {
     mockFetch([])
     renderPanel()
     fireEvent.change(getInput(), { target: { value: "xyz" } })
     await act(() => vi.runAllTimersAsync())
-    expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+    // The dropdown itself is NOT hidden — an empty suggest result must not remove
+    // the only mouse/touch-reachable way to trigger a search (no-submit-button redesign).
+    expect(screen.getByRole("listbox")).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: /xyz/ })).toBeInTheDocument()
+    expect(screen.queryByText("Orte")).not.toBeInTheDocument()
+    expect(screen.queryByText("Lokationen")).not.toBeInTheDocument()
   })
 
-  it("hides dropdown when API request fails", async () => {
+  it("shows only the freetext row when the API request fails", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network error")))
     renderPanel()
     fireEvent.change(getInput(), { target: { value: "Ber" } })
     await act(() => vi.runAllTimersAsync())
-    expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+    expect(screen.getByRole("listbox")).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: /Ber/ })).toBeInTheDocument()
+    expect(screen.queryByText("Orte")).not.toBeInTheDocument()
   })
 
   it("hides dropdown on Escape", async () => {
@@ -296,7 +308,10 @@ describe("ChatPanel autocomplete — selection", () => {
     fireEvent.change(getInput(), { target: { value: "Bierpumpe Issum" } })
     await act(() => vi.runAllTimersAsync())
 
-    fireEvent.mouseDown(screen.getByRole("option", { name: /Bierpumpe/ }))
+    // Exact display string, not a /Bierpumpe/ regex: the always-present freetext
+    // row's label ("Nach „Bierpumpe…" suchen") also contains "Bierpumpe" and
+    // would otherwise match too, causing a "multiple elements found" failure.
+    fireEvent.mouseDown(screen.getByRole("option", { name: "Bierpumpe, Issum (DE)" }))
     expect(onPlaceSearch).toHaveBeenCalledWith("Bierpumpe", { lat: 51.54, lon: 6.42 })
     expect(onSearch).not.toHaveBeenCalled()
     expect(getInput().value).toBe("Bierpumpe, Issum (DE)")
@@ -309,7 +324,10 @@ describe("ChatPanel autocomplete — selection", () => {
     fireEvent.change(getInput(), { target: { value: "Bierpumpe" } })
     await act(() => vi.runAllTimersAsync())
 
-    fireEvent.mouseDown(screen.getByRole("option", { name: /Bierpumpe/ }))
+    // Exact display string, not a /Bierpumpe/ regex: the always-present freetext
+    // row's label ("Nach „Bierpumpe…" suchen") also contains "Bierpumpe" and
+    // would otherwise match too, causing a "multiple elements found" failure.
+    fireEvent.mouseDown(screen.getByRole("option", { name: "Bierpumpe, Issum (DE)" }))
     expect(onPlaceSearch).toHaveBeenCalledWith("Bierpumpe", undefined)
   })
 
@@ -319,7 +337,10 @@ describe("ChatPanel autocomplete — selection", () => {
     renderPanel(vi.fn(), false, onPlaceSearch)
     fireEvent.change(getInput(), { target: { value: "Bierpumpe" } })
     await act(() => vi.runAllTimersAsync())
-    fireEvent.mouseDown(screen.getByRole("option", { name: /Bierpumpe/ }))
+    // Exact display string, not a /Bierpumpe/ regex: the always-present freetext
+    // row's label ("Nach „Bierpumpe…" suchen") also contains "Bierpumpe" and
+    // would otherwise match too, causing a "multiple elements found" failure.
+    fireEvent.mouseDown(screen.getByRole("option", { name: "Bierpumpe, Issum (DE)" }))
     expect(onPlaceSearch).toHaveBeenCalledTimes(1)
 
     fireEvent.keyDown(getInput(), { key: "Enter" })
@@ -367,7 +388,10 @@ describe("ChatPanel autocomplete — selection", () => {
     )
     fireEvent.change(getInput(), { target: { value: "Bierpumpe" } })
     await act(() => vi.runAllTimersAsync())
-    fireEvent.mouseDown(screen.getByRole("option", { name: /Bierpumpe/ }))
+    // Exact display string, not a /Bierpumpe/ regex: the always-present freetext
+    // row's label ("Nach „Bierpumpe…" suchen") also contains "Bierpumpe" and
+    // would otherwise match too, causing a "multiple elements found" failure.
+    fireEvent.mouseDown(screen.getByRole("option", { name: "Bierpumpe, Issum (DE)" }))
     expect(onPlaceSearch).toHaveBeenCalledWith("Bierpumpe", { lat: 51.54, lon: 6.42 })
 
     openChipGroup("Gastronomie")
@@ -502,7 +526,7 @@ describe("ChatPanel location token (search-row variant B)", () => {
     expect(screen.getByText(/Maxvorstadt/)).toBeInTheDocument()
   })
 
-  it("Suchen with an empty field and an active fix re-runs the nearby search", async () => {
+  it("Enter on an empty field with an active fix re-runs the nearby search (no-submit-button redesign)", async () => {
     simulateGpsSuccess(48.14, 11.56, "Maxvorstadt")
     const onSearch = vi.fn()
     render(<ChatPanel onSearch={onSearch} isLoading={false} initialMode="text" />)
@@ -510,9 +534,7 @@ describe("ChatPanel location token (search-row variant B)", () => {
     await act(() => vi.runAllTimersAsync())
     onSearch.mockClear()
 
-    const searchBtn = screen.getByRole("button", { name: "Suchen" })
-    expect(searchBtn).not.toBeDisabled()
-    fireEvent.click(searchBtn)
+    fireEvent.keyDown(getInput(), { key: "Enter" })
     expect(onSearch).toHaveBeenCalledWith("in Maxvorstadt", { lat: 48.14, lon: 11.56 })
   })
 
@@ -890,25 +912,62 @@ describe("ChatPanel single-field UI", () => {
     expect(getInput()).toBeInTheDocument()
   })
 
-  it("search button is disabled when the input is empty", () => {
+  it("renders no submit button — Google Maps model, no-submit-button redesign", () => {
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
-    expect(screen.getByRole("button", { name: "Suchen" })).toBeDisabled()
+    expect(screen.queryByRole("button", { name: "Suchen" })).not.toBeInTheDocument()
   })
 
-  it("search button is enabled when the input has text", () => {
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
-    fireEvent.change(getInput(), { target: { value: "Berlin" } })
-    expect(screen.getByRole("button", { name: "Suchen" })).not.toBeDisabled()
-  })
-
-  it("clicking Suchen with raw text fires an area search, never onPlaceSearch", () => {
+  it("Enter with raw text fires an area search, never onPlaceSearch", () => {
     const onSearch = vi.fn()
     const onPlaceSearch = vi.fn()
     render(<ChatPanel onSearch={onSearch} onPlaceSearch={onPlaceSearch} isLoading={false} initialMode="text" />)
     fireEvent.change(getInput(), { target: { value: "Bierpumpe Issum" } })
-    fireEvent.click(screen.getByRole("button", { name: "Suchen" }))
+    fireEvent.keyDown(getInput(), { key: "Enter" })
     expect(onSearch).toHaveBeenCalledWith(expect.stringContaining("Bierpumpe Issum"), undefined, undefined)
     expect(onPlaceSearch).not.toHaveBeenCalled()
+  })
+
+  it("clicking the always-present freetext dropdown row fires the same search as Enter", () => {
+    const onSearch = vi.fn()
+    const onPlaceSearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} onPlaceSearch={onPlaceSearch} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "Bierpumpe Issum" } })
+    fireEvent.mouseDown(screen.getByRole("option", { name: /Nach.*Bierpumpe Issum.*suchen/ }))
+    expect(onSearch).toHaveBeenCalledWith(expect.stringContaining("Bierpumpe Issum"), undefined, undefined)
+    expect(onPlaceSearch).not.toHaveBeenCalled()
+  })
+
+  it("the freetext row is the default-highlighted option (aria-selected) and carries aria-activedescendant", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "Berlin" } })
+    const row = screen.getByRole("option", { name: /Nach.*Berlin.*suchen/ })
+    expect(row).toHaveAttribute("aria-selected", "true")
+    expect(getInput()).toHaveAttribute("aria-activedescendant", "unified-opt-freetext")
+  })
+
+  it("the dropdown (and freetext row) is not rendered while the field is empty", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+  })
+
+  it("Escape closes the dropdown even when only the freetext row is showing (no suggestions yet)", () => {
+    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "B" } }) // 1 char — below the suggest-fetch threshold
+    expect(screen.getByRole("listbox")).toBeInTheDocument()
+
+    fireEvent.keyDown(getInput(), { key: "Escape" })
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+  })
+
+  it("shows a spinner instead of the clear button, and an indeterminate progress bar, while loading", () => {
+    const { rerender } = render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "Berlin" } })
+    expect(screen.getByRole("button", { name: /Eingabe löschen/ })).toBeInTheDocument()
+    expect(screen.queryByRole("status", { name: "Suche läuft …" })).not.toBeInTheDocument()
+
+    rerender(<ChatPanel onSearch={vi.fn()} isLoading initialMode="text" />)
+    expect(screen.queryByRole("button", { name: /Eingabe löschen/ })).not.toBeInTheDocument()
+    expect(screen.getByRole("status", { name: "Suche läuft …" })).toBeInTheDocument()
   })
 })
 

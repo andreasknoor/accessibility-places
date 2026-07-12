@@ -23,6 +23,9 @@ export interface Translations {
     unifiedPlaceholder: string
     suggestGroupAreas:  string
     suggestGroupVenues: string
+    // Always-present first dropdown row (no-submit-button redesign): runs the
+    // exact input as typed, same as pressing Enter. `q` is the raw field value.
+    suggestSearchFor:   (q: string) => string
     chipAll:            string
     // Drill-in category chips (Konzept A): a group chip opens its subcategories
     // in place of the row; "←" returns to the group list.
@@ -41,7 +44,6 @@ export interface Translations {
     // short placeholder shown while the green location token occupies the field.
     nearbyAction:       string
     nearbyTokenPlaceholder: string
-    send:          string
     thinking:      string
     noResults:        string
     noSearchYetTitle:      string
