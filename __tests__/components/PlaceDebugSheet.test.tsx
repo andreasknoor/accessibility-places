@@ -147,6 +147,40 @@ describe("PlaceDebugSheet accessibility section", () => {
     expect(screen.getByText(/75%/)).toBeInTheDocument()
   })
 
+  // ─── Variante B: the "Verlässlichkeit · X%" chip is the score-breakdown toggle ──
+  describe("confidence-score breakdown (chip toggle, Variante B)", () => {
+    it("does not show the calculation breakdown until the chip is toggled open", () => {
+      renderSheet()
+      expect(screen.queryByText(/Score-Berechnung|Score calculation/i)).not.toBeInTheDocument()
+    })
+
+    it("shows the formula breakdown after clicking the reliability chip", () => {
+      renderSheet()
+      fireEvent.click(screen.getByRole("button", { name: /75%/ }))
+      expect(screen.getByText(/Score-Berechnung|Score calculation/i)).toBeInTheDocument()
+      // ScoreContent's formula line: entrance @75% and parking @75% are known
+      // (value !== "unknown"); toilet is unknown and excluded from the average.
+      expect(screen.getByText(/\(75% \+ 75%\) ÷ 2 = 75%/)).toBeInTheDocument()
+    })
+
+    it("hides the breakdown again when the chip is toggled a second time", () => {
+      renderSheet()
+      const chip = screen.getByRole("button", { name: /75%/ })
+      fireEvent.click(chip)
+      expect(screen.getByText(/Score-Berechnung|Score calculation/i)).toBeInTheDocument()
+      fireEvent.click(chip)
+      expect(screen.queryByText(/Score-Berechnung|Score calculation/i)).not.toBeInTheDocument()
+    })
+
+    it("sets aria-expanded on the chip to reflect open/closed state", () => {
+      renderSheet()
+      const chip = screen.getByRole("button", { name: /75%/ })
+      expect(chip).toHaveAttribute("aria-expanded", "false")
+      fireEvent.click(chip)
+      expect(chip).toHaveAttribute("aria-expanded", "true")
+    })
+  })
+
   it("shows a per-criterion reliability pill for known values, not for unknown (proposal A2)", () => {
     // Fixture: entrance yes @0.75 → "Verlässlich"; toilet unknown → no pill;
     // a lone weak source (Google @0.35) on toilet → "Unsicher".

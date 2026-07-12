@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { createPortal } from "react-dom"
-import { MapPin, Globe, Phone, ChevronDown, ChevronUp, Accessibility, PawPrint, Salad, Leaf, Map, ShieldCheck } from "lucide-react"
+import { MapPin, Globe, Phone, ChevronDown, ChevronUp, ChevronRight, Accessibility, PawPrint, Salad, Leaf, Map, ShieldCheck } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { NativeLink } from "@/components/ui/native-link"
 import { Badge } from "@/components/ui/badge"
@@ -65,50 +65,64 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
     return `https://wheelmap.org/?lat=${place.coordinates.lat}&lon=${place.coordinates.lon}&zoom=19`
   })()
 
+  function openDetails() {
+    setShowDebug(true)
+    track("detail_sheet_open", { category: place.category })
+  }
+
   return (
     <Card
       className={cn(
-        "cursor-pointer transition-all shadow-sm hover:shadow-md border overflow-hidden",
+        "transition-all shadow-sm border overflow-hidden",
         isSelected ? "border-primary ring-1 ring-primary" : "border-card-border",
       )}
-      onClick={() => { setShowDebug(true); track("detail_sheet_open", { category: place.category }) }}
     >
       <CardContent className="p-3 flex flex-col gap-2">
-        {/* ── Header ── */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-start gap-2 min-w-0 flex-1">
-            <span className="text-base shrink-0" aria-hidden>
-              {CATEGORY_ICONS[place.category] ?? "📍"}
-            </span>
-            <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-sm leading-snug line-clamp-2 break-words">
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setShowDebug(true); track("detail_sheet_open", { category: place.category }) }}
-                  aria-label={t.results.openDetails(place.name)}
-                  className="text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
-                >
-                  {place.name}
-                </button>
-              </h3>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {(t.categories as Record<string, string>)[place.category] ?? place.category}
+        {/* ── Header: the single tap target that opens the detail sheet ──
+            A framed, inset box (not touching the card's own edges/corners) so
+            it reads as one clickable control, not a whole clickable card with
+            scattered interactive icons in it. role="button" div, not a real
+            <button>, because <button>'s content model forbids a heading (h3)
+            child — a real button can't legally wrap place.name's <h3>. The
+            confidence badge is a plain, non-stopPropagation child here
+            (decision D2c): tapping it opens this same detail sheet instead of
+            its own separate quick-view, so there is exactly one exception-free
+            tap target for the whole box, badge included. */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={openDetails}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDetails() }
+          }}
+          aria-label={t.results.openDetails(place.name)}
+          className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-2.5 py-2 cursor-pointer hover:bg-muted/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <span className="text-base shrink-0" aria-hidden>
+            {CATEGORY_ICONS[place.category] ?? "📍"}
+          </span>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-semibold text-sm leading-snug line-clamp-2 break-words">
+              {place.name}
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {(t.categories as Record<string, string>)[place.category] ?? place.category}
+            </p>
+            {(addr || distanceM !== undefined) && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                <MapPin className="w-3 h-3 shrink-0" />
+                {addr && <span className="truncate min-w-0">{addr}</span>}
+                {distanceM !== undefined && (
+                  <>
+                    {addr && <span className="shrink-0">·</span>}
+                    <span className="shrink-0">{t.results.distanceFromHere(Math.round(distanceM))}</span>
+                  </>
+                )}
               </p>
-              {(addr || distanceM !== undefined) && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                  <MapPin className="w-3 h-3 shrink-0" />
-                  {addr && <span className="truncate min-w-0">{addr}</span>}
-                  {distanceM !== undefined && (
-                    <>
-                      {addr && <span className="shrink-0">·</span>}
-                      <span className="shrink-0">{t.results.distanceFromHere(Math.round(distanceM))}</span>
-                    </>
-                  )}
-                </p>
-              )}
-            </div>
+            )}
           </div>
           <ConfidenceBadge confidence={place.overallConfidence} place={place} className="shrink-0 self-start" />
+          <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 self-center mt-0.5" aria-hidden />
         </div>
 
         {/* ── Source badge ── */}

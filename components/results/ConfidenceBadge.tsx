@@ -27,7 +27,11 @@ const COLORS = {
   low:    "bg-red-100 text-red-800 border-red-200",
 }
 
-function ScoreContent({ place }: { place: Place }) {
+// Exported so PlaceDebugSheet can render the same breakdown inline (Variante B):
+// the mobile confidence badge no longer opens its own quick-view sheet — tapping
+// it now bubbles up to the card's own detail-sheet trigger like everything else
+// (decision D2c), so this content needs a home inside the full detail sheet.
+export function ScoreContent({ place }: { place: Place }) {
   const t = useTranslations()
   const valueLabel = (key: "entrance" | "toilet" | "parking" | "seating", v: string): string => {
     if (
@@ -180,7 +184,6 @@ export default function ConfidenceBadge({ confidence, place, className }: Props)
   const isMobile = useIsMobile()
   const level    = confidenceLabel(confidence)
   const pct      = Math.round(confidence * 100)
-  const [sheetOpen, setSheetOpen] = useState(false)
 
   const badge = (
     <span className={cn(
@@ -192,21 +195,14 @@ export default function ConfidenceBadge({ confidence, place, className }: Props)
     </span>
   )
 
+  // Mobile: no own tap action — the badge sits inside PlaceCard's single
+  // detail-sheet tap target and deliberately does NOT stopPropagation (D2c),
+  // so a tap here opens the same detail sheet as the rest of the card, which
+  // now shows this breakdown inline (see ScoreContent in PlaceDebugSheet).
+  // Desktop keeps the hover tooltip — a different interaction channel than
+  // click, so it doesn't reintroduce the "unexpected exception" problem.
   const badgeWithInteraction = place ? (
-    isMobile ? (
-      <>
-        <button onClick={(e) => { e.stopPropagation(); setSheetOpen(true) }} className="leading-none">
-          {badge}
-        </button>
-        <BottomSheet
-          open={sheetOpen}
-          onClose={() => setSheetOpen(false)}
-          title={t.results.scoreCalculation}
-        >
-          <ScoreContent place={place} />
-        </BottomSheet>
-      </>
-    ) : (
+    isMobile ? badge : (
       <Tooltip>
         <TooltipTrigger asChild>{badge}</TooltipTrigger>
         <TooltipContent side="left" className="bg-white text-zinc-900 border border-zinc-200 shadow-lg p-3 w-[min(22rem,90vw)]">

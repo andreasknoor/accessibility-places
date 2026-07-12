@@ -73,12 +73,29 @@ describe("PlaceCard", () => {
     expect(await screen.findByText(/Grunddaten|Basic information/i)).toBeInTheDocument()
   })
 
-  it("exposes the place name as a keyboard-operable button that opens the info sheet (WCAG 2.1.1)", async () => {
+  it("exposes the header as a keyboard-operable custom button that opens the info sheet (WCAG 2.1.1)", async () => {
     renderWithProvider(<PlaceCard place={makePlace()} onClick={vi.fn()} />)
-    // The name is a real <button> → focusable + Enter/Space operable natively,
-    // with an accessible name describing the action.
-    const nameButton = screen.getByRole("button", { name: /Details (zu|for).*Café Barrierefrei/i })
-    fireEvent.click(nameButton)
+    // Header is a role="button" div (not a real <button> — its content model
+    // forbids the nested <h3>), so Enter/Space must be handled manually; this
+    // locks that in instead of relying on native button behaviour.
+    const header = screen.getByRole("button", { name: /Details (zu|for).*Café Barrierefrei/i })
+    fireEvent.click(header)
+    expect(await screen.findByText(/Grunddaten|Basic information/i)).toBeInTheDocument()
+  })
+
+  it("opens the info sheet on Enter and on Space when the header is focused (WCAG 2.1.1)", async () => {
+    renderWithProvider(<PlaceCard place={makePlace()} onClick={vi.fn()} />)
+    const header = screen.getByRole("button", { name: /Details (zu|for).*Café Barrierefrei/i })
+    fireEvent.keyDown(header, { key: "Enter" })
+    expect(await screen.findByText(/Grunddaten|Basic information/i)).toBeInTheDocument()
+  })
+
+  it("tapping the confidence badge opens the info sheet instead of its own quick view (decision D2c)", async () => {
+    // Regression test for the "tapping the score badge does nothing, unexpectedly"
+    // usability finding: the badge must NOT stopPropagation — a tap on it is
+    // just another tap inside the single header tap target.
+    renderWithProvider(<PlaceCard place={makePlace()} onClick={vi.fn()} />)
+    fireEvent.click(screen.getByText(/72%/))
     expect(await screen.findByText(/Grunddaten|Basic information/i)).toBeInTheDocument()
   })
 

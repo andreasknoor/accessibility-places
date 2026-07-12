@@ -19,6 +19,7 @@ import { buildPlaceDeepLink } from "@/lib/place-link"
 import { openTallyPopup } from "@/lib/tally"
 import { track } from "@/lib/analytics"
 import { confidenceLabel } from "@/lib/matching/merge"
+import { ScoreContent } from "./ConfidenceBadge"
 import { cn } from "@/lib/utils"
 import type { Place, SourceId, ParkingDetails, EntranceDetails, ToiletDetails, SeatingDetails } from "@/lib/types"
 
@@ -102,24 +103,53 @@ function Section({
   icon: Icon,
   chipClass,
   children,
+  expandable,
+  expanded,
+  onToggleExpand,
+  expandedContent,
 }: {
   title: string
   icon: React.ElementType
   chipClass: string
   children: React.ReactNode
+  // Variante B: the chip itself becomes the expand/collapse trigger for
+  // supplementary content (currently only the Barrierefreiheit section's
+  // confidence-score breakdown) instead of adding a separate row/element.
+  expandable?:      boolean
+  expanded?:        boolean
+  onToggleExpand?:  () => void
+  expandedContent?: React.ReactNode
 }) {
+  const chipClasses = cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold mb-3 border", chipClass)
   return (
     <section className="py-4">
-      <div className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold mb-3 border", chipClass)}>
-        <Icon className="w-3 h-3 shrink-0" />
-        <span className="uppercase tracking-wide">{title}</span>
-      </div>
+      {expandable ? (
+        <button
+          type="button"
+          onClick={onToggleExpand}
+          aria-expanded={expanded}
+          className={cn(chipClasses, "cursor-pointer hover:opacity-80 transition-opacity")}
+        >
+          <Icon className="w-3 h-3 shrink-0" />
+          <span className="uppercase tracking-wide">{title}</span>
+          {expanded ? <ChevronUp className="w-3 h-3 shrink-0" /> : <ChevronDown className="w-3 h-3 shrink-0" />}
+        </button>
+      ) : (
+        <div className={chipClasses}>
+          <Icon className="w-3 h-3 shrink-0" />
+          <span className="uppercase tracking-wide">{title}</span>
+        </div>
+      )}
+      {expandable && expanded && (
+        <div className="mb-3 bg-muted/40 border border-border rounded-lg p-3">{expandedContent}</div>
+      )}
       <div className="space-y-2">{children}</div>
     </section>
   )
 }
 
 export default function PlaceDebugSheet({ place, onClose }: Props) {
+  const [scoreOpen, setScoreOpen] = useState(false)
   const [shareFeedback, setShareFeedback] = useState<"copied" | "shared" | null>(null)
   const [copiedField,  setCopiedField]  = useState<"address" | "osm" | null>(null)
   const copyTimerRef      = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -438,6 +468,17 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
             title={`${ti.reliability} · ${Math.round(place.overallConfidence * 100)}%`}
             icon={Accessibility}
             chipClass="bg-green-50 text-green-700 border-green-200"
+            expandable
+            expanded={scoreOpen}
+            onToggleExpand={() => setScoreOpen((v) => !v)}
+            expandedContent={
+              <>
+                <p className="font-semibold text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
+                  {t.results.scoreCalculation}
+                </p>
+                <ScoreContent place={place} />
+              </>
+            }
           >
             {wheelchairDesc && (
               <InfoRow icon={MessageSquare} label={ti.description}>{wheelchairDesc}</InfoRow>
