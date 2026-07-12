@@ -418,15 +418,16 @@ export default function MobileLayout({
 
         {/* Map tab — lazy-mounted so Leaflet initializes in a visible container */}
         <div className={cn("h-full relative", activeTab !== "map" && "hidden")}>
-          {/* Top-left pill row — just the (when the user has panned) "search
-              here" pill now. The count pill that used to sit here was dropped:
-              the result count already lives on the "Ergebnisse" tab badge and
-              inside the results list itself, so a third copy floating over
-              the map was redundant. Hidden in focus mode (amenity search). */}
+          {/* "Search here" pill, centred like the desktop MapView's own
+              (MapView.tsx ~line 1252) — it used to sit left-offset (left-14)
+              to leave room for the count pill that shared this row; that pill
+              is gone now (see comment below), so nothing needs the space
+              reserved and centring matches the desktop convention again.
+              Hidden in focus mode (amenity search). */}
           {!amenityActiveBool && searchHereRun && (
             <div
               className={cn(
-                "absolute top-3 left-14 z-[1000] flex items-center gap-1.5 transition-opacity",
+                "absolute top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-1.5 transition-opacity",
                 mapPopupOpen && "opacity-0 pointer-events-none",
               )}
             >
@@ -440,8 +441,10 @@ export default function MobileLayout({
             </div>
           )}
           {/* Amenity count pill + (when available) the focus-mode "search this
-              area" pill, flowing side-by-side — same row layout as the venue
-              pills above, so the two can never overlap (see MapView's
+              area" pill, flowing side-by-side. Left-anchored (not centred like
+              the venue-mode pill above) since this row can hold one or two
+              pills and a fixed start point keeps them from jumping around as
+              the second one appears/disappears (see MapView's
               hideSearchHereButton / onPanned wiring for the focus-mode side). */}
           {amenityActiveBool && ((!isLoading && (amenityResults?.length ?? 0) > 0) || searchHereRun) && (
             <div

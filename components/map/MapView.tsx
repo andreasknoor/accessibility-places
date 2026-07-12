@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { Maximize2, Minimize2, Search, LocateFixed, Loader2 } from "lucide-react"
+import { Maximize2, Minimize2, Search, LocateFixed, Loader2, Layers, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import PlaceDebugSheet from "@/components/results/PlaceDebugSheet"
 import { useTranslations } from "@/lib/i18n"
@@ -1296,33 +1296,55 @@ export default function MapView({
         </div>
       )}
 
-      {/* ── Map-layer toggle pills (bottom-left) ── */}
-      {/* Two independent toggles — parking and WC. Disabled in amenity focus mode. */}
+      {/* ── Layer box (bottom-left): "Ebenen" label + two checkbox-style
+          toggles, grouped in one bordered box instead of two loose pills.
+          Deliberately NOT styled like the Schnellsuche amenity chips (rounded
+          pills) — the checkbox look + shared "layers" label read as "these
+          add an overlay to the existing results", vs. the chips' pill look,
+          which reads as "this replaces the results with a new search". Same
+          widget, same two colours (blue/parking, green/WC) as everywhere else
+          disabled parking/WC markers appear, only the container differs.
+          Disabled in amenity focus mode (the count there would be stale). ── */}
       {onSetMapLayers && (
         <div
           aria-disabled={focusMode}
-          className={`absolute bottom-3 left-3 z-[1000] flex items-center gap-1.5 ${focusMode ? "opacity-50 pointer-events-none" : ""}`}
+          role="group"
+          aria-label={t.map.layersLabel}
+          className={`absolute bottom-3 left-3 z-[1000] flex items-center gap-2 rounded-xl border border-border bg-background/95 backdrop-blur-sm shadow-md px-2.5 py-1.5 ${focusMode ? "opacity-50 pointer-events-none" : ""}`}
         >
-          <button
-            onClick={() => onSetMapLayers(!(showParking ?? false), showToilets ?? false)}
-            aria-pressed={showParking ?? false}
-            className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium shadow-md backdrop-blur-sm transition-colors
-              ${showParking ? "bg-blue-600 text-white border-blue-600" : "bg-background/95 border-border text-muted-foreground hover:text-foreground hover:bg-muted"}`}
-          >
-            <span aria-hidden>🅿</span>
-            <span>{t.chat.focusChipParking}</span>
-          </button>
-          {hasToiletData && (
+          <span className="flex items-center gap-1 text-[11px] font-bold text-muted-foreground shrink-0">
+            <Layers className="w-3.5 h-3.5" aria-hidden />
+            {t.map.layersLabel}
+          </span>
+          <span className="w-px self-stretch bg-border" aria-hidden />
+          <span className="flex items-center gap-2.5">
             <button
-              onClick={() => onSetMapLayers(showParking ?? false, !(showToilets ?? false))}
-              aria-pressed={showToilets ?? false}
-              className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium shadow-md backdrop-blur-sm transition-colors
-                ${showToilets ? "bg-green-700 text-white border-green-700" : "bg-background/95 border-border text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+              onClick={() => onSetMapLayers(!(showParking ?? false), showToilets ?? false)}
+              aria-pressed={showParking ?? false}
+              className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              <span aria-hidden>🚻</span>
-              <span>{t.chat.focusChipToilet}</span>
+              <span className={`w-[0.95rem] h-[0.95rem] rounded-[0.2rem] border-[1.5px] flex items-center justify-center shrink-0 transition-colors
+                ${showParking ? "bg-blue-600 border-blue-600" : "border-current"}`}>
+                {showParking && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3.5} aria-hidden />}
+              </span>
+              <span aria-hidden>🅿</span>
+              <span className={showParking ? "text-foreground" : undefined}>{t.chat.focusChipParking}</span>
             </button>
-          )}
+            {hasToiletData && (
+              <button
+                onClick={() => onSetMapLayers(showParking ?? false, !(showToilets ?? false))}
+                aria-pressed={showToilets ?? false}
+                className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <span className={`w-[0.95rem] h-[0.95rem] rounded-[0.2rem] border-[1.5px] flex items-center justify-center shrink-0 transition-colors
+                  ${showToilets ? "bg-green-700 border-green-700" : "border-current"}`}>
+                  {showToilets && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3.5} aria-hidden />}
+                </span>
+                <span aria-hidden>🚻</span>
+                <span className={showToilets ? "text-foreground" : undefined}>{t.chat.focusChipToilet}</span>
+              </button>
+            )}
+          </span>
         </div>
       )}
 

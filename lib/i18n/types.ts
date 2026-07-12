@@ -238,6 +238,9 @@ export interface Translations {
     parkingReservedLabel:    string
     parkingDedicatedLabel:   string
     toggleParking:          string
+    // Short group label for the map's layer toggle box ("Ebenen" + the two
+    // checkbox-style items below it — see focusChipParking/focusChipToilet).
+    layersLabel:            string
     nearbyParking:          string
     parkingFree:            string
     parkingPaid:            string

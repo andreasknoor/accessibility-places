@@ -255,6 +255,7 @@ const de: Translations = {
     parkingReservedLabel:    "Reservierte Rollstuhlplätze",
     parkingDedicatedLabel:   "Dedizierte Rollstuhlplätze",
     toggleParking:  "Rollstuhlparkplätze in Karte anzeigen",
+    layersLabel:    "Ebenen",
     nearbyParking:  "Parkplätze in der Nähe",
     parkingFree:      "Kostenlos",
     parkingPaid:      "Kostenpflichtig",
