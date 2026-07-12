@@ -76,11 +76,6 @@ describe("FilterPanel", () => {
     expect(screen.getByLabelText(/Rollstuhlgerechter Parkplatz|Wheelchair-accessible parking/i)).toBeInTheDocument()
   })
 
-  it("shows the current radius value", () => {
-    renderPanel(DEFAULT_FILTERS, DEFAULT_SOURCES, 10)
-    expect(screen.getByText("10 km")).toBeInTheDocument()
-  })
-
   it("calls onSources when a source checkbox is toggled", () => {
     const onSources = vi.fn()
     renderPanel(DEFAULT_FILTERS, DEFAULT_SOURCES, 5, vi.fn(), onSources)
@@ -112,25 +107,25 @@ describe("FilterPanel", () => {
   })
 })
 
-describe("FilterPanel — radius slider commits on release, not per drag tick (finding F3)", () => {
-  it("does not call onRadius while dragging — only once, on release", () => {
-    const onRadius = vi.fn()
-    renderPanel(DEFAULT_FILTERS, DEFAULT_SOURCES, 5, vi.fn(), vi.fn(), onRadius)
-    const slider = screen.getByTestId("radius-slider")
-    fireEvent.change(slider, { target: { value: "8" } })
-    fireEvent.change(slider, { target: { value: "12" } })
-    fireEvent.change(slider, { target: { value: "20" } })
-    expect(onRadius).not.toHaveBeenCalled()
-    fireEvent.mouseUp(slider)
-    expect(onRadius).toHaveBeenCalledTimes(1)
-    expect(onRadius).toHaveBeenCalledWith(20)
+// Venue-search radius no longer has its own slider in FilterPanel — it's
+// redundant with the dedicated control in ResultsList's header (desktop) /
+// MobileLayout's header pill (mobile), both driving the same radiusKm. See
+// docs/plans and the "Kann der Suchradius aus den Filtern entfernt werden?"
+// removal. Only the amenity (parking/WC) radius keeps a slider here, since
+// during an amenity search ResultsList's picker is gated off and this is its
+// only desktop-reachable control.
+describe("FilterPanel — venue-search radius has no slider (redundant with header controls)", () => {
+  it("renders no radius section and no slider in venue (non-amenity) mode", () => {
+    renderPanel(DEFAULT_FILTERS, DEFAULT_SOURCES, 10)
+    expect(screen.queryByTestId("radius-slider")).not.toBeInTheDocument()
+    expect(screen.queryByText("10 km")).not.toBeInTheDocument()
   })
 
-  it("updates the displayed value live while dragging, before commit", () => {
-    renderPanel(DEFAULT_FILTERS, DEFAULT_SOURCES, 5, vi.fn(), vi.fn(), vi.fn())
-    const slider = screen.getByTestId("radius-slider")
-    fireEvent.change(slider, { target: { value: "30" } })
-    expect(screen.getByText("30 km")).toBeInTheDocument()
+  it("never calls onRadius, since there is no venue radius control to trigger it", () => {
+    const onRadius = vi.fn()
+    renderPanel(DEFAULT_FILTERS, DEFAULT_SOURCES, 5, vi.fn(), vi.fn(), onRadius)
+    expect(onRadius).not.toHaveBeenCalled()
+    expect(screen.queryByTestId("radius-slider")).not.toBeInTheDocument()
   })
 })
 
@@ -150,6 +145,16 @@ describe("FilterPanel — amenity mode radius (finding F4: parkingRadiusKm must 
       />,
     )
   }
+
+  it("renders a radius section and slider in amenity mode", () => {
+    renderAmenityPanel("parking", 2)
+    expect(screen.getByTestId("radius-slider")).toBeInTheDocument()
+  })
+
+  it("shows the current amenity radius value", () => {
+    renderAmenityPanel("parking", 2)
+    expect(screen.getByText("2 km")).toBeInTheDocument()
+  })
 
   it("uses the amenity-scale slider range (0.05–25 km, matching the server cap), not the venue range (1–50 km)", () => {
     renderAmenityPanel("parking", 2)
@@ -172,5 +177,25 @@ describe("FilterPanel — amenity mode radius (finding F4: parkingRadiusKm must 
   it("displays sub-1km values in metres, like the dedicated parking-radius setting used to", () => {
     renderAmenityPanel("parking", 0.3)
     expect(screen.getByText("300 m")).toBeInTheDocument()
+  })
+
+  it("does not call onAmenityRadius while dragging — only once, on release", () => {
+    const onAmenityRadius = vi.fn()
+    renderAmenityPanel("parking", 2, onAmenityRadius)
+    const slider = screen.getByTestId("radius-slider")
+    fireEvent.change(slider, { target: { value: "3" } })
+    fireEvent.change(slider, { target: { value: "5" } })
+    fireEvent.change(slider, { target: { value: "8" } })
+    expect(onAmenityRadius).not.toHaveBeenCalled()
+    fireEvent.mouseUp(slider)
+    expect(onAmenityRadius).toHaveBeenCalledTimes(1)
+    expect(onAmenityRadius).toHaveBeenCalledWith(8)
+  })
+
+  it("updates the displayed value live while dragging, before commit", () => {
+    renderAmenityPanel("parking", 2)
+    const slider = screen.getByTestId("radius-slider")
+    fireEvent.change(slider, { target: { value: "6" } })
+    expect(screen.getByText("6 km")).toBeInTheDocument()
   })
 })

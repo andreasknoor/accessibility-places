@@ -176,29 +176,38 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
           </span>
         </button>
       )}
-      {/* ── Radius ── */}
-      <section>
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-          {t.filters.radius}
-        </h2>
-        <div className="flex flex-col gap-3">
-          <div className="flex justify-between text-sm text-muted-foreground">
-            <span>{formatRadius(radiusMin)}</span>
-            <span className="font-medium text-foreground">{formatRadius(localRadius)}</span>
-            <span>{formatRadius(radiusMax)}</span>
+      {/* ── Radius ──
+          Venue-search radius is deliberately NOT duplicated here — it already
+          has a dedicated control in ResultsList's own header (desktop) /
+          MobileLayout's header pill (mobile), both driving the same radiusKm.
+          The amenity radius keeps its slider here: during a parking/WC search
+          the ResultsList picker is gated off (canShowResultsRadiusPicker),
+          leaving this as its only desktop-reachable control (mobile still has
+          the header pill via headerRadiusControl()). */}
+      {amenityMode && (
+        <section>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+            {t.filters.radius}
+          </h2>
+          <div className="flex flex-col gap-3">
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>{formatRadius(radiusMin)}</span>
+              <span className="font-medium text-foreground">{formatRadius(localRadius)}</span>
+              <span>{formatRadius(radiusMax)}</span>
+            </div>
+            <Slider
+              min={radiusMin}
+              max={radiusMax}
+              step={radiusStep}
+              value={[localRadius]}
+              onValueChange={([v]) => setLocalRadius(v)}
+              onValueCommit={([v]) => commitRadius(v)}
+              thumbAriaLabel={t.filters.radiusSliderLabel}
+              className="w-full"
+            />
           </div>
-          <Slider
-            min={radiusMin}
-            max={radiusMax}
-            step={radiusStep}
-            value={[localRadius]}
-            onValueChange={([v]) => setLocalRadius(v)}
-            onValueCommit={([v]) => commitRadius(v)}
-            thumbAriaLabel={t.filters.radiusSliderLabel}
-            className="w-full"
-          />
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ── Amenity options (parking / WC search) ── */}
       {amenityMode && (
