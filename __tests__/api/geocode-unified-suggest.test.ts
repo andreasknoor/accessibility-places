@@ -200,4 +200,56 @@ describe("GET /api/geocode/unified-suggest", () => {
     await GET(makeReq("Zürich"))
     expect(mockFetch.mock.calls[0][0]).toContain("bbox=")
   })
+
+  // ── Dedicated area query ────────────────────────────────────────────────────
+
+  it("fires a second, layer-restricted call for areas", async () => {
+    const mockFetch = vi.fn().mockResolvedValue(photonResponse([]))
+    vi.stubGlobal("fetch", mockFetch)
+    await GET(makeReq("Berlin Char"))
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+    const areaUrl: string = mockFetch.mock.calls[1][0]
+    expect(areaUrl).toContain("layer=city")
+    expect(areaUrl).toContain("layer=district")
+    expect(areaUrl).toContain("layer=county")
+    expect(areaUrl).toContain("layer=state")
+    expect(areaUrl).toContain("layer=country")
+    expect(areaUrl).not.toContain("layer=locality")
+  })
+
+  it("surfaces a district found only by the area call, even when the general call misses it", async () => {
+    const mockFetch = vi.fn()
+      // General (venue) call: only unrelated venues rank in the top 20, no district.
+      .mockResolvedValueOnce(photonResponse([venueFeature("Berlin-Charlottenburg", { city: "Berlin" })]))
+      // Dedicated area call: layer restriction surfaces the district directly.
+      .mockResolvedValueOnce(photonResponse([
+        feature("Charlottenburg", { osm_key: "place", osm_value: "suburb", type: "district", city: "Berlin", countrycode: "DE" }),
+      ]))
+    vi.stubGlobal("fetch", mockFetch)
+    const data = await (await GET(makeReq("Berlin Char"))).json()
+    expect(data.map((d: { kind: string; name: string }) => [d.kind, d.name])).toEqual([
+      ["area", "Charlottenburg"],
+      ["venue", "Berlin-Charlottenburg"],
+    ])
+  })
+
+  it("falls back to area-classified features from the general call when the area call fails", async () => {
+    const mockFetch = vi.fn()
+      .mockResolvedValueOnce(photonResponse([cityFeature("Hamburg")]))
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+    vi.stubGlobal("fetch", mockFetch)
+    const data = await (await GET(makeReq("Hamburg"))).json()
+    expect(data).toHaveLength(1)
+    expect(data[0]).toMatchObject({ kind: "area", name: "Hamburg" })
+  })
+
+  it("does not duplicate an area found by both calls", async () => {
+    const berlin = cityFeature("Berlin")
+    const mockFetch = vi.fn()
+      .mockResolvedValueOnce(photonResponse([berlin]))
+      .mockResolvedValueOnce(photonResponse([berlin]))
+    vi.stubGlobal("fetch", mockFetch)
+    const data = await (await GET(makeReq("Berlin"))).json()
+    expect(data).toHaveLength(1)
+  })
 })

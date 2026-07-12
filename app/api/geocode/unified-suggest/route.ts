@@ -10,9 +10,17 @@ const SUPPORTED_CODE_SET = new Set<string>(SUPPORTED_COUNTRY_CODES)
 const AREA_TYPES = new Set(["city", "district", "locality", "county", "state", "country"])
 // OSM keys whose features are areas regardless of the Photon type field.
 const AREA_OSM_KEYS = new Set(["place", "boundary"])
+// Layers requested on the dedicated area query. Deliberately excludes Photon's
+// "locality" layer: verified live that it surfaces noisy landuse/commercial
+// features (industrial estates, shopping centres) rather than city/district
+// entities, which would defeat the point of a precision-focused second call.
+const AREA_LAYERS = ["city", "district", "county", "state", "country"]
 
 const MAX_AREAS  = 3
 const MAX_VENUES = 5
+// Fetch a few more than MAX_AREAS on the dedicated call so dedupe/cc-filtering
+// still leaves enough candidates.
+const AREA_QUERY_LIMIT = 8
 
 export type UnifiedSuggestion = {
   kind:     "area" | "venue"
@@ -25,8 +33,16 @@ export type UnifiedSuggestion = {
 }
 
 /**
- * Unified location + venue autocomplete: one Photon call without layer
- * restriction, classified into areas (cities/districts) and venues (POIs).
+ * Unified location + venue autocomplete. Two parallel Photon calls:
+ * - a general, unrestricted query (limit=20) for venues
+ * - a dedicated query with `layer=city,district,county,state,country` for areas
+ *
+ * The dedicated area call exists because Photon's relevance ranking on a short,
+ * partially-typed query (e.g. "Berlin Char") routinely buries the actual
+ * district/city entity beneath dozens of venues whose name or address field
+ * happens to contain the same text — verified live: "Berlin Char" returns zero
+ * district-type results in the general call's top 20, while a `layer`-scoped
+ * call finds "Charlottenburg" immediately, without needing extra characters.
  * Replaces the separate `suggest` (areas only) and `place-suggest` (POIs)
  * routes for the single-search-field UI; both remain live for one release.
  */
@@ -51,88 +67,114 @@ export async function GET(req: NextRequest) {
   const biasOk = Number.isFinite(lat) && Number.isFinite(lon) &&
                  Math.abs(lat) <= 90 && Math.abs(lon) <= 180
 
-  // No layer restriction — areas and POIs come back in one response.
-  // Ask for more candidates than needed so classification + dedupe still
-  // fill both groups.
-  // In DACH mode a tight bbox sharpens results. In international mode no single
-  // bbox can cover the allowlist (Europe + US), so we drop it and rely on the
-  // per-result country-code filter below plus the optional lat/lon bias.
-  let url = `${PHOTON_URL}?q=${encodeURIComponent(q)}&limit=20&lang=${lang}`
-  if (!intl) url += `&bbox=${DACH_BBOX_STR}`
+  // Shared params for both calls. In DACH mode a tight bbox sharpens results.
+  // In international mode no single bbox can cover the allowlist (Europe + US),
+  // so we drop it and rely on the per-result country-code filter below plus the
+  // optional lat/lon bias.
+  let sharedParams = `lang=${lang}`
+  if (!intl) sharedParams += `&bbox=${DACH_BBOX_STR}`
   if (biasOk) {
-    url += `&lat=${lat}&lon=${lon}`
+    sharedParams += `&lat=${lat}&lon=${lon}`
     // International mode: widen the proximity-bias radius via a low `zoom`.
     // Photon's default zoom (16) makes lat/lon act as a hard nearby filter — a
     // query like "Paris" from Berlin returns only local "Paris*" features and
     // drops Paris (FR) from the response entirely. zoom=10 keeps a mild local
     // preference (nearby matches still surface) while letting distant major
     // cities rank in. DACH mode keeps the default (tight) bias + bbox.
-    if (intl) url += `&zoom=10`
+    if (intl) sharedParams += `&zoom=10`
   }
 
-  try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "AccessiblePlaces/1.0 (contact@accessible-places.org)" },
-      signal:  AbortSignal.timeout(3_000),
-    })
-    if (!res.ok) return NextResponse.json([])
+  // General, unrestricted query — ask for more candidates than needed so
+  // classification + dedupe still fill the venues group.
+  const venueUrl = `${PHOTON_URL}?q=${encodeURIComponent(q)}&limit=20&${sharedParams}`
+  // Dedicated area query — layer-restricted so short/ambiguous prefixes still
+  // surface the actual district/city entity instead of losing it to venues.
+  const areaUrl =
+    `${PHOTON_URL}?q=${encodeURIComponent(q)}&limit=${AREA_QUERY_LIMIT}&${sharedParams}` +
+    AREA_LAYERS.map((l) => `&layer=${l}`).join("")
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data: { features?: any[] } = await res.json()
-    const seen   = new Set<string>()
-    const areas:  UnifiedSuggestion[] = []
-    const venues: UnifiedSuggestion[] = []
-
-    for (const f of data.features ?? []) {
-      const p = f?.properties ?? {}
-
-      // countrycode is often absent for POIs — trust the bbox/bias instead.
-      // Only hard-exclude results with an explicit out-of-allowlist country code.
-      const cc = (p.countrycode ?? "").toUpperCase()
-      if (cc && !codeSet.has(cc)) continue
-
-      const name = (p.name ?? "").trim()
-      if (!name) continue
-
-      const osmKey   = p.osm_key ?? null
-      const osmValue = p.osm_value ?? null
-
-      // Streets are neither a useful search area nor a venue — skip them.
-      if (osmKey === "highway") continue
-
-      const isArea =
-        AREA_OSM_KEYS.has(osmKey ?? "") || AREA_TYPES.has((p.type ?? "").toLowerCase())
-
-      const city    = (p.city ?? p.county ?? "").trim()
-      const base    = city && city !== name ? `${name}, ${city}` : name
-      const display = cc ? `${base} (${cc})` : base
-      // Dedupe across both groups: node+way duplicates of the same feature can
-      // classify identically, and an area/venue display collision is resolved
-      // first-come (Photon ranks by relevance).
-      if (seen.has(display)) continue
-      seen.add(display)
-
-      // GeoJSON coordinates are [lon, lat]
-      const coords = f?.geometry?.coordinates
-      const pLon   = typeof coords?.[0] === "number" ? coords[0] : null
-      const pLat   = typeof coords?.[1] === "number" ? coords[1] : null
-
-      const suggestion: UnifiedSuggestion = {
-        kind: isArea ? "area" : "venue",
-        display, name, lat: pLat, lon: pLon, osmKey, osmValue,
-      }
-      if (isArea) {
-        if (areas.length < MAX_AREAS) areas.push(suggestion)
-      } else {
-        if (venues.length < MAX_VENUES) venues.push(suggestion)
-      }
-      if (areas.length >= MAX_AREAS && venues.length >= MAX_VENUES) break
+  const fetchPhoton = async (url: string) => {
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": "AccessiblePlaces/1.0 (contact@accessible-places.org)" },
+        signal:  AbortSignal.timeout(3_000),
+      })
+      if (!res.ok) return []
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data: { features?: any[] } = await res.json()
+      return data.features ?? []
+    } catch {
+      return []
     }
-
-    // Areas first — they are fewer, higher-precision matches, and the grouped
-    // dropdown renders them as the top section.
-    return NextResponse.json([...areas, ...venues])
-  } catch {
-    return NextResponse.json([])
   }
+
+  const [venueFeatures, areaFeatures] = await Promise.all([
+    fetchPhoton(venueUrl),
+    fetchPhoton(areaUrl),
+  ])
+
+  const seen  = new Set<string>()
+  const areas:  UnifiedSuggestion[] = []
+  const venues: UnifiedSuggestion[] = []
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const toSuggestion = (f: any): UnifiedSuggestion | null => {
+    const p = f?.properties ?? {}
+
+    // countrycode is often absent for POIs — trust the bbox/bias instead.
+    // Only hard-exclude results with an explicit out-of-allowlist country code.
+    const cc = (p.countrycode ?? "").toUpperCase()
+    if (cc && !codeSet.has(cc)) return null
+
+    const name = (p.name ?? "").trim()
+    if (!name) return null
+
+    const osmKey   = p.osm_key ?? null
+    const osmValue = p.osm_value ?? null
+
+    // Streets are neither a useful search area nor a venue — skip them.
+    if (osmKey === "highway") return null
+
+    const isArea =
+      AREA_OSM_KEYS.has(osmKey ?? "") || AREA_TYPES.has((p.type ?? "").toLowerCase())
+
+    const city    = (p.city ?? p.county ?? "").trim()
+    const base    = city && city !== name ? `${name}, ${city}` : name
+    const display = cc ? `${base} (${cc})` : base
+
+    // GeoJSON coordinates are [lon, lat]
+    const coords = f?.geometry?.coordinates
+    const pLon   = typeof coords?.[0] === "number" ? coords[0] : null
+    const pLat   = typeof coords?.[1] === "number" ? coords[1] : null
+
+    return { kind: isArea ? "area" : "venue", display, name, lat: pLat, lon: pLon, osmKey, osmValue }
+  }
+
+  // Areas first, sourced from the dedicated layer-restricted call — this is
+  // what fixes short-prefix queries losing the district/city entity to venues.
+  for (const f of areaFeatures) {
+    if (areas.length >= MAX_AREAS) break
+    const s = toSuggestion(f)
+    if (!s || s.kind !== "area") continue
+    if (seen.has(s.display)) continue
+    seen.add(s.display)
+    areas.push(s)
+  }
+
+  // Venues from the general call. Also catches any area-classified feature the
+  // dedicated call missed (e.g. rate-limited/failed), as a fallback.
+  for (const f of venueFeatures) {
+    if (areas.length >= MAX_AREAS && venues.length >= MAX_VENUES) break
+    const s = toSuggestion(f)
+    if (!s) continue
+    if (seen.has(s.display)) continue
+    if (s.kind === "area" && areas.length >= MAX_AREAS) continue
+    seen.add(s.display)
+    if (s.kind === "area") areas.push(s)
+    else if (venues.length < MAX_VENUES) venues.push(s)
+  }
+
+  // Areas first — they are fewer, higher-precision matches, and the grouped
+  // dropdown renders them as the top section.
+  return NextResponse.json([...areas, ...venues])
 }

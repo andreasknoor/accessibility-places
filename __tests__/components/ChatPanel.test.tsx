@@ -208,6 +208,170 @@ describe("ChatPanel autocomplete — grouped dropdown", () => {
   })
 })
 
+// ─── Area pill rail (Konzept C) ──────────────────────────────────────────────
+// Areas render as a horizontal pill rail (<button>, wrapped in a labelled
+// role="group") instead of vertical <li> rows shared with venues — a
+// structurally different shape, not just a different color/icon, so a venue
+// whose OSM name happens to read like a place (e.g. a railway station
+// literally named "Berlin-Charlottenburg") can no longer be mistaken for the
+// district itself. See docs/plans (issue: unified-suggest area/venue mixup).
+
+describe("ChatPanel autocomplete — area pill rail (Konzept C)", () => {
+  it("renders each area suggestion as a <button>, not a <li>", async () => {
+    mockFetch([area("Berlin")])
+    renderPanel()
+    fireEvent.change(getInput(), { target: { value: "Ber" } })
+    await act(() => vi.runAllTimersAsync())
+
+    const option = screen.getByRole("option", { name: "Berlin" })
+    expect(option.tagName).toBe("BUTTON")
+  })
+
+  it("renders each venue suggestion as a <li>, a different element than area pills", async () => {
+    mockFetch([venue("Bierpumpe", "Bierpumpe, Issum (DE)")])
+    renderPanel()
+    fireEvent.change(getInput(), { target: { value: "Bier" } })
+    await act(() => vi.runAllTimersAsync())
+
+    const option = screen.getByRole("option", { name: /Bierpumpe/ })
+    expect(option.tagName).toBe("LI")
+  })
+
+  it("groups all area pills under a single element labelled by the 'Orte' heading", async () => {
+    mockFetch([
+      area("Charlottenburg", "Charlottenburg, Berlin (DE)"),
+      area("Charlottenburg-Wilmersdorf", "Charlottenburg-Wilmersdorf, Berlin (DE)"),
+      area("Charlottenburg-Nord", "Charlottenburg-Nord, Berlin (DE)"),
+    ])
+    renderPanel()
+    fireEvent.change(getInput(), { target: { value: "Berlin Char" } })
+    await act(() => vi.runAllTimersAsync())
+
+    const group = screen.getByRole("group", { name: "Orte" })
+    const pills = within(group).getAllByRole("option")
+    expect(pills).toHaveLength(3)
+    expect(pills.map((p) => p.textContent)).toEqual([
+      "Charlottenburg, Berlin (DE)",
+      "Charlottenburg-Wilmersdorf, Berlin (DE)",
+      "Charlottenburg-Nord, Berlin (DE)",
+    ])
+  })
+
+  it("does not render an area group when there are no area suggestions", async () => {
+    mockFetch([venue("Bierpumpe", "Bierpumpe, Issum (DE)")])
+    renderPanel()
+    fireEvent.change(getInput(), { target: { value: "Bier" } })
+    await act(() => vi.runAllTimersAsync())
+
+    expect(screen.queryByRole("group", { name: "Orte" })).not.toBeInTheDocument()
+  })
+
+  it("keeps the venues list outside the area group", async () => {
+    mockFetch([area("Essen"), venue("Restaurant Essen", "Restaurant Essen, Bochum (DE)")])
+    renderPanel()
+    fireEvent.change(getInput(), { target: { value: "Essen" } })
+    await act(() => vi.runAllTimersAsync())
+
+    const group = screen.getByRole("group", { name: "Orte" })
+    expect(within(group).queryByText(/Restaurant Essen/)).not.toBeInTheDocument()
+    expect(screen.getByRole("option", { name: /Restaurant Essen/ })).toBeInTheDocument()
+  })
+
+  it("each area pill carries a hidden icon distinguishing it visually from venue rows", async () => {
+    mockFetch([area("Berlin")])
+    renderPanel()
+    fireEvent.change(getInput(), { target: { value: "Ber" } })
+    await act(() => vi.runAllTimersAsync())
+
+    const pill = screen.getByRole("option", { name: "Berlin" })
+    expect(pill.querySelector("svg[aria-hidden]")).toBeInTheDocument()
+  })
+
+  it("keyboard ArrowDown steps through every area pill before reaching the first venue", async () => {
+    mockFetch([
+      area("Charlottenburg", "Charlottenburg, Berlin (DE)"),
+      area("Charlottenburg-Nord", "Charlottenburg-Nord, Berlin (DE)"),
+      venue("Berlin-Charlottenburg", "Berlin-Charlottenburg, Berlin (DE)"),
+    ])
+    renderPanel()
+    fireEvent.change(getInput(), { target: { value: "Berlin Char" } })
+    await act(() => vi.runAllTimersAsync())
+
+    fireEvent.keyDown(getInput(), { key: "ArrowDown" })
+    expect(screen.getByRole("option", { name: "Charlottenburg, Berlin (DE)" })).toHaveAttribute("aria-selected", "true")
+
+    fireEvent.keyDown(getInput(), { key: "ArrowDown" })
+    expect(screen.getByRole("option", { name: "Charlottenburg-Nord, Berlin (DE)" })).toHaveAttribute("aria-selected", "true")
+    expect(screen.getByRole("option", { name: "Charlottenburg, Berlin (DE)" })).toHaveAttribute("aria-selected", "false")
+
+    fireEvent.keyDown(getInput(), { key: "ArrowDown" })
+    expect(screen.getByRole("option", { name: /Berlin-Charlottenburg/ })).toHaveAttribute("aria-selected", "true")
+  })
+
+  it("aria-activedescendant follows highlight from an area pill to a venue row", async () => {
+    mockFetch([area("Charlottenburg", "Charlottenburg, Berlin (DE)"), venue("Bierpumpe", "Bierpumpe, Issum (DE)")])
+    renderPanel()
+    fireEvent.change(getInput(), { target: { value: "Char" } })
+    await act(() => vi.runAllTimersAsync())
+
+    fireEvent.keyDown(getInput(), { key: "ArrowDown" })
+    expect(getInput()).toHaveAttribute("aria-activedescendant", "unified-opt-0")
+    fireEvent.keyDown(getInput(), { key: "ArrowDown" })
+    expect(getInput()).toHaveAttribute("aria-activedescendant", "unified-opt-1")
+  })
+
+  it("clicking a non-first area pill selects that specific area, not the first one", async () => {
+    const onSearch = vi.fn()
+    mockFetch([
+      area("Charlottenburg", "Charlottenburg, Berlin (DE)"),
+      area("Charlottenburg-Nord", "Charlottenburg-Nord, Berlin (DE)"),
+    ])
+    renderPanel(onSearch)
+    fireEvent.change(getInput(), { target: { value: "Berlin Char" } })
+    await act(() => vi.runAllTimersAsync())
+
+    fireEvent.mouseDown(screen.getByRole("option", { name: "Charlottenburg-Nord, Berlin (DE)" }))
+    expect(getInput().value).toBe("Charlottenburg-Nord, Berlin (DE)")
+    expect(onSearch).toHaveBeenCalledWith(expect.stringContaining("Charlottenburg-Nord, Berlin (DE)"), undefined, undefined)
+  })
+
+  it("Enter on a highlighted area pill (not just the first) selects the highlighted one", async () => {
+    const onSearch = vi.fn()
+    mockFetch([
+      area("Charlottenburg", "Charlottenburg, Berlin (DE)"),
+      area("Charlottenburg-Nord", "Charlottenburg-Nord, Berlin (DE)"),
+    ])
+    renderPanel(onSearch)
+    fireEvent.change(getInput(), { target: { value: "Berlin Char" } })
+    await act(() => vi.runAllTimersAsync())
+
+    fireEvent.keyDown(getInput(), { key: "ArrowDown" })
+    fireEvent.keyDown(getInput(), { key: "ArrowDown" })
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+
+    expect(onSearch).toHaveBeenCalledWith(expect.stringContaining("Charlottenburg-Nord, Berlin (DE)"), undefined, undefined)
+  })
+
+  it("a venue whose display string reads like a place still renders as a list row, not a pill", async () => {
+    // Regression guard for the exact bug report: a railway station literally
+    // named "Berlin-Charlottenburg" must not visually resemble the district.
+    mockFetch([
+      area("Charlottenburg", "Charlottenburg, Berlin (DE)"),
+      venue("Berlin-Charlottenburg", "Berlin-Charlottenburg, Berlin (DE)"),
+    ])
+    renderPanel()
+    fireEvent.change(getInput(), { target: { value: "Berlin Char" } })
+    await act(() => vi.runAllTimersAsync())
+
+    const stationOption = screen.getByRole("option", { name: "Berlin-Charlottenburg, Berlin (DE)" })
+    const districtOption = screen.getByRole("option", { name: "Charlottenburg, Berlin (DE)" })
+    expect(stationOption.tagName).toBe("LI")
+    expect(districtOption.tagName).toBe("BUTTON")
+    expect(stationOption.closest('[role="group"]')).toBeNull()
+    expect(districtOption.closest('[role="group"]')).not.toBeNull()
+  })
+})
+
 // ─── Keyboard navigation (flat index across groups) ─────────────────────────
 
 describe("ChatPanel autocomplete — keyboard navigation", () => {

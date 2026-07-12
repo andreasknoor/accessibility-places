@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useRef, useEffect, Fragment } from "react"
-import { Search, Loader2, LocateFixed, X, Coffee, UtensilsCrossed, Beer, BookOpen, Hotel, Landmark, Film, Library, GalleryHorizontal, Star, IceCream, MapPin } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
+import { Search, Loader2, LocateFixed, X, Coffee, UtensilsCrossed, Beer, BookOpen, Hotel, Landmark, Film, Library, GalleryHorizontal, Star, IceCream, MapPin, Layers } from "lucide-react"
 import { track } from "@/lib/analytics"
 import { useTranslations, useLocale, getTranslations, type Locale } from "@/lib/i18n"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
@@ -1143,9 +1143,16 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       })
   }
 
-  // Index of the first suggestion of each kind — used to emit the group header rows.
-  const firstAreaIdx  = suggestions.findIndex((s) => s.kind === "area")
-  const firstVenueIdx = suggestions.findIndex((s) => s.kind === "venue")
+  // Areas render as a horizontal pill rail (Konzept C), not list rows — a
+  // structurally different shape from venues so the two kinds can't be
+  // confused at a glance, unlike relying on the section header alone (a venue
+  // whose OSM name/city happen to read like a place, e.g. a railway station
+  // literally named "Berlin-Charlottenburg", used to be visually
+  // indistinguishable from the district itself). Splitting by kind here keeps
+  // each suggestion's original index `i` for aria-activedescendant/keyboard
+  // nav (handleKeyDown navigates the flat `suggestions` array unchanged).
+  const areaEntries  = suggestions.map((s, i) => ({ s, i })).filter(({ s }) => s.kind === "area")
+  const venueEntries = suggestions.map((s, i) => ({ s, i })).filter(({ s }) => s.kind === "venue")
 
   // No-submit-button redesign: the dropdown's first row is always "run this
   // input as typed" (mirrors Enter, which already falls through to submit()
@@ -1375,52 +1382,73 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                     </span>
                   </li>
                 )}
-                {suggestions.map((s, i) => {
+                {areaEntries.length > 0 && (
+                  <li role="presentation" className="px-3 pt-2 pb-2 border-b border-border">
+                    <span className="block mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground select-none">
+                      {t.chat.suggestGroupAreas}
+                    </span>
+                    <span role="group" aria-label={t.chat.suggestGroupAreas} className="flex flex-wrap gap-1.5">
+                      {areaEntries.map(({ s, i }) => {
+                        const commaIdx = s.display.indexOf(",")
+                        const splitAt  = commaIdx !== -1 ? commaIdx : s.display.lastIndexOf(" (")
+                        const bold     = splitAt !== -1 ? s.display.slice(0, splitAt) : s.display
+                        const rest     = splitAt !== -1 ? s.display.slice(splitAt)    : ""
+                        return (
+                          <button
+                            key={`${s.kind}-${s.display}`}
+                            type="button"
+                            id={`unified-opt-${i}`}
+                            role="option"
+                            aria-selected={i === highlightedIdx}
+                            onMouseDown={(e) => { e.preventDefault(); selectSuggestion(s) }}
+                            className={cn(
+                              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm cursor-pointer transition-colors",
+                              i === highlightedIdx
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-muted/60 border-border hover:bg-muted",
+                            )}
+                          >
+                            <Layers className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                            <span className="whitespace-nowrap">
+                              <span className="font-semibold">{bold}</span>{rest}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </span>
+                  </li>
+                )}
+                {venueEntries.length > 0 && (
+                  <li role="presentation" className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground select-none">
+                    {t.chat.suggestGroupVenues}
+                  </li>
+                )}
+                {venueEntries.map(({ s, i }) => {
                   const commaIdx = s.display.indexOf(",")
                   const splitAt  = commaIdx !== -1 ? commaIdx : s.display.lastIndexOf(" (")
                   const bold     = splitAt !== -1 ? s.display.slice(0, splitAt) : s.display
                   const rest     = splitAt !== -1 ? s.display.slice(splitAt)    : ""
                   return (
-                    <Fragment key={`${s.kind}-${s.display}`}>
-                      {i === firstAreaIdx && (
-                        <li role="presentation" className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground select-none">
-                          {t.chat.suggestGroupAreas}
-                        </li>
+                    <li
+                      key={`${s.kind}-${s.display}`}
+                      id={`unified-opt-${i}`}
+                      role="option"
+                      aria-selected={i === highlightedIdx}
+                      onMouseDown={(e) => { e.preventDefault(); selectSuggestion(s) }}
+                      className={cn(
+                        "px-3 py-2 text-sm cursor-pointer transition-colors",
+                        i === highlightedIdx
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-muted",
                       )}
-                      {i === firstVenueIdx && (
-                        <li role="presentation" className={cn(
-                          "px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground select-none",
-                          firstVenueIdx > 0 && "border-t border-border",
-                        )}>
-                          {t.chat.suggestGroupVenues}
-                        </li>
-                      )}
-                      <li
-                        id={`unified-opt-${i}`}
-                        role="option"
-                        aria-selected={i === highlightedIdx}
-                        onMouseDown={(e) => { e.preventDefault(); selectSuggestion(s) }}
-                        className={cn(
-                          "px-3 py-2 text-sm cursor-pointer transition-colors",
-                          i === highlightedIdx
-                            ? "bg-primary text-primary-foreground"
-                            : "hover:bg-muted",
-                        )}
-                      >
-                        {s.kind === "venue" ? (
-                          <span className="flex items-center gap-2">
-                            <PlaceCategoryIcon osmKey={s.osmKey} osmValue={s.osmValue} />
-                            <span>
-                              <span className="font-semibold">{bold}</span>{rest}
-                            </span>
-                          </span>
-                        ) : (
-                          <span>
-                            <span className="font-semibold">{bold}</span>{rest}
-                          </span>
-                        )}
-                      </li>
-                    </Fragment>
+                    >
+                      <span className="flex items-center gap-2">
+                        <PlaceCategoryIcon osmKey={s.osmKey} osmValue={s.osmValue} />
+                        <span>
+                          <span className="font-semibold">{bold}</span>{rest}
+                        </span>
+                      </span>
+                    </li>
                   )
                 })}
               </ul>
