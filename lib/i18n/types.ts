@@ -101,8 +101,8 @@ export interface Translations {
   }
   results: {
     title:              string
-    titleRadius:        (km: number) => string
-    radiusPickerLabel:  (km: number) => string
+    titleRadius:        (radiusLabel: string) => string
+    radiusPickerLabel:  (radiusLabel: string) => string
     count:              (n: number) => string
     resultsAnnounce:    (n: number) => string
     parkingCount:       (n: number) => string
@@ -415,8 +415,6 @@ export interface Translations {
     mobileViewMap:     string
     resetToDefaults:   string
     resetDone:         string
-    parkingRadius:     string
-    parkingRadiusHint: string
     internationalMode:     string
     internationalModeHint: string
     usageStats:            string

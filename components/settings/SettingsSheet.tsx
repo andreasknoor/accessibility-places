@@ -5,7 +5,7 @@ import { useFocusTrap } from "@/hooks/useFocusTrap"
 import { createPortal } from "react-dom"
 import { Settings, Check, Search, Map, SlidersHorizontal } from "lucide-react"
 import { useTranslations, useLocale } from "@/lib/i18n"
-import { SETTING_CHIPS, DEFAULT_APP_SETTINGS, SETTINGS_PARKING_RADIUS_MAX_KM } from "@/lib/settings"
+import { SETTING_CHIPS, DEFAULT_APP_SETTINGS } from "@/lib/settings"
 import { cn } from "@/lib/utils"
 import { track } from "@/lib/analytics"
 import type { AppSettings } from "@/lib/settings"
@@ -88,31 +88,6 @@ function SelectInput({ value, onChange, children, ...aria }: {
     >
       {children}
     </select>
-  )
-}
-
-function SliderInput({ value, min, max, step, onChange, displayLabel, ...aria }: {
-  value: number
-  min: number
-  max: number
-  step: number
-  onChange: (v: number) => void
-  displayLabel: string
-} & React.AriaAttributes) {
-  return (
-    <div className="flex items-center gap-2 min-w-[160px]">
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="flex-1 h-1.5 accent-primary cursor-pointer"
-        {...aria}
-      />
-      <span className="text-xs text-muted-foreground tabular-nums w-12 text-right shrink-0">{displayLabel}</span>
-    </div>
   )
 }
 
@@ -230,20 +205,6 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
               <Toggle
                 value={settings.publicToiletsOnly}
                 onChange={(v) => onUpdate({ publicToiletsOnly: v })}
-              />
-            </Row>
-            <Row label={ts.parkingRadius} hint={ts.parkingRadiusHint}>
-              <SliderInput
-                min={0.05}
-                max={SETTINGS_PARKING_RADIUS_MAX_KM}
-                step={0.05}
-                value={settings.parkingRadiusKm}
-                onChange={(v) => onUpdate({ parkingRadiusKm: v })}
-                displayLabel={
-                  settings.parkingRadiusKm < 1
-                    ? `${Math.round(settings.parkingRadiusKm * 1000)} m`
-                    : `${settings.parkingRadiusKm.toFixed(1)} km`
-                }
               />
             </Row>
           </div>

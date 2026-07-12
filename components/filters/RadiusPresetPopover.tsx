@@ -3,14 +3,18 @@
 import { ChevronDown } from "lucide-react"
 import { Popover, PopoverTrigger, PopoverContent, PopoverClose } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-
-export const RADIUS_PRESETS_KM = [1, 2, 5, 10, 25, 50] as const
+import { RADIUS_PRESETS_KM, formatRadiusKm } from "@/lib/search-ui"
 
 interface Props {
   radiusKm: number
-  // Absent (e.g. during an active amenity search — see canShowResultsRadiusPicker
-  // in lib/search-ui.ts) renders a plain, non-interactive label instead of a popover.
+  // Absent (e.g. ResultsList's picker during an active amenity search — see
+  // canShowResultsRadiusPicker in lib/search-ui.ts) renders a plain,
+  // non-interactive label instead of a popover.
   onChange?: (km: number) => void
+  // Defaults to the venue domain (1-50km). Pass AMENITY_RADIUS_PRESETS_KM (via
+  // headerRadiusControl) for an amenity-mode trigger — never mix domains, a
+  // km-only list would misrepresent the 0.05-5km amenity range.
+  presets?: readonly number[]
   label: string
   ariaLabel: string
   triggerClassName: string
@@ -20,7 +24,7 @@ interface Props {
 // a preset-pill popover on tap. Originally lived inline in ResultsList's header;
 // extracted so the always-visible header pill (MobileLayout) can reuse the exact
 // same interaction instead of duplicating the Popover/preset markup.
-export default function RadiusPresetPopover({ radiusKm, onChange, label, ariaLabel, triggerClassName }: Props) {
+export default function RadiusPresetPopover({ radiusKm, onChange, presets = RADIUS_PRESETS_KM, label, ariaLabel, triggerClassName }: Props) {
   if (!onChange) {
     return <span className={triggerClassName}>{label}</span>
   }
@@ -34,7 +38,7 @@ export default function RadiusPresetPopover({ radiusKm, onChange, label, ariaLab
       </PopoverTrigger>
       <PopoverContent className="w-auto p-1.5" align="start">
         <div className="flex flex-wrap gap-1 max-w-[14rem]">
-          {RADIUS_PRESETS_KM.map((km) => {
+          {presets.map((km) => {
             const isActive = km === radiusKm
             return (
               <PopoverClose asChild key={km}>
@@ -48,7 +52,7 @@ export default function RadiusPresetPopover({ radiusKm, onChange, label, ariaLab
                       : "bg-card text-foreground border-border hover:bg-muted"
                   )}
                 >
-                  {km} km
+                  {formatRadiusKm(km)}
                 </button>
               </PopoverClose>
             )

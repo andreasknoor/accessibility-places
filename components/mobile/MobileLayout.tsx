@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { hapticLight } from "@/lib/native/haptics"
 import { track } from "@/lib/analytics"
-import { amenitySpotKey, type ViewportOrigin } from "@/lib/search-ui"
+import { amenitySpotKey, formatRadiusKm, headerRadiusControl, type ViewportOrigin } from "@/lib/search-ui"
 import ChatPanel       from "@/components/chat/ChatPanel"
 import FilterPanel     from "@/components/filters/FilterPanel"
 import RadiusPresetPopover from "@/components/filters/RadiusPresetPopover"
@@ -282,14 +282,18 @@ export default function MobileLayout({
         </div>
         <div className="flex items-center gap-1.5">
           {/* Always-visible radius control (issue: radius was only reachable via
-              the Filter tab). Reuses radiusKm/onRadiusChange — already resolved by
-              HomeClient to the venue-vs-amenity domain and to undefined during an
-              active amenity search, exactly like ResultsList's header picker. */}
+              the Filter tab). radiusKm is already resolved by HomeClient to the
+              venue-vs-amenity domain (displayedRadiusKm). Unlike ResultsList's
+              picker, this one STAYS interactive during an amenity search —
+              headerRadiusControl picks the matching presets + commit handler
+              (onAmenityRadius), which is the same handler FilterPanel's own
+              amenity slider already calls, so there's still only one source of
+              truth for the value (see lib/search-ui.ts for the full reasoning). */}
           <RadiusPresetPopover
             radiusKm={radiusKm}
-            onChange={onRadiusChange}
-            label={t.results.titleRadius(radiusKm)}
-            ariaLabel={t.results.radiusPickerLabel(radiusKm)}
+            {...headerRadiusControl({ amenityActive: amenityActiveBool, onRadiusChange, onAmenityRadius })}
+            label={t.results.titleRadius(formatRadiusKm(radiusKm))}
+            ariaLabel={t.results.radiusPickerLabel(formatRadiusKm(radiusKm))}
             triggerClassName="flex items-center gap-0.5 text-xs font-semibold text-primary bg-primary/10 border border-primary/20 rounded-full px-2.5 py-1 hover:bg-primary/15 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
           <SettingsSheet settings={settings} onUpdate={onUpdateSettings} onResetOnboarding={onResetOnboarding} />

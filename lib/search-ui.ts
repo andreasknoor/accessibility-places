@@ -121,3 +121,35 @@ export function expandRadiusTarget(args: ExpandRadiusArgs): "amenity" | "venue" 
 export function canShowResultsRadiusPicker(amenityActive: boolean): boolean {
   return !amenityActive
 }
+
+// ─── Radius presets + formatting (shared by RadiusPresetPopover call sites) ──
+
+export const RADIUS_PRESETS_KM = [1, 2, 5, 10, 25, 50] as const
+// 4 km is kept in the list even though it's a slightly odd step — it's the
+// persisted AppSettings.parkingRadiusKm default, so a first-time popover open
+// highlights an active preset instead of showing none selected.
+export const AMENITY_RADIUS_PRESETS_KM = [0.1, 0.25, 0.5, 1, 2, 3, 4, 5] as const
+
+// "5 km" / "500 m" — same convention as FilterPanel's own (separate, not
+// deduplicated here to keep this change's blast radius small) formatRadius.
+export function formatRadiusKm(km: number): string {
+  return km < 1 ? `${Math.round(km * 1000)} m` : `${km} km`
+}
+
+// Which presets + commit handler the always-visible header radius pill
+// (MobileLayout) should use. Unlike ResultsList's picker — venue-only, see
+// canShowResultsRadiusPicker above — the header pill DOES stay interactive
+// during an amenity search: both this and FilterPanel's amenity slider
+// ultimately call the exact same commit handler (handleAmenityRadiusCommit in
+// HomeClient), so there is exactly one source of truth in either domain — no
+// new "two controls desync one value" risk (the thing canShowResultsRadiusPicker
+// was originally guarding against was a *domain* mix-up, not a second control).
+export function headerRadiusControl(args: {
+  amenityActive:    boolean
+  onRadiusChange?:  (km: number) => void
+  onAmenityRadius?: (km: number) => void
+}): { presets: readonly number[]; onChange?: (km: number) => void } {
+  return args.amenityActive
+    ? { presets: AMENITY_RADIUS_PRESETS_KM, onChange: args.onAmenityRadius }
+    : { presets: RADIUS_PRESETS_KM,         onChange: args.onRadiusChange }
+}

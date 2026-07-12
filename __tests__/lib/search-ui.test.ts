@@ -10,9 +10,14 @@ import {
   venueViewportOrigin,
   amenityViewportOrigin,
   amenitySpotKey,
+  formatRadiusKm,
+  headerRadiusControl,
+  RADIUS_PRESETS_KM,
+  AMENITY_RADIUS_PRESETS_KM,
   AMENITY_RADIUS_MIN_KM,
   AMENITY_RADIUS_MAX_KM,
 } from "@/lib/search-ui"
+import { SETTINGS_PARKING_RADIUS_MAX_KM } from "@/lib/settings"
 import { RADIUS_MIN_KM, RADIUS_MAX_KM } from "@/lib/config"
 
 const center = { lat: 52.5, lon: 13.4 }
@@ -228,5 +233,76 @@ describe("amenitySpotKey — stable identity shared by map markers and result li
     const spot = { osmId: "way/42", lat: 48.1, lon: 11.6 }
     // The marker passes only osmId/lat/lon; the list passes the full feature.
     expect(amenitySpotKey(spot)).toBe(amenitySpotKey({ ...spot, capacity: 3 } as never))
+  })
+})
+
+describe("formatRadiusKm", () => {
+  it("renders sub-km radii in metres", () => {
+    expect(formatRadiusKm(0.25)).toBe("250 m")
+    expect(formatRadiusKm(0.1)).toBe("100 m")
+    expect(formatRadiusKm(0.05)).toBe("50 m")
+  })
+
+  it("renders 1km and above in kilometres, never as a metres value", () => {
+    expect(formatRadiusKm(1)).toBe("1 km")
+    expect(formatRadiusKm(5)).toBe("5 km")
+    expect(formatRadiusKm(50)).toBe("50 km")
+  })
+
+  it("rounds fractional metres to the nearest whole metre", () => {
+    expect(formatRadiusKm(0.3478)).toBe("348 m")
+  })
+})
+
+describe("radius preset lists — sanity + no cross-domain leakage", () => {
+  it("venue presets are ascending and inside the venue domain (RADIUS_MIN_KM-RADIUS_MAX_KM)", () => {
+    expect([...RADIUS_PRESETS_KM]).toEqual([...RADIUS_PRESETS_KM].sort((a, b) => a - b))
+    for (const km of RADIUS_PRESETS_KM) {
+      expect(km).toBeGreaterThanOrEqual(RADIUS_MIN_KM)
+      expect(km).toBeLessThanOrEqual(RADIUS_MAX_KM)
+    }
+  })
+
+  it("amenity presets are ascending and inside the persisted-default domain (AMENITY_RADIUS_MIN_KM-SETTINGS_PARKING_RADIUS_MAX_KM)", () => {
+    expect([...AMENITY_RADIUS_PRESETS_KM]).toEqual([...AMENITY_RADIUS_PRESETS_KM].sort((a, b) => a - b))
+    for (const km of AMENITY_RADIUS_PRESETS_KM) {
+      expect(km).toBeGreaterThanOrEqual(AMENITY_RADIUS_MIN_KM)
+      expect(km).toBeLessThanOrEqual(SETTINGS_PARKING_RADIUS_MAX_KM)
+    }
+  })
+
+  it("includes the persisted parkingRadiusKm default, so a first-time header-pill open highlights an active preset", async () => {
+    const { DEFAULT_APP_SETTINGS } = await import("@/lib/settings")
+    expect(AMENITY_RADIUS_PRESETS_KM as readonly number[]).toContain(DEFAULT_APP_SETTINGS.parkingRadiusKm)
+  })
+})
+
+describe("headerRadiusControl — always-visible header radius pill's domain switch", () => {
+  it("picks the venue presets + onRadiusChange when no amenity search is active", () => {
+    const onRadiusChange = () => {}
+    const onAmenityRadius = () => {}
+    const result = headerRadiusControl({ amenityActive: false, onRadiusChange, onAmenityRadius })
+    expect(result.presets).toBe(RADIUS_PRESETS_KM)
+    expect(result.onChange).toBe(onRadiusChange)
+  })
+
+  it("picks the amenity presets + onAmenityRadius when an amenity search is active", () => {
+    const onRadiusChange = () => {}
+    const onAmenityRadius = () => {}
+    const result = headerRadiusControl({ amenityActive: true, onRadiusChange, onAmenityRadius })
+    expect(result.presets).toBe(AMENITY_RADIUS_PRESETS_KM)
+    expect(result.onChange).toBe(onAmenityRadius)
+  })
+
+  it("never returns the venue handler while amenity-active, even though both are supplied (no cross-domain wiring)", () => {
+    const onRadiusChange = () => {}
+    const onAmenityRadius = () => {}
+    const result = headerRadiusControl({ amenityActive: true, onRadiusChange, onAmenityRadius })
+    expect(result.onChange).not.toBe(onRadiusChange)
+  })
+
+  it("degrades to a non-interactive trigger (onChange undefined) when the matching handler is absent", () => {
+    expect(headerRadiusControl({ amenityActive: false, onAmenityRadius: () => {} }).onChange).toBeUndefined()
+    expect(headerRadiusControl({ amenityActive: true, onRadiusChange: () => {} }).onChange).toBeUndefined()
   })
 })

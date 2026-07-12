@@ -24,7 +24,11 @@ export interface AppSettings {
   // WC focus mode: when true, restricts the WC layer to standalone public toilets
   // (amenity=toilets) and hides WCs that are part of a venue. Default off (show all).
   publicToiletsOnly:  boolean
-  parkingRadiusKm:    number          // radius for the amenity focus fetch (parking + WC), 0.05–5.0
+  // Amenity (parking/WC) search starting radius, 0.05–5.0. No direct Settings
+  // UI — it round-trips automatically via persistParkingStartRadius whenever
+  // the amenity radius changes (header pill, FilterPanel slider, "search this
+  // area", "expand radius"), so it always reflects the last-used value.
+  parkingRadiusKm:    number
   // Opt-in: allow searches outside DACH (curated country allowlist). Default off.
   // When on, geocoding + OSM endpoint choice widen to the allowlist; DACH searches
   // are unaffected (still use the private server + all sources).

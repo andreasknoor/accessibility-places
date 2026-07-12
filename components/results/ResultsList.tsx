@@ -8,7 +8,7 @@ import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import RadiusPresetPopover from "@/components/filters/RadiusPresetPopover"
 import { haversineMetres } from "@/lib/matching/match"
-import { amenitySpotKey } from "@/lib/search-ui"
+import { amenitySpotKey, formatRadiusKm } from "@/lib/search-ui"
 import type { Place, SearchFilters, FilterDebug, AmenityFeature, AmenityType } from "@/lib/types"
 
 interface Props {
@@ -191,8 +191,8 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
               <RadiusPresetPopover
                 radiusKm={radiusKm}
                 onChange={onRadiusChange}
-                label={t.results.titleRadius(radiusKm)}
-                ariaLabel={t.results.radiusPickerLabel(radiusKm)}
+                label={t.results.titleRadius(formatRadiusKm(radiusKm))}
+                ariaLabel={t.results.radiusPickerLabel(formatRadiusKm(radiusKm))}
                 triggerClassName="flex items-center gap-0.5 text-xs font-normal text-muted-foreground hover:text-foreground transition-colors rounded-sm px-1 -mx-1 py-0.5 hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
             )}
