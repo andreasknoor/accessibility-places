@@ -1234,15 +1234,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setFilters(next)
   }, [filters])
 
-  const handleToggleParking = useCallback(() => {
-    setFilters((f) => {
-      const next = !f.alwaysShowParking
-      if (next) track("parking_shown")
-      updateSettings({ alwaysShowParking: next })
-      return { ...f, alwaysShowParking: next }
-    })
-  }, [updateSettings])
-
   // Segmented map-layer control: sets parking + toilet display together.
   const handleSetMapLayers = useCallback((parking: boolean, toilets: boolean) => {
     if (parking) track("parking_shown")
@@ -1398,7 +1389,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         initialChipCat={initialCategory && resetKey === 0 ? SEO_CATEGORY_SLUGS[initialCategory] : (settings.defaultChipCat ?? undefined)}
         scrollToId={scrollToId}
         showParking={filters.alwaysShowParking}
-        onToggleParking={hasParkingToggle ? handleToggleParking : undefined}
         parkingSpotCount={parkingSpots.length > 0 ? parkingSpots.length : undefined}
         settings={settings}
         onUpdateSettings={handleUpdateSettings}

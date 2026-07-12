@@ -61,17 +61,17 @@ describe("SettingsSheet", () => {
     expect(onUpdate).toHaveBeenCalledWith({ autoZoom: false })
   })
 
-  it("toggling alwaysShowParking calls onUpdate with { alwaysShowParking: true }", () => {
+  it("toggling showWeakParking calls onUpdate with { showWeakParking: true }", () => {
     const onUpdate = vi.fn()
-    renderSheet({ ...DEFAULT_APP_SETTINGS, alwaysShowParking: false }, onUpdate)
+    renderSheet({ ...DEFAULT_APP_SETTINGS, showWeakParking: false }, onUpdate)
     fireEvent.click(screen.getByRole("button", { name: /Einstellungen/i }))
     // Locate the switch by its row label (robust against other toggles being
     // added/reordered) rather than by position among all switches.
-    const label = screen.getByText("Rollstuhlparkplätze immer in Karte")
+    const label = screen.getByText("Auch nicht reservierte Parkplätze")
     const row = label.parentElement!.parentElement! // <p> → label wrapper → Row root
     const parkingSwitch = within(row).getByRole("switch")
     fireEvent.click(parkingSwitch)
-    expect(onUpdate).toHaveBeenCalledWith({ alwaysShowParking: true })
+    expect(onUpdate).toHaveBeenCalledWith({ showWeakParking: true })
   })
 
   it("changing sortOrder select calls onUpdate with { sortOrder: 'distance' }", () => {

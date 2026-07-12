@@ -220,12 +220,6 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
                 onChange={(v) => onUpdate({ autoZoom: v })}
               />
             </Row>
-            <Row label={ts.alwaysShowParking}>
-              <Toggle
-                value={settings.alwaysShowParking}
-                onChange={(v) => onUpdate({ alwaysShowParking: v })}
-              />
-            </Row>
             <Row label={ts.showWeakParking} hint={ts.showWeakParkingHint}>
               <Toggle
                 value={settings.showWeakParking}

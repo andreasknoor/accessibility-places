@@ -62,7 +62,6 @@ interface Props {
   showToilets?:         boolean
   onSetMapLayers?:      (parking: boolean, toilets: boolean) => void
   hasToiletData?:       boolean
-  onToggleParking?:     () => void
   parkingSpotCount?:    number
   settings:             AppSettings
   onUpdateSettings:     (patch: Partial<AppSettings>) => void
@@ -109,7 +108,7 @@ export default function MobileLayout({
   filters, sources, radiusKm, onFilters, onSources, onRadius,
   sourceStates, searchCenter, onSearch, onPlaceSearch, onRerun, hasSourceError, onExpandRadius, onAmenityExpandRadius, onRadiusChange, hasSearched, error,
   onReset, onLogoTap, resetKey, filterDebug, initialLocation, initialChipCat, scrollToId: externalScrollToId,
-  showParking, showToilets, onSetMapLayers, hasToiletData, onToggleParking, parkingSpotCount,
+  showParking, showToilets, onSetMapLayers, hasToiletData, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
   onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, onStartNearby, locateTrigger, exitNearbyTrigger, onSwitchToText,
   chatMode, onChatModeChange, biasCoords, onSearchHere, onLocate, locatePanTrigger, gpsCoords, onCategoryQueryChange, activeSearchCoords,

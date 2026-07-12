@@ -85,7 +85,6 @@ const en: Translations = {
     radiusSliderLabel: "Search radius in kilometres",
     acceptUnknown: "Show places with unclear information",
     displayOptions: "Display options",
-    alwaysShowParking: "Always show wheelchair parking on map",
     sourceCountTooltip: (raw: number, final: number) => `Raw: ${raw} → after filter: ${final}`,
     criteriaItems: {
       entrance:      "Wheelchair-accessible entrance",
@@ -430,7 +429,6 @@ const en: Translations = {
     sortDistance:      "Distance",
     autoZoom:          "Auto-zoom after search",
     autoZoomHint:      "Fit map to all results after each search",
-    alwaysShowParking: "Always show wheelchair parking on map",
     showWeakParking:     "Also non-reserved parking",
     showWeakParkingHint: "Yellow markers: lots without reserved disabled spaces (weaker data)",
     publicToiletsOnly:     "Public/standalone toilets only",

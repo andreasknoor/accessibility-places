@@ -85,7 +85,6 @@ const de: Translations = {
     radiusSliderLabel: "Suchradius in Kilometern",
     acceptUnknown: "Orte mit unklaren Informationen anzeigen",
     displayOptions: "Anzeigeoptionen",
-    alwaysShowParking: "Rollstuhlparkplätze immer in Karte anzeigen",
     sourceCountTooltip: (raw: number, final: number) => `Rohtreffer: ${raw} → nach Filter: ${final}`,
     criteriaItems: {
       entrance:      "Rollstuhlgerechter Eingang",
@@ -430,7 +429,6 @@ const de: Translations = {
     sortDistance:      "Entfernung",
     autoZoom:          "Automatischer Zoom nach Suche",
     autoZoomHint:      "Kartenausschnitt auf alle Ergebnisse anpassen",
-    alwaysShowParking: "Rollstuhlparkplätze immer in Karte",
     showWeakParking:     "Auch nicht reservierte Parkplätze",
     showWeakParkingHint: "Gelbe Marker: Parkplätze ohne reservierte Behindertenplätze (schwächere Datenlage)",
     publicToiletsOnly:     "Nur öffentliche/eigenständige WCs",

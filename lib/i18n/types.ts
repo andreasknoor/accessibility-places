@@ -89,7 +89,6 @@ export interface Translations {
     radiusSliderLabel:   string
     acceptUnknown:       string
     displayOptions:      string
-    alwaysShowParking:   string
     sourceCountTooltip:  (raw: number, final: number) => string
     criteriaItems: {
       entrance:      string
@@ -407,7 +406,6 @@ export interface Translations {
     sortDistance:      string
     autoZoom:          string
     autoZoomHint:      string
-    alwaysShowParking: string
     showWeakParking:     string
     showWeakParkingHint: string
     publicToiletsOnly:     string
