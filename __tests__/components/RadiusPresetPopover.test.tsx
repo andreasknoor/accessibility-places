@@ -84,6 +84,7 @@ describe("RadiusPresetPopover — amenity domain (explicit presets prop)", () =>
         radiusKm={radiusKm}
         onChange={onChange}
         presets={AMENITY_RADIUS_PRESETS_KM}
+        amenityMode
         label={label}
         ariaLabel={`${label} – change search radius`}
         triggerClassName="trigger"
@@ -125,5 +126,27 @@ describe("RadiusPresetPopover — amenity domain (explicit presets prop)", () =>
     const onChange = renderAmenity(0.25)
     fireEvent.click(presetButton("250 m"))
     expect(onChange).not.toHaveBeenCalled()
+  })
+})
+
+// Regression guard: forgetting to pass amenityMode (e.g. a new call site that
+// spreads `presets` but not the rest of headerRadiusControl's result) must not
+// silently render amenity's sub-km presets as fractional/floored km — it
+// should be obviously wrong (fails these tests), not a subtle metres-vs-km bug.
+describe("RadiusPresetPopover — amenityMode defaults to false", () => {
+  it("formats a sub-1km preset list in venue style (floored to '1 km') when amenityMode is omitted", () => {
+    render(
+      <RadiusPresetPopover
+        radiusKm={1}
+        onChange={vi.fn()}
+        presets={AMENITY_RADIUS_PRESETS_KM}
+        label="1 km"
+        ariaLabel="1 km – change search radius"
+        triggerClassName="trigger"
+      />,
+    )
+    fireEvent.click(screen.getByRole("button", { name: /1 km/ }))
+    expect(screen.queryByText("250 m")).toBeNull()
+    expect(screen.queryByText("100 m")).toBeNull()
   })
 })

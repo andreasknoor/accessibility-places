@@ -236,21 +236,49 @@ describe("amenitySpotKey — stable identity shared by map markers and result li
   })
 })
 
-describe("formatRadiusKm", () => {
-  it("renders sub-km radii in metres", () => {
-    expect(formatRadiusKm(0.25)).toBe("250 m")
-    expect(formatRadiusKm(0.1)).toBe("100 m")
-    expect(formatRadiusKm(0.05)).toBe("50 m")
+describe("formatRadiusKm — venue domain (default, amenityMode omitted/false)", () => {
+  it("rounds to a whole km number — the venue radiusKm can be a raw viewport-derived float after 'Hier suchen'", () => {
+    expect(formatRadiusKm(12.3)).toBe("12 km")
+    expect(formatRadiusKm(12.6)).toBe("13 km")
+    expect(formatRadiusKm(8.5)).toBe("9 km") // round-half-up, same as Math.round
   })
 
-  it("renders 1km and above in kilometres, never as a metres value", () => {
+  it("never renders a metres value, even for a sub-1km input", () => {
+    expect(formatRadiusKm(0.4)).not.toMatch(/ m$/)
+    expect(formatRadiusKm(0.99)).not.toMatch(/ m$/)
+  })
+
+  it("floors any sub-1km value to '1 km' (the venue domain's own floor, RADIUS_MIN_KM)", () => {
+    expect(formatRadiusKm(0.4)).toBe("1 km")
+    expect(formatRadiusKm(0.99)).toBe("1 km")
+    expect(formatRadiusKm(0)).toBe("1 km")
+  })
+
+  it("renders already-whole km values unchanged", () => {
     expect(formatRadiusKm(1)).toBe("1 km")
     expect(formatRadiusKm(5)).toBe("5 km")
     expect(formatRadiusKm(50)).toBe("50 km")
   })
+})
+
+describe("formatRadiusKm — amenity domain (amenityMode=true), unchanged sub-km metres display", () => {
+  it("renders sub-km radii in metres", () => {
+    expect(formatRadiusKm(0.25, true)).toBe("250 m")
+    expect(formatRadiusKm(0.1, true)).toBe("100 m")
+    expect(formatRadiusKm(0.05, true)).toBe("50 m")
+  })
+
+  it("renders 1km and above in kilometres, never as a metres value", () => {
+    expect(formatRadiusKm(1, true)).toBe("1 km")
+    expect(formatRadiusKm(5, true)).toBe("5 km")
+  })
 
   it("rounds fractional metres to the nearest whole metre", () => {
-    expect(formatRadiusKm(0.3478)).toBe("348 m")
+    expect(formatRadiusKm(0.3478, true)).toBe("348 m")
+  })
+
+  it("does NOT round a fractional km value (unlike the venue domain)", () => {
+    expect(formatRadiusKm(2.7, true)).toBe("2.7 km")
   })
 })
 
@@ -284,6 +312,7 @@ describe("headerRadiusControl — always-visible header radius pill's domain swi
     const result = headerRadiusControl({ amenityActive: false, onRadiusChange, onAmenityRadius })
     expect(result.presets).toBe(RADIUS_PRESETS_KM)
     expect(result.onChange).toBe(onRadiusChange)
+    expect(result.amenityMode).toBe(false)
   })
 
   it("picks the amenity presets + onAmenityRadius when an amenity search is active", () => {
@@ -292,6 +321,7 @@ describe("headerRadiusControl — always-visible header radius pill's domain swi
     const result = headerRadiusControl({ amenityActive: true, onRadiusChange, onAmenityRadius })
     expect(result.presets).toBe(AMENITY_RADIUS_PRESETS_KM)
     expect(result.onChange).toBe(onAmenityRadius)
+    expect(result.amenityMode).toBe(true)
   })
 
   it("never returns the venue handler while amenity-active, even though both are supplied (no cross-domain wiring)", () => {

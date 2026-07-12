@@ -132,8 +132,20 @@ export const AMENITY_RADIUS_PRESETS_KM = [0.1, 0.25, 0.5, 1, 2, 3, 4, 5] as cons
 
 // "5 km" / "500 m" — same convention as FilterPanel's own (separate, not
 // deduplicated here to keep this change's blast radius small) formatRadius.
-export function formatRadiusKm(km: number): string {
-  return km < 1 ? `${Math.round(km * 1000)} m` : `${km} km`
+//
+// Venue domain (amenityMode=false, the default): always a whole km number,
+// rounded — the venue radiusKm can be a raw viewport-derived float after
+// "Hier suchen" (handleSearchHere in HomeClient passes the exact centre→corner
+// distance), and a decimal like "12.3 km" in the header pill reads as
+// precision the app never actually offers (the presets are whole numbers).
+// Never shown in metres: RADIUS_MIN_KM already floors the domain at 1 km, but
+// round up defensively rather than ever displaying "0 km" from a stray float.
+//
+// Amenity domain (amenityMode=true) keeps its "250 m"-style sub-km display —
+// a deliberate choice for the 0.05-5 km parking/WC scale, untouched here.
+export function formatRadiusKm(km: number, amenityMode = false): string {
+  if (amenityMode) return km < 1 ? `${Math.round(km * 1000)} m` : `${km} km`
+  return `${Math.max(1, Math.round(km))} km`
 }
 
 // Which presets + commit handler the always-visible header radius pill
@@ -148,8 +160,8 @@ export function headerRadiusControl(args: {
   amenityActive:    boolean
   onRadiusChange?:  (km: number) => void
   onAmenityRadius?: (km: number) => void
-}): { presets: readonly number[]; onChange?: (km: number) => void } {
+}): { presets: readonly number[]; onChange?: (km: number) => void; amenityMode: boolean } {
   return args.amenityActive
-    ? { presets: AMENITY_RADIUS_PRESETS_KM, onChange: args.onAmenityRadius }
-    : { presets: RADIUS_PRESETS_KM,         onChange: args.onRadiusChange }
+    ? { presets: AMENITY_RADIUS_PRESETS_KM, onChange: args.onAmenityRadius, amenityMode: true }
+    : { presets: RADIUS_PRESETS_KM,         onChange: args.onRadiusChange,  amenityMode: false }
 }

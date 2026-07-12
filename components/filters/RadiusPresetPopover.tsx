@@ -15,6 +15,10 @@ interface Props {
   // headerRadiusControl) for an amenity-mode trigger — never mix domains, a
   // km-only list would misrepresent the 0.05-5km amenity range.
   presets?: readonly number[]
+  // Formats the preset pills: venue (default) rounds to a whole km number,
+  // amenity keeps the "250 m"-style sub-km display. headerRadiusControl's
+  // result spreads this in alongside `presets`, so the two stay in sync.
+  amenityMode?: boolean
   label: string
   ariaLabel: string
   triggerClassName: string
@@ -24,7 +28,7 @@ interface Props {
 // a preset-pill popover on tap. Originally lived inline in ResultsList's header;
 // extracted so the always-visible header pill (MobileLayout) can reuse the exact
 // same interaction instead of duplicating the Popover/preset markup.
-export default function RadiusPresetPopover({ radiusKm, onChange, presets = RADIUS_PRESETS_KM, label, ariaLabel, triggerClassName }: Props) {
+export default function RadiusPresetPopover({ radiusKm, onChange, presets = RADIUS_PRESETS_KM, amenityMode = false, label, ariaLabel, triggerClassName }: Props) {
   if (!onChange) {
     return <span className={triggerClassName}>{label}</span>
   }
@@ -52,7 +56,7 @@ export default function RadiusPresetPopover({ radiusKm, onChange, presets = RADI
                       : "bg-card text-foreground border-border hover:bg-muted"
                   )}
                 >
-                  {formatRadiusKm(km)}
+                  {formatRadiusKm(km, amenityMode)}
                 </button>
               </PopoverClose>
             )
