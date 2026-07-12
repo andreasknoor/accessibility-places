@@ -103,7 +103,7 @@ const en: Translations = {
     count:        (n: number) => `${n} place${n !== 1 ? "s" : ""}`,
     resultsAnnounce: (n: number) => `${n} place${n !== 1 ? "s" : ""} found`,
     parkingCount: (n: number) => `(${n}x parking)`,
-    showMap: "Show map",
+    showMap: "Map",
     confidence: {
       high:   "Reliable",
       medium: "Moderate",

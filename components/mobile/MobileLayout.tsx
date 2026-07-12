@@ -210,27 +210,33 @@ export default function MobileLayout({
   // solid bg-primary block (Variante 3 tab bar), a bg-primary count badge
   // would blend straight into it — swap to an inverted (background-coloured)
   // pill so the count stays legible in both states.
+  // Result count lives on "Ergebnisse" (its own tab), not "Karte" — the map
+  // isn't a property of a count, and ResultsList already shows the number
+  // itself; a badge on Karte was a third, misplaced copy of the same figure.
+  // Both badges below sit clear of the 20px (w-5) icon's right edge
+  // (-right-5, ~2px gap) rather than the typical corner-overlay offset
+  // (-right-1.5), which put the digit on top of the icon glyph.
   const allTabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "results", label: t.results.title ?? "Ergebnisse", icon: <List className="w-5 h-5" /> },
-    { id: "map",     label: t.results.showMap ?? "Karte",     icon: (
+    { id: "results", label: t.results.title ?? "Ergebnisse", icon: (
       <span className="relative">
-        <Map className="w-5 h-5" />
+        <List className="w-5 h-5" />
         {hasSearched && !isLoading && resultCount > 0 && (
           <span className={cn(
-            "absolute -top-1.5 -right-1.5 min-w-[1.125rem] h-[1.125rem] rounded-full text-[10px] font-bold leading-none flex items-center justify-center px-1",
-            activeTab === "map" ? "bg-background text-primary" : "bg-primary text-primary-foreground",
+            "absolute -top-1.5 -right-5 min-w-[1.125rem] h-[1.125rem] rounded-full text-[10px] font-bold leading-none flex items-center justify-center px-1",
+            activeTab === "results" ? "bg-background text-primary" : "bg-primary text-primary-foreground",
           )}>
             {resultCount > 99 ? "99+" : resultCount}
           </span>
         )}
       </span>
     )},
+    { id: "map",     label: t.results.showMap ?? "Karte",     icon: <Map className="w-5 h-5" /> },
     { id: "filter",  label: t.filters?.title  ?? "Filter",    icon: (
       <span className="relative">
         <SlidersHorizontal className="w-5 h-5" />
         {activeFilterCount > 0 && (
           <span className={cn(
-            "absolute -top-1.5 -right-1.5 min-w-[1.125rem] h-[1.125rem] rounded-full text-[10px] font-bold leading-none flex items-center justify-center px-1",
+            "absolute -top-1.5 -right-5 min-w-[1.125rem] h-[1.125rem] rounded-full text-[10px] font-bold leading-none flex items-center justify-center px-1",
             activeTab === "filter" ? "bg-background text-red-500" : "bg-red-500 text-white",
           )}>
             {activeFilterCount}
@@ -412,36 +418,25 @@ export default function MobileLayout({
 
         {/* Map tab — lazy-mounted so Leaflet initializes in a visible container */}
         <div className={cn("h-full relative", activeTab !== "map" && "hidden")}>
-          {/* Top-left pill row — count pill + (when the user has panned) the
-              "search here" pill, flowing side-by-side with a small gap like the
-              category chips. Hidden in focus mode: the count points at the (now
-              irrelevant) venue results. */}
-          {!amenityActiveBool && ((hasSearched && !isLoading && resultCount > 0) || searchHereRun) && (
+          {/* Top-left pill row — just the (when the user has panned) "search
+              here" pill now. The count pill that used to sit here was dropped:
+              the result count already lives on the "Ergebnisse" tab badge and
+              inside the results list itself, so a third copy floating over
+              the map was redundant. Hidden in focus mode (amenity search). */}
+          {!amenityActiveBool && searchHereRun && (
             <div
               className={cn(
                 "absolute top-3 left-14 z-[1000] flex items-center gap-1.5 transition-opacity",
                 mapPopupOpen && "opacity-0 pointer-events-none",
               )}
             >
-              {hasSearched && !isLoading && resultCount > 0 && (
-                <button
-                  onClick={() => { hapticLight(); setActiveTab("results") }}
-                  className="flex items-center gap-1.5 rounded-full bg-card/95 backdrop-blur-sm border border-border shadow-md px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
-                  aria-label={t.results.title}
-                >
-                  <List className="w-3.5 h-3.5 text-primary shrink-0" />
-                  <span>{t.results.count(resultCount)}</span>
-                </button>
-              )}
-              {searchHereRun && (
-                <button
-                  onClick={() => { hapticLight(); searchHereRun() }}
-                  className="flex items-center gap-1.5 rounded-full bg-card/95 backdrop-blur-sm border border-border shadow-md px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
-                >
-                  <Search className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
-                  <span>{t.map.searchHere}</span>
-                </button>
-              )}
+              <button
+                onClick={() => { hapticLight(); searchHereRun() }}
+                className="flex items-center gap-1.5 rounded-full bg-card/95 backdrop-blur-sm border border-border shadow-md px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+              >
+                <Search className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
+                <span>{t.map.searchHere}</span>
+              </button>
             </div>
           )}
           {/* Amenity count pill + (when available) the focus-mode "search this
