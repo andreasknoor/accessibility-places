@@ -12,6 +12,7 @@ import { track } from "@/lib/analytics"
 import { amenitySpotKey, type ViewportOrigin } from "@/lib/search-ui"
 import ChatPanel       from "@/components/chat/ChatPanel"
 import FilterPanel     from "@/components/filters/FilterPanel"
+import RadiusPresetPopover from "@/components/filters/RadiusPresetPopover"
 import ResultsList     from "@/components/results/ResultsList"
 import LanguageSwitcher from "@/components/LanguageSwitcher"
 import SettingsSheet   from "@/components/settings/SettingsSheet"
@@ -280,7 +281,18 @@ export default function MobileLayout({
             <p className="text-xs text-muted-foreground mt-0.5">{t.app.subtitle}</p>
           </button>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
+          {/* Always-visible radius control (issue: radius was only reachable via
+              the Filter tab). Reuses radiusKm/onRadiusChange — already resolved by
+              HomeClient to the venue-vs-amenity domain and to undefined during an
+              active amenity search, exactly like ResultsList's header picker. */}
+          <RadiusPresetPopover
+            radiusKm={radiusKm}
+            onChange={onRadiusChange}
+            label={t.results.titleRadius(radiusKm)}
+            ariaLabel={t.results.radiusPickerLabel(radiusKm)}
+            triggerClassName="flex items-center gap-0.5 text-xs font-semibold text-primary bg-primary/10 border border-primary/20 rounded-full px-2.5 py-1 hover:bg-primary/15 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
           <SettingsSheet settings={settings} onUpdate={onUpdateSettings} onResetOnboarding={onResetOnboarding} />
           <LanguageSwitcher />
         </div>

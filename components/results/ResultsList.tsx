@@ -1,17 +1,15 @@
 "use client"
 
 import { useState, useRef, useEffect, useMemo, useCallback } from "react"
-import { Loader2, RefreshCw, MapPin, X, ChevronDown, ChevronRight, ArrowUpDown, SlidersHorizontal, Compass, LocateFixed } from "lucide-react"
+import { Loader2, RefreshCw, MapPin, X, ChevronRight, ArrowUpDown, SlidersHorizontal, Compass, LocateFixed } from "lucide-react"
 import PlaceCard from "./PlaceCard"
 import AmenityCard from "./AmenityCard"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
-import { Popover, PopoverTrigger, PopoverContent, PopoverClose } from "@/components/ui/popover"
+import RadiusPresetPopover from "@/components/filters/RadiusPresetPopover"
 import { haversineMetres } from "@/lib/matching/match"
 import { amenitySpotKey } from "@/lib/search-ui"
 import type { Place, SearchFilters, FilterDebug, AmenityFeature, AmenityType } from "@/lib/types"
-
-const RADIUS_PRESETS_KM = [1, 2, 5, 10, 25, 50] as const
 
 interface Props {
   places:      Place[]
@@ -190,47 +188,13 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
           <h2 className="font-semibold text-sm flex items-center gap-2">
             {t.results.title}
             {radiusKm !== undefined && (
-              onRadiusChange ? (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      aria-label={t.results.radiusPickerLabel(radiusKm)}
-                      className="flex items-center gap-0.5 text-xs font-normal text-muted-foreground hover:text-foreground transition-colors rounded-sm px-1 -mx-1 py-0.5 hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
-                    >
-                      {t.results.titleRadius(radiusKm)}
-                      <ChevronDown className="w-3 h-3" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-1.5" align="start">
-                    <div className="flex flex-wrap gap-1 max-w-[14rem]">
-                      {RADIUS_PRESETS_KM.map((km) => {
-                        const isActive = km === radiusKm
-                        return (
-                          <PopoverClose asChild key={km}>
-                            <button
-                              type="button"
-                              onClick={() => { if (km !== radiusKm) onRadiusChange(km) }}
-                              className={cn(
-                                "text-xs font-medium rounded-md px-2.5 py-1 border transition-colors cursor-pointer",
-                                isActive
-                                  ? "bg-primary text-primary-foreground border-primary"
-                                  : "bg-card text-foreground border-border hover:bg-muted"
-                              )}
-                            >
-                              {km} km
-                            </button>
-                          </PopoverClose>
-                        )
-                      })}
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              ) : (
-                <span className="text-xs font-normal text-muted-foreground">
-                  {t.results.titleRadius(radiusKm)}
-                </span>
-              )
+              <RadiusPresetPopover
+                radiusKm={radiusKm}
+                onChange={onRadiusChange}
+                label={t.results.titleRadius(radiusKm)}
+                ariaLabel={t.results.radiusPickerLabel(radiusKm)}
+                triggerClassName="flex items-center gap-0.5 text-xs font-normal text-muted-foreground hover:text-foreground transition-colors rounded-sm px-1 -mx-1 py-0.5 hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
             )}
             {isLoading && (
               <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" aria-label={t.chat.thinking} />
