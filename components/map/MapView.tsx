@@ -60,7 +60,11 @@ interface Props {
   showWeakParking?:        boolean
   // Called when the user pans the map and clicks "Search here". Receives the
   // new map centre; caller should re-run the last search at that location.
-  onSearchHere?:           (center: { lat: number; lon: number }, radiusKm: number) => void
+  // `origin` distinguishes a genuine drag-pan pill from one armed by the locate
+  // button (see searchHereOriginRef below) — the caller uses this to decide
+  // whether the resulting search counts as "near me" (distance display, the
+  // green location token) or an ordinary panned-area search (neither).
+  onSearchHere?:           (center: { lat: number; lon: number }, radiusKm: number, origin: "drag" | "locate") => void
   // When true, MapView does NOT render its own (centred) "search here" button.
   // Instead it reports pan state via onPanned so the parent can render the pill
   // inline next to the result-count pill (mobile). Has no effect in focus mode.
@@ -349,6 +353,11 @@ export default function MapView({
 
   // Floating "search here" button state — set when user pans away from search centre.
   const [searchHereCenter, setSearchHereCenter] = useState<{ lat: number; lon: number } | null>(null)
+  // Which gesture armed the pill — a real drag (moveend handler below) or the
+  // locate button (locatePanTrigger effect, "Option 2"). Read once, at the
+  // moment the pill fires, by the onPanned/onSearchHere call sites below; never
+  // needs to be state since nothing renders differently based on its value.
+  const searchHereOriginRef = useRef<"drag" | "locate">("drag")
   // Report pan availability to the parent so it can render the "search here" pill
   // inline next to the count pill (mobile) — for both the venue path and the
   // amenity focus-mode path, so neither ever collides with a count pill the
@@ -387,8 +396,9 @@ export default function MapView({
         ? map.getCenter().distanceTo(map.getBounds().getNorthEast()) / 1000
         : 5
       const panned = searchHereCenter
+      const panOrigin = searchHereOriginRef.current
       notify?.(() => {
-        onSearchHereRef.current?.(panned, viewportRadiusKm)
+        onSearchHereRef.current?.(panned, viewportRadiusKm, panOrigin)
         setSearchHereCenter(null)
       })
       report?.({ center: panned, radiusKm: viewportRadiusKm })
@@ -459,6 +469,7 @@ export default function MapView({
     // available, and setting the venue pill state here would leave a stale
     // pill behind when the user exits the amenity search.
     if (onSearchHereRef.current && !focusModeRef.current) {
+      searchHereOriginRef.current = "locate"
       setSearchHereCenter({ lat: ul.lat, lon: ul.lon })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -541,6 +552,7 @@ export default function MapView({
         const sc = searchCenterRef.current
         if (Math.abs(newCenter.lat - sc.lat) > threshold ||
             Math.abs(newCenter.lng - sc.lon) > threshold) {
+          searchHereOriginRef.current = "drag"
           setSearchHereCenter({ lat: newCenter.lat, lon: newCenter.lng })
         } else {
           setSearchHereCenter(null)
@@ -1265,7 +1277,7 @@ export default function MapView({
               const viewportRadiusKm = map
                 ? map.getCenter().distanceTo(map.getBounds().getNorthEast()) / 1000
                 : 5
-              onSearchHere(searchHereCenter, viewportRadiusKm)
+              onSearchHere(searchHereCenter, viewportRadiusKm, searchHereOriginRef.current)
               setSearchHereCenter(null)
             }}
             className="flex items-center gap-1.5 rounded-full border border-border bg-background/95 backdrop-blur-sm px-3 py-1.5 text-sm font-medium shadow-md hover:bg-muted transition-colors"

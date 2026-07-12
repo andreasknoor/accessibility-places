@@ -36,7 +36,6 @@ export interface Translations {
     chipsGroupLabel:    string
     // Amenity quick-find row (B2 layout): label + the inline location affordance.
     amenityRowLabel:    string
-    useLocation:        string
     clearLocation:      string
     clearInput:         string
     locationActive:     (district: string) => string

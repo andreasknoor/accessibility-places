@@ -660,25 +660,35 @@ describe("ChatPanel clear button", () => {
 
 // ─── Location token in the field (search-row variant B) ─────────────────────
 
+// Simulates the map's own locate button resolving a district — the inline ⌖
+// search-row action is gone, so mapLocateFix/mapLocateFixKey (bumped by the
+// parent once HomeClient.handleLocate's background reverse-geocode resolves)
+// is now the only path that populates nearbyPhase WITHOUT running a search.
+// See docs/plans/remove-nearby-button-from-search-row.md.
+function simulateMapLocateFix(
+  rerender: (ui: React.ReactElement) => void,
+  baseProps: React.ComponentProps<typeof ChatPanel>,
+  lat: number, lon: number, district: string,
+) {
+  rerender(<ChatPanel {...baseProps} mapLocateFix={{ lat, lon, district }} mapLocateFixKey={1} />)
+}
+
 describe("ChatPanel location token (search-row variant B)", () => {
-  it("shows the district as a visible token after a locate; its ✕ clears the fix", async () => {
-    simulateGpsSuccess(48.14, 11.56, "Maxvorstadt")
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
-    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
-    await act(() => vi.runAllTimersAsync())
+  it("shows the district as a visible token after a locate; its ✕ clears the fix", () => {
+    const baseProps = { onSearch: vi.fn(), isLoading: false, initialMode: "text" as const }
+    const { rerender } = render(<ChatPanel {...baseProps} />)
+    simulateMapLocateFix(rerender, baseProps, 48.14, 11.56, "Maxvorstadt")
     expect(screen.getByText(/Maxvorstadt/)).toBeInTheDocument()
 
-    // ✕ on the token drops the fix and brings the inline nearby action back.
+    // ✕ on the token drops the fix.
     fireEvent.click(screen.getByRole("button", { name: "Standort entfernen" }))
     expect(screen.queryByText(/Maxvorstadt/)).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Standort verwenden" })).toBeInTheDocument()
   })
 
-  it("typing hides the token WITHOUT dropping the fix; clearing the text brings it back", async () => {
-    simulateGpsSuccess(48.14, 11.56, "Maxvorstadt")
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="text" />)
-    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
-    await act(() => vi.runAllTimersAsync())
+  it("typing hides the token WITHOUT dropping the fix; clearing the text brings it back", () => {
+    const baseProps = { onSearch: vi.fn(), isLoading: false, initialMode: "text" as const }
+    const { rerender } = render(<ChatPanel {...baseProps} />)
+    simulateMapLocateFix(rerender, baseProps, 48.14, 11.56, "Maxvorstadt")
     expect(screen.getByText(/Maxvorstadt/)).toBeInTheDocument()
 
     // Typing: token steps back visually (same reversible pattern as panPending) …
@@ -690,36 +700,24 @@ describe("ChatPanel location token (search-row variant B)", () => {
     expect(screen.getByText(/Maxvorstadt/)).toBeInTheDocument()
   })
 
-  it("Enter on an empty field with an active fix re-runs the nearby search (no-submit-button redesign)", async () => {
-    simulateGpsSuccess(48.14, 11.56, "Maxvorstadt")
+  it("Enter on an empty field with an active fix re-runs the nearby search (no-submit-button redesign)", () => {
     const onSearch = vi.fn()
-    render(<ChatPanel onSearch={onSearch} isLoading={false} initialMode="text" />)
-    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
-    await act(() => vi.runAllTimersAsync())
-    onSearch.mockClear()
+    const baseProps = { onSearch, isLoading: false, initialMode: "text" as const }
+    const { rerender } = render(<ChatPanel {...baseProps} />)
+    simulateMapLocateFix(rerender, baseProps, 48.14, 11.56, "Maxvorstadt")
 
     fireEvent.keyDown(getInput(), { key: "Enter" })
     expect(onSearch).toHaveBeenCalledWith("in Maxvorstadt", { lat: 48.14, lon: 11.56 })
   })
 
-  it("the inline nearby action is not rendered while text is in the field (no accidental text loss)", () => {
-    renderPanel()
-    expect(screen.getByRole("button", { name: "Standort verwenden" })).toBeInTheDocument()
-    fireEvent.change(getInput(), { target: { value: "Berlin" } })
-    expect(screen.queryByRole("button", { name: "Standort verwenden" })).not.toBeInTheDocument()
-  })
-
-  it("the location token itself is a Tab-focusable/clickable button that re-runs the nearby search — not just reachable via Enter", async () => {
-    simulateGpsSuccess(48.14, 11.56, "Maxvorstadt")
+  it("the location token itself is a Tab-focusable/clickable button that re-runs the nearby search — not just reachable via Enter", () => {
     const onSearch = vi.fn()
-    render(<ChatPanel onSearch={onSearch} isLoading={false} initialMode="text" />)
-    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
-    await act(() => vi.runAllTimersAsync())
-    onSearch.mockClear()
+    const baseProps = { onSearch, isLoading: false, initialMode: "text" as const }
+    const { rerender } = render(<ChatPanel {...baseProps} />)
+    simulateMapLocateFix(rerender, baseProps, 48.14, 11.56, "Maxvorstadt")
 
     // The token's label (not its ✕) is its own accessible, clickable control —
-    // distinct from "Standort entfernen" (the ✕) — restoring the Tab-reachable
-    // affordance the removed "Suchen" button used to provide in this exact state.
+    // distinct from "Standort entfernen" (the ✕).
     fireEvent.click(screen.getByRole("button", { name: "Suche um Maxvorstadt" }))
     expect(onSearch).toHaveBeenCalledWith("in Maxvorstadt", { lat: 48.14, lon: 11.56 })
   })
@@ -857,12 +855,14 @@ describe("ChatPanel all-categories chip", () => {
 // ─── initialMode ─────────────────────────────────────────────────────────────
 
 describe("ChatPanel initialMode", () => {
-  it("renders the inline ⌖ location button instead of mode tabs (issue #28)", () => {
+  it("renders no mode tabs and no inline location button (search row has no submit/nearby action any more, issue #28)", () => {
     vi.stubGlobal("navigator", { geolocation: { getCurrentPosition: vi.fn(), watchPosition: vi.fn(), clearWatch: vi.fn() }, clipboard: navigator.clipboard })
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
-    expect(screen.getByRole("button", { name: "Standort verwenden" })).toBeInTheDocument()
     // The old top-level "Überall" mode tab no longer exists.
     expect(screen.queryByText("Überall")).not.toBeInTheDocument()
+    // Nor does the inline ⌖ nearby action — the map's own locate button + "Hier
+    // suchen" pill is the only nearby entry point now.
+    expect(screen.queryByRole("button", { name: /Standort/ })).not.toBeInTheDocument()
   })
 
   it("calls geolocation.getCurrentPosition on mount when initialMode is not passed (returning visitor)", () => {
@@ -888,7 +888,6 @@ describe("ChatPanel initialMode", () => {
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} initialMode="nearby" />)
     expect(screen.queryByText("Überall")).not.toBeInTheDocument()
     // "In der Nähe" only appears later as the location token (after a GPS fix), never as a tab.
-    expect(screen.getByRole("button", { name: "Standort verwenden" })).toBeInTheDocument()
   })
 
   it("calls geolocation.getCurrentPosition on mount when initialMode='nearby' (returning visitor)", () => {
@@ -925,20 +924,22 @@ function simulateGpsSuccess(lat = 52.52, lon = 13.405, district = "Mitte") {
 }
 
 describe("ChatPanel GPS resolution", () => {
-  it("calls onGpsResolved with coords after GPS success", async () => {
+  it("calls onGpsResolved with coords after GPS success (locateTrigger — e.g. welcome-screen auto-locate)", async () => {
     simulateGpsSuccess(48.137, 11.576, "Maxvorstadt")
     const onGpsResolved = vi.fn()
-    render(<ChatPanel onSearch={vi.fn()} isLoading={false} onGpsResolved={onGpsResolved} />)
-    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
+    const props = { onSearch: vi.fn(), isLoading: false, onGpsResolved }
+    const { rerender } = render(<ChatPanel {...props} locateTrigger={0} />)
+    rerender(<ChatPanel {...props} locateTrigger={1} />)
     await act(() => vi.runAllTimersAsync())
     expect(onGpsResolved).toHaveBeenCalledWith({ lat: 48.137, lon: 11.576 })
   })
 
-  it("tapping ⌖ locates AND immediately starts a nearby search (like the old 'In der Nähe' tab)", async () => {
+  it("locateTrigger locates AND immediately starts a nearby search (welcome-screen/defaultSearchMode='nearby' auto-locate — unaffected by removing the inline ⌖ row button)", async () => {
     simulateGpsSuccess(48.137, 11.576, "Maxvorstadt")
     const onSearch = vi.fn()
-    render(<ChatPanel onSearch={onSearch} isLoading={false} />)
-    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
+    const props = { onSearch, isLoading: false }
+    const { rerender } = render(<ChatPanel {...props} locateTrigger={0} />)
+    rerender(<ChatPanel {...props} locateTrigger={1} />)
     await act(() => vi.runAllTimersAsync())
     // The GPS fix is fed straight into a venue search at those coordinates.
     expect(onSearch).toHaveBeenCalledWith(expect.any(String), { lat: 48.137, lon: 11.576 })
@@ -961,10 +962,11 @@ describe("ChatPanel GPS resolution", () => {
     }))
     const onSearch = vi.fn()
     const onModeChange = vi.fn()
-    render(<ChatPanel onSearch={onSearch} isLoading={false} initialMode="text" onModeChange={onModeChange} />)
+    const props = { onSearch, isLoading: false, initialMode: "text" as const, onModeChange }
+    const { rerender } = render(<ChatPanel {...props} locateTrigger={0} />)
 
     // 1. Locate → nearby mode + GPS badge on the locate button (district in title).
-    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
+    rerender(<ChatPanel {...props} locateTrigger={1} />)
     await act(() => vi.runAllTimersAsync())
     expect(screen.getByTitle(/Maxvorstadt/)).toBeInTheDocument()
     expect(onModeChange).toHaveBeenLastCalledWith("nearby")
@@ -1001,10 +1003,10 @@ describe("ChatPanel GPS resolution", () => {
       onSearch, onModeChange, isLoading: false, initialMode: "text" as const,
       activeSearchCoords: { lat: 52.5, lon: 13.4 },
     }
-    const { rerender } = render(<ChatPanel {...props} exitNearbyTrigger={0} />)
+    const { rerender } = render(<ChatPanel {...props} exitNearbyTrigger={0} locateTrigger={0} />)
 
     // Locate → nearby GPS fix (Munich) is active (district badge shown).
-    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
+    rerender(<ChatPanel {...props} exitNearbyTrigger={0} locateTrigger={1} />)
     await act(() => vi.runAllTimersAsync())
     expect(onModeChange).toHaveBeenLastCalledWith("nearby")
     expect(screen.getByTitle(/Maxvorstadt/)).toBeInTheDocument()
@@ -1013,7 +1015,7 @@ describe("ChatPanel GPS resolution", () => {
     // The parent (HomeClient) calls setChatMode("text") directly in the same batch
     // as handleSearch, so exitNearbyTrigger must NOT call onModeChange — doing so
     // would trigger clearSearchState() and wipe lastQuery after handleSearch set it.
-    rerender(<ChatPanel {...props} exitNearbyTrigger={1} />)
+    rerender(<ChatPanel {...props} exitNearbyTrigger={1} locateTrigger={1} />)
     await act(() => vi.runAllTimersAsync())
     // onModeChange is NOT called from the trigger path (parent owns the chatMode sync).
     expect(onModeChange).not.toHaveBeenCalledWith("text")
@@ -1043,20 +1045,19 @@ describe("ChatPanel GPS resolution", () => {
       return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }))
     }))
     const props = { onSearch: vi.fn(), isLoading: false, initialMode: "text" as const }
-    const { rerender } = render(<ChatPanel {...props} panPending={false} />)
+    const { rerender } = render(<ChatPanel {...props} panPending={false} locateTrigger={0} />)
 
     // Acquire a GPS fix → the green district badge shows.
-    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
+    rerender(<ChatPanel {...props} panPending={false} locateTrigger={1} />)
     await act(() => vi.runAllTimersAsync())
     expect(screen.getByTitle(/Maxvorstadt/)).toBeInTheDocument()
 
-    // A pan becomes pending → badge hidden, ⌖ reverts to the neutral locate button.
-    rerender(<ChatPanel {...props} panPending={true} />)
+    // A pan becomes pending → badge hidden.
+    rerender(<ChatPanel {...props} panPending={true} locateTrigger={1} />)
     expect(screen.queryByTitle(/Maxvorstadt/)).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Standort verwenden" })).toBeInTheDocument()
 
     // Panning back / a new search clears the pending pan → badge returns (reversible).
-    rerender(<ChatPanel {...props} panPending={false} />)
+    rerender(<ChatPanel {...props} panPending={false} locateTrigger={1} />)
     expect(screen.getByTitle(/Maxvorstadt/)).toBeInTheDocument()
   })
 })
@@ -1075,10 +1076,10 @@ describe("ChatPanel single-field UI", () => {
     expect(screen.queryByRole("button", { name: /Ort suchen/ })).not.toBeInTheDocument()
   })
 
-  it("renders no visible mode tabs — the inline ⌖ button replaces them (issue #28)", () => {
+  it("renders no visible mode tabs and no inline nearby button (issue #28) — the map's locate button + pill replaced them", () => {
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
     expect(screen.queryByRole("button", { name: /Überall/ })).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Standort verwenden" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /Standort/ })).not.toBeInTheDocument()
   })
 
   it("chip strip is visible in text mode", () => {
@@ -1309,13 +1310,12 @@ describe("ChatPanel Schnellsuche — typed-location geocode", () => {
   })
 
   it("a typed location beats a live GPS fix", async () => {
-    // Resolve a real GPS fix first (via the ⌖ button), then type a different place
-    // and tap an amenity chip — the typed place must win.
-    simulateGpsSuccess(52.52, 13.405, "Mitte")
+    // Resolve a real GPS fix first (via the map's locate button), then type a
+    // different place and tap an amenity chip — the typed place must win.
     const onAmenitySearch = vi.fn()
-    render(<ChatPanel onSearch={vi.fn()} onAmenitySearch={onAmenitySearch} isLoading={false} initialMode="text" />)
-    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
-    await act(() => vi.runAllTimersAsync())
+    const baseProps = { onSearch: vi.fn(), onAmenitySearch, isLoading: false, initialMode: "text" as const }
+    const { rerender } = render(<ChatPanel {...baseProps} />)
+    simulateMapLocateFix(rerender, baseProps, 52.52, 13.405, "Mitte")
     onAmenitySearch.mockClear()
     // Re-stub fetch to answer the geocode call for the typed place.
     vi.stubGlobal("fetch", vi.fn((url: unknown) =>
@@ -1432,20 +1432,12 @@ describe("ChatPanel amenity chips — location resolution & no mode-hijack (find
     expect(onModeChange).not.toHaveBeenCalled()
   })
 
-  it("prefers an active nearby GPS fix over a stale searchCenter prop", async () => {
-    simulateGpsSuccess(52.52, 13.405, "Mitte")
+  it("prefers an active nearby GPS fix over a stale searchCenter prop", () => {
     const onAmenitySearch = vi.fn()
-    render(
-      <ChatPanel
-        onSearch={vi.fn()}
-        onAmenitySearch={onAmenitySearch}
-        isLoading={false}
-        searchCenter={{ lat: 1, lon: 1 }}
-      />,
-    )
-    // Resolve a real GPS fix via the normal "In der Nähe" flow first.
-    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
-    await act(() => vi.runAllTimersAsync())
+    const baseProps = { onSearch: vi.fn(), onAmenitySearch, isLoading: false, searchCenter: { lat: 1, lon: 1 } }
+    const { rerender } = render(<ChatPanel {...baseProps} />)
+    // Resolve a real GPS fix via the map's locate button first.
+    simulateMapLocateFix(rerender, baseProps, 52.52, 13.405, "Mitte")
     onAmenitySearch.mockClear()
 
     fireEvent.click(screen.getByRole("radio", { name: /🅿/ }))
@@ -1473,9 +1465,10 @@ describe("ChatPanel amenity chips — racing an in-flight 'In der Nähe' locate 
     ))
     const onSearch = vi.fn()
     const onAmenitySearch = vi.fn()
-    render(<ChatPanel onSearch={onSearch} onAmenitySearch={onAmenitySearch} isLoading={false} initialMode="text" />)
+    const props = { onSearch, onAmenitySearch, isLoading: false, initialMode: "text" as const }
+    const { rerender } = render(<ChatPanel {...props} locateTrigger={0} />)
 
-    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
+    rerender(<ChatPanel {...props} locateTrigger={1} />)
     // GPS hasn't resolved yet — tap WC immediately, before the fix lands.
     fireEvent.click(screen.getByRole("radio", { name: /🚻/ }))
 
@@ -1492,8 +1485,9 @@ describe("ChatPanel amenity chips — racing an in-flight 'In der Nähe' locate 
     simulateGpsSuccess(52.52, 13.405, "Mitte")
     const onSearch = vi.fn()
     const onAmenitySearch = vi.fn()
-    render(<ChatPanel onSearch={onSearch} onAmenitySearch={onAmenitySearch} isLoading={false} initialMode="text" />)
-    fireEvent.click(screen.getByRole("button", { name: "Standort verwenden" }))
+    const props = { onSearch, onAmenitySearch, isLoading: false, initialMode: "text" as const }
+    const { rerender } = render(<ChatPanel {...props} locateTrigger={0} />)
+    rerender(<ChatPanel {...props} locateTrigger={1} />)
     await act(() => vi.runAllTimersAsync())
     expect(onSearch).toHaveBeenCalled()
     expect(onAmenitySearch).not.toHaveBeenCalled()

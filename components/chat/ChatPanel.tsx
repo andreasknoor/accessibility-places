@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Search, Loader2, LocateFixed, X, Coffee, UtensilsCrossed, Beer, BookOpen, Hotel, Landmark, Film, Library, GalleryHorizontal, Star, IceCream, MapPin, Layers } from "lucide-react"
+import { Search, Loader2, X, Coffee, UtensilsCrossed, Beer, BookOpen, Hotel, Landmark, Film, Library, GalleryHorizontal, Star, IceCream, MapPin, Layers } from "lucide-react"
 import { track } from "@/lib/analytics"
 import { useTranslations, useLocale, getTranslations, type Locale } from "@/lib/i18n"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
@@ -33,6 +33,15 @@ interface Props {
   initialMode?:      "text" | "nearby" | "place"  // "place" is treated as "text" (legacy)
   onGpsResolved?:    (coords: Coords) => void
   locateTrigger?:    number
+  // Reverse-geocoded district for the map locate button's GPS fix (the inline
+  // ⌖ search-row action was removed — the map's own locate button + "Hier
+  // suchen" pill is now the only nearby entry point). Bumping mapLocateFixKey
+  // (only once the district resolves) tells ChatPanel to populate its own
+  // nearbyPhase from mapLocateFix, purely for display (the location token) —
+  // it never triggers a search itself; that only happens if/when the user
+  // taps the pill.
+  mapLocateFix?:     { lat: number; lon: number; district: string } | null
+  mapLocateFixKey?:  number
   // Bumped by the parent when an explicit "Hier suchen" (coordinate-based area
   // search at a panned viewport) runs. Forces the panel out of nearby mode so a
   // subsequent chip pick refines the searched area via activeSearchCoords instead
@@ -264,7 +273,7 @@ async function geocodeLocation(q: string, international: boolean): Promise<Coord
   return { lat: data.lat, lon: data.lon }
 }
 
-export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipCat, initialMode, onGpsResolved, locateTrigger, exitNearbyTrigger, biasCoords, onAmenitySearch, amenityActive, onExitAmenity, onCategoryQueryChange, activeSearchCoords, searchCenter, international, getViewportOrigin, panPending }: Props) {
+export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipCat, initialMode, onGpsResolved, locateTrigger, mapLocateFix, mapLocateFixKey, exitNearbyTrigger, biasCoords, onAmenitySearch, amenityActive, onExitAmenity, onCategoryQueryChange, activeSearchCoords, searchCenter, international, getViewportOrigin, panPending }: Props) {
   // Internal positional form of the cat-keyed prop. The mount/default effects below
   // were written against an index; deriving it here keeps that logic untouched while
   // the external contract stays category-keyed.
@@ -523,6 +532,18 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locateTrigger])
 
+  // Populate nearbyPhase (and therefore the location token) from the map's own
+  // locate button — the inline ⌖ search-row action is gone, so this is now the
+  // only path that resolves a GPS fix into a district label without also
+  // running a search. Deliberately does NOT call switchMode/onModeChange: a
+  // locate tap alone must not enter nearby mode or search — only a subsequent
+  // "Hier suchen" tap does that (handleSearchHere's origin==="locate" branch).
+  useEffect(() => {
+    if (!mapLocateFixKey || !mapLocateFix) return
+    setNearbyPhase({ district: mapLocateFix.district, lat: mapLocateFix.lat, lon: mapLocateFix.lon })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapLocateFixKey])
+
   // Leave nearby mode when the parent runs an explicit "Hier suchen" at a panned
   // viewport: the results are no longer "near me", so a following chip pick must
   // refine the searched area (activeSearchCoords) rather than re-run at the GPS fix.
@@ -642,26 +663,6 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedIdx, selectedGroup, locale])
 
-  function switchMode(next: Mode) {
-    clearPickState()
-    setMode(next)
-    onModeChange?.(next)
-    setSuggestions([])
-    setShowSuggestions(false)
-    if (next !== "nearby") {
-      if (watchIdRef.current !== null) {
-        clearWatchPosition(watchIdRef.current)
-        watchIdRef.current = null
-      }
-      return
-    }
-    // Always fetch a fresh fix on entering nearby mode. Reusing the cached
-    // nearbyPhase coords here re-ran the search at an arbitrarily old position
-    // ("I see an old location"); handleLocate re-locates, calls onGpsResolved
-    // (so the dot is fresh too) and searches at the current coords.
-    handleLocate()
-  }
-
   // Tear down the "nearby" context: stop follow-me, drop the GPS-fix phase (which
   // also clears the location token AND any stale "locating"/"error" state), and —
   // only if we were actually in nearby mode — flip the internal mode back to text
@@ -682,17 +683,6 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     }
   }
   useEffect(() => { exitNearbyStateRef.current = exitNearbyState })
-
-  // Inline ⌖ button: express the "nearby" intent without a visible mode tab.
-  // Equivalent to the old "In der Nähe" tab — switches internal mode and locates.
-  // Clears any typed text first: ⌖ means "use MY location", so a leftover "Hamburg"
-  // in the field would otherwise contradict the GPS results (and the location token).
-  function onLocateTap() {
-    if (isLoading) return
-    track("locate")
-    setLocation("")
-    switchMode("nearby")
-  }
 
   // ✕ on the active-location token: drop the GPS fix and return to the neutral
   // typed-search state.
@@ -1300,13 +1290,12 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                 "placeholder:text-muted-foreground focus:outline-none disabled:opacity-50",
               )}
             />
-            {/* Right-side field action — exactly one of three, in priority order:
-                a spinner while the search that just started is in flight (no
-                submit button left to carry that state); else the ✕ once there's
-                text to clear; else the labelled inline "In der Nähe" GPS action,
-                which only renders on a genuinely empty field (with text present
-                the ✕ takes its place, so tapping it can never silently discard a
-                typed query — the old ⌖ bug). */}
+            {/* Right-side field action — a spinner while the search that just
+                started is in flight (no submit button left to carry that
+                state); else the ✕ once there's text to clear; else nothing.
+                No inline nearby/GPS action here any more — that intent now
+                starts from the map's own locate button + "Hier suchen" pill
+                (docs/plans/remove-nearby-button-from-search-row.md). */}
             {isLoading ? (
               <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin text-muted-foreground" aria-hidden />
             ) : location ? (
@@ -1325,20 +1314,6 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                 aria-label={t.chat.clearInput}
               >
                 <X className="w-3.5 h-3.5" aria-hidden />
-              </button>
-            ) : !showLocationToken ? (
-              <button
-                type="button"
-                onClick={onLocateTap}
-                disabled={isLoading}
-                aria-label={t.chat.useLocation}
-                aria-busy={nearbyPhase === "locating"}
-                className="shrink-0 flex items-center gap-1 rounded px-1.5 py-1 text-xs font-medium text-primary-strong hover:bg-primary/10 transition-colors disabled:opacity-50"
-              >
-                {nearbyPhase === "locating"
-                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden />
-                  : <LocateFixed className="w-3.5 h-3.5" aria-hidden />}
-                {t.chat.nearbyAction}
               </button>
             ) : null}
             </div>
@@ -1405,7 +1380,12 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                               "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm cursor-pointer transition-colors",
                               i === highlightedIdx
                                 ? "bg-primary text-primary-foreground border-primary"
-                                : "bg-muted/60 border-border hover:bg-muted",
+                                // Solid, on-token fill (--card-border, "slightly darker card
+                                // edge" per globals.css) rather than a faint --muted wash — the
+                                // pill needs to read as clearly darker than the white dropdown
+                                // background at a glance, not just outlined, so it doesn't get
+                                // lost next to the plain hover-only venue rows below it.
+                                : "bg-card-border/70 border-card-border hover:bg-card-border",
                             )}
                           >
                             <Layers className="w-3.5 h-3.5 shrink-0" aria-hidden />

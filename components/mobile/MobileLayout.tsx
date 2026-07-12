@@ -88,12 +88,14 @@ interface Props {
   onDismissWelcome?:    () => void
   onStartNearby?:       () => void
   locateTrigger?:       number
+  mapLocateFix?:        { lat: number; lon: number; district: string } | null
+  mapLocateFixKey?:     number
   exitNearbyTrigger?:   number
   onSwitchToText?:      () => void
   chatMode:             "text" | "nearby"
   onChatModeChange:     (mode: "text" | "nearby") => void
   biasCoords?:          { lat: number; lon: number }
-  onSearchHere?:        (center: { lat: number; lon: number }, radiusKm: number) => void
+  onSearchHere?:        (center: { lat: number; lon: number }, radiusKm: number, origin: "drag" | "locate") => void
   onLocate?:            () => Promise<void>
   locatePanTrigger?:    number
   gpsCoords?:           { lat: number; lon: number } | null
@@ -110,7 +112,7 @@ export default function MobileLayout({
   onReset, onLogoTap, resetKey, filterDebug, initialLocation, initialChipCat, scrollToId: externalScrollToId,
   showParking, showToilets, onSetMapLayers, hasToiletData, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
-  onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, onStartNearby, locateTrigger, exitNearbyTrigger, onSwitchToText,
+  onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, onStartNearby, locateTrigger, mapLocateFix, mapLocateFixKey, exitNearbyTrigger, onSwitchToText,
   chatMode, onChatModeChange, biasCoords, onSearchHere, onLocate, locatePanTrigger, gpsCoords, onCategoryQueryChange, activeSearchCoords,
   amenityActive, onAmenitySearch, onExitAmenity, amenityResults, amenityHint, amenitySearchCenter, onAmenitySearchHere, onAmenityRadius, amenityRadiusKm, intlNotice, placeSearchName,
   onAmenitySelect, selectedAmenityKey, onAmenityMarkerClick, amenityPanTarget, amenityPanTrigger,
@@ -292,8 +294,8 @@ export default function MobileLayout({
           <RadiusPresetPopover
             radiusKm={radiusKm}
             {...headerRadiusControl({ amenityActive: amenityActiveBool, onRadiusChange, onAmenityRadius })}
-            label={t.results.titleRadius(formatRadiusKm(radiusKm))}
-            ariaLabel={t.results.radiusPickerLabel(formatRadiusKm(radiusKm))}
+            label={t.results.titleRadius(formatRadiusKm(radiusKm, amenityActiveBool))}
+            ariaLabel={t.results.radiusPickerLabel(formatRadiusKm(radiusKm, amenityActiveBool))}
             triggerClassName="flex items-center gap-0.5 text-xs font-semibold text-primary bg-primary/10 border border-primary/20 rounded-full px-2.5 py-1 hover:bg-primary/15 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
           <SettingsSheet settings={settings} onUpdate={onUpdateSettings} onResetOnboarding={onResetOnboarding} />
@@ -304,7 +306,7 @@ export default function MobileLayout({
 
       {/* ── Search bar (always visible) ── */}
       <div role="search">
-        <ChatPanel key={resetKey} autoFocus={autoFocusInput} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipCat={initialChipCat} initialMode={chatMode} onGpsResolved={onGpsResolved} locateTrigger={locateTrigger} exitNearbyTrigger={exitNearbyTrigger} biasCoords={biasCoords} onAmenitySearch={handleAmenitySearch} amenityActive={amenityActive} onExitAmenity={onExitAmenity} onCategoryQueryChange={onCategoryQueryChange} activeSearchCoords={activeSearchCoords} searchCenter={searchCenter} international={settings.internationalMode} getViewportOrigin={getViewportOrigin} panPending={panPending} />
+        <ChatPanel key={resetKey} autoFocus={autoFocusInput} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipCat={initialChipCat} initialMode={chatMode} onGpsResolved={onGpsResolved} locateTrigger={locateTrigger} mapLocateFix={mapLocateFix} mapLocateFixKey={mapLocateFixKey} exitNearbyTrigger={exitNearbyTrigger} biasCoords={biasCoords} onAmenitySearch={handleAmenitySearch} amenityActive={amenityActive} onExitAmenity={onExitAmenity} onCategoryQueryChange={onCategoryQueryChange} activeSearchCoords={activeSearchCoords} searchCenter={searchCenter} international={settings.internationalMode} getViewportOrigin={getViewportOrigin} panPending={panPending} />
       </div>
 
       {/* ── Error banner ── */}
@@ -425,7 +427,11 @@ export default function MobileLayout({
             onRadiusChange={onRadiusChange}
             hasSearched={hasSearched}
             filterDebug={filterDebug}
-            searchCenter={searchCenter}
+            // Distance display is origin-gated (GPS-fix searches only), matching
+            // desktop's gate (HomeClient.tsx) — mobile previously passed
+            // searchCenter ungated here, so any search with a resolved centre
+            // (typed included) showed distance, not just genuinely nearby ones.
+            searchCenter={chatMode === "nearby" || amenityActiveBool ? searchCenter : undefined}
             parkingSpotCount={parkingSpotCount}
             sortBy={sortBy}
             onSortChange={onSortChange}

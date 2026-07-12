@@ -19,8 +19,8 @@ import MobileLayout from "@/components/mobile/MobileLayout"
 import SettingsSheet from "@/components/settings/SettingsSheet"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { useTranslations, useLocale } from "@/lib/i18n"
-import { DEFAULT_RADIUS_KM, RADIUS_MIN_KM, RADIUS_MAX_KM, regionForCoordinates, accessTierForCountry } from "@/lib/config"
-import { clampAmenityRadiusKm, snapAmenityRadiusKm, snapVenueRadiusKm, rerunTarget, expandRadiusTarget, canShowResultsRadiusPicker, amenitySpotKey, type ViewportOrigin } from "@/lib/search-ui"
+import { DEFAULT_RADIUS_KM, RADIUS_MAX_KM, regionForCoordinates, accessTierForCountry } from "@/lib/config"
+import { clampVenueRadiusKm, clampAmenityRadiusKm, snapAmenityRadiusKm, snapVenueRadiusKm, rerunTarget, expandRadiusTarget, canShowResultsRadiusPicker, amenitySpotKey, type ViewportOrigin } from "@/lib/search-ui"
 import { SEO_CATEGORY_SLUGS, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
@@ -201,6 +201,15 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // of refining the panned area (viewport-origin bug).
   const [exitNearbyTriggerKey, setExitNearbyTriggerKey] = useState(0)
   const [locatePanTrigger,    setLocatePanTrigger]    = useState(0)
+  // Reverse-geocoded district for the map locate button's GPS fix, resolved
+  // asynchronously after handleLocate acquires coords (see handleLocate below).
+  // ChatPanel uses this to populate its own nearbyPhase/location-token display —
+  // the map locate button no longer runs a search itself, but the token still
+  // needs a place to get its "Suche um <Bezirk>" label from. mapLocateFixKey is
+  // bumped only once the district resolves (not when coords/locatePanTrigger
+  // fire), so ChatPanel's effect never reads a stale/empty district.
+  const [mapLocateFix,    setMapLocateFix]    = useState<{ lat: number; lon: number; district: string } | null>(null)
+  const [mapLocateFixKey, setMapLocateFixKey] = useState(0)
   // ── Easter Eggs ────────────────────────────────────────────────────────────
   const [showRace,         setShowRace]         = useState(false)
   const logoTapCount  = useRef(0)
@@ -737,23 +746,41 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
   }, [searchCenter, t, handleSearch, settings.internationalMode])
 
-  const handleSearchHere = useCallback((coords: { lat: number; lon: number }, viewportRadiusKm: number) => {
+  const handleSearchHere = useCallback((coords: { lat: number; lon: number }, viewportRadiusKm: number, origin: "drag" | "locate" = "drag") => {
     // Use the viewport-derived radius so the search covers exactly what the user
     // sees, not the last user-setting radius. (Amenity "search here" is wired
     // separately via MapView's onFocusSearchHere → handleAmenitySearchHere.)
-    const clampedRadius = Math.min(Math.max(viewportRadiusKm, RADIUS_MIN_KM), RADIUS_MAX_KM)
-    // Searching an explicitly panned area means the results are no longer "near me":
-    // leave nearby mode so a subsequent chip pick refines THIS area (activeSearchCoords)
-    // rather than snapping back to the still-active GPS fix.
-    // setChatMode("text") runs in this same batch as handleSearch so that
-    // exitNearbyTrigger's ChatPanel effect can safely skip onModeChange (and therefore
-    // clearSearchState), which would otherwise wipe lastQuery after handleSearch set it.
-    setExitNearbyTriggerKey((k) => k + 1)
-    setChatMode("text")
-    track("search_here", { radius_km: Math.round(clampedRadius) })
+    const clampedRadius = clampVenueRadiusKm(viewportRadiusKm)
+    if (origin === "locate") {
+      // The pill was armed by the locate button, not a drag: this IS "near me" —
+      // stay in (or enter) nearby mode so distance display and the location
+      // token reflect a genuine GPS-origin search. Do NOT bump
+      // exitNearbyTriggerKey here — that would reset ChatPanel's nearbyPhase
+      // (and hide the token) that mapLocateFix just populated.
+      setChatMode("nearby")
+    } else {
+      // Searching an explicitly panned area means the results are no longer "near me":
+      // leave nearby mode so a subsequent chip pick refines THIS area (activeSearchCoords)
+      // rather than snapping back to the still-active GPS fix.
+      // setChatMode("text") runs in this same batch as handleSearch so that
+      // exitNearbyTrigger's ChatPanel effect can safely skip onModeChange (and therefore
+      // clearSearchState), which would otherwise wipe lastQuery after handleSearch set it.
+      setExitNearbyTriggerKey((k) => k + 1)
+      setChatMode("text")
+    }
+    track("search_here", { radius_km: Math.round(clampedRadius), origin })
+    // Sync radiusKm so the header radius pill (RadiusPresetPopover, both the
+    // mobile header and ResultsList's desktop header) reflects the radius that
+    // was ACTUALLY searched — otherwise it silently keeps showing the pre-pan
+    // value while the query underneath used the viewport-derived one. Mirrors
+    // handleExpandRadius just below, the other radius-changing search path,
+    // which already does this. Only set (like handleExpandRadius) when a
+    // search actually fires, not unconditionally.
     if (lastQuery) {
+      setRadiusKm(clampedRadius)
       handleSearch(lastQuery, clampedRadius, coords, lastNameHint)
     } else if (categoryQuery) {
+      setRadiusKm(clampedRadius)
       handleSearch(categoryQuery, clampedRadius, coords)
     }
   }, [lastQuery, lastNameHint, categoryQuery, handleSearch])
@@ -895,6 +922,20 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     gpsCoordRef.current = coords
     setGpsCoords(coords)
     setLocatePanTrigger((k) => k + 1)
+    // Reverse-geocode in the background — MapView already panned above without
+    // waiting for this. Non-fatal on failure: the pill still arms via
+    // locatePanTrigger regardless, just without a district for the token's label.
+    try {
+      const res = await fetch(`/api/geocode/reverse?lat=${coords.lat}&lon=${coords.lon}`)
+      if (res.ok) {
+        const data = await res.json()
+        const district = data.district ?? ""
+        setMapLocateFix({ lat: coords.lat, lon: coords.lon, district })
+        setMapLocateFixKey((k) => k + 1)
+      }
+    } catch (err) {
+      console.warn("[locate] reverse geocode failed", err)
+    }
   }, [])
 
   const noneFoundFor = useCallback(
@@ -1401,6 +1442,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onDismissWelcome={handleDismissWelcome}
         onStartNearby={handleStartNearby}
         locateTrigger={locateTriggerKey}
+        mapLocateFix={mapLocateFix}
+        mapLocateFixKey={mapLocateFixKey}
         exitNearbyTrigger={exitNearbyTriggerKey}
         biasCoords={searchCenter ?? gpsCoords ?? undefined}
         onSwitchToText={() => handleSwitchMode("text")}
@@ -1516,6 +1559,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           initialMode={chatMode}
           onGpsResolved={handleGpsResolved}
           locateTrigger={locateTriggerKey}
+          mapLocateFix={mapLocateFix}
+          mapLocateFixKey={mapLocateFixKey}
           exitNearbyTrigger={exitNearbyTriggerKey}
           biasCoords={searchCenter ?? gpsCoords ?? undefined}
           onAmenitySearch={handleAmenitySearch}

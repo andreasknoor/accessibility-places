@@ -1,10 +1,12 @@
 # Remove the "In der Nähe" button from the search row
 
-Status: concept, not implemented. Functional description only — implementation
-phases at the end. Based on the discussion of 2026-07-11/12 (Google-Maps-style
+Status: implemented (v9.72, branch `feat/remove-nearby-search-row-button`, not
+yet merged). Based on the discussion of 2026-07-11/12 (Google-Maps-style
 implicit nearby default, revised twice: no implicit GPS acquisition, no
 auto-search on locate — the map locate button *arms* the existing "Hier
-suchen" pill instead).
+suchen" pill instead). See CLAUDE.md's "Nearby search entry point (v9.72)"
+paragraph for the implementation mechanism (`origin: "drag" | "locate"` on
+`onSearchHere`, `mapLocateFix`/`mapLocateFixKey` plumbing).
 
 ## Goal
 
@@ -21,6 +23,19 @@ This is the final step of the issue #28 simplification line (mode tabs →
 unified field → this). The GPS permission request stays bound to an explicit
 user gesture at all times; there is deliberately **no** implicit GPS
 acquisition on app start or on chip tap.
+
+**Baseline correction (2026-07-12):** the search row already has **no
+dedicated submit button** — that was removed in an earlier redesign
+(`ChatPanel.tsx`, "No-submit-button redesign" / Google Maps model). A search
+starts from Enter, the always-present "Suche nach `<text>`" dropdown row, a
+picked area/venue suggestion, a category chip, "Hier suchen" on the map, or —
+with an empty field and an active GPS fix — tapping the green location token
+itself (it's its own clickable trigger, labelled `t.chat.nearbyAction`, not a
+separate button). This concept does not reintroduce a submit button anywhere;
+it only removes the inline ⌖ *nearby* action and relocates its trigger to the
+map's locate button + "Hier suchen" pill. Any earlier wording below that reads
+like a "Suchen"/submit button exists refers to this token-tap/Enter mechanism,
+not a separate button.
 
 ## What the button does today (inventory)
 
@@ -43,12 +58,13 @@ new home or an explicit decision to drop:
 
 - The inline nearby action is **removed**. The empty field shows only the
   regular placeholder.
-- The **green location token stays** — it remains the single, cross-view
-  display of "the current search origin is your GPS position around
-  <district>", with ✕ to discard the fix. It is now display + exit only,
-  never a trigger.
-- Empty field + active token + "Suchen"/Enter still re-runs the nearby search
-  at the fix (unchanged).
+- The **green location token stays exactly as it works today** — it remains
+  the single, cross-view display of "the current search origin is your GPS
+  position around <district>", with ✕ to discard the fix. Tapping the token
+  itself (already its own clickable trigger today, not a separate button) or
+  pressing Enter with an empty field re-runs the nearby search at the fix —
+  unchanged by this concept, since there is no dedicated submit button to
+  preserve that function elsewhere.
 - Typing still visually steps the token back; clearing the text brings it
   back (unchanged, reversible).
 
