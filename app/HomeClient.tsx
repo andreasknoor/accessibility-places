@@ -1477,17 +1477,26 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     <div className="flex flex-col h-screen overflow-hidden bg-background text-foreground">
       {/* ── Top bar ── */}
       <header className={cn("flex items-center justify-between px-5 py-3 border-b border-border bg-card shrink-0", isFullscreen && "hidden")}>
-        <button
-          onClick={() => { handleLogoTap(); handleReset() }}
-          className="flex items-center gap-2.5 hover:opacity-75 transition-opacity cursor-pointer"
-          title="Reset"
-        >
-          <img src="/icons/icon-preview.svg" className="w-11 h-11 rounded-xl" alt="" aria-hidden />
-          <div className="text-left">
+        <div className="flex items-center gap-2.5">
+          {/* Icon-only: the "tap 7×" easter egg. Split from the reset button
+              below it (v9.61) — combined, every one of the 7 taps also fired
+              a search reset, which made the rapid-tap sequence unusable. */}
+          <button
+            onClick={handleLogoTap}
+            className="hover:opacity-75 transition-opacity cursor-pointer"
+            aria-label={t.app.title}
+          >
+            <img src="/icons/icon-preview.svg" className="w-11 h-11 rounded-xl" alt="" aria-hidden />
+          </button>
+          <button
+            onClick={handleReset}
+            className="text-left hover:opacity-75 transition-opacity cursor-pointer"
+            title="Reset"
+          >
             <span className="font-bold text-xl leading-none block">{t.app.title}</span>
             <p className="text-xs text-muted-foreground mt-1">{t.app.subtitle}</p>
-          </div>
-        </button>
+          </button>
+        </div>
         <div className="flex items-center gap-1">
           <SettingsSheet settings={settings} onUpdate={handleUpdateSettings} onResetOnboarding={() => { try { localStorage.removeItem("ap_visited"); localStorage.removeItem("ap_welcome_dismissed") } catch { /* ignore */ }; setIsFirstVisit(true) }} />
           <LanguageSwitcher />

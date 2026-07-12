@@ -260,17 +260,26 @@ export default function MobileLayout({
 
       {/* ── Header ── */}
       <header className="flex items-center justify-between px-4 pb-3 pt-safe-3 border-b border-border bg-card shrink-0">
-        <button
-          onClick={() => { onLogoTap?.(); onReset?.() }}
-          className="flex items-center gap-2.5 hover:opacity-75 transition-opacity"
-          title="Reset"
-        >
-          <img src="/icons/icon-preview.svg" className="w-7 h-7 rounded-lg" alt="" aria-hidden />
-          <div className="text-left">
+        <div className="flex items-center gap-2.5">
+          {/* Icon-only: the "tap 7×" easter egg. Split from the reset button
+              below it (v9.61) — combined, every one of the 7 taps also fired
+              a search reset, which made the rapid-tap sequence unusable. */}
+          <button
+            onClick={() => onLogoTap?.()}
+            className="hover:opacity-75 transition-opacity"
+            aria-label={t.app.title}
+          >
+            <img src="/icons/icon-preview.svg" className="w-7 h-7 rounded-lg" alt="" aria-hidden />
+          </button>
+          <button
+            onClick={() => onReset?.()}
+            className="text-left hover:opacity-75 transition-opacity"
+            title="Reset"
+          >
             <span className="font-bold text-sm leading-none block">{t.app.title}</span>
             <p className="text-xs text-muted-foreground mt-0.5">{t.app.subtitle}</p>
-          </div>
-        </button>
+          </button>
+        </div>
         <div className="flex items-center gap-1">
           <SettingsSheet settings={settings} onUpdate={onUpdateSettings} onResetOnboarding={onResetOnboarding} />
           <LanguageSwitcher />
