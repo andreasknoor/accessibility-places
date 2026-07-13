@@ -1,4 +1,4 @@
-import type { Category, ParsedQuery } from "./types"
+import type { AmenityType, Category, ParsedQuery } from "./types"
 
 const CATEGORY_HINTS: Record<Category, string[]> = {
   cafe:        ["cafe", "café", "kaffee", "kaffeehaus", "bistro", "coffee", "brunch", "frühstück", "breakfast", "eisdiele", "eisdielen", "eis", "gelato", "gelateria", "ice cream", "icecream", "eiscafe", "eiscafé"],
@@ -102,6 +102,47 @@ function matchedCategories(query: string): Category[] {
 export function inferCategories(query: string): Category[] {
   const found = matchedCategories(query)
   return found.length > 0 ? found : [...ALL_CATEGORIES]
+}
+
+// Parking/WC free-text detection — deliberately separate from CATEGORY_HINTS
+// (AmenityType is not a Category: it drives the dedicated 🅿/🚻 quick-search
+// chips and /api/nearby-parking, not the venue /api/search pipeline). See
+// CATEGORY_HINTS' "park$" comment for why a bare "parking"/"parkplatz" hint
+// was deliberately excluded there — the same false-positive risk applies
+// here, so this stays exact-match-only (see inferAmenityType below), never
+// substring matching.
+const AMENITY_HINTS: Record<AmenityType, string[]> = {
+  parking: [
+    "parkplatz", "parkplätze", "behindertenparkplatz", "behindertenparkplätze",
+    "rollstuhlparkplatz", "rollstuhlparkplätze", "parking", "accessible parking",
+    "disabled parking", "handicap parking", "wheelchair parking",
+  ],
+  toilet: [
+    "wc", "wcs", "toilette", "toiletten", "behindertentoilette", "behinderten-wc",
+    "rollstuhl-wc", "rollstuhltoilette", "toilet", "toilets", "restroom",
+    "accessible toilet", "accessible restroom", "wheelchair toilet",
+  ],
+}
+
+/**
+ * Detects when a free-text query is ENTIRELY an amenity request (parking/WC),
+ * not a venue-category search — e.g. "Parkplatz in Köln", "WC in Berlin".
+ * Deliberately conservative: the part before "in" (or the whole query, if
+ * there is no "in") must consist of NOTHING but a single amenity word — an
+ * exact match, not a substring. "Hotel mit Parkplatz in Köln" must NOT match:
+ * "Parkplatz" there is an attribute of a venue search, not the search intent
+ * itself. Returns null for anything else, including a mix of an amenity word
+ * with other content (no partial/best-effort matching, unlike inferCategories).
+ */
+export function inferAmenityType(userQuery: string): AmenityType | null {
+  const inIdx        = userQuery.search(/\bin\s/i)
+  const categoryPart = (inIdx >= 0 ? userQuery.slice(0, inIdx) : userQuery).trim()
+  if (!categoryPart) return null
+  const norm = normaliseForMatch(categoryPart)
+  for (const [type, hints] of Object.entries(AMENITY_HINTS) as [AmenityType, string[]][]) {
+    if (hints.some((h) => norm === normaliseForMatch(h))) return type
+  }
+  return null
 }
 
 // Supports straight, curly, German typographic and guillemet quote styles.

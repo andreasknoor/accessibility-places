@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest"
-import { extractLocationFallback, extractQuotedName, inferCategories, parseQuery } from "@/lib/llm"
+import { extractLocationFallback, extractQuotedName, inferAmenityType, inferCategories, parseQuery } from "@/lib/llm"
 
 // ─── extractLocationFallback ──────────────────────────────────────────────────
 
@@ -282,6 +282,48 @@ describe("inferCategories — expanded hints", () => {
   it("maps Musical to theater and Currywurst to fast_food", () => {
     expect(inferCategories("Musical")).toContain("theater")
     expect(inferCategories("Currywurst")).toContain("fast_food")
+  })
+})
+
+// ─── inferAmenityType — free-text parking/WC detection ───────────────────────
+
+describe("inferAmenityType", () => {
+  it("detects a bare parking request with a location", () => {
+    expect(inferAmenityType("Parkplatz in Köln")).toBe("parking")
+    expect(inferAmenityType("parking in Munich")).toBe("parking")
+    expect(inferAmenityType("Behindertenparkplatz in Berlin")).toBe("parking")
+  })
+
+  it("detects a bare toilet request with a location", () => {
+    expect(inferAmenityType("WC in Berlin")).toBe("toilet")
+    expect(inferAmenityType("Toilette in Hamburg")).toBe("toilet")
+    expect(inferAmenityType("toilets in Vienna")).toBe("toilet")
+  })
+
+  it("detects a bare amenity word with no location at all", () => {
+    expect(inferAmenityType("Parkplatz")).toBe("parking")
+    expect(inferAmenityType("WC")).toBe("toilet")
+  })
+
+  it("is case-insensitive and diacritic-insensitive", () => {
+    expect(inferAmenityType("PARKPLATZ in Köln")).toBe("parking")
+    expect(inferAmenityType("parkplätze in koeln")).toBe("parking")
+  })
+
+  it("does NOT fire when the amenity word is just an attribute of a venue search (false-positive guard)", () => {
+    expect(inferAmenityType("Hotel mit Parkplatz in Köln")).toBeNull()
+    expect(inferAmenityType("Restaurant mit WC in Berlin")).toBeNull()
+  })
+
+  it("does NOT fire on an ordinary venue category search", () => {
+    expect(inferAmenityType("Restaurants in Berlin")).toBeNull()
+    expect(inferAmenityType("Arzt in Frankenthal")).toBeNull()
+    expect(inferAmenityType("in Frankenthal")).toBeNull()
+  })
+
+  it("returns null for an empty or whitespace-only query", () => {
+    expect(inferAmenityType("")).toBeNull()
+    expect(inferAmenityType("   ")).toBeNull()
   })
 })
 

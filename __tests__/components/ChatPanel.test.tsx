@@ -1372,6 +1372,105 @@ describe("ChatPanel Schnellsuche — typed-location geocode", () => {
   })
 })
 
+// ─── Free-text parking/WC detection (v10.4): typing "Parkplatz in Köln" or
+// "WC in Berlin" and pressing Enter routes into the same amenity search the
+// 🅿/🚻 chips use, instead of a venue search silently falling back to "all
+// categories" (parking/toilet are deliberately excluded from CATEGORY_HINTS,
+// see lib/llm.ts's inferAmenityType) ──────────────────────────────────────────
+
+describe("ChatPanel free-text amenity requests (v10.4)", () => {
+  it("typing 'Parkplatz in <city>' and pressing Enter geocodes the city and runs a parking search, not a venue search", async () => {
+    const onSearch = vi.fn()
+    const onAmenitySearch = vi.fn()
+    vi.stubGlobal("fetch", vi.fn((url: unknown) =>
+      Promise.resolve(new Response(
+        JSON.stringify(typeof url === "string" && url.includes("/api/geocode?q=")
+          ? { lat: 50.94, lon: 6.96 } : []),
+        { status: 200 },
+      )),
+    ))
+    render(<ChatPanel onSearch={onSearch} onAmenitySearch={onAmenitySearch} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "Parkplatz in Köln" } })
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+    await act(() => vi.runAllTimersAsync())
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith(expect.stringContaining("/api/geocode?q=K"))
+    expect(onAmenitySearch).toHaveBeenCalledWith("parking", { lat: 50.94, lon: 6.96 })
+    expect(onSearch).not.toHaveBeenCalled()
+  })
+
+  it("typing 'WC in <city>' and pressing Enter runs a toilet search", async () => {
+    const onSearch = vi.fn()
+    const onAmenitySearch = vi.fn()
+    vi.stubGlobal("fetch", vi.fn((url: unknown) =>
+      Promise.resolve(new Response(
+        JSON.stringify(typeof url === "string" && url.includes("/api/geocode?q=")
+          ? { lat: 52.52, lon: 13.405 } : []),
+        { status: 200 },
+      )),
+    ))
+    render(<ChatPanel onSearch={onSearch} onAmenitySearch={onAmenitySearch} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "WC in Berlin" } })
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+    await act(() => vi.runAllTimersAsync())
+    expect(onAmenitySearch).toHaveBeenCalledWith("toilet", { lat: 52.52, lon: 13.405 })
+    expect(onSearch).not.toHaveBeenCalled()
+  })
+
+  it("normalises the field to just the location text after routing (drops the amenity word)", async () => {
+    const onAmenitySearch = vi.fn()
+    vi.stubGlobal("fetch", vi.fn((url: unknown) =>
+      Promise.resolve(new Response(
+        JSON.stringify(typeof url === "string" && url.includes("/api/geocode?q=")
+          ? { lat: 50.94, lon: 6.96 } : []),
+        { status: 200 },
+      )),
+    ))
+    render(<ChatPanel onSearch={vi.fn()} onAmenitySearch={onAmenitySearch} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "Parkplatz in Köln" } })
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+    await act(() => vi.runAllTimersAsync())
+    expect(getInput()).toHaveValue("Köln")
+  })
+
+  it("a bare amenity word with no location falls back to the same location-resolution chain as a direct chip tap", () => {
+    const onAmenitySearch = vi.fn()
+    render(
+      <ChatPanel
+        onSearch={vi.fn()}
+        onAmenitySearch={onAmenitySearch}
+        isLoading={false}
+        initialMode="text"
+        activeSearchCoords={{ lat: 52.5, lon: 13.4 }}
+      />,
+    )
+    fireEvent.change(getInput(), { target: { value: "Parkplatz" } })
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+    expect(onAmenitySearch).toHaveBeenCalledWith("parking", { lat: 52.5, lon: 13.4 })
+  })
+
+  it("does NOT hijack a search where the amenity word is merely a venue attribute (false-positive guard)", async () => {
+    const onSearch = vi.fn()
+    const onAmenitySearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} onAmenitySearch={onAmenitySearch} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "Hotel mit Parkplatz in Köln" } })
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+    await act(() => vi.runAllTimersAsync())
+    expect(onAmenitySearch).not.toHaveBeenCalled()
+    expect(onSearch).toHaveBeenCalled()
+  })
+
+  it("shows an error and does not crash when the typed location fails to geocode", async () => {
+    const onAmenitySearch = vi.fn()
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response("{}", { status: 404 }))))
+    render(<ChatPanel onSearch={vi.fn()} onAmenitySearch={onAmenitySearch} isLoading={false} initialMode="text" />)
+    fireEvent.change(getInput(), { target: { value: "Parkplatz in Nirgendwoshausen" } })
+    fireEvent.keyDown(getInput(), { key: "Enter" })
+    await act(() => vi.runAllTimersAsync())
+    expect(onAmenitySearch).not.toHaveBeenCalled()
+    expect(screen.getByText(/nicht finden|not found/i)).toBeInTheDocument()
+  })
+})
+
 // ─── Finding F1 (critical): amenity chip must use the resolved search location
 // for ANY prior search (not just a coordinate-known one), and must never hijack
 // the legacy Überall/In-der-Nähe mode or clear search state while locating ──────

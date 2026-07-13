@@ -7,7 +7,7 @@ import { useTranslations, useLocale, getTranslations, type Locale } from "@/lib/
 import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { cn } from "@/lib/utils"
-import { extractQuotedName, parseQuery } from "@/lib/llm"
+import { extractQuotedName, extractLocationFallback, inferAmenityType, parseQuery } from "@/lib/llm"
 import { loadSettings, legacyChipIdxToCat } from "@/lib/settings"
 import { isReturningNow, loadSearchRun, loadActiveMode, saveNearbyLocation, loadNearbyLocation, saveSearchInput, loadSearchInput, clearSearchInput } from "@/lib/session-restore"
 import { getCurrentPosition, isGeolocationAvailable, watchPosition, clearWatchPosition, type GeoWatchId } from "@/lib/native/geolocation"
@@ -707,7 +707,12 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // discarding the previously-searched area's context on locate failure. The
   // amenity chips are mode-agnostic by design (see issue #30) and must not
   // touch venue search state at all.
-  function selectAmenity(type: AmenityType) {
+  // skipTypedLocation: used by the free-text "bare amenity word" path in submit()
+  // ("Parkplatz" with no location) — that caller has already decided there is no
+  // real typed location (just the trigger word itself) and wants step 2 onward,
+  // but can't rely on first clearing `location` state and having step 1 see the
+  // cleared value in the same call (setState doesn't apply within this closure).
+  function selectAmenity(type: AmenityType, skipTypedLocation = false) {
     setSuggestions([])
     setShowSuggestions(false)
     setAmenityLocateError(null)
@@ -715,8 +720,8 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     // "Hamburg" while standing in Berlin means you want Hamburg ("Schnellsuche"
     // is location-neutral, not nearby-only). A picked area/venue already ran a
     // search, so its centre is covered by searchCenter in step 4 — no geocode.
-    const typed = locationPart(location)
-    const isUserTyped = !!location && location !== programmaticLocRef.current && !!typed
+    const typed = skipTypedLocation ? "" : locationPart(location)
+    const isUserTyped = !skipTypedLocation && !!location && location !== programmaticLocRef.current && !!typed
     if (isUserTyped) {
       setAmenityLocating(type)
       geocodeLocation(typed, !!international)
@@ -936,6 +941,45 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       // (the button is disabled then; Enter can still reach this path).
       if (typeof nearbyPhase === "object" && showNearbyBadge) {
         onSearch(nearbyQuery(selectionLabel(), nearbyPhase.district), { lat: nearbyPhase.lat, lon: nearbyPhase.lon })
+      }
+      return
+    }
+    // Free-text parking/WC request ("Parkplatz in Köln", "WC in Berlin") —
+    // routes into the same amenity search the 🅿/🚻 chips use, instead of a
+    // venue search that would silently fall back to "all categories" (parking/
+    // toilet were deliberately excluded from CATEGORY_HINTS — see lib/llm.ts).
+    // inferAmenityType is conservative (exact-match only), so this never fires
+    // on a query that merely mentions parking as a venue attribute.
+    const amenityType = inferAmenityType(location)
+    if (amenityType) {
+      setSuggestions([])
+      setShowSuggestions(false)
+      exitNearbyState()
+      if (/\bin\s/i.test(location)) {
+        // A location was typed alongside the amenity word — extract and geocode
+        // it (locationPart() can't: it only strips a LEADING "in ", not a
+        // preceding word like "Parkplatz"; extractLocationFallback's "in"
+        // branch handles any prefix).
+        const loc = extractLocationFallback(location)
+        setAmenityLocating(amenityType)
+        setAmenityLocateError(null)
+        geocodeLocation(loc, !!international)
+          .then((coords) => {
+            setAmenityLocating(null)
+            setLocation(loc)
+            onAmenitySearch?.(amenityType, coords)
+          })
+          .catch(() => {
+            setAmenityLocating(null)
+            setAmenityLocateError(t.chat.placeNotFound)
+          })
+      } else {
+        // Bare "Parkplatz"/"WC", no location — skipTypedLocation tells
+        // selectAmenity not to treat the literal trigger word as a place name to
+        // geocode; it falls through to the same viewport/GPS-fix/auto-locate
+        // chain a direct chip tap already uses. Clear the field for display.
+        setLocation("")
+        selectAmenity(amenityType, true)
       }
       return
     }
