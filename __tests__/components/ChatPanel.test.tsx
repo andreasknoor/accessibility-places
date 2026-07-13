@@ -855,14 +855,16 @@ describe("ChatPanel all-categories chip", () => {
 // ─── initialMode ─────────────────────────────────────────────────────────────
 
 describe("ChatPanel initialMode", () => {
-  it("renders no mode tabs and no inline location button (search row has no submit/nearby action any more, issue #28)", () => {
+  it("renders no mode tabs, but does render the freestanding nearby-search button (search row has no submit action, issue #28; nearby button reintroduced v10.1)", () => {
     vi.stubGlobal("navigator", { geolocation: { getCurrentPosition: vi.fn(), watchPosition: vi.fn(), clearWatch: vi.fn() }, clipboard: navigator.clipboard })
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
     // The old top-level "Überall" mode tab no longer exists.
     expect(screen.queryByText("Überall")).not.toBeInTheDocument()
-    // Nor does the inline ⌖ nearby action — the map's own locate button + "Hier
-    // suchen" pill is the only nearby entry point now.
-    expect(screen.queryByRole("button", { name: /Standort/ })).not.toBeInTheDocument()
+    // The freestanding circular nearby button (right of the field) DOES exist —
+    // reintroduced in v10.1 after v9.72 removed the docked inline ⌖, which read
+    // as part of the field rather than a separate control. This one is visually
+    // separated (gap + circle + primary fill) instead of docked.
+    expect(screen.getByRole("button", { name: "In der Nähe suchen" })).toBeInTheDocument()
   })
 
   it("calls geolocation.getCurrentPosition on mount when initialMode is not passed (returning visitor)", () => {
@@ -942,6 +944,15 @@ describe("ChatPanel GPS resolution", () => {
     rerender(<ChatPanel {...props} locateTrigger={1} />)
     await act(() => vi.runAllTimersAsync())
     // The GPS fix is fed straight into a venue search at those coordinates.
+    expect(onSearch).toHaveBeenCalledWith(expect.any(String), { lat: 48.137, lon: 11.576 })
+  })
+
+  it("clicking the freestanding nearby-search button locates AND immediately starts a search using the active chip (v10.1)", async () => {
+    simulateGpsSuccess(48.137, 11.576, "Maxvorstadt")
+    const onSearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} isLoading={false} />)
+    fireEvent.click(screen.getByRole("button", { name: "In der Nähe suchen" }))
+    await act(() => vi.runAllTimersAsync())
     expect(onSearch).toHaveBeenCalledWith(expect.any(String), { lat: 48.137, lon: 11.576 })
   })
 
@@ -1076,10 +1087,10 @@ describe("ChatPanel single-field UI", () => {
     expect(screen.queryByRole("button", { name: /Ort suchen/ })).not.toBeInTheDocument()
   })
 
-  it("renders no visible mode tabs and no inline nearby button (issue #28) — the map's locate button + pill replaced them", () => {
+  it("renders no visible mode tabs (issue #28) but does render the freestanding nearby-search button (v10.1)", () => {
     render(<ChatPanel onSearch={vi.fn()} isLoading={false} />)
     expect(screen.queryByRole("button", { name: /Überall/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: /Standort/ })).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "In der Nähe suchen" })).toBeInTheDocument()
   })
 
   it("chip strip is visible in text mode", () => {

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Search, Loader2, X, Coffee, UtensilsCrossed, Beer, BookOpen, Hotel, Landmark, Film, Library, GalleryHorizontal, Star, IceCream, MapPin, Layers } from "lucide-react"
+import { Search, Loader2, X, Coffee, UtensilsCrossed, Beer, BookOpen, Hotel, Landmark, Film, Library, GalleryHorizontal, Star, IceCream, MapPin, Layers, LocateFixed } from "lucide-react"
 import { track } from "@/lib/analytics"
 import { useTranslations, useLocale, getTranslations, type Locale } from "@/lib/i18n"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
@@ -1166,16 +1166,18 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     {showDevConsole && <DevConsole onClose={() => setShowDevConsole(false)} />}
     <div className="flex flex-col gap-3 p-4 border-b border-border bg-card relative z-20">
 
-      {/* ── Unified search field (always visible). No submit button (Google Maps
-          model, replacing the earlier docked "Suchen" button): a search starts
-          from Enter, the always-present "search for <text>" dropdown row, a
-          venue/area suggestion, a category chip, or "Hier suchen" on the map —
-          submit() is the single function all of these funnel into. The old
-          top-level mode tabs (Überall / In der Nähe) are gone too — the
-          "nearby" intent is the inline ⌖ action below; typing/picking a
+      {/* ── Unified search field (always visible). The field itself has no submit
+          button (Google Maps model): a search starts from Enter, the
+          always-present "search for <text>" dropdown row, a venue/area
+          suggestion, a category chip, or "Hier suchen" on the map — submit()
+          is the single function all of these funnel into. The freestanding
+          circular button to the right of the field is a separate control (see
+          its own comment below), not part of the field. The old top-level mode
+          tabs (Überall / In der Nähe) are gone too — typing/picking a
           suggestion expresses "search there". Internal `mode` state is
           unchanged (issue #28). ── */}
-      <div className="relative">
+      <div className="relative flex items-stretch gap-2">
+          <div className="relative flex-1 min-w-0">
             {inputPulse && (
               <span
                 className="absolute inset-0 rounded-md ring-2 ring-primary animate-pulse pointer-events-none z-10"
@@ -1290,12 +1292,12 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                 "placeholder:text-muted-foreground focus:outline-none disabled:opacity-50",
               )}
             />
-            {/* Right-side field action — a spinner while the search that just
-                started is in flight (no submit button left to carry that
-                state); else the ✕ once there's text to clear; else nothing.
-                No inline nearby/GPS action here any more — that intent now
-                starts from the map's own locate button + "Hier suchen" pill
-                (docs/plans/remove-nearby-button-from-search-row.md). */}
+            {/* Right-side field action (inside the field itself) — a spinner
+                while the search that just started is in flight (no submit
+                button left to carry that state); else the ✕ once there's text
+                to clear; else nothing. The freestanding nearby-search button
+                (below, outside this field) is a separate control — see its own
+                comment. */}
             {isLoading ? (
               <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin text-muted-foreground" aria-hidden />
             ) : location ? (
@@ -1433,6 +1435,33 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
                 })}
               </ul>
             )}
+          </div>
+
+          {/* Freestanding "search nearby" action (v10.1) — reintroduced after
+              v9.72 removed the docked inline ⌖ (it read as part of the field,
+              not a separate control). Deliberately NOT docked to the field this
+              time: circular shape + gap + primary fill read as "a second,
+              independent action" rather than the field's submit button (the
+              field itself has none — see the comment above). Filled primary
+              blue matches the chip-selection colour, since one tap locates AND
+              immediately searches using whichever chip is active — "blue = this
+              will be searched now", consistent between chips and this button.
+              Distinct from the map's own locate button (MapView, neutral/white):
+              that one only pans and arms "Hier suchen" — a second tap is still
+              required there. Same handleLocate() the old inline action used. */}
+          <button
+            type="button"
+            onClick={handleLocate}
+            disabled={isLoading || nearbyPhase === "locating"}
+            title={t.chat.nearbySearchButton}
+            aria-label={t.chat.nearbySearchButton}
+            className="flex items-center justify-center w-[38px] h-[38px] shrink-0 rounded-full bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+          >
+            {nearbyPhase === "locating"
+              ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+              : <LocateFixed className="w-4 h-4" aria-hidden />
+            }
+          </button>
       </div>
 
       {/* Search-in-progress indicator — replaces the old button's spinner+label

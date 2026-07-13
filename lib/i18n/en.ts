@@ -38,6 +38,7 @@ const en: Translations = {
     clearInput:         "Clear input",
     locationActive:     (district: string) => `Searching around ${district}`,
     nearbyAction:       "Nearby",
+    nearbySearchButton: "Search nearby",
     nearbyTokenPlaceholder: "… or type a place",
     thinking: "Searching …",
     noResults:        "No matching places found.",

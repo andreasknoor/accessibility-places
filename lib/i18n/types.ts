@@ -42,6 +42,9 @@ export interface Translations {
     // Variant-B search row: inline "Nearby" action inside the field + the
     // short placeholder shown while the green location token occupies the field.
     nearbyAction:       string
+    // Freestanding circular button next to the search field (v10.1) — one tap
+    // locates and immediately runs a nearby search using the active chip.
+    nearbySearchButton: string
     nearbyTokenPlaceholder: string
     thinking:      string
     noResults:        string

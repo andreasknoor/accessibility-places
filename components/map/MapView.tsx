@@ -1229,6 +1229,13 @@ export default function MapView({
           it no longer risks silently exiting the parking/WC view. */}
       {onLocate && (
         <div className={`absolute top-3 z-[1000] flex flex-col items-end gap-1 transition-opacity ${showFullscreenToggle ? "right-14" : "right-3"} ${popupOpen ? "opacity-0 pointer-events-none" : ""}`}>
+          {/* Deliberately neutral (white/grey), never primary blue — the search
+              row's own nearby button (ChatPanel) owns blue = "this searches
+              now"; this one only pans + arms "Hier suchen" (a second tap is
+              still required), so it must not look like a search action. Sized
+              up from the plain secondary icon button (was 40px, blended into
+              the zoom control) to a larger, bordered, more visible circle —
+              still reads as "map navigation", not "search". */}
           <Button
             variant="secondary"
             size="icon"
@@ -1246,13 +1253,13 @@ export default function MapView({
               }
             }}
             disabled={locating}
-            className="shadow-md"
+            className="w-11 h-11 rounded-full bg-background hover:bg-muted border border-border shadow-lg"
             title={t.map.locate}
             aria-label={t.map.locate}
           >
             {locating
-              ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
-              : <LocateFixed className="w-4 h-4" aria-hidden />
+              ? <Loader2 className="w-5 h-5 animate-spin" aria-hidden />
+              : <LocateFixed className="w-5 h-5" aria-hidden />
             }
           </Button>
           {locateErrorVisible && (
