@@ -263,8 +263,8 @@ export default function MobileLayout({
       {/* ── Header ── */}
       <header className="flex items-center justify-between px-4 pb-3 pt-safe-3 border-b border-border bg-card shrink-0">
         <div className="flex items-center gap-2.5">
-          {/* Icon-only: the "tap 7×" easter egg. Split from the reset button
-              below it (v9.61) — combined, every one of the 7 taps also fired
+          {/* Icon-only: the "tap 4×" easter egg. Split from the reset button
+              below it (v9.61) — combined, every one of the taps also fired
               a search reset, which made the rapid-tap sequence unusable. */}
           <button
             onClick={() => onLogoTap?.()}

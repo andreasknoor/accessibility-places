@@ -269,7 +269,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   function handleLogoTap() {
     logoTapCount.current += 1
     clearTimeout(logoTapTimer.current)
-    if (logoTapCount.current >= 7) {
+    if (logoTapCount.current >= 4) {
       logoTapCount.current = 0
       setShowRace(true)
     } else {
@@ -1511,7 +1511,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       {/* ── Top bar ── */}
       <header className={cn("flex items-center justify-between px-5 py-3 border-b border-border bg-card shrink-0", isFullscreen && "hidden")}>
         <div className="flex items-center gap-2.5">
-          {/* Icon-only: the "tap 7×" easter egg. Split from the reset button
+          {/* Icon-only: the "tap 4×" easter egg. Split from the reset button
               below it (v9.61) — combined, every one of the 7 taps also fired
               a search reset, which made the rapid-tap sequence unusable. */}
           <button
