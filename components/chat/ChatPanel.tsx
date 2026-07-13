@@ -1091,6 +1091,13 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
             setAmenityLocating(null)
             onAmenitySearch?.(pendingAmenity, { lat, lon })
           } else {
+            // Clear any leftover typed text (e.g. a previous "Berlin" text
+            // search) — showLocationToken is gated on `!location`, so stale
+            // field text would silently suppress the green token even though
+            // the search itself already ran against the new GPS fix (v10.1
+            // regression: nearby-search button after a prior text search).
+            clearPickState()
+            setLocation("")
             // Read locale from a ref so a fix that arrives after the user switched
             // language still uses the current value.
             const label = selectedGroupRef.current

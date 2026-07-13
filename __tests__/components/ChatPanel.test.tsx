@@ -956,6 +956,20 @@ describe("ChatPanel GPS resolution", () => {
     expect(onSearch).toHaveBeenCalledWith(expect.any(String), { lat: 48.137, lon: 11.576 })
   })
 
+  it("clears stale typed text (e.g. a prior 'Berlin' text search) so the location token shows after the nearby-search button (v10.1 regression)", async () => {
+    simulateGpsSuccess(48.137, 11.576, "Maxvorstadt")
+    const onSearch = vi.fn()
+    render(<ChatPanel onSearch={onSearch} isLoading={false} />)
+    const input = screen.getByRole("combobox")
+    fireEvent.change(input, { target: { value: "Berlin" } })
+    expect(input).toHaveValue("Berlin")
+    fireEvent.click(screen.getByRole("button", { name: "In der Nähe suchen" }))
+    await act(() => vi.runAllTimersAsync())
+    expect(onSearch).toHaveBeenCalledWith(expect.any(String), { lat: 48.137, lon: 11.576 })
+    expect(input).toHaveValue("")
+    expect(screen.getByText(/Maxvorstadt/)).toBeInTheDocument()
+  })
+
   it("a typed search after a nearby fix exits nearby mode and drops the location token (H1/M1)", async () => {
     // Reverse geocode → district; everything else (autocomplete suggest) → empty.
     vi.stubGlobal("navigator", {
