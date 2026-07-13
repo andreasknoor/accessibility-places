@@ -1726,6 +1726,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             onViewportChange={(v) => { viewportRef.current = v; setMapPanned(v !== null) }}
             onLocate={isGeolocationAvailable() ? handleLocate : undefined}
             locatePanTrigger={locatePanTrigger}
+            searchRadiusKm={displayedRadiusKm}
             amenityPanTarget={amenityPanTarget}
             amenityPanTrigger={amenityPanTrigger}
             onAmenityMarkerClick={handleAmenityMarkerSelect}

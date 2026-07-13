@@ -535,6 +535,7 @@ export default function MobileLayout({
               onPanned={(run) => setSearchHereRun(() => run)}
               onLocate={onLocate}
               locatePanTrigger={locatePanTrigger}
+              searchRadiusKm={radiusKm}
               amenityPanTarget={amenityPanTarget}
               amenityPanTrigger={amenityPanTrigger}
               onAmenityMarkerClick={onAmenityMarkerClick}

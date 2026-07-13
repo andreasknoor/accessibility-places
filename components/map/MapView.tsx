@@ -90,6 +90,11 @@ interface Props {
   // at zoom 16. Stamped as programmatic so "search here" is NOT auto-shown by
   // moveend — instead the button is shown explicitly (Option 2).
   locatePanTrigger?:       number
+  // The currently configured search radius (venue or amenity domain, already
+  // resolved by the caller — same value shown in the header radius pill). Used
+  // to pick the locate-button zoom level so "Hier suchen" after a locate tap
+  // covers roughly this radius instead of a fixed ~2 km (issue #37).
+  searchRadiusKm?:         number
   // "Zur Karte" from an amenity (parking/WC) result card: pans/zooms to that
   // spot's coordinates and opens its popup. Distinct from selectedId/panTrigger
   // (place markers) since amenity markers aren't tracked in the place cluster.
@@ -298,6 +303,7 @@ export default function MapView({
   onViewportChange,
   onLocate,
   locatePanTrigger,
+  searchRadiusKm,
   amenityPanTarget = null,
   amenityPanTrigger,
   onAmenityMarkerClick,
@@ -463,7 +469,23 @@ export default function MapView({
     const ul = userLocation
     if (!ul) return
     lastProgrammaticMoveRef.current = Date.now()
-    mapInst.current.setView([ul.lat, ul.lon], 14, { animate: false })  // ~2 km radius visible
+    // Zoom out just far enough that the configured search radius is visible,
+    // instead of a fixed zoom 14 (~2 km) — a locate tap followed by "Hier
+    // suchen" used to search a much smaller area than the configured radius
+    // (issue #37). getBoundsZoom finds the zoom level that fits a bounding
+    // box whose corner is `searchRadiusKm` away from the centre — the same
+    // corner-distance formula used elsewhere in this file (viewportRadiusKm)
+    // to derive the radius that "Hier suchen" will actually search.
+    const km = searchRadiusKm && searchRadiusKm > 0 ? searchRadiusKm : 5
+    const half = km / Math.SQRT2 // corner distance of a square = half-extent * sqrt(2)
+    const latDelta = half / 111.32
+    const lonDelta = half / (111.32 * Math.cos((ul.lat * Math.PI) / 180))
+    const bounds = L.latLngBounds(
+      [ul.lat - latDelta, ul.lon - lonDelta],
+      [ul.lat + latDelta, ul.lon + lonDelta],
+    )
+    const zoom = Math.max(3, Math.min(mapInst.current.getBoundsZoom(bounds, false), 18))
+    mapInst.current.setView([ul.lat, ul.lon], zoom, { animate: false })
     // Option 2: show "search here" explicitly if a previous search exists.
     // Not in focus mode — there the focus "search this area" pill is always
     // available, and setting the venue pill state here would leave a stale
