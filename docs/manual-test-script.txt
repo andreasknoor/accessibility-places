@@ -1,0 +1,1687 @@
+MANUAL TEST SCRIPT - MOBILE WEB APP (FULL FEATURE PASS)
+========================================================
+
+AUDIENCE: This script is written for a tester with zero prior knowledge
+of what this app does or how it works. Every test explains the idea
+behind the feature, exactly what to tap, what you should see, and known
+tricky edge cases.
+
+SCOPE: Mobile only (phone-sized browser window, or an actual phone).
+Desktop is out of scope for this script.
+
+APP IN ONE SENTENCE: Accessible Places lets people search for places
+(restaurants, hotels, museums, etc.) in Germany/Austria/Switzerland and
+see, for each one, whether it has a wheelchair-accessible entrance,
+toilet, parking, and seating - pulled from several open data sources and
+combined into one confidence score per place.
+
+
+HOW TO USE THIS SCRIPT
+-----------------------
+
+- Work through the phases roughly in order - later phases assume you've
+  already seen the basics from earlier ones (e.g. Phase 4 assumes you
+  know what a "chip" is from Phase 3).
+
+- Each test case has four parts:
+  * Why this matters - the idea behind the feature, so you understand
+    what "working correctly" even means.
+  * Steps - exact taps, in order.
+  * Expected result - what you should see if it works.
+  * Edge cases - things testers commonly miss, or situations where the
+    behaviour is supposed to look different (so you don't misreport
+    them as bugs).
+
+- If a step says "tap X", it means a single tap/click on that element.
+
+- Test on a real phone if you can - some things (haptic feedback, the
+  on-screen keyboard, GPS accuracy) don't fully translate to a resized
+  desktop browser window.
+
+- Before you start: clear the site's data / use a fresh private browsing
+  tab, so you see the app exactly as a brand-new user would. Have
+  location services enabled on the device, and be prepared to grant the
+  browser permission to use your location when prompted.
+
+
+================================================================
+PHASE 1 - FIRST LAUNCH (WELCOME SCREEN)
+================================================================
+
+TEST 1.1 - The welcome screen appears for a new user
+
+Why this matters:
+A brand-new visitor has never seen this app before - the very first
+screen needs to explain what it does and offer a clear next step, or
+people will bounce immediately.
+
+Steps:
+1. Open the app for the very first time (fresh browser data / private
+   tab).
+
+Expected result:
+Instead of a normal search screen, you see a welcome screen with:
+- The app icon and a short title/subtitle explaining what the app does.
+- A prominent blue button labelled "Search nearby" with a short
+  description underneath it (something like "Accessible places around
+  your location").
+- Below that, a lighter/secondary option to type a place name instead.
+- Near the bottom, a toggle between "List" and "Map" as your preferred
+  default view.
+- A small "Don't show this again" link.
+
+Edge cases:
+- If you've used the app before on this device/browser (cookies/local
+  storage not cleared), you will NOT see this screen - that's correct,
+  not a bug. Clear site data and reload to see it again.
+
+
+TEST 1.2 - Starting with "Search nearby" from the welcome screen
+
+Why this matters:
+This is meant to be the fastest path to useful results for a new user -
+one tap should be enough.
+
+Steps:
+1. On the welcome screen, tap the blue "Search nearby" button.
+2. If your browser asks for permission to use your location, tap Allow.
+
+Expected result:
+The app determines your location, immediately runs a search, and shows
+you a list of nearby accessible places without any further input from
+you. The map (if you switch to it) is centered on your current position.
+
+Edge cases:
+- If you deny location permission here, you should get a clear,
+  readable error message - not a silent failure or a frozen screen. If
+  that happens, reload and try 1.3 instead, then come back to test
+  denial explicitly later (see Phase 5, test 5.9).
+- If you're testing this in a location with genuinely no accessible
+  places nearby (rural area, poor data coverage), an empty/low result
+  count is expected, not a bug - check whether the app explains this
+  reasonably rather than just showing a blank screen.
+
+
+TEST 1.3 - Starting with "Type a place or name" from the welcome screen
+
+Why this matters:
+Not everyone wants to search near themselves - this is the alternative
+path for someone who already knows where they want to search.
+
+Steps:
+1. Reload the app fresh again (clear data again, or use a fresh private
+   tab) so you get the welcome screen once more.
+2. This time, tap the secondary "Type a place or name" option instead
+   of "Search nearby".
+
+Expected result:
+The welcome screen closes. You're taken to the normal search screen
+with the text search field focused (keyboard should pop up on a real
+phone) and no search has run yet - you should see a "What are you
+looking for?" placeholder message, not results.
+
+
+TEST 1.4 - Dismissing the welcome screen without picking anything
+
+Why this matters:
+A returning-ish user shouldn't be forced through onboarding every single
+time - this exit needs to work cleanly.
+
+Steps:
+1. Get back to the welcome screen (fresh data again).
+2. Tap "Don't show this again".
+
+Expected result:
+The welcome screen closes, you land on the normal search screen (not
+results - just the empty search state), and if you fully reload the app
+afterward, the welcome screen does NOT reappear.
+
+
+================================================================
+PHASE 2 - THE TOP HEADER BAR
+================================================================
+
+The header is the strip at the very top of the screen: the app icon,
+the app name/subtitle next to it, and - further right - a settings
+(gear) icon and a language switcher.
+
+TEST 2.1 - The app name text resets the whole search
+
+Why this matters:
+There's no visible "reset" or "start over" button anywhere obvious in
+the app - this text doubles as one, which is not obvious unless you're
+told. Testing this makes sure that hidden functionality actually still
+works.
+
+Steps:
+1. Run any search (e.g. search nearby, or type a city).
+2. Select a category chip, change a filter or the search radius if you
+   can find those controls easily (don't worry if you can't yet - later
+   phases cover this in detail).
+3. Tap directly on the app name/subtitle text in the header (not the
+   icon next to it - the actual words "Accessible Places" and the
+   subtitle line below it).
+
+Expected result:
+Everything resets - the search field clears, any category selection
+clears, filters/radius return to their defaults, results disappear, and
+the app returns to essentially its just-launched state.
+
+Edge cases:
+- This must work when tapping the TEXT, not the icon. Tapping the icon
+  does something completely different (see 2.2) - if tapping the icon
+  also resets the search, that is unexpected and should be reported.
+
+
+TEST 2.2 - The app icon is a hidden "easter egg" (4 taps)
+
+Why this matters:
+This is a deliberate, playful hidden feature - it should be fun to
+discover but must never interfere with normal use of the app
+(accidental slow taps on the logo happen constantly).
+
+Steps:
+1. Tap the app icon (the little logo image, to the left of the text)
+   four times in quick succession - within roughly a second and a half,
+   like a fast double-tap done twice.
+
+Expected result:
+A short animated "wheelchair race" plays across the screen. It should
+end and let you get back to normal use of the app afterward.
+
+Steps for the negative case:
+2. Reload the app. Tap the icon once, wait about 3 seconds, tap it
+   again, wait 3 seconds, tap a third time, wait 3 seconds, tap a
+   fourth time.
+
+Expected result (negative case):
+The animation should NOT play - slow, spaced-out taps must not
+accidentally trigger it. If it still triggers after long pauses, report
+it.
+
+Edge cases:
+- Tapping the icon should feel like tapping an image - it should NOT
+  visually look or feel like a normal clickable button (no obvious
+  "this is a button" styling). That's intentional, since it's meant to
+  be a hidden surprise, not a discoverable control.
+
+
+TEST 2.3 - Settings icon opens the settings panel
+
+Why this matters:
+This is the main way a user customizes how the app behaves for them
+long-term - it needs to be reachable and to actually open.
+
+Steps:
+1. Tap the gear/settings icon in the top-right of the header.
+
+Expected result:
+A settings panel slides up/open from the bottom or side, showing
+multiple sections of options (covered in detail in Phase 10).
+
+Steps to close it:
+2. Close the settings panel (there should be a close button, or tapping
+   outside/behind it should also close it).
+
+Expected result:
+The panel closes cleanly, and whatever you were doing before (search
+results, map position) is unaffected.
+
+
+TEST 2.4 - Language switcher
+
+Why this matters:
+The app is available in German and English - this needs to actually
+change every visible piece of text, not just some of it.
+
+Steps:
+1. Tap the language switcher in the header (shows the current
+   language, e.g. "DE" or "EN").
+2. Pick the other language.
+
+Expected result:
+The whole app's visible text switches language - header, buttons,
+placeholders, category names, everything. No leftover text in the
+previous language anywhere you look.
+
+Edge cases:
+- Check a few less-obvious places too: error messages, the settings
+  panel, and the empty-search placeholder text. It's easy for a
+  translation to be missed in an obscure corner.
+- If you had an active search/results when you switched, check that
+  category names and any place details also update to the new language
+  (not just the header chrome).
+
+
+================================================================
+PHASE 3 - THE SEARCH FIELD AND AUTOCOMPLETE
+================================================================
+
+The search field is the box near the top where you type a place name.
+Unlike many apps, there is no separate "Search" submit button attached
+to the field itself - this is intentional (see 3.6). Note: there IS a
+separate, clearly distinct nearby-search button next to the field -
+that's covered fully in Phase 5, not here.
+
+TEST 3.1 - Basic typed search - picking a suggested area
+
+Why this matters:
+This is the single most common way people will use this app - typing
+where they want to look.
+
+Steps:
+1. Tap the search field to focus it.
+2. Type a well-known city name, e.g. "Berlin".
+3. Wait a moment for a dropdown of suggestions to appear below the
+   field.
+
+Expected result:
+A dropdown appears, grouped into sections - typically an "Areas"
+section (cities/districts) and, if applicable, a "Venues" section
+(specific named places matching what you typed). "Berlin" should show
+up as a top area suggestion.
+
+4. Tap the "Berlin" area suggestion.
+
+Expected result:
+The search field now shows "Berlin", the dropdown closes, and a search
+runs automatically - you see a loading indicator and then a list of
+accessible places in Berlin.
+
+
+TEST 3.2 - Searching by pressing Enter / the keyboard's search key
+
+Why this matters:
+Not every user will explicitly tap a suggestion - many will just type
+and hit "search"/"go"/"enter" on their keyboard.
+
+Steps:
+1. Type a city name into the search field.
+2. Instead of tapping a suggestion, press the "Search"/"Go"/Enter key
+   on your on-screen keyboard.
+
+Expected result:
+A search runs for exactly what you typed (or the best-matching
+interpretation of it), same as tapping the top suggestion would.
+
+
+TEST 3.3 - Searching via the always-present "search for <text>" row
+
+Why this matters:
+Even if autocomplete finds nothing useful, or is slow/fails, there must
+always be a way to just search your raw typed text.
+
+Steps:
+1. Type something unusual or nonsensical that's unlikely to match any
+   real place, e.g. "asdkjfh123".
+2. Look at the top of the dropdown.
+
+Expected result:
+Even with no real suggestions, the very first row in the dropdown
+should always read something like: Search for "asdkjfh123"
+
+3. Tap that row.
+
+Expected result:
+The app attempts the search with your literal typed text. Since it's
+nonsense, you should get a clear "location not found" (or similar)
+message - not a crash, not a silent blank screen.
+
+
+TEST 3.4 - Autocomplete also finds specific venues, not just areas
+
+Why this matters:
+Sometimes people know the exact name of the place they want, not just
+the city - the app should be able to jump straight to one specific
+venue.
+
+Steps:
+1. Type the name of a well-known, specific place - a famous museum, a
+   hotel chain name, a landmark - ideally combined with a city, e.g.
+   "Hotel Adlon Berlin".
+2. Look at the dropdown's "Venues" section (separate from "Areas").
+
+Expected result:
+If the venue is found in the data, it appears as a distinctly-styled
+row (different from the area rows - usually with its address as a
+subtitle).
+
+3. Tap that venue suggestion.
+
+Expected result:
+The app searches specifically for that one venue and shows you just
+that result (or very few results, all clearly related to it) - not a
+broad city-wide search.
+
+
+TEST 3.5 - Clearing the search field
+
+Why this matters:
+Basic, easy-to-break input hygiene - a broken clear button is very
+noticeable and annoying.
+
+Steps:
+1. Type anything into the search field.
+2. Look for a small "x" icon that appears inside the field once there's
+   text.
+3. Tap it.
+
+Expected result:
+The field empties immediately, the dropdown closes (or shows the
+empty-state again), and focus stays in the field so you can type
+something new right away.
+
+
+TEST 3.6 - There is no separate "Search" button glued to the field -
+confirm this is not broken
+
+Why this matters:
+This app deliberately removed a traditional "Search" submit button in a
+past redesign (Google Maps style: search starts from typing / Enter /
+suggestions / chips instead). A tester unfamiliar with this might think
+a button is "missing" - it isn't. This test is here so you don't
+misreport the absence of a button as a bug, and so you confirm the
+replacement mechanisms (3.1-3.3) all still work.
+
+Steps:
+1. Look carefully at the search field itself, from its left edge to its
+   right edge.
+
+Expected result:
+There is no button that says "Search" or shows only a magnifying-glass
+icon directly attached to/inside the field. (There IS a separate,
+visually distinct nearby-search button further to the right, outside
+the field - that's a different, deliberate feature covered fully in
+Phase 5. Don't confuse the two.)
+
+
+================================================================
+PHASE 4 - CATEGORY CHIPS
+================================================================
+
+Chips are the row of pill-shaped buttons just below the search field
+(e.g. "All", "Food & Drink", "Accommodation", ...). They control what
+kind of place you're searching for.
+
+TEST 4.1 - The "All" chip is selected by default
+
+Why this matters:
+New users shouldn't have to pick a category before they can search at
+all.
+
+Steps:
+1. On a fresh app state (no search yet), look at the chip row.
+
+Expected result:
+A chip labelled "All" is visible and appears selected (usually
+filled/highlighted) by default.
+
+
+TEST 4.2 - Picking a top-level category group opens a drill-in row
+
+Why this matters:
+There are many categories (dozens), grouped into about 7 broad groups -
+this two-step structure needs to work smoothly, not feel broken or like
+a dead end.
+
+Steps:
+1. Tap the "Food & Drink" chip (or whichever broad group chip is shown
+   - groups include things like Food & Drink, Accommodation, Culture,
+   Sport & Leisure, Health, Everyday, and Public & Transit).
+
+Expected result:
+The chip row changes to show more specific sub-categories within that
+group (e.g. under Food & Drink: Restaurants, Cafes & Ice Cream, Bars,
+Pubs, Beer Gardens, Fast Food), plus a way to go back to the main chip
+row (usually a back arrow) and an "All" option within that group
+(meaning "all food & drink places", not literally everything).
+
+2. Tap one specific sub-category, e.g. "Restaurants".
+
+Expected result:
+That chip becomes the active selection, and if a search has already
+run, results update to only that sub-category. If no search has run
+yet, this selection will apply once you do search.
+
+3. Tap the back arrow to return to the main chip row.
+
+Expected result:
+You're back at the top-level group chips. Your specific selection (e.g.
+"Restaurants") should still be reflected somehow - e.g. the "Food &
+Drink" group chip might show as active/highlighted to indicate a
+sub-selection is active within it.
+
+
+TEST 4.3 - Switching categories re-runs the search automatically
+
+Why this matters:
+Changing your mind about what you're looking for shouldn't require
+re-typing the location.
+
+Steps:
+1. Search for a city (e.g. "Munich").
+2. Once results appear, tap a specific category chip, e.g. "Hotels"
+   (under Accommodation).
+
+Expected result:
+Without you touching the search field again, results update
+automatically to show hotels in Munich. No need to re-type or
+re-submit anything.
+
+
+TEST 4.4 - Category chips affect nearby search too
+
+Why this matters:
+The category you have selected should be respected by every search
+method, not just typed searches - this connects directly to Phase 5's
+nearby button.
+
+Steps:
+1. Select a specific category, e.g. "Museums".
+2. Trigger a nearby search (see Phase 5 for exactly how).
+
+Expected result:
+The nearby search results should only be museums near you, not all
+categories. (Full detail on the nearby button itself is in Phase 5 -
+this test is just about the chip/nearby interaction.)
+
+
+================================================================
+PHASE 5 - SEARCHING NEAR YOUR CURRENT LOCATION
+================================================================
+
+There are TWO DISTINCT WAYS to search near your current location in
+this app, and they behave differently on purpose. Read both parts of
+this phase carefully - mixing them up is the single easiest thing to
+misunderstand while testing.
+
+TEST 5.1 - The blue circular button next to the search field
+
+Why this matters:
+This is the primary, fastest "search near me" entry point - a single
+tap should locate you and show results immediately, no second step
+required.
+
+Steps:
+1. Look at the search field. To its right, separated by a visible gap
+   (NOT touching or glued to the field), there should be a round blue
+   button with a small crosshair/target icon inside it.
+
+Expected result:
+The button is clearly a separate, standalone control - it should not
+look like part of the text field, and should not look like a
+"submit"/"go" button attached to typing (see 3.6 - there is no such
+attached button; this blue circle is a different, independent
+feature).
+
+2. Tap the blue circular button.
+3. If prompted, allow location access.
+
+Expected result:
+All of the following should happen from this single tap, without any
+further action from you:
+- The map centers on your current location.
+- A search runs immediately.
+- Results appear in the list.
+- The search field itself changes to show a GREEN PILL reading
+  something like "Nearby - <your district/neighbourhood name>" - not
+  empty, not showing raw coordinates, and not showing any text you
+  might have typed before.
+
+
+TEST 5.2 - The nearby button respects your active category
+
+Why this matters:
+Same idea as test 4.4, but specifically for this button - confirms the
+"search what's near me" promise is actually scoped to what you're
+interested in, not everything.
+
+Steps:
+1. Select a specific category chip, e.g. "Restaurants".
+2. Tap the blue circular nearby button.
+
+Expected result:
+Results near you are restaurants only, not a mix of all categories.
+
+
+TEST 5.3 - IMPORTANT REGRESSION CHECK: leftover typed text must not
+stay visible
+
+Why this matters:
+This exact scenario was recently identified and fixed as a bug - the
+search itself worked correctly, but the search field kept showing old,
+stale text instead of the expected green "Nearby" pill, which was
+confusing (it looked like the app searched the OLD typed location, even
+though it hadn't). This test exists specifically to make sure that fix
+keeps working.
+
+Steps:
+1. Type a city name into the search field, e.g. "Berlin", and actually
+   run that search (tap the top suggestion or press Enter) so you see
+   real results for Berlin.
+2. With "Berlin" now sitting in the search field from step 1, select a
+   category chip, e.g. "Restaurants".
+3. Now tap the blue circular nearby button (without clearing the field
+   yourself first).
+
+Expected result:
+- The map jumps to your current location.
+- Results update to nearby restaurants.
+- The search field must now show the GREEN "Nearby - <district>" PILL -
+  the word "Berlin" must be completely gone from the field.
+
+THIS IS A BUG IF: the word "Berlin" (or whatever you typed) is still
+visible in the field after this - even if the results themselves look
+correct. Report this exact scenario (what you typed beforehand, which
+chip you picked) if you see it.
+
+
+TEST 5.4 - Clearing the "Nearby" state
+
+Why this matters:
+Users need an easy way to back out of "searching near me" mode.
+
+Steps:
+1. With the green "Nearby - <district>" pill showing in the field, tap
+   the small "x" on the pill itself.
+
+Expected result:
+The pill disappears, the field is empty, and you're back to a normal,
+ready-to-type search field. Previous nearby results may still be
+showing until you search something new - that's fine.
+
+
+TEST 5.5 - Re-running the same nearby search
+
+Why this matters:
+Confirms the green pill is itself tappable/useful, not just a
+decorative label.
+
+Steps:
+1. With the green "Nearby - <district>" pill showing, tap the pill
+   itself (not the x, the label part).
+
+Expected result:
+The nearby search re-runs at the same location (useful e.g. after
+changing a filter).
+
+
+TEST 5.6 - Rapid double-tap on the nearby button
+
+Why this matters:
+Fast, repeated taps are a very common real-world accident (fat fingers,
+impatience) - the app must not break, duplicate requests, or get stuck.
+
+Steps:
+1. Tap the blue nearby button, and immediately tap it again a second
+   time before anything visibly happens.
+
+Expected result:
+No crash, no permanently stuck loading spinner, no obviously
+duplicated/broken behaviour. A single, clean search result at the end
+is fine; some UI feedback (e.g. the button briefly disabled) is also
+fine.
+
+
+TEST 5.7 - Part two: the separate locate button ON THE MAP
+
+Why this matters:
+This is a SECOND, deliberately different way to get to your location,
+living on the map itself rather than next to the search field. It
+behaves differently on purpose - it does NOT automatically search.
+
+Steps:
+1. Switch to the Map tab (bottom navigation bar - covered fully in
+   Phase 7, but you'll need it here).
+2. Look at the top-right corner of the map. There should be a
+   WHITE/GREY circular button (not blue) with the same crosshair/target
+   icon, larger and more prominent than a plain small icon, with a
+   visible border/shadow.
+
+Expected result:
+This button must look NEUTRAL/WHITE, not blue. That's intentional -
+blue is reserved elsewhere in the app for "this will search right now"
+(like the button in test 5.1); this map button deliberately looks
+different because tapping it does NOT search by itself.
+
+3. Tap the map's locate button.
+
+Expected result:
+The map pans/zooms smoothly to your current location. NO SEARCH RUNS
+AUTOMATICALLY - this is correct behaviour, not a bug, even though it
+might feel surprising at first.
+
+4. After the map has centered on you, look for a small pill/button,
+   usually near the top-center of the map, that says something like
+   "Search here".
+
+Expected result:
+This pill is now visible and tappable.
+
+5. Tap "Search here".
+
+Expected result:
+NOW a search runs, using the area currently visible on the map as the
+search radius. The search field should also update to show the green
+"Nearby - <district>" pill after this second tap.
+
+
+TEST 5.8 - Dragging the map instead of using "Search here" after
+locating
+
+Why this matters:
+Confirms that panning around freely after locating yourself doesn't
+break or lose the ability to search a new area.
+
+Steps:
+1. Tap the map's locate button (as in 5.7) to center on yourself.
+2. Instead of tapping "Search here", manually drag/pan the map to a
+   different area.
+
+Expected result:
+The "Search here" pill stays available (now offering to search the
+newly panned-to area, not your original GPS position). It should not
+disappear or become stuck referencing your old location.
+
+
+TEST 5.9 - Denying location access
+
+Why this matters:
+Not everyone will grant location permission - the app must fail
+gracefully, with a clear message, not silently or with a crash.
+
+Steps:
+1. In your browser's site settings, reset/deny location permission for
+   this site (or use a fresh private browsing session and explicitly
+   deny when prompted).
+2. Tap either the blue nearby button (5.1) or the map's locate button
+   (5.7).
+
+Expected result:
+A clear, readable error message appears (e.g. "could not determine
+your location"). The app does not freeze, and you can still use text
+search normally afterward.
+
+
+TEST 5.10 - Known, already-reported issue - do not re-file, just
+confirm
+
+Why this matters:
+This is a known limitation, already tracked separately (GitHub issue
+#37) - you don't need to report it again, but it's useful to confirm
+it's still present so the team knows it hasn't regressed further or
+improved on its own.
+
+Steps:
+1. Run a search via the blue nearby button (5.1) in some area, and note
+   roughly how many results you get.
+2. In the same area, instead use the map locate button + "Search here"
+   flow (5.7) and note the result count.
+
+Expected (known, accepted) result:
+The map-flow (5.7) result count is often noticeably lower than the
+direct button's (5.1), because locating on the map zooms in closer,
+implying a smaller search radius. This is expected for now - no need
+to report it again.
+
+
+================================================================
+PHASE 6 - FREE PARKING/TOILET QUICK-SEARCH CHIPS
+================================================================
+
+Separate from category chips (Phase 4), there are two special chips,
+usually labelled "Parking" (P icon) and "Toilets" (WC icon), typically
+shown in their own row under "Quick search".
+
+TEST 6.1 - Running a parking search
+
+Why this matters:
+Finding accessible parking is often just as important as finding the
+destination itself - this is a first-class feature, not an
+afterthought, and deserves its own dedicated test.
+
+Steps:
+1. Tap the "Parking" quick-search chip.
+2. If prompted, allow location access (if you haven't already for this
+   session).
+
+Expected result:
+The normal place-results list is REPLACED by a list of individual
+accessible parking spots, each showing a distance from you. The map
+shows parking spot markers instead of place pins.
+
+
+TEST 6.2 - Running a toilets search
+
+Steps:
+1. Tap the "Toilets" quick-search chip instead.
+
+Expected result:
+Same idea as 6.1, but for accessible toilets - a distance-sorted list
+of toilet locations, map markers to match.
+
+
+TEST 6.3 - Parking/toilet chips are single-select and separate from
+category chips
+
+Why this matters:
+These chips represent a completely different kind of search (finding
+an amenity, not a venue) - selecting one should visibly replace, not
+combine with, a category search.
+
+Steps:
+1. With a category chip active (e.g. "Restaurants") and results
+   showing, tap the "Parking" chip.
+
+Expected result:
+The restaurant results disappear, replaced entirely by parking spots.
+The "Restaurants" category chip should no longer appear selected/active
+(or should visually indicate it's no longer the active search).
+
+2. Now tap a category chip like "All" again.
+
+Expected result:
+You're taken back to a normal venue search (parking chip deselects).
+
+
+TEST 6.4 - Distance and radius for amenity searches
+
+Why this matters:
+Confirms the "how far to search" concept applies consistently to
+amenity searches too, and that it's independently adjustable from
+venue search radius.
+
+Steps:
+1. With a parking or toilet search active, find the radius control
+   (look near the results count, or check the Filter tab - covered in
+   Phase 9).
+
+Expected result:
+You can see and adjust a search radius specific to this amenity search.
+Sub-kilometer values (e.g. "250 m") are normal and expected here -
+unlike venue search, which only shows whole kilometers (see 8.4).
+
+
+================================================================
+PHASE 7 - THE MAP IN DETAIL
+================================================================
+
+Access the map via the "Map" tab in the bottom navigation bar.
+
+TEST 7.1 - Basic pan and zoom
+
+Steps:
+1. Open the Map tab with some results showing.
+2. Drag the map around with your finger.
+3. Pinch to zoom in and out (or use the +/- buttons in the top-left
+   corner).
+
+Expected result:
+Smooth, responsive panning and zooming, no lag or jumping. Place
+markers stay correctly positioned as you move/zoom.
+
+
+TEST 7.2 - Place markers and clustering
+
+Why this matters:
+In a dense area, showing every single marker individually would be
+unreadable - nearby markers should visually group together until you
+zoom in.
+
+Steps:
+1. Search a dense city center (e.g. central Berlin or Vienna) with the
+   "All" category.
+2. Zoom out until many results are visible at once.
+
+Expected result:
+Markers that are close together visually merge into a single "cluster"
+bubble showing a number (how many places are grouped there), instead
+of dozens of overlapping pins.
+
+3. Tap a cluster bubble.
+
+Expected result:
+The map zooms in on that cluster, gradually breaking it apart into
+smaller clusters and eventually individual markers.
+
+
+TEST 7.3 - Marker colors reflect confidence, icon reflects category
+
+Why this matters:
+The color-coding is meant to let you judge data reliability at a
+glance, before even opening a place.
+
+Steps:
+1. Look at a handful of individual (non-clustered) markers.
+
+Expected result:
+Markers are teardrop-shaped pins, each showing a small emoji/icon
+matching its category (e.g. a cup for a cafe, a fork/knife for a
+restaurant). Their color should vary - generally green-ish for
+high-confidence data, more amber/red-ish for lower confidence. (Exact
+color meaning isn't critical to memorize - just confirm that markers
+are NOT all the same single color, which would indicate the confidence
+signal isn't working.)
+
+
+TEST 7.4 - Tapping a marker opens a popup
+
+Steps:
+1. Tap any individual place marker.
+
+Expected result:
+A small popup appears above the marker showing at least the place's
+name and category. There should be a way to see full details from here
+(tapping the popup, or a link/button inside it) - this should take you
+to the same detail view covered in test 8.7.
+
+
+TEST 7.5 - Fullscreen map mode
+
+Steps:
+1. Look for a fullscreen/expand icon on the map (usually top-right
+   area).
+2. Tap it.
+
+Expected result:
+The map expands to take up the full screen, hiding other UI chrome
+(header, tab bar).
+
+3. Tap the icon again (it should now look like a "collapse"/minimize
+   icon).
+
+Expected result:
+The map returns to its normal embedded size within the app layout.
+
+
+TEST 7.6 - The "Search here" pill after manually panning (no location
+involved)
+
+Why this matters:
+This is the general-purpose "look somewhere else and search there"
+flow - distinct from the location-specific flow in tests 5.7-5.8, this
+one starts from any manual pan, with no GPS involved at all.
+
+Steps:
+1. With results showing, manually drag the map to a completely
+   different area (don't use the locate button first).
+
+Expected result:
+A "Search here" pill appears once you stop dragging.
+
+2. Tap it.
+
+Expected result:
+A new search runs for the area now visible on the map. The search field
+should NOT show the green "Nearby" pill after this (that's reserved for
+GPS-based searches specifically) - this was a manual pan, not a
+location fix.
+
+
+TEST 7.7 - The "Layers" control (bottom-left of the map)
+
+Why this matters:
+This lets you see parking/toilet locations as a passive overlay
+ALONGSIDE your normal venue results, without replacing them (unlike the
+dedicated Parking/Toilets chips in Phase 6).
+
+Steps:
+1. With venue results showing on the map (not a parking/toilet
+   search), look at the bottom-left corner for a small box labelled
+   "Layers" (or "Ebenen" in German) with two checkbox-style options:
+   Parking and WC/Toilets.
+2. Tap the Parking checkbox to enable it.
+
+Expected result:
+Parking spot markers appear on the map IN ADDITION TO your existing
+venue results - the venue results are not replaced.
+
+3. Tap the WC checkbox too.
+
+Expected result:
+Toilet markers also appear, alongside both venue results and parking
+markers.
+
+4. Untick both.
+
+Expected result:
+Both overlay layers disappear; venue markers remain untouched
+throughout.
+
+Edge cases:
+- This layer box should be disabled or hidden while an actual Parking/
+  Toilet quick-search (Phase 6) is active - that's already showing you
+  a dedicated amenity search, so this generic overlay wouldn't add
+  anything.
+
+
+TEST 7.8 - Marker legend
+
+Steps:
+1. With parking/toilet markers visible on the map (via either Phase 6
+   or 7.7), look at the bottom-right corner for a small legend
+   button/panel.
+2. Open it if collapsed.
+
+Expected result:
+It explains what each marker color/style means (e.g. which color
+indicates a "strong"/reserved accessible parking spot vs. a more
+general "accessible-ish" spot).
+
+
+================================================================
+PHASE 8 - THE RESULTS LIST
+================================================================
+
+Access via the "Results" tab in the bottom navigation.
+
+TEST 8.1 - Result cards show key info at a glance
+
+Steps:
+1. Run any search that returns results.
+2. Look at a single result card in the list.
+
+Expected result:
+Each card shows, at minimum: the place's name, category, address, a
+confidence badge/percentage (how reliable the accessibility data is),
+and icons/indicators for entrance, toilet, and parking accessibility
+status.
+
+
+TEST 8.2 - Sorting results
+
+Steps:
+1. Look for a sort control near the top of the results list (often an
+   icon/label saying "Confidence" or "Distance", tappable to change).
+2. Tap it and switch between "Confidence" and "Distance" sort order.
+
+Expected result:
+The list re-orders. "Confidence" order should put the most
+reliably-documented places first; "Distance" order should put the
+physically nearest places first.
+
+Edge cases:
+- "Distance" sorting is most meaningful for nearby searches - check
+  whether distance is even available/shown for a plain typed-city
+  search (see 8.3 below, this connects directly).
+
+
+TEST 8.3 - Distance is only shown for genuinely nearby searches
+
+Why this matters:
+Showing "250 m away" on a card only makes sense when you searched "near
+me" - for a search where you typed a totally different city, showing a
+meaningless/misleading distance would be confusing. This was previously
+buggy specifically on mobile (distance leaked into every search type)
+and was fixed - worth confirming it stays fixed.
+
+Steps:
+1. Run a plain TYPED search, e.g. "Museums in Munich" (not a nearby
+   search).
+2. Look at the result cards.
+
+Expected result:
+Cards do NOT show a distance ("X m/km away") on this kind of search.
+
+3. Now run a genuine NEARBY search (either method from Phase 5).
+4. Look at the result cards.
+
+Expected result:
+Cards DO show a distance now.
+
+
+TEST 8.4 - The radius control and its display format
+
+Why this matters:
+The app recently fixed a display bug where this value could show a
+confusing decimal like "12.3 km" - should always be a clean whole
+number for normal venue search.
+
+Steps:
+1. Find the radius indicator/pill (often near the results count, at
+   the top of the list, or in the header area - labelled with
+   something like "5 km").
+2. Tap it.
+
+Expected result:
+A small menu/popover of preset radius options appears (e.g. 1 km,
+2 km, 5 km, 10 km, ...).
+
+3. Pick a different preset.
+
+Expected result:
+The list updates for the new radius, and the pill's label shows the
+new value.
+
+4. Trigger a "Search here" from the map (test 7.6) with a fairly
+   zoomed-out view, then check the radius pill again.
+
+Expected result:
+The pill should always show a WHOLE NUMBER of kilometers (e.g.
+"12 km"), never a decimal like "12.3 km" - even though the actual
+search radius used behind the scenes might be a precise value based on
+exactly what was visible on the map.
+
+Edge cases:
+- This whole-number rule applies to VENUE search only. If you switch to
+  a Parking/Toilets amenity search (Phase 6) and check its own radius
+  control, sub-kilometer values like "250 m" are correct and expected
+  there - don't report that as inconsistent.
+
+
+TEST 8.5 - Expanding the radius when there are too few results
+
+Steps:
+1. Search somewhere with very few or zero results (a small town, or a
+   narrow radius in a rural area).
+2. Look for a message/button suggesting a wider search radius.
+
+Expected result:
+An option like "expand radius" or "search a wider area" should appear
+when results are sparse, and tapping it should actually widen the
+search and re-run it.
+
+
+TEST 8.6 - Empty state - no search run yet, with a nearby-search button
+
+Why this matters:
+This is another entry point into a nearby search (related to, but
+visually distinct from, the header button covered in Phase 5) - worth
+confirming it also works correctly on its own.
+
+Steps:
+1. Get to a state with no search run yet (e.g. tap the header reset
+   from 2.1, or dismiss the welcome screen once via 1.4 and don't
+   search anything).
+2. Look at the Results tab.
+
+Expected result:
+Instead of an empty blank list, you see a message like "What are you
+looking for?" and a prominent blue button (visually matching the
+nearby button style from Phase 5) offering to search nearby.
+
+3. Tap that button.
+
+Expected result:
+Same behaviour as the test 5.1 nearby button - locates you, searches
+immediately, shows the green "Nearby" pill in the search field.
+
+Edge cases:
+- This button should only appear in the true "nothing searched yet"
+  state - not after a search that simply returned zero results (that's
+  a different empty state, covered in 8.5, with different messaging
+  about expanding the radius instead).
+
+
+TEST 8.7 - Opening a place's full detail view
+
+Steps:
+1. Tap directly on the framed header area of any result card - the box
+   containing the icon, name, category, address, and confidence badge
+   (not the footer buttons/links below it, which have their own
+   separate actions).
+
+Expected result:
+A detail sheet/panel opens (slides up or appears as an overlay) showing
+much more information about that specific place - covered fully in
+test 8.8 below.
+
+2. Close it (look for a close button or a way to swipe/tap it away).
+
+Expected result:
+You're returned to the results list exactly where you left off (scroll
+position preserved, nothing re-runs).
+
+
+TEST 8.8 - What the detail view should contain
+
+Steps:
+1. With a detail view open (from 8.7), review it thoroughly.
+
+Expected result - check that all of these are present:
+- The full place name, category, and address.
+- A breakdown of accessibility per criterion (entrance, toilet,
+  parking, seating), each showing yes/no/unknown/partial with some
+  explanation.
+- A confidence score, and a way to see how it was calculated (often a
+  tappable chip/section that expands into a formula breakdown).
+- Which data source(s) contributed to this place's info, with a note
+  on how reliable each source generally is.
+- Links/icons for things like the place's website, phone number, or an
+  external map link (e.g. Wheelmap), where available.
+- A "copy link"/share option so you can send this specific place to
+  someone else.
+- Some way to report incorrect data about this specific place.
+
+2. Tap "copy link" (or the share icon).
+
+Expected result:
+On a real phone, this should ideally open the native share sheet; at
+minimum, it should copy a working link to your clipboard and show a
+brief "Copied!" confirmation. Paste the link somewhere to confirm it's
+a real, working URL.
+
+3. If a "report an error" option is available, tap it.
+
+Expected result:
+A form opens (may be an embedded form/popup) pre-filled with context
+about the place, so you can describe what's wrong with the data.
+
+Edge cases:
+- Not every place will have every field (e.g. not all places have a
+  phone number, not all have a Wheelmap link) - missing OPTIONAL fields
+  is normal, not a bug. Only report if something looks broken/garbled
+  rather than simply absent.
+
+
+TEST 8.9 - The map-pin button on a result card
+
+Why this matters:
+This is a shortcut to see a place located on the map, without opening
+the full detail sheet (different from 8.7).
+
+Steps:
+1. On a result card, look for a small map-pin icon/button, separate
+   from the main tappable header area described in 8.7.
+2. Tap it.
+
+Expected result:
+You're switched to the Map tab with that specific place's marker
+highlighted/selected/centered - the detail sheet from 8.7 should NOT
+open from this action.
+
+
+================================================================
+PHASE 9 - FILTERS (THE "FILTER" TAB)
+================================================================
+
+Access via the "Filter" tab in the bottom navigation bar (third tab,
+next to Results and Map).
+
+TEST 9.1 - Accessibility criteria filters
+
+Why this matters:
+This is the core value proposition of the whole app - letting a user
+say "only show me places that definitely have X" for whichever criteria
+matter to them.
+
+Steps:
+1. Open the Filter tab.
+2. Find the accessibility criteria toggles - Entrance, Toilet, Parking,
+   Seating.
+3. Turn on "Entrance" only (leave the others off) and confirm/apply if
+   there's an apply step.
+
+Expected result:
+Results update to only show places with a wheelchair-accessible
+entrance (or clearly-marked "unknown" ones, if the "accept unknown"
+option below is also on).
+
+4. Repeat individually for Toilet, Parking, and Seating, checking that
+   each one filters correctly on its own.
+
+Edge cases:
+- If a search returns very few or zero places after enabling a strict
+  filter, that's expected for some categories/areas (data coverage
+  varies a lot) - not necessarily a bug. Try a large, well-covered city
+  like Berlin or Vienna to reduce this risk while testing.
+
+
+TEST 9.2 - "Show places with unclear information" toggle
+
+Why this matters:
+This controls a genuinely important trade-off: strict filtering (only
+proven-accessible places) vs. broader results (including places nobody
+has documented yet).
+
+Steps:
+1. With one or more of the criteria from 9.1 turned on, toggle "Show
+   places with unclear information" on and off.
+
+Expected result:
+With it ON, places where that criterion simply has no data ("unknown")
+should still appear in results. With it OFF, only places with a
+confirmed "yes" for that criterion should appear - result count should
+generally shrink when you turn it off.
+
+
+TEST 9.3 - "Only manually verified places" toggle
+
+Steps:
+1. Toggle this on.
+
+Expected result:
+Results narrow down to only places where the accessibility info has
+been specifically confirmed/verified relatively recently (not just
+inferred or old data) - expect a noticeably smaller result count,
+potentially zero in some areas. That's expected, not a bug.
+
+
+TEST 9.4 - Data source toggles
+
+Why this matters:
+The app combines data from multiple independent sources - being able to
+turn individual ones off is useful for comparing where data comes from,
+and for testers checking source-specific behaviour.
+
+Steps:
+1. Find the list of data sources (checkboxes/toggles), each usually
+   showing a name and a small reliability indicator.
+2. Turn one source off (e.g. turn off "OpenStreetMap", the biggest
+   one).
+
+Expected result:
+Results update - total place count typically drops, and depending on
+the place, some accessibility info might change from "yes" to
+"unknown" if that specific detail only came from the now-disabled
+source.
+
+3. Turn it back on.
+
+Expected result:
+Results return to the original state.
+
+
+TEST 9.5 - Radius slider
+
+Steps:
+1. Find the radius slider/control within the Filter tab.
+2. Drag it to a different value.
+
+Expected result:
+As you release, the results list updates for the new radius, and this
+should stay in sync with the radius pill shown elsewhere (test 8.4) -
+both should always show the same value.
+
+
+TEST 9.6 - "Always show parking/toilets on map" display toggles
+
+Why this matters:
+Distinct from the actual filter criteria (9.1) - these are pure DISPLAY
+toggles that don't remove/add results, just change what extra markers
+show on the map. Also connects to the "Layers" box tested in 7.7 - this
+is the settings-level version of the same idea (and can also be reached
+from there directly).
+
+Steps:
+1. Check whether there are toggles here for showing parking/toilet
+   markers on the map by default.
+2. Toggle one on, then check the Map tab.
+
+Expected result:
+The relevant markers appear as an overlay on the map, same as described
+in test 7.7 - since it's the same underlying setting, toggling it from
+either place should update the other.
+
+
+TEST 9.7 - Resetting filters
+
+Steps:
+1. Change several filters/toggles from their defaults.
+2. Find a reset control (in the Filter tab, or via the header reset
+   from 2.1).
+
+Expected result:
+All filters return cleanly to their default state.
+
+
+================================================================
+PHASE 10 - SETTINGS PANEL (DEEP DIVE)
+================================================================
+
+Reopen the settings panel via the gear icon (see 2.3). This phase goes
+into more depth than 2.3 - testing each individual setting's effect.
+
+TEST 10.1 - "Search mode" (auto-locate on launch vs. start empty)
+
+Steps:
+1. In Settings, find the option controlling what happens when you open
+   the app - usually two choices along the lines of "Search nearby
+   automatically" vs. "Start with an empty search".
+2. Set it to the "automatically search nearby" option.
+3. Fully close and reopen the app (or reload the page).
+
+Expected result:
+On reopening, the app should automatically locate you and search
+nearby without you tapping anything (similar to the welcome screen's
+nearby button, but happening automatically on launch).
+
+4. Change the setting to "start empty" and reload again.
+
+Expected result:
+This time, the app opens to an empty search state, with no automatic
+location request or search.
+
+
+TEST 10.2 - "Default category"
+
+Steps:
+1. Set a specific default category (e.g. "Restaurants") in Settings.
+2. Reload the app.
+
+Expected result:
+That category chip should be pre-selected the next time you search,
+instead of "All".
+
+
+TEST 10.3 - "Default mobile view" (list vs. map)
+
+Steps:
+1. Set this to "Map".
+2. Run a search.
+
+Expected result:
+After a search completes, you land on the Map tab by default rather
+than Results. Change it to "List" and confirm the opposite.
+
+
+TEST 10.4 - International search mode
+
+Why this matters:
+By default, the app is limited to Germany/Austria/Switzerland - this
+setting is an experimental opt-in to search more broadly, and should
+come with a clear caveat that it's less reliable outside that core
+region.
+
+Steps:
+1. Turn on "International search" (there should be a hint/description
+   next to it explaining what it does - read it).
+2. Try searching a location clearly outside Germany/Austria/
+   Switzerland, e.g. "Paris" or "London".
+
+Expected result:
+With the setting on, searching a supported international location
+should actually work and return results (data quality/quantity may be
+lower than in the core region - that's expected and should be somewhat
+explained in the UI, e.g. a small notice).
+
+3. Turn the setting back off, and try the same international search
+   again.
+
+Expected result:
+International search should no longer work/return results the same
+way - confirms the toggle genuinely gates the behaviour.
+
+
+TEST 10.5 - Auto-zoom, weak-parking display, public-toilets-only
+
+Steps:
+1. Toggle "Auto-zoom" off, then run a new search.
+
+Expected result:
+The map should NOT automatically zoom/fit itself to the new results
+the way it normally would.
+
+2. Toggle it back on and confirm the map does auto-fit to results
+   again.
+
+3. Toggle "Show weak parking" and run/view a parking search or the map
+   parking layer.
+
+Expected result:
+With it on, a broader, lower-confidence tier of "somewhat accessible"
+parking spots should appear (usually visually distinguished, e.g. a
+different marker color/shade) in addition to the strict "reserved
+accessible" ones. With it off, only the strict tier shows.
+
+4. Toggle "Public toilets only" and check a toilet search/layer.
+
+Expected result:
+With it on, only standalone public toilets should show (e.g. those in
+parks/squares) - toilets that are actually inside a restaurant/venue
+should be excluded. With it off, both kinds show.
+
+
+TEST 10.6 - Sort order default
+
+Steps:
+1. Change the default sort order setting (Confidence vs. Distance -
+   same concept as test 8.2, but as a persistent default here).
+2. Run a fresh search.
+
+Expected result:
+The results list should already be sorted according to your chosen
+default, without you needing to tap the sort control manually.
+
+
+TEST 10.7 - Usage statistics toggle
+
+Steps:
+1. Find the usage statistics/analytics opt-out toggle and read its
+   description.
+2. Toggle it off.
+
+Expected result:
+No crash or visible change to functionality - this is a privacy
+preference, so the only expected effect is that usage data stops being
+sent (not something you can directly observe in the UI, but the toggle
+itself should work smoothly and persist).
+
+
+TEST 10.8 - Reset onboarding
+
+Steps:
+1. Find a "reset onboarding" option, usually near the bottom of
+   Settings or as a consequence of the general "reset to defaults"
+   action.
+2. Trigger it, then fully reload the app.
+
+Expected result:
+The welcome screen (Phase 1) appears again, as if this were a
+brand-new visit.
+
+
+TEST 10.9 - "Reset to defaults" button
+
+Steps:
+1. Change several settings away from their defaults across different
+   sections.
+2. Find and tap "Reset to defaults" (usually at the bottom of the
+   Settings panel).
+
+Expected result:
+A brief confirmation appears (e.g. a checkmark / "Done" message), and
+all settings you changed revert to their original default values.
+Re-open Settings to confirm the values actually stuck.
+
+
+================================================================
+PHASE 11 - BOTTOM NAVIGATION AND APP STATE PERSISTENCE
+================================================================
+
+TEST 11.1 - Three tabs, with badges
+
+Steps:
+1. Run a search with several results.
+2. Look at the bottom navigation bar.
+
+Expected result:
+Three tabs - Results, Map, Filter. The Results tab should show a small
+badge with the result count. If any filters are currently active
+(Phase 9), the Filter tab should show its own badge with the count of
+active filters.
+
+
+TEST 11.2 - Switching tabs preserves state
+
+Steps:
+1. Run a nearby search (Phase 5), note the results and map position.
+2. Switch to Map, then to Filter, then back to Results, several times
+   in a row.
+
+Expected result:
+Nothing resets or reloads unexpectedly - the same results, the same
+map position/zoom, and the same filter settings persist across every
+tab switch.
+
+
+TEST 11.3 - Reloading the browser/app mid-session
+
+Why this matters:
+Mobile browsers get closed/reopened, backgrounded, or refreshed
+constantly - losing your search on an accidental reload would be a bad
+experience.
+
+Steps:
+1. Run a search, apply a filter or two.
+2. Reload the page (pull-to-refresh, or the browser's reload button).
+
+Expected result:
+The app should attempt to restore your previous search/state
+reasonably well (exact behaviour may vary - the important thing is that
+you're not dumped back to a completely blank first-launch state after a
+routine reload of an already-used session).
+
+
+================================================================
+PHASE 12 - STATIC/LEGAL PAGES AND FEEDBACK
+================================================================
+
+Found via links at the bottom of the screen (footer), usually visible
+below the header/search area or reachable by scrolling.
+
+TEST 12.1 - FAQ page
+
+Steps:
+1. Tap the "FAQ" footer link.
+
+Expected result:
+A page opens with categorized frequently-asked questions (how to
+search, data reliability, accessibility of the app itself, etc.), all
+rendered cleanly and readably on a mobile screen.
+
+2. Tap a couple of questions to expand/read their answers.
+
+Expected result:
+Answers expand/are readable; text isn't cut off or overlapping other
+elements.
+
+3. Navigate back to the main app.
+
+Expected result:
+You return cleanly to where you were (or to the main search screen)
+without losing the app in a broken state.
+
+
+TEST 12.2 - Legal notice ("Impressum")
+
+Steps:
+1. Tap the "Impressum"/"Legal notice" footer link.
+
+Expected result:
+A page with legal/contact information opens and renders correctly.
+
+
+TEST 12.3 - About page
+
+Steps:
+1. Tap the "About"/"Ueber die App" footer link.
+
+Expected result:
+A page describing the app's purpose/background opens and renders
+correctly.
+
+
+TEST 12.4 - Feedback
+
+Steps:
+1. Tap the "Feedback" footer link/button.
+
+Expected result:
+A feedback form opens (likely as an embedded popup/modal), letting you
+type and submit a message.
+
+
+TEST 12.5 - Privacy policy
+
+Steps:
+1. Find the privacy policy - it may be linked from the Impressum or FAQ
+   page rather than the main footer directly. Look there if it's not
+   in the main footer.
+
+Expected result:
+A privacy policy page opens and renders correctly.
+
+
+================================================================
+PHASE 13 - CROSS-CUTTING CHECKS
+================================================================
+
+These aren't single features - they're broader sanity checks worth
+doing once you've been through everything else above.
+
+TEST 13.1 - Result volume looks reasonable for a big city
+
+Why this matters:
+A data-fetching limit was recently raised because searches in dense
+cities were silently cutting off the vast majority of available
+results - worth a basic sanity check that this stays fixed.
+
+Steps:
+1. Search a large, well-known city (Berlin, Vienna, Munich, Zurich)
+   with category "All" and a generous radius (5 km or more).
+
+Expected result:
+You should get a substantial number of results (many dozens at least,
+often 100+) - not a suspiciously small, round-looking number like
+exactly 20 or 50 that suggests results are being silently cut off.
+
+
+TEST 13.2 - Parking spots appear even without a nearby venue result
+
+Steps:
+1. Enable the parking map layer (7.7) or run a parking search (6.1) in
+   an area you know has at least one accessible parking spot but not
+   necessarily a documented accessible venue right next to it (e.g. a
+   parking lot near a park or a small town center).
+
+Expected result:
+The parking spot still shows up on the map - it should not be hidden
+just because there's no accessible venue immediately next to it.
+
+
+TEST 13.3 - Everything works after a language switch, not just on
+first load
+
+Steps:
+1. Switch language (2.4) partway through testing, after you've already
+   run a search and opened a detail view.
+
+Expected result:
+Everything currently on screen updates correctly, and every subsequent
+action you take (new search, filters, settings) continues to work
+correctly in the new language - not just the very first screen you see
+after switching.
+
+
+TEST 13.4 - No dead ends
+
+Why this matters:
+A general catch-all - while going through every phase above, keep a
+mental note of anything that felt like a dead end.
+
+Steps:
+1. Throughout your entire testing session, note any screen, popup, or
+   state where you couldn't find an obvious way back/out (no close
+   button, no back gesture that works, stuck loading spinner, etc.).
+
+Expected result:
+Every screen/modal/sheet should have a clear way to leave it and return
+to normal use of the app.
+
+
+================================================================
+REPORTING BUGS
+================================================================
+
+For every issue found, please note:
+
+1. Which phase and test number (e.g. "5.3").
+2. Device/browser you tested on.
+3. What you expected vs. what actually happened.
+4. Exact steps to reproduce, including anything you typed and which
+   chips/toggles were active beforehand - many of these bugs (like 5.3)
+   only appear in a specific sequence of actions, not from a single tap
+   in isolation.
+5. A screenshot or screen recording if the issue is visual.
+
