@@ -265,3 +265,44 @@ describe("ResultsList — scrollTrigger re-fires the scroll for an unchanged scr
     }
   })
 })
+
+describe("ResultsList — no-search-yet empty state offers a nearby CTA button, not just instruction text", () => {
+  it("renders the 'search nearby' button and calls onStartNearby on click, when no search has run yet", () => {
+    const onStartNearby = vi.fn()
+    renderList({
+      places: [],
+      onSelect: vi.fn(),
+      isLoading: false,
+      hasSearched: false,
+      chatMode: "text",
+      onStartNearby,
+    })
+    const button = screen.getByRole("button", { name: /In der Nähe suchen/ })
+    fireEvent.click(button)
+    expect(onStartNearby).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not render the button when onStartNearby is not provided", () => {
+    renderList({
+      places: [],
+      onSelect: vi.fn(),
+      isLoading: false,
+      hasSearched: false,
+      chatMode: "text",
+    })
+    expect(screen.queryByRole("button", { name: /In der Nähe suchen/ })).not.toBeInTheDocument()
+  })
+
+  it("does not render the button once a search has run (empty-results state, not the pre-search state)", () => {
+    const onStartNearby = vi.fn()
+    renderList({
+      places: [],
+      onSelect: vi.fn(),
+      isLoading: false,
+      hasSearched: true,
+      chatMode: "text",
+      onStartNearby,
+    })
+    expect(screen.queryByRole("button", { name: /In der Nähe suchen/ })).not.toBeInTheDocument()
+  })
+})

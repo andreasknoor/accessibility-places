@@ -438,6 +438,7 @@ export default function MobileLayout({
             chatMode={chatMode}
             onSwitchToText={onSwitchToText}
             isFirstVisit={isFirstVisit}
+            onStartNearby={onStartNearby}
             amenityType={amenityActive}
             amenityResults={amenityResults}
             amenityHint={amenityHint}

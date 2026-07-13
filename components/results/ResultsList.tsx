@@ -356,6 +356,21 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
                 <p className="font-semibold text-foreground">{t.chat.noSearchYetTitle}</p>
                 <p className="text-sm text-muted-foreground">{t.chat.noSearchYet}</p>
               </div>
+              {onStartNearby && (
+                <button
+                  onClick={onStartNearby}
+                  className="w-full max-w-xs flex items-center gap-3 rounded-lg bg-primary text-primary-foreground px-4 py-3 shadow-sm hover:bg-primary/90 transition-colors text-left"
+                >
+                  <span className="w-9 h-9 rounded-full bg-primary-foreground/15 flex items-center justify-center shrink-0">
+                    <LocateFixed className="w-4 h-4" />
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-sm font-semibold">{t.chat.welcomeNearbyCard}</span>
+                    <span className="block text-xs text-primary-foreground mt-0.5">{t.chat.welcomeNearbyCardHint}</span>
+                  </span>
+                  <ChevronRight className="w-4 h-4 shrink-0" />
+                </button>
+              )}
             </div>
           )}
 

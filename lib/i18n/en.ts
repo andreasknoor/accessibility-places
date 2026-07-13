@@ -42,7 +42,7 @@ const en: Translations = {
     thinking: "Searching …",
     noResults:        "No matching places found.",
     noSearchYetTitle:      "What are you looking for?",
-    noSearchYet:           "Enter a city above – or tap ⌖ on the map to search near you.",
+    noSearchYet:           "Enter a city above.",
     errorGeneric:  "An error occurred. Please try again.",
     errorTimeout:  "The search took too long. A data source is not responding right now — please try again.",
     errorLocationNotFound:     "Location not found. Please check the spelling or try a larger place nearby.",
