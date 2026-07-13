@@ -1512,11 +1512,14 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       <header className={cn("flex items-center justify-between px-5 py-3 border-b border-border bg-card shrink-0", isFullscreen && "hidden")}>
         <div className="flex items-center gap-2.5">
           {/* Icon-only: the "tap 4×" easter egg. Split from the reset button
-              below it (v9.61) — combined, every one of the 7 taps also fired
-              a search reset, which made the rapid-tap sequence unusable. */}
+              below it (v9.61) — combined, every one of the taps also fired
+              a search reset, which made the rapid-tap sequence unusable.
+              No cursor-pointer here on purpose: the icon is a hidden easter
+              egg, not a discoverable control — a hand cursor would invite
+              clicking it as if it were the reset button next to it. */}
           <button
             onClick={handleLogoTap}
-            className="hover:opacity-75 transition-opacity cursor-pointer"
+            className="hover:opacity-75 transition-opacity cursor-default"
             aria-label={t.app.title}
           >
             <img src="/icons/icon-preview.svg" className="w-11 h-11 rounded-xl" alt="" aria-hidden />
