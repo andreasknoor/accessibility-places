@@ -9,6 +9,7 @@ import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS } from "@/lib/config"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { openExternalUrl } from "@/lib/native/browser"
+import { startDefaultNavigation } from "@/lib/native/navigation"
 import { hapticLight } from "@/lib/native/haptics"
 import { confidenceLabel } from "@/lib/matching/merge"
 import { haversineMetres } from "@/lib/matching/match"
@@ -199,8 +200,12 @@ const POPUP_TITLE   = "font-weight:700;font-size:14px;flex:1;min-width:0;overflo
 const POPUP_SUB     = "font-size:11px;color:#71717a;margin:2px 0 11px"
 // No font-size here — each usage sets its own (P badge: 13px, 🚻 emoji: 14px).
 const POPUP_BADGE   = "display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;flex-shrink:0"
-// External-link glyph (white via currentColor inside the blue CTA, blue in text links).
-const POPUP_EXT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`
+// Navigation-compass glyph for the "Navigate here" popup CTA (docs/plans/
+// native-navigate-here.md) — matches the lucide `Navigation` icon used by
+// NavigateButton (components/ui/navigate-button.tsx), so the same action
+// reads consistently between the React card/sheet UI and these hand-built
+// Leaflet popups.
+const POPUP_NAV_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>`
 
 // Wraps popup content in the flush-bar shell. `bar` is the accent colour.
 function popupShell(bar: string, inner: string): string {
@@ -766,18 +771,32 @@ export default function MapView({
         </div>
         <div style="${POPUP_KV}">${rows}</div>
         <div style="${POPUP_FOOTER}">
-          <button data-gmaps style="${POPUP_CTA}">${POPUP_EXT_SVG}${t.results.googleMapsLink}</button>
-          ${showResults || tier === "weak" ? `<div style="${POPUP_LINKS}">
+          <button data-navigate style="${POPUP_CTA}">${POPUP_NAV_SVG}${t.results.navigateHere}</button>
+          <div style="${POPUP_LINKS}">
+            <button data-gmaps style="${POPUP_LINK}">${t.results.googleMapsLink} →</button>
             ${showResults ? `<button data-show-results style="${POPUP_LINK}">${t.map.showInResults} →</button>` : ""}
             ${tier === "weak" ? `<button data-report style="${POPUP_LINK_WARN}">
               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
               ${t.map.parkingReportButton}
             </button>` : ""}
-          </div>` : ""}
+          </div>
         </div>
       `)
       // Use L.DomEvent.on (not addEventListener) — plain addEventListener and
       // inline onclick fail on mobile because Leaflet intercepts touchstart.
+      // "Navigate here" is the reserved primary CTA slot (docs/plans/
+      // native-navigate-here.md, "Map marker popup placement") — no in-popup
+      // chooser, unlike the card/sheet NavigateButton: this popup is
+      // short-lived (closes on pan/zoom) and too narrow for a multi-option
+      // picker, so it always fires the platform default directly.
+      const navigateBtn = div.querySelector<HTMLElement>("[data-navigate]")
+      if (navigateBtn) {
+        L!.DomEvent.on(navigateBtn, "click", (ev: Event) => {
+          L!.DomEvent.stopPropagation(ev)
+          startDefaultNavigation({ lat: spot.lat, lon: spot.lon })
+        })
+      }
+
       const gmapsBtn = div.querySelector<HTMLElement>("[data-gmaps]")
       if (gmapsBtn) {
         L!.DomEvent.on(gmapsBtn, "click", (ev: Event) => {
@@ -883,15 +902,27 @@ export default function MapView({
         ${sub ? `<div style="${POPUP_SUB}">${sub}</div>` : ""}
         <div style="${POPUP_KV}">${rows}</div>
         <div style="${POPUP_FOOTER}">
-          ${wheelmapUrl
-            ? `<button data-wheelmap style="${POPUP_CTA}">${POPUP_EXT_SVG}Wheelmap</button>`
-            : `<button data-gmaps style="${POPUP_CTA}">${POPUP_EXT_SVG}${t.results.googleMapsLink}</button>`}
-          ${(wheelmapUrl || showResults) ? `<div style="${POPUP_LINKS}">
-            ${wheelmapUrl ? `<button data-gmaps style="${POPUP_LINK}">${t.results.googleMapsLink} →</button>` : ""}
+          <button data-navigate style="${POPUP_CTA}">${POPUP_NAV_SVG}${t.results.navigateHere}</button>
+          <div style="${POPUP_LINKS}">
+            ${wheelmapUrl ? `<button data-wheelmap style="${POPUP_LINK}">Wheelmap →</button>` : ""}
+            <button data-gmaps style="${POPUP_LINK}">${t.results.googleMapsLink} →</button>
             ${showResults ? `<button data-show-results style="${POPUP_LINK}">${t.map.showInResults} →</button>` : ""}
-          </div>` : ""}
+          </div>
         </div>
       `)
+      // "Navigate here" is the reserved primary CTA slot, same reasoning as
+      // the parking popup above — no in-popup chooser, direct platform
+      // default. Previously this slot conditionally held Wheelmap or Google
+      // Maps depending on which was available; both are now always available
+      // as secondary links instead, so the CTA behaves identically regardless
+      // of whether a Wheelmap URL exists.
+      const navigateBtn = div.querySelector<HTMLElement>("[data-navigate]")
+      if (navigateBtn) {
+        L.DomEvent.on(navigateBtn, "click", (ev: Event) => {
+          L!.DomEvent.stopPropagation(ev)
+          startDefaultNavigation({ lat: spot.lat, lon: spot.lon })
+        })
+      }
       const gmapsBtn = div.querySelector<HTMLElement>("[data-gmaps]")
       if (gmapsBtn) {
         L.DomEvent.on(gmapsBtn, "click", () => void openExternalUrl(mapsUrl))

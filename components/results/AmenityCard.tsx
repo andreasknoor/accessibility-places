@@ -4,6 +4,7 @@ import { useState } from "react"
 import { MapPin, Map, Accessibility, Flag } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { NativeLink } from "@/components/ui/native-link"
+import NavigateButton from "@/components/ui/navigate-button"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import CriterionBox, { type CriterionTone } from "@/components/results/CriterionBox"
@@ -191,17 +192,26 @@ export default function AmenityCard({ spot, amenityType, isSelected, onClick, di
             )}
           </div>
 
-          {onClick && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onClick() }}
-              className="flex items-center gap-1 text-xs text-primary bg-primary/10 hover:bg-primary/20 transition-colors rounded-full px-2.5 py-1"
-              aria-label={t.results.showOnMap}
-              title={t.results.showOnMap}
-            >
-              <MapPin className="w-[1.1rem] h-[1.1rem] shrink-0" />
-              {t.results.showOnMap}
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {/* No detail sheet exists for amenity results (unlike PlaceCard →
+                PlaceDebugSheet), so the footer row is the only placement
+                candidate — a labelled button, not a bare icon, borrows the
+                "deserves more weight" reasoning Placement 3 uses for venues.
+                See docs/plans/native-navigate-here.md, "AmenityCard (list)
+                placement". */}
+            <NavigateButton coords={{ lat: spot.lat, lon: spot.lon }} variant="labeled" />
+            {onClick && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onClick() }}
+                className="flex items-center gap-1 text-xs text-primary bg-primary/10 hover:bg-primary/20 transition-colors rounded-full px-2.5 py-1"
+                aria-label={t.results.showOnMap}
+                title={t.results.showOnMap}
+              >
+                <MapPin className="w-[1.1rem] h-[1.1rem] shrink-0" />
+                {t.results.showOnMap}
+              </button>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

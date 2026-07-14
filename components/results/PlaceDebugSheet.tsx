@@ -14,6 +14,7 @@ import { hapticLight, hapticSuccess } from "@/lib/native/haptics"
 import { SOURCE_LABELS, APP_VERSION, TALLY_DATA_ERROR_FORMS } from "@/lib/config"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { NativeLink } from "@/components/ui/native-link"
+import NavigateButton from "@/components/ui/navigate-button"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { buildPlaceDeepLink } from "@/lib/place-link"
 import { openTallyPopup } from "@/lib/tally"
@@ -785,8 +786,11 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
 
         </div>
 
-        {/* Sticky close button */}
-        <div className="shrink-0 px-4 py-3 border-t border-border">
+        {/* Sticky footer: navigation CTA (Placement 3 — docs/plans/native-navigate-here.md)
+            + close button. Reachable regardless of scroll position within the
+            accessibility-details content above. */}
+        <div className="shrink-0 px-4 py-3 border-t border-border flex flex-col gap-2">
+          <NavigateButton coords={place.coordinates} variant="sticky" />
           <button
             onClick={onClose}
             className="w-full py-2 rounded-md border border-border text-sm text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"

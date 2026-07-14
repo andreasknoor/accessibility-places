@@ -122,6 +122,10 @@ const de: Translations = {
     gintoLink:      "Auf Ginto prüfen",
     acceslibreLink: "Auf AccèsLibre prüfen",
     googleMapsLink: "In Google Maps öffnen",
+    navigateHere:      "Navigation starten",
+    navigateWith:      "Navigieren mit",
+    navigateGoogleMaps: "Google Maps",
+    navigateOtherApp:  "Andere Navigations-App",
     verifiedRecently: "Vor Ort verifiziert",
     verifiedAt: (date: string, sources: string[]) => {
       const src = sources.length > 0 ? ` in ${sources.join(", ")}` : ""

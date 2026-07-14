@@ -5,6 +5,7 @@ import { createPortal } from "react-dom"
 import { MapPin, Globe, Phone, ChevronDown, ChevronUp, ChevronRight, Accessibility, PawPrint, Salad, Leaf, Map, ShieldCheck } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { NativeLink } from "@/components/ui/native-link"
+import NavigateButton from "@/components/ui/navigate-button"
 import { Badge } from "@/components/ui/badge"
 import ConfidenceBadge, { VerifiedBadge } from "./ConfidenceBadge"
 import A11yAttribute    from "./A11yAttribute"
@@ -235,6 +236,7 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
             >
               <Map className="w-[1.1rem] h-[1.1rem]" />
             </NativeLink>
+            <NavigateButton coords={place.coordinates} variant="icon" />
             <VerifiedBadge place={place} />
           </div>
 
