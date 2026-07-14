@@ -10,6 +10,7 @@ import type { Place } from "@/lib/types"
 vi.mock("@/lib/native/navigation", () => ({
   startDefaultNavigation: vi.fn(),
   startNavigationWithApp: vi.fn(),
+  shouldShowChooser: () => false,
 }))
 
 // LocaleProvider mirrors the root layout — the info sheet opened from the card

@@ -4,7 +4,7 @@ import { Navigation } from "lucide-react"
 import { Popover, PopoverTrigger, PopoverContent, PopoverClose } from "@/components/ui/popover"
 import { useTranslations } from "@/lib/i18n"
 import { getPlatform, track } from "@/lib/analytics"
-import { startDefaultNavigation, startNavigationWithApp, type NavCoords } from "@/lib/native/navigation"
+import { startDefaultNavigation, startNavigationWithApp, shouldShowChooser, type NavCoords } from "@/lib/native/navigation"
 import { cn } from "@/lib/utils"
 
 interface Props {
@@ -42,7 +42,7 @@ const ICON_CLASS: Record<Props["variant"], string> = {
 export default function NavigateButton({ coords, variant, className }: Props) {
   const t = useTranslations()
   const platform = getPlatform()
-  const showChooser = platform === "android"
+  const showChooser = shouldShowChooser(platform)
 
   function fireDefault(e: React.MouseEvent) {
     e.stopPropagation()
@@ -55,36 +55,40 @@ export default function NavigateButton({ coords, variant, className }: Props) {
     startNavigationWithApp(app, coords)
   }
 
-  if (!showChooser) {
-    return (
-      <button
-        type="button"
-        onClick={fireDefault}
-        aria-label={t.results.navigateHere}
-        title={variant === "icon" ? t.results.navigateHere : undefined}
-        className={cn(TRIGGER_CLASS[variant], className)}
-      >
-        <Navigation className={ICON_CLASS[variant]} aria-hidden />
-        {variant !== "icon" && t.results.navigateHere}
-      </button>
-    )
-  }
+  // Built once regardless of showChooser — the two branches previously
+  // rendered near-identical <button> markup independently, which could
+  // silently drift (aria-label/title logic is accessibility-relevant, not
+  // just styling). onClick differs per branch: the no-chooser path fires
+  // navigation directly, the chooser path only needs to stop the click from
+  // bubbling to an ancestor's own handler (e.g. PlaceCard's "open details")
+  // — Radix's Popover already handles the actual open-toggle.
+  const trigger = (
+    <button
+      type="button"
+      onClick={showChooser ? (e) => e.stopPropagation() : fireDefault}
+      aria-label={t.results.navigateHere}
+      title={variant === "icon" ? t.results.navigateHere : undefined}
+      className={cn(TRIGGER_CLASS[variant], className)}
+    >
+      <Navigation className={ICON_CLASS[variant]} aria-hidden />
+      {variant !== "icon" && t.results.navigateHere}
+    </button>
+  )
+
+  if (!showChooser) return trigger
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          onClick={(e) => e.stopPropagation()}
-          aria-label={t.results.navigateHere}
-          title={variant === "icon" ? t.results.navigateHere : undefined}
-          className={cn(TRIGGER_CLASS[variant], className)}
-        >
-          <Navigation className={ICON_CLASS[variant]} aria-hidden />
-          {variant !== "icon" && t.results.navigateHere}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-56 p-1" align="start" onClick={(e) => e.stopPropagation()}>
+      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+      {/* z-[1100]: PopoverContent's own default (z-50, components/ui/popover.tsx)
+          sits below PlaceDebugSheet's overlay (z-[1050]/z-[1051]) — since the
+          "sticky" variant renders inside that sheet, the portalled popover
+          content would otherwise paint invisibly underneath it. 1100 clears
+          every fixed-overlay z-index in the app (highest existing is
+          bottom-sheet.tsx's z-[1061]) with headroom. cn() in popover.tsx
+          resolves this via tailwind-merge, so it reliably overrides the
+          component's own z-50 rather than depending on CSS declaration order. */}
+      <PopoverContent className="w-56 p-1 z-[1100]" align="start" onClick={(e) => e.stopPropagation()}>
         <p className="px-2.5 pt-1.5 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           {t.results.navigateWith}
         </p>

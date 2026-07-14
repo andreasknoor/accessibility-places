@@ -8,6 +8,7 @@ vi.mock("@/lib/analytics", () => ({ track: vi.fn(), getPlatform: () => "web" }))
 vi.mock("@/lib/native/navigation", () => ({
   startDefaultNavigation: vi.fn(),
   startNavigationWithApp: vi.fn(),
+  shouldShowChooser: () => false,
 }))
 vi.mock("@/lib/config", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/config")>()

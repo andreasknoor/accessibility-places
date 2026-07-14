@@ -9,6 +9,7 @@ import type { AmenityFeature } from "@/lib/types"
 vi.mock("@/lib/native/navigation", () => ({
   startDefaultNavigation: vi.fn(),
   startNavigationWithApp: vi.fn(),
+  shouldShowChooser: () => false,
 }))
 
 function renderWithProvider(ui: React.ReactElement) {

@@ -8,6 +8,7 @@ import {
   navAppUrl,
   startDefaultNavigation,
   startNavigationWithApp,
+  shouldShowChooser,
 } from "@/lib/native/navigation"
 
 const coords = { lat: 52.52, lon: 13.405 }
@@ -39,7 +40,9 @@ describe("startDefaultNavigation", () => {
 
   beforeEach(() => {
     originalHref = window.location.href
-    vi.stubGlobal("open", vi.fn())
+    // Returns a truthy stub window by default (the "popup succeeded" case) —
+    // individual tests override this to simulate a blocked popup.
+    vi.stubGlobal("open", vi.fn(() => ({}) as Window))
   })
 
   afterEach(() => {
@@ -80,6 +83,44 @@ describe("startDefaultNavigation", () => {
       "_blank",
       "noopener,noreferrer",
     )
+  })
+
+  it("falls back to a same-tab navigation when window.open is blocked (e.g. iOS standalone PWA)", () => {
+    mockGetPlatform.mockReturnValue("web")
+    vi.stubGlobal("open", vi.fn(() => null)) // simulates a blocked popup
+    const setHref = vi.fn()
+    Object.defineProperty(window, "location", {
+      value: { ...window.location, set href(v: string) { setHref(v) } },
+      writable: true,
+    })
+    startDefaultNavigation(coords)
+    expect(setHref).toHaveBeenCalledWith("https://www.google.com/maps/dir/?api=1&destination=52.52,13.405")
+  })
+
+  it("does NOT fall back to same-tab navigation when window.open succeeds", () => {
+    mockGetPlatform.mockReturnValue("web")
+    const setHref = vi.fn()
+    Object.defineProperty(window, "location", {
+      value: { ...window.location, set href(v: string) { setHref(v) } },
+      writable: true,
+    })
+    startDefaultNavigation(coords)
+    expect(setHref).not.toHaveBeenCalled()
+  })
+})
+
+describe("shouldShowChooser", () => {
+  it("is true only for android", () => {
+    expect(shouldShowChooser("android")).toBe(true)
+    expect(shouldShowChooser("ios")).toBe(false)
+    expect(shouldShowChooser("web")).toBe(false)
+  })
+
+  it("defaults to reading the current platform when called with no argument", () => {
+    mockGetPlatform.mockReturnValue("android")
+    expect(shouldShowChooser()).toBe(true)
+    mockGetPlatform.mockReturnValue("ios")
+    expect(shouldShowChooser()).toBe(false)
   })
 })
 

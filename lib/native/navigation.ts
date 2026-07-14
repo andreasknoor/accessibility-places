@@ -68,11 +68,32 @@ function navigateWebViewTo(uri: string): void {
 // on Android, Apple Maps on iOS, the universal Google Maps web fallback
 // everywhere else (desktop browser, mobile browser, PWA). This is Variant B
 // from the concept doc, with Variant A as its non-native fallback.
+//
+// The window.open() call is expected to work everywhere this branch runs,
+// including an installed iOS home-screen PWA (app/manifest.ts's
+// display: "standalone") — but WebKit's standalone display mode is known to
+// sometimes block/no-op window.open(..., "_blank") even under a synchronous
+// user gesture. window.open() returns null (not a thrown error) when
+// blocked, so falling back to a same-tab navigation on that signal is a
+// low-risk, well-established mitigation — worst case on platforms where the
+// popup succeeds, the fallback branch simply never runs.
 export function startDefaultNavigation(coords: NavCoords): void {
   const platform = getPlatform()
   if (platform === "android") { navigateWebViewTo(navAppUrl("google", coords)); return }
   if (platform === "ios")     { navigateWebViewTo(navAppUrl("apple",  coords)); return }
-  window.open(universalMapsUrl(coords), "_blank", "noopener,noreferrer")
+  const url = universalMapsUrl(coords)
+  const win = window.open(url, "_blank", "noopener,noreferrer")
+  if (!win) window.location.href = url
+}
+
+// Whether the in-app chooser popover (reduced-scope Variant C, see file
+// header) should be offered for the given platform — Android only. Single
+// source of truth for "which platform gets a chooser": components/ui/
+// navigate-button.tsx reads this instead of re-deriving its own
+// `platform === "android"` check, which previously could drift from the
+// platform branches in startDefaultNavigation above with nothing to catch it.
+export function shouldShowChooser(platform: string = getPlatform()): boolean {
+  return platform === "android"
 }
 
 // Starts navigation in a specific app, for the Android in-app chooser popover

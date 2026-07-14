@@ -11,6 +11,10 @@ const startNavigationWithApp = vi.fn()
 vi.mock("@/lib/native/navigation", () => ({
   startDefaultNavigation: (...args: unknown[]) => startDefaultNavigation(...args),
   startNavigationWithApp: (...args: unknown[]) => startNavigationWithApp(...args),
+  // Real behaviour, not a stub — these tests exercise the Android-vs-other
+  // branching itself, so shouldShowChooser must actually react to the
+  // mocked platform the same way the real implementation does.
+  shouldShowChooser: (platform: string) => platform === "android",
 }))
 
 function renderButton(variant: "sticky" | "icon" | "labeled" = "sticky") {

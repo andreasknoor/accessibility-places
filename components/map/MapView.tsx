@@ -221,6 +221,24 @@ function popupRow(label: string, value: string, opts: { color?: string; dot?: st
   return `<span style="font-size:11px;color:#71717a">${label}</span><span style="${valStyle}">${dotEl}${value}${opts.chip ?? ""}</span>`
 }
 
+// Wires the "Navigate here" primary CTA button (docs/plans/native-navigate-
+// here.md, "Map marker popup placement") — shared by the parking and toilet
+// marker popups, which used to each hand-roll this querySelector + DomEvent
+// wiring independently. Uses L.DomEvent.on (not addEventListener) — plain
+// addEventListener and inline onclick fail on mobile because Leaflet
+// intercepts touchstart. No in-popup chooser, unlike the card/sheet
+// NavigateButton: this popup is short-lived (closes on pan/zoom) and too
+// narrow for a multi-option picker, so it always fires the platform default
+// directly.
+function wireNavigateButton(div: HTMLElement, coords: { lat: number; lon: number }): void {
+  const navigateBtn = div.querySelector<HTMLElement>("[data-navigate]")
+  if (!navigateBtn) return
+  L!.DomEvent.on(navigateBtn, "click", (ev: Event) => {
+    L!.DomEvent.stopPropagation(ev)
+    startDefaultNavigation(coords)
+  })
+}
+
 // Parking marker colours per tier.
 // "strong" (reserved disabled bays) = signal blue "P"; "weak" (wheelchair=yes
 // lot) = signal orange with dark "P" (white-on-orange fails contrast — this is
@@ -782,20 +800,7 @@ export default function MapView({
           </div>
         </div>
       `)
-      // Use L.DomEvent.on (not addEventListener) — plain addEventListener and
-      // inline onclick fail on mobile because Leaflet intercepts touchstart.
-      // "Navigate here" is the reserved primary CTA slot (docs/plans/
-      // native-navigate-here.md, "Map marker popup placement") — no in-popup
-      // chooser, unlike the card/sheet NavigateButton: this popup is
-      // short-lived (closes on pan/zoom) and too narrow for a multi-option
-      // picker, so it always fires the platform default directly.
-      const navigateBtn = div.querySelector<HTMLElement>("[data-navigate]")
-      if (navigateBtn) {
-        L!.DomEvent.on(navigateBtn, "click", (ev: Event) => {
-          L!.DomEvent.stopPropagation(ev)
-          startDefaultNavigation({ lat: spot.lat, lon: spot.lon })
-        })
-      }
+      wireNavigateButton(div, { lat: spot.lat, lon: spot.lon })
 
       const gmapsBtn = div.querySelector<HTMLElement>("[data-gmaps]")
       if (gmapsBtn) {
@@ -904,7 +909,7 @@ export default function MapView({
         <div style="${POPUP_FOOTER}">
           <button data-navigate style="${POPUP_CTA}">${POPUP_NAV_SVG}${t.results.navigateHere}</button>
           <div style="${POPUP_LINKS}">
-            ${wheelmapUrl ? `<button data-wheelmap style="${POPUP_LINK}">Wheelmap →</button>` : ""}
+            ${wheelmapUrl ? `<button data-wheelmap style="${POPUP_LINK}">${t.results.wheelmapLink} →</button>` : ""}
             <button data-gmaps style="${POPUP_LINK}">${t.results.googleMapsLink} →</button>
             ${showResults ? `<button data-show-results style="${POPUP_LINK}">${t.map.showInResults} →</button>` : ""}
           </div>
@@ -916,13 +921,7 @@ export default function MapView({
       // Maps depending on which was available; both are now always available
       // as secondary links instead, so the CTA behaves identically regardless
       // of whether a Wheelmap URL exists.
-      const navigateBtn = div.querySelector<HTMLElement>("[data-navigate]")
-      if (navigateBtn) {
-        L.DomEvent.on(navigateBtn, "click", (ev: Event) => {
-          L!.DomEvent.stopPropagation(ev)
-          startDefaultNavigation({ lat: spot.lat, lon: spot.lon })
-        })
-      }
+      wireNavigateButton(div, { lat: spot.lat, lon: spot.lon })
       const gmapsBtn = div.querySelector<HTMLElement>("[data-gmaps]")
       if (gmapsBtn) {
         L.DomEvent.on(gmapsBtn, "click", () => void openExternalUrl(mapsUrl))
