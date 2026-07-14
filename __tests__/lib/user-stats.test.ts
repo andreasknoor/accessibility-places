@@ -33,7 +33,10 @@ const redisMock = {
   expire:   vi.fn().mockResolvedValue(1),
 }
 
-vi.mock("@/lib/stats", () => ({ getRedis: () => redisMock }))
+vi.mock("@/lib/stats", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/stats")>()
+  return { ...actual, getRedis: () => redisMock }
+})
 
 import { trackUserSearch, trackUserOpen, getTopUsers, getUserTotals, resetUserStats, setUserComment, isStreakActive, COMMENT_MAX_LENGTH } from "@/lib/user-stats"
 

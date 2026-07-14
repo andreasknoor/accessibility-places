@@ -89,14 +89,23 @@ const ALL_SOURCES: SourceId[] = [
   "osm_parking", "osm_parking_private", "osm_parking_public", "nominatim",
 ]
 
-async function scanKeys(redis: Redis, pattern: string): Promise<string[]> {
-  let cursor = 0
+// Upstash's SCAN cursor is an unsigned 64-bit integer serialised as a string —
+// far beyond Number.MAX_SAFE_INTEGER (2^53). `Number(nextCursor)` silently
+// rounds it, so the following scan() call resumes from a corrupted cursor the
+// server has never handed out, which it treats as "no more keys" and returns
+// batch:0/cursor:0 — verified live: this truncated `stats:h:*` from 16,145 real
+// keys down to 1,000, and `stats:h:calls:accessibility_cloud:*` from 595 down
+// to 100, deflating call totals far more than error totals (fewer keys, less
+// likely to hit a large cursor) and inflating every derived error rate (17%
+// apparent vs. 2.4% actual). Fix: keep the cursor as a string throughout.
+export async function scanKeys(redis: Redis, pattern: string): Promise<string[]> {
+  let cursor = "0"
   const keys: string[] = []
   do {
-    const [nextCursor, batch] = await redis.scan(cursor, { match: pattern, count: 100 })
-    cursor = Number(nextCursor)
+    const [nextCursor, batch] = await redis.scan(cursor, { match: pattern, count: 500 })
+    cursor = String(nextCursor)
     keys.push(...batch)
-  } while (cursor !== 0)
+  } while (cursor !== "0")
   return keys
 }
 
@@ -141,13 +150,7 @@ async function getDurationStats(
 export async function resetStats(): Promise<number> {
   const redis = getRedis()
   if (!redis) return 0
-  let cursor = 0
-  const keys: string[] = []
-  do {
-    const [nextCursor, batch] = await redis.scan(cursor, { match: "stats:h:*", count: 100 })
-    cursor = Number(nextCursor)
-    keys.push(...batch)
-  } while (cursor !== 0)
+  const keys = await scanKeys(redis, "stats:h:*")
   if (keys.length === 0) return 0
   for (let i = 0; i < keys.length; i += 100)
     await redis.del(...keys.slice(i, i + 100))

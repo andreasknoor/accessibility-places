@@ -1,4 +1,4 @@
-import { getRedis } from "./stats"
+import { getRedis, scanKeys } from "./stats"
 
 // Anonymous per-user search counters for the top-users dashboard section
 // (docs/plans/top-users-stats.md). Stored per user: random client-generated
@@ -114,13 +114,7 @@ export async function trackUserOpen(uid: unknown, platform: unknown): Promise<vo
 export async function resetUserStats(): Promise<number> {
   const redis = getRedis()
   if (!redis) return 0
-  let cursor = 0
-  const keys: string[] = [ZSET_KEY]
-  do {
-    const [nextCursor, batch] = await redis.scan(cursor, { match: "user:*", count: 100 })
-    cursor = Number(nextCursor)
-    keys.push(...batch)
-  } while (cursor !== 0)
+  const keys = [ZSET_KEY, ...await scanKeys(redis, "user:*")]
   for (let i = 0; i < keys.length; i += 100)
     await redis.del(...keys.slice(i, i + 100))
   return keys.length
@@ -229,13 +223,7 @@ export async function getUserTotals(): Promise<UserTotals> {
   const redis = getRedis()
   if (!redis) return { total: 0, neverSearched: 0, byPlatform: {} }
 
-  let cursor = 0
-  const keys: string[] = []
-  do {
-    const [nextCursor, batch] = await redis.scan(cursor, { match: "user:*", count: 100 })
-    cursor = Number(nextCursor)
-    keys.push(...batch)
-  } while (cursor !== 0)
+  const keys = await scanKeys(redis, "user:*")
   if (keys.length === 0) return { total: 0, neverSearched: 0, byPlatform: {} }
 
   const searched = new Set(await redis.zrange<string[]>(ZSET_KEY, 0, -1))
