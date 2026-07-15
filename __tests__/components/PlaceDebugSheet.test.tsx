@@ -4,7 +4,12 @@ import PlaceDebugSheet from "@/components/results/PlaceDebugSheet"
 import type { Place } from "@/lib/types"
 
 vi.mock("@/lib/tally", () => ({ openTallyPopup: vi.fn() }))
-vi.mock("@/lib/analytics", () => ({ track: vi.fn() }))
+vi.mock("@/lib/analytics", () => ({ track: vi.fn(), getPlatform: () => "web" }))
+vi.mock("@/lib/native/navigation", () => ({
+  startDefaultNavigation: vi.fn(),
+  startNavigationWithApp: vi.fn(),
+  shouldShowChooser: () => false,
+}))
 vi.mock("@/lib/config", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/config")>()
   return { ...actual, TALLY_DATA_ERROR_FORMS: { de: "testFormDe", en: "testFormEn" } }
@@ -338,5 +343,18 @@ describe("PlaceDebugSheet optional fields", () => {
   it("does not show Angebot section when no offer data is present", () => {
     renderSheet()
     expect(screen.queryByText("Angebot")).toBeNull()
+  })
+})
+
+// ─── Navigate button (docs/plans/native-navigate-here.md, Placement 3) ───────
+
+describe("PlaceDebugSheet navigate button", () => {
+  it("renders a sticky 'Navigation starten' button in the footer, above the close button", async () => {
+    const { startDefaultNavigation } = await import("@/lib/native/navigation")
+    renderSheet()
+    const navigateBtn = screen.getByRole("button", { name: "Navigation starten" })
+    expect(navigateBtn).toBeInTheDocument()
+    fireEvent.click(navigateBtn)
+    expect(startDefaultNavigation).toHaveBeenCalledWith({ lat: 52.52, lon: 13.405 })
   })
 })

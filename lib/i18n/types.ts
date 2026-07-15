@@ -128,6 +128,10 @@ export interface Translations {
     gintoLink:         string
     acceslibreLink:    string
     googleMapsLink:    string
+    navigateHere:       string
+    navigateWith:       string
+    navigateGoogleMaps: string
+    navigateOtherApp:   string
     verifiedRecently:  string
     verifiedAt:        (date: string, sources: string[]) => string
     verifiedAge:       (date: string) => string

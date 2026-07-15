@@ -9,6 +9,7 @@ import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS } from "@/lib/config"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { openExternalUrl } from "@/lib/native/browser"
+import { startDefaultNavigation } from "@/lib/native/navigation"
 import { hapticLight } from "@/lib/native/haptics"
 import { confidenceLabel } from "@/lib/matching/merge"
 import { haversineMetres } from "@/lib/matching/match"
@@ -182,25 +183,39 @@ function confidenceChip(confidence: number, shortLabels: { high: string; medium:
 
 // ─── Shared popup styling (venue / parking / WC) ──────────────────────────────
 // All three map popups use one layout: a flush left accent bar (host/confidence
-// colour) + an icon badge header + an aligned key/value grid + a footer with
-// exactly one bold blue default CTA and the rest as plain text links. The flush
-// bar relies on the ".ap-popup" CSS override (globals.css) zeroing Leaflet's
-// content inset; the padding is re-added on the content column below.
+// colour) + an icon badge header + an aligned key/value grid + a footer of
+// equally-weighted pill chips (docs/prototypes/navigate-here-popup-footer-
+// variants.html, "Variante 2"). No chip is a filled default CTA — "Navigation
+// starten" always exits the app and must never outrank the others (user
+// feedback: it previously read as the popup's primary action). The one
+// exception is the venue popup's "Details anzeigen" chip, which stays filled
+// blue because — unlike every other chip here — it's an in-app action, not an
+// exit, consistent with the app-wide convention that filled blue means "this
+// executes now, in the app" (see the search row's nearby-search button). The
+// flush bar relies on the ".ap-popup" CSS override (globals.css) zeroing
+// Leaflet's content inset; the padding is re-added on the content column below.
 const POPUP_PAD     = "padding:12px 14px;flex:1;min-width:0"
 const POPUP_KV      = "display:grid;grid-template-columns:auto 1fr;gap:7px 10px;align-items:center"
 const POPUP_FOOTER  = "border-top:1px solid #f0f0f0;margin-top:11px;padding-top:9px"
-// Smaller vertical padding keeps the popup compact; font-size 12px stays readable at this width.
-const POPUP_CTA     = "display:flex;align-items:center;justify-content:center;gap:6px;width:100%;background:#2563eb;color:#fff;border:none;border-radius:7px;padding:6px 8px;font-size:12px;font-weight:600;cursor:pointer"
-const POPUP_LINK    = "display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline"
-const POPUP_LINK_WARN = "display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:#92400e;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline"
-const POPUP_LINKS   = "display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-top:9px"
+const POPUP_CHIPS   = "display:flex;flex-wrap:wrap;gap:6px"
+const POPUP_CHIP    = "display:inline-flex;align-items:center;gap:5px;border:1px solid #e5e7eb;border-radius:999px;background:#f1f3f6;color:#1f2937;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap"
+// The one filled/primary chip — reserved for the venue popup's "Details anzeigen" (see header comment above).
+const POPUP_CHIP_PRIMARY = "display:inline-flex;align-items:center;gap:5px;border:1px solid #2563eb;border-radius:999px;background:#2563eb;color:#fff;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap"
+const POPUP_CHIP_WARN    = "display:inline-flex;align-items:center;gap:5px;border:1px solid #f3dcb8;border-radius:999px;background:#fef3e2;color:#92400e;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap"
 // POPUP_TITLE: overflow control prevents long names pushing the pill/badge off-screen.
 const POPUP_TITLE   = "font-weight:700;font-size:14px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
 const POPUP_SUB     = "font-size:11px;color:#71717a;margin:2px 0 11px"
 // No font-size here — each usage sets its own (P badge: 13px, 🚻 emoji: 14px).
 const POPUP_BADGE   = "display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;flex-shrink:0"
-// External-link glyph (white via currentColor inside the blue CTA, blue in text links).
-const POPUP_EXT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`
+// Chip glyphs — hand-copied from the matching lucide-react icon (same one used
+// in the equivalent React UI) so the same action reads consistently between
+// the card/sheet components and these hand-built Leaflet popups.
+const POPUP_NAV_SVG      = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>` // lucide Navigation
+const POPUP_GMAPS_SVG    = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg>` // lucide Map — matches PlaceCard's Google-Maps-search link icon
+const POPUP_WHEELMAP_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="4" r="1"/><path d="m18 19 1-7-6 1"/><path d="m5 8 3-3 5.5 3-2.36 3.5"/><path d="M4.24 14.5a5 5 0 0 0 6.88 6"/><path d="M13.76 17.5a5 5 0 0 0-6.88-6"/></svg>` // lucide Accessibility — matches PlaceCard's Wheelmap link icon
+const POPUP_LIST_SVG     = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h.01"/><path d="M3 12h.01"/><path d="M3 19h.01"/><path d="M8 5h13"/><path d="M8 12h13"/><path d="M8 19h13"/></svg>` // lucide List
+const POPUP_INFO_SVG     = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>` // lucide Info
+const POPUP_FLAG_SVG     = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>` // lucide Flag
 
 // Wraps popup content in the flush-bar shell. `bar` is the accent colour.
 function popupShell(bar: string, inner: string): string {
@@ -214,6 +229,24 @@ function popupRow(label: string, value: string, opts: { color?: string; dot?: st
   const valStyle = `font-size:12px;font-weight:600;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px${opts.color ? `;color:${opts.color}` : ""}`
   const dotEl = opts.dot ? `<span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${opts.dot};display:inline-block"></span>` : ""
   return `<span style="font-size:11px;color:#71717a">${label}</span><span style="${valStyle}">${dotEl}${value}${opts.chip ?? ""}</span>`
+}
+
+// Wires the "Navigate here" primary CTA button (docs/plans/native-navigate-
+// here.md, "Map marker popup placement") — shared by the parking and toilet
+// marker popups, which used to each hand-roll this querySelector + DomEvent
+// wiring independently. Uses L.DomEvent.on (not addEventListener) — plain
+// addEventListener and inline onclick fail on mobile because Leaflet
+// intercepts touchstart. No in-popup chooser, unlike the card/sheet
+// NavigateButton: this popup is short-lived (closes on pan/zoom) and too
+// narrow for a multi-option picker, so it always fires the platform default
+// directly.
+function wireNavigateButton(div: HTMLElement, coords: { lat: number; lon: number }): void {
+  const navigateBtn = div.querySelector<HTMLElement>("[data-navigate]")
+  if (!navigateBtn) return
+  L!.DomEvent.on(navigateBtn, "click", (ev: Event) => {
+    L!.DomEvent.stopPropagation(ev)
+    startDefaultNavigation(coords)
+  })
 }
 
 // Parking marker colours per tier.
@@ -766,18 +799,16 @@ export default function MapView({
         </div>
         <div style="${POPUP_KV}">${rows}</div>
         <div style="${POPUP_FOOTER}">
-          <button data-gmaps style="${POPUP_CTA}">${POPUP_EXT_SVG}${t.results.googleMapsLink}</button>
-          ${showResults || tier === "weak" ? `<div style="${POPUP_LINKS}">
-            ${showResults ? `<button data-show-results style="${POPUP_LINK}">${t.map.showInResults} →</button>` : ""}
-            ${tier === "weak" ? `<button data-report style="${POPUP_LINK_WARN}">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
-              ${t.map.parkingReportButton}
-            </button>` : ""}
-          </div>` : ""}
+          <div style="${POPUP_CHIPS}">
+            <button data-navigate style="${POPUP_CHIP}">${POPUP_NAV_SVG}${t.results.navigateHere}</button>
+            <button data-gmaps style="${POPUP_CHIP}">${POPUP_GMAPS_SVG}${t.results.googleMapsLink}</button>
+            ${showResults ? `<button data-show-results style="${POPUP_CHIP}">${POPUP_LIST_SVG}${t.map.showInResults}</button>` : ""}
+            ${tier === "weak" ? `<button data-report style="${POPUP_CHIP_WARN}">${POPUP_FLAG_SVG}${t.map.parkingReportButton}</button>` : ""}
+          </div>
         </div>
       `)
-      // Use L.DomEvent.on (not addEventListener) — plain addEventListener and
-      // inline onclick fail on mobile because Leaflet intercepts touchstart.
+      wireNavigateButton(div, { lat: spot.lat, lon: spot.lon })
+
       const gmapsBtn = div.querySelector<HTMLElement>("[data-gmaps]")
       if (gmapsBtn) {
         L!.DomEvent.on(gmapsBtn, "click", (ev: Event) => {
@@ -883,15 +914,17 @@ export default function MapView({
         ${sub ? `<div style="${POPUP_SUB}">${sub}</div>` : ""}
         <div style="${POPUP_KV}">${rows}</div>
         <div style="${POPUP_FOOTER}">
-          ${wheelmapUrl
-            ? `<button data-wheelmap style="${POPUP_CTA}">${POPUP_EXT_SVG}Wheelmap</button>`
-            : `<button data-gmaps style="${POPUP_CTA}">${POPUP_EXT_SVG}${t.results.googleMapsLink}</button>`}
-          ${(wheelmapUrl || showResults) ? `<div style="${POPUP_LINKS}">
-            ${wheelmapUrl ? `<button data-gmaps style="${POPUP_LINK}">${t.results.googleMapsLink} →</button>` : ""}
-            ${showResults ? `<button data-show-results style="${POPUP_LINK}">${t.map.showInResults} →</button>` : ""}
-          </div>` : ""}
+          <div style="${POPUP_CHIPS}">
+            <button data-navigate style="${POPUP_CHIP}">${POPUP_NAV_SVG}${t.results.navigateHere}</button>
+            ${wheelmapUrl ? `<button data-wheelmap style="${POPUP_CHIP}">${POPUP_WHEELMAP_SVG}${t.results.wheelmapLink}</button>` : ""}
+            <button data-gmaps style="${POPUP_CHIP}">${POPUP_GMAPS_SVG}${t.results.googleMapsLink}</button>
+            ${showResults ? `<button data-show-results style="${POPUP_CHIP}">${POPUP_LIST_SVG}${t.map.showInResults}</button>` : ""}
+          </div>
         </div>
       `)
+      // "Navigate here" is one chip among several, equal weight to the rest —
+      // no in-popup chooser, direct platform default.
+      wireNavigateButton(div, { lat: spot.lat, lon: spot.lon })
       const gmapsBtn = div.querySelector<HTMLElement>("[data-gmaps]")
       if (gmapsBtn) {
         L.DomEvent.on(gmapsBtn, "click", () => void openExternalUrl(mapsUrl))
@@ -1005,8 +1038,11 @@ export default function MapView({
             ${popupRow(t.criteria.parking,  parkingText,                    { color: VALUE_TEXT_COLORS[par.value], chip: par.value !== "unknown" ? confidenceChip(par.confidence, t.map.confidenceShort) : undefined })}
           </div>
           <div style="${POPUP_FOOTER}">
-            <button data-show-details style="${POPUP_CTA}">${esc(t.map.showDetails)}</button>
-            ${onShowInResults ? `<div style="${POPUP_LINKS}"><button data-show-id style="${POPUP_LINK}">${esc(t.map.showInResults)} →</button></div>` : ""}
+            <div style="${POPUP_CHIPS}">
+              <button data-show-details style="${POPUP_CHIP_PRIMARY}">${POPUP_INFO_SVG}${esc(t.map.showDetails)}</button>
+              <button data-navigate style="${POPUP_CHIP}">${POPUP_NAV_SVG}${t.results.navigateHere}</button>
+              ${onShowInResults ? `<button data-show-id style="${POPUP_CHIP}">${POPUP_LIST_SVG}${esc(t.map.showInResults)}</button>` : ""}
+            </div>
           </div>
         `)
 
@@ -1019,6 +1055,7 @@ export default function MapView({
             if (p) setDetailPlace(p)
           })
         }
+        wireNavigateButton(div, { lat: place.coordinates.lat, lon: place.coordinates.lon })
 
         if (onShowInResults) {
           const btn = div.querySelector<HTMLElement>("[data-show-id]")

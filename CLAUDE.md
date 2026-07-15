@@ -169,6 +169,73 @@ The welcome screen's "In der Nähe suchen" CTA, `defaultSearchMode = "nearby"` a
 - `wheelmapUrl` — authoritative Wheelmap.org URL from `accessibility.cloud`'s `infoPageUrl`; preferred over a constructed link.
 - `gintoUrl` — Ginto detail page URL from `publication.linkUrl`; shown as ShieldCheck icon in PlaceCard when present.
 
+### "Navigate here" (`lib/native/navigation.ts`)
+
+One-tap turn-by-turn navigation from a place or amenity spot to the phone's
+own maps app. Concept + full rationale: `docs/plans/native-navigate-here.md`.
+Deliberately **not** built on `openExternalUrl()`/`NativeLink`
+(`lib/native/browser.ts`) — that mechanism opens a Custom Tab /
+SFSafariViewController, a browser context that can't reliably hand off a
+non-`http(s)` deep-link scheme (`maps://`, `google.navigation:`, `geo:`) to
+an installed app. `lib/native/navigation.ts` instead does a plain WebView
+navigation (`window.location.href = uri`) — the same path any other link tap
+uses to escape the WebView, relying on the OS's default "unrecognised
+scheme → hand to an installed app" behaviour (no native plugin, no Capacitor
+API call).
+
+- `startDefaultNavigation(coords)` — platform default, one tap, no chooser:
+  `google.navigation:` (Android, launches Google Maps already in driving
+  mode) / `maps://` (iOS, Apple Maps) / the universal
+  `google.com/maps/dir/?api=1&destination=…` URL opened in a new tab
+  everywhere else (desktop browser, mobile browser, PWA — `getPlatform()`
+  only distinguishes native iOS/Android from "web", so this path also covers
+  mobile-web visitors, not just desktop).
+- `startNavigationWithApp(app, coords)` — a specific app's deep link, for the
+  Android-only in-app chooser (below).
+
+**Reduced-scope Variant C — the in-app chooser is Android-only.** iOS ships
+with no chooser: `startDefaultNavigation` goes straight to Apple Maps.
+Offering a "Google Maps" option on iOS would need a `canOpenURL` installed-
+app check, which requires declaring `comgooglemaps` under
+`ios/App/App/Info.plist`'s `LSApplicationQueriesSchemes` (a native Xcode
+project change) — without it, a tap on an uninstalled app's scheme fails
+**silently** (no error, dead tap), worse than not offering the option.
+Android needs no such entitlement (`PackageManager` queries aren't gated the
+way iOS 9+ gates `canOpenURL`), so it gets a real two-option popover: Google
+Maps directly, or Android's own OS-level "Open with" chooser via the
+generic `geo:` URI (`NavApp = "geo"`) — letting a non-Google app (Waze etc.)
+stay reachable without enumerating installed apps ourselves.
+
+**UI:** `components/ui/navigate-button.tsx` (`NavigateButton`) is the single
+shared trigger + popover, in three variants:
+- `"sticky"` — full-width primary button in `PlaceDebugSheet`'s footer,
+  above the existing close button. The main placement: reachable regardless
+  of scroll position, given more visual weight than the Website/Phone icons
+  since "can I get there" is central to this app's purpose.
+- `"icon"` — small icon in `PlaceCard`'s existing footer link row.
+  Deliberately the lucide `Navigation` compass glyph, **never** `Map`/pin —
+  that shape is already used one icon over by the Google-Maps-*search* link
+  (`googleMapsHref`, opens a search, not directions); a second pin-like icon
+  there would be indistinguishable from it.
+- `"labeled"` — pill button with icon + text, `AmenityCard`'s footer (the
+  🅿/🚻 quick-search results). `AmenityCard` has no detail sheet at all, so
+  there's no sticky-footer surface to push this into instead — the footer
+  row is the only placement candidate, hence the heavier labelled treatment
+  there instead of a bare icon.
+
+The map's parking/toilet marker popups (`MapView.tsx`, hand-built HTML +
+`L.DomEvent.on` bindings — **not** React, `NavigateButton` cannot be reused
+there) get their own, simpler treatment: "Navigate here" is now the
+popup's permanent primary CTA slot (`POPUP_CTA`), demoting the Google-Maps-
+search / Wheelmap links that used to occupy it into the secondary
+`POPUP_LINKS` row underneath. No in-popup chooser here even on Android —
+the popup is short-lived (closes on pan/zoom) and too narrow for a picker,
+so it always calls `startDefaultNavigation` directly.
+
+Every surface targets the coordinate of the specific thing being navigated
+to — a `Place`'s own `coordinates`, or an `AmenityFeature`'s own `lat`/`lon`
+(for a venue-hosted WC, the toilet's own point, not the venue's).
+
 ### Geocoding API routes
 
 Proxy routes forward to external geocoding services (all restricted to DACH):

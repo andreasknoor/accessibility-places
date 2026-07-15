@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Platzierung 3 — Prototyp: "Navigation starten"-Button</title>
+<style>
+  :root {
+    --background: #fff;
+    --foreground: hsl(222.2 84% 4.9%);
+    --primary: hsl(221.2 83.2% 53.3%);
+    --primary-dark: hsl(221.2 83.2% 42%);
+    --primary-fg: hsl(210 40% 98%);
+    --muted: hsl(210 40% 96.1%);
+    --muted-fg: hsl(215.4 16.3% 46.9%);
+    --border: hsl(214.3 31.8% 91.4%);
+    --green-bg: #f0fdf4;
+    --green-border: #bbf7d0;
+    --green-fg: #15803d;
+    --amber-bg: #fffbeb;
+    --amber-fg: #b45309;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: hsl(210 40% 94%);
+    color: var(--foreground);
+    padding: 24px;
+  }
+  h1 { font-size: 1.3rem; margin-bottom: 4px; }
+  .sub { color: var(--muted-fg); font-size: .88rem; margin-bottom: 20px; max-width: 760px; line-height: 1.5; }
+
+  .row { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+  .col-label { font-size: .8rem; font-weight: 700; color: var(--muted-fg); text-transform: uppercase; letter-spacing: .03em; margin-bottom: 8px; }
+
+  /* ── phone frame ─────────────────────────────────────── */
+  .phone {
+    width: 360px; height: 720px;
+    background: var(--background);
+    border-radius: 28px;
+    border: 8px solid #1c1c1e;
+    box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    overflow: hidden;
+    position: relative;
+    display: flex; flex-direction: column;
+  }
+
+  /* ── sheet header ─────────────────────────────────────── */
+  .sheet-header {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+    padding: 14px 16px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .sheet-title { font-weight: 700; font-size: .92rem; }
+  .sheet-sub { font-size: .76rem; color: var(--muted-fg); margin-top: 3px; display: flex; align-items: center; gap: 5px; }
+  .sheet-addr { font-size: .76rem; color: var(--muted-fg); margin-top: 3px; }
+  .sheet-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; margin-top: 2px; }
+  .icon-btn { width: 22px; height: 22px; display: grid; place-items: center; color: var(--muted-fg); }
+
+  /* ── scrollable content ───────────────────────────────── */
+  .sheet-content { flex: 1; overflow-y: auto; padding: 0 16px 16px; }
+  .section-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    border-radius: 999px; padding: 4px 10px; font-size: .68rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .03em;
+    margin-top: 18px; margin-bottom: 10px;
+  }
+  .chip-green { background: var(--green-bg); color: var(--green-fg); border: 1px solid var(--green-border); }
+  .chip-blue  { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+  .info-row { display: flex; align-items: flex-start; gap: 8px; padding: 7px 0; font-size: .78rem; border-bottom: 1px solid #f1f3f5; }
+  .info-row .ic { color: var(--muted-fg); flex-shrink: 0; margin-top: 1px; }
+  .info-row .lbl { color: var(--muted-fg); width: 92px; flex-shrink: 0; }
+  .info-row .val { flex: 1; }
+  .crit-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; font-size: .8rem; }
+  .crit-ok { color: var(--green-fg); font-weight: 600; font-size: .74rem; background: var(--green-bg); border: 1px solid var(--green-border); border-radius: 999px; padding: 2px 8px; }
+
+  /* ── sticky nav bar (Placement 3) ─────────────────────── */
+  .nav-bar {
+    flex-shrink: 0; padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+    background: rgba(255,255,255,.97);
+    backdrop-filter: blur(6px);
+    position: relative;
+  }
+  .nav-btn {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: var(--primary); color: var(--primary-fg);
+    border: none; border-radius: 10px; padding: 12px 14px;
+    font-size: .88rem; font-weight: 700;
+    box-shadow: 0 2px 8px rgba(37,99,235,.35);
+    cursor: pointer; transition: background .12s;
+  }
+  .nav-btn:hover { background: var(--primary-dark); }
+  .nav-btn svg { flex-shrink: 0; }
+
+  /* ── popover (anchored above the button) ──────────────── */
+  .popover {
+    position: absolute; left: 14px; right: 14px; bottom: calc(100% + 8px);
+    background: #fff; border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.18);
+    overflow: hidden;
+    opacity: 0; transform: translateY(6px); pointer-events: none;
+    transition: opacity .15s, transform .15s;
+  }
+  .popover.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .popover::after {
+    content: ""; position: absolute; bottom: -7px; left: 28px;
+    width: 14px; height: 14px; background: #fff;
+    border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    transform: rotate(45deg);
+  }
+  .popover-title {
+    font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--muted-fg); padding: 10px 14px 4px;
+  }
+  .popover-opt {
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    padding: 11px 14px; background: none; border: none; text-align: left;
+    font-size: .84rem; font-weight: 600; color: var(--foreground);
+    cursor: pointer; transition: background .1s;
+  }
+  .popover-opt:hover { background: var(--muted); }
+  .popover-opt .glyph {
+    width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+    display: grid; place-items: center; font-size: 1rem;
+  }
+  .glyph-gmaps { background: #e8f0fe; }
+  .glyph-amaps { background: #eafaf0; }
+  .popover-opt .sub { font-size: .7rem; font-weight: 400; color: var(--muted-fg); margin-top: 1px; }
+  .popover-divider { height: 1px; background: var(--border); margin: 2px 0; }
+
+  /* ── scrim behind popover, closes on tap ──────────────── */
+  .scrim { position: absolute; inset: 0; z-index: 5; display: none; }
+  .scrim.open { display: block; }
+
+  .demo-hint {
+    font-size: .74rem; color: var(--primary-dark); background: #eff6ff;
+    border: 1px dashed #bfdbfe; border-radius: 8px;
+    padding: 7px 11px; margin-bottom: 14px; display: inline-block;
+  }
+
+  .note-card {
+    background: #fff; border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; font-size: .82rem; line-height: 1.55; max-width: 520px;
+  }
+  .note-card h3 { font-size: .85rem; margin-bottom: 6px; }
+  .note-card .pro { color: #15803d; }
+  .note-card .con { color: #b91c1c; }
+  .note-card ul { margin: 6px 0 14px 18px; }
+  .note-card li { margin-bottom: 4px; }
+
+  /* ── icon comparison strip ────────────────────────────── */
+  .icon-compare { display: flex; gap: 18px; align-items: center; margin-top: 10px; }
+  .icon-sample { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: .7rem; color: var(--muted-fg); }
+  .icon-sample .box { width: 40px; height: 40px; border-radius: 9px; border: 1px solid var(--border); display: grid; place-items: center; background: #fff; }
+</style>
+</head>
+<body>
+
+<h1>Platzierung 3 — Prototyp</h1>
+<p class="sub">
+  Dediziertes, sticky "Navigation starten"-Button im <code>PlaceDebugSheet</code>-Footer statt Icon in einer bereits vollen Reihe.
+  Ein Tap öffnet ein Popover (nicht ein zweites Sheet) mit Google Maps / Apple Maps. Klick auf den blauen Button unten testen.
+</p>
+
+<div class="row">
+
+  <!-- Phone 1: closed state -->
+  <div>
+    <div class="col-label">Zustand A — Sheet geöffnet, Button sichtbar</div>
+    <div class="phone">
+      <div class="sheet-header">
+        <div>
+          <div class="sheet-title">Café Solidarität</div>
+          <div class="sheet-sub">☕ Café &amp; Eis</div>
+          <div class="sheet-addr">Bergmannstraße 29, 10961 Berlin</div>
+        </div>
+        <div class="sheet-actions">
+          <span class="icon-btn" title="Teilen">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          </span>
+          <span class="icon-btn" title="Schließen">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </span>
+        </div>
+      </div>
+
+      <div class="sheet-content">
+        <div class="section-chip chip-green">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/></svg>
+          Barrierefreiheit · 86%
+        </div>
+        <div class="crit-row"><span>Eingang</span><span class="crit-ok">Ja</span></div>
+        <div class="crit-row"><span>Toilette</span><span class="crit-ok">Ja</span></div>
+        <div class="crit-row"><span>Parkplatz</span><span class="crit-ok">Ja, in der Nähe</span></div>
+
+        <div class="section-chip chip-blue">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="10" r="3"/><path d="M12 21s-7-6.4-7-11a7 7 0 0 1 14 0c0 4.6-7 11-7 11z"/></svg>
+          Grunddaten
+        </div>
+        <div class="info-row">
+          <span class="ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 21s-7-6.4-7-11a7 7 0 0 1 14 0c0 4.6-7 11-7 11z"/></svg></span>
+          <span class="lbl">Adresse</span>
+          <span class="val">Bergmannstr. 29, Berlin</span>
+        </div>
+        <div class="info-row">
+          <span class="ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
+          <span class="lbl">Telefon</span>
+          <span class="val" style="color:#2563eb">030 691 234 56</span>
+        </div>
+        <div class="info-row">
+          <span class="ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg></span>
+          <span class="lbl">Website</span>
+          <span class="val" style="color:#2563eb">cafe-solidaritaet.de</span>
+        </div>
+        <div class="info-row" style="border-bottom:none;">
+          <span class="ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+          <span class="lbl">Öffnungszeiten</span>
+          <span class="val">Mo–Sa 9–19 Uhr</span>
+        </div>
+
+        <div class="section-chip" style="background:#fafafa; color:#6b7280; border:1px solid #e5e7eb;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Externe Links
+        </div>
+        <div class="info-row"><span class="ic">🗺</span><span class="lbl">OSM</span><span class="val" style="color:#2563eb">node/4821…</span></div>
+        <div class="info-row" style="border-bottom:none;"><span class="ic">♿</span><span class="lbl">Wheelmap</span><span class="val" style="color:#2563eb">Wheelmap.org</span></div>
+      </div>
+
+      <div class="nav-bar">
+        <div class="popover" id="pop1">
+          <div class="popover-title">Navigieren mit</div>
+          <button class="popover-opt">
+            <span class="glyph glyph-gmaps">🧭</span>
+            <span><span style="display:block">Google Maps</span><span class="sub">Turn-by-Turn starten</span></span>
+          </button>
+          <div class="popover-divider"></div>
+          <button class="popover-opt">
+            <span class="glyph glyph-amaps"></span>
+            <span><span style="display:block">Apple Maps</span><span class="sub">Turn-by-Turn starten</span></span>
+          </button>
+        </div>
+        <button class="nav-btn" onclick="document.getElementById('pop1').classList.toggle('open')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+          Navigation starten
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phone 2: popover open state, pre-triggered -->
+  <div>
+    <div class="col-label">Zustand B — Popover geöffnet (Auswahl)</div>
+    <div class="phone">
+      <div class="sheet-header">
+        <div>
+          <div class="sheet-title">Café Solidarität</div>
+          <div class="sheet-sub">☕ Café &amp; Eis</div>
+          <div class="sheet-addr">Bergmannstraße 29, 10961 Berlin</div>
+        </div>
+        <div class="sheet-actions">
+          <span class="icon-btn"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></span>
+          <span class="icon-btn"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
+        </div>
+      </div>
+
+      <div class="sheet-content" style="filter:blur(1.5px); opacity:.5;">
+        <div class="section-chip chip-green">Barrierefreiheit · 86%</div>
+        <div class="crit-row"><span>Eingang</span><span class="crit-ok">Ja</span></div>
+        <div class="crit-row"><span>Toilette</span><span class="crit-ok">Ja</span></div>
+        <div class="crit-row"><span>Parkplatz</span><span class="crit-ok">Ja, in der Nähe</span></div>
+        <div class="section-chip chip-blue">Grunddaten</div>
+        <div class="info-row"><span class="lbl">Adresse</span><span class="val">Bergmannstr. 29, Berlin</span></div>
+        <div class="info-row"><span class="lbl">Telefon</span><span class="val">030 691 234 56</span></div>
+      </div>
+
+      <div class="nav-bar">
+        <div class="popover open" id="pop2">
+          <div class="popover-title">Navigieren mit</div>
+          <button class="popover-opt">
+            <span class="glyph glyph-gmaps">🧭</span>
+            <span><span style="display:block">Google Maps</span><span class="sub">Turn-by-Turn starten</span></span>
+          </button>
+          <div class="popover-divider"></div>
+          <button class="popover-opt">
+            <span class="glyph glyph-amaps"></span>
+            <span><span style="display:block">Apple Maps</span><span class="sub">Turn-by-Turn starten</span></span>
+          </button>
+        </div>
+        <button class="nav-btn" onclick="document.getElementById('pop2').classList.toggle('open')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+          Navigation starten
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes -->
+  <div style="max-width: 520px;">
+    <div class="col-label">Hinweise</div>
+    <div class="note-card">
+      <h3>Warum diese Umsetzung so gebaut ist</h3>
+      <ul>
+        <li><span class="pro">＋</span> Sticky am unteren Rand — bleibt beim Scrollen durch die Barrierefreiheits-Details erreichbar, kein Zurückscrollen nötig.</li>
+        <li><span class="pro">＋</span> Popover statt zweites Sheet — kein Sheet-in-Sheet, kein zweiter Fokus-Trap nötig (siehe Detailkonzept).</li>
+        <li><span class="pro">＋</span> Eigenes Icon (Kompass/Pfeil), <em>nicht</em> das bestehende <code>Map</code>-Pin-Icon aus der PlaceCard-Fußzeile — keine Verwechslung mit dem reinen "Google-Maps-Suche"-Link.</li>
+        <li><span class="con">−</span> Popover-Optionen sind hier statisch (Google Maps + Apple Maps) — in der reduzierten Umsetzung würde iOS nur Apple Maps zeigen (kein <code>Info.plist</code>-Aufwand), Android beide.</li>
+      </ul>
+      <h3>Icon-Unterscheidung (Kontext PlaceCard-Fußzeile)</h3>
+      <div class="icon-compare">
+        <div class="icon-sample">
+          <div class="box" style="color:#6b7280"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4z"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></div>
+          <span>bestehend:<br>Google-Maps-Suche</span>
+        </div>
+        <div class="icon-sample">
+          <div class="box" style="color:var(--primary)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></div>
+          <span>neu:<br>Navigation starten</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

@@ -1,10 +1,17 @@
 import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 import PlaceCard from "@/components/results/PlaceCard"
+import { startDefaultNavigation } from "@/lib/native/navigation"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { LocaleProvider } from "@/lib/i18n"
 import { buildAttribute, emptyAttribute } from "@/lib/matching/merge"
 import type { Place } from "@/lib/types"
+
+vi.mock("@/lib/native/navigation", () => ({
+  startDefaultNavigation: vi.fn(),
+  startNavigationWithApp: vi.fn(),
+  shouldShowChooser: () => false,
+}))
 
 // LocaleProvider mirrors the root layout — the info sheet opened from the card
 // reads the locale for the Tally report-form selection.
@@ -265,5 +272,23 @@ describe("PlaceCard — nearby parking label", () => {
     })
     renderWithProvider(<PlaceCard place={place} onClick={vi.fn()} />)
     expect(screen.getByText(/in der Nähe|nearby/i)).toBeInTheDocument()
+  })
+})
+
+describe("PlaceCard — navigate button (docs/plans/native-navigate-here.md, Placement 1)", () => {
+  it("renders a distinct navigate icon in the footer, separate from the Google Maps search icon", () => {
+    renderWithProvider(<PlaceCard place={makePlace()} />)
+    expect(screen.getByRole("button", { name: "Navigation starten" })).toBeInTheDocument()
+    // The pre-existing Google Maps search link stays an <a>, not a <button> —
+    // confirms the two controls are genuinely separate elements, not the
+    // same icon relabelled.
+    expect(screen.getByRole("link", { name: /google maps/i })).toBeInTheDocument()
+  })
+
+  it("clicking the navigate icon starts navigation at the place's own coordinates and does not open the info sheet", () => {
+    renderWithProvider(<PlaceCard place={makePlace()} onClick={vi.fn()} />)
+    fireEvent.click(screen.getByRole("button", { name: "Navigation starten" }))
+    expect(startDefaultNavigation).toHaveBeenCalledWith({ lat: 52.52, lon: 13.405 })
+    expect(screen.queryByText(/Grunddaten|Basic information/i)).not.toBeInTheDocument()
   })
 })
