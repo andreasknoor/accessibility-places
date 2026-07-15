@@ -222,6 +222,15 @@ function popupShell(bar: string, inner: string): string {
   return `<div style="display:flex"><div style="width:5px;flex-shrink:0;background:${bar}"></div><div style="${POPUP_PAD}">${inner}</div></div>`
 }
 
+// Caps a place name so the parking popup's "342 m from <name>" row can't blow
+// up the popup's height — the value cell has no overflow/nowrap clipping (it
+// wraps normally, unlike the fixed-width labels), so a long venue name like
+// "Kulturhaus Johannes R. Becher" would otherwise wrap across several lines.
+const POPUP_NAME_MAX_LEN = 24
+function truncateName(name: string, max: number = POPUP_NAME_MAX_LEN): string {
+  return name.length > max ? `${name.slice(0, max - 1).trimEnd()}…` : name
+}
+
 // One label/value row for the popup key/value grid. `dot` draws a leading status
 // dot; `color` tints the value text; `chip` appends trailing HTML (the compact
 // confidence chip on venue criteria — see confidenceChip()).
@@ -750,7 +759,7 @@ export default function MapView({
         return best === null || d < best.dist ? { name: p.name, dist: d } : best
       }, null)
       const distText = nearest !== null
-        ? t.map.parkingDistanceTo(t.results.distanceFromHere(Math.round(nearest.dist)), esc(nearest.name))
+        ? t.map.parkingDistanceTo(t.results.distanceFromHere(Math.round(nearest.dist)), esc(truncateName(nearest.name)))
         : null
 
       // Fee badge: show only when tag is present
@@ -896,7 +905,7 @@ export default function MapView({
 
       // Venue WCs name their host in the subline; standalone WCs have no subline.
       const sub = host === "venue"
-        ? `🏢 ${spot.host?.name ? esc(spot.host.name) : (t.map.toiletVenueGeneric ?? "Lokalität")}`
+        ? `🏢 ${spot.host?.name ? esc(truncateName(spot.host.name)) : (t.map.toiletVenueGeneric ?? "Lokalität")}`
         : ""
 
       // Wheelmap only indexes OSM nodes, not ways or relations.
