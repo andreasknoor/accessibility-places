@@ -85,9 +85,28 @@ describe("startDefaultNavigation", () => {
     )
   })
 
-  it("falls back to a same-tab navigation when window.open is blocked (e.g. iOS standalone PWA)", () => {
+  it("does NOT also navigate the current tab when window.open succeeds on an ordinary desktop/mobile browser (regression: window.open('noopener') always returns null, so a return-value check previously fired on every call)", () => {
     mockGetPlatform.mockReturnValue("web")
-    vi.stubGlobal("open", vi.fn(() => null)) // simulates a blocked popup
+    vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: false })))
+    const setHref = vi.fn()
+    Object.defineProperty(window, "location", {
+      value: { ...window.location, set href(v: string) { setHref(v) } },
+      writable: true,
+    })
+    startDefaultNavigation(coords)
+    expect(window.open).toHaveBeenCalledWith(
+      "https://www.google.com/maps/dir/?api=1&destination=52.52,13.405",
+      "_blank",
+      "noopener,noreferrer",
+    )
+    expect(setHref).not.toHaveBeenCalled()
+  })
+
+  it("routes straight to a same-tab navigation (skipping window.open entirely) when running as an installed standalone PWA", () => {
+    mockGetPlatform.mockReturnValue("web")
+    vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: true })))
+    const openSpy = vi.fn(() => ({}) as Window)
+    vi.stubGlobal("open", openSpy)
     const setHref = vi.fn()
     Object.defineProperty(window, "location", {
       value: { ...window.location, set href(v: string) { setHref(v) } },
@@ -95,17 +114,22 @@ describe("startDefaultNavigation", () => {
     })
     startDefaultNavigation(coords)
     expect(setHref).toHaveBeenCalledWith("https://www.google.com/maps/dir/?api=1&destination=52.52,13.405")
+    expect(openSpy).not.toHaveBeenCalled()
   })
 
-  it("does NOT fall back to same-tab navigation when window.open succeeds", () => {
+  it("also detects standalone mode via the legacy iOS navigator.standalone flag", () => {
     mockGetPlatform.mockReturnValue("web")
+    vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: false })))
+    Object.defineProperty(window.navigator, "standalone", { value: true, configurable: true })
     const setHref = vi.fn()
     Object.defineProperty(window, "location", {
       value: { ...window.location, set href(v: string) { setHref(v) } },
       writable: true,
     })
     startDefaultNavigation(coords)
-    expect(setHref).not.toHaveBeenCalled()
+    expect(setHref).toHaveBeenCalledWith("https://www.google.com/maps/dir/?api=1&destination=52.52,13.405")
+    // @ts-expect-error cleanup only, not part of the Navigator type
+    delete window.navigator.standalone
   })
 })
 

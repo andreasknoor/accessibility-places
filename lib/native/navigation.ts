@@ -64,26 +64,43 @@ function navigateWebViewTo(uri: string): void {
   window.location.href = uri
 }
 
+// True when the page is running as an installed iOS/Android home-screen PWA
+// (app/manifest.ts's display: "standalone"). A real, synchronous environment
+// signal — unlike window.open()'s return value, which cannot be used to
+// detect a blocked popup here: passing "noopener" (required — see below)
+// makes window.open() return null unconditionally per spec, whether or not
+// the tab actually opened, so a "did it get blocked?" check based on that
+// return value is fundamentally unreliable and was previously firing on
+// *every* call, sending desktop users' own tab to Google Maps alongside the
+// new one instead of only the new tab (see git history on this function for
+// the reverted attempt). Standalone-mode detection has to happen up front,
+// before deciding how to navigate, not reactively after the fact.
+function isStandalonePwa(): boolean {
+  if (typeof window === "undefined") return false
+  const nav = window.navigator as Navigator & { standalone?: boolean }
+  return window.matchMedia?.("(display-mode: standalone)").matches === true || nav.standalone === true
+}
+
 // Starts navigation using the platform's own default maps app — Google Maps
 // on Android, Apple Maps on iOS, the universal Google Maps web fallback
 // everywhere else (desktop browser, mobile browser, PWA). This is Variant B
 // from the concept doc, with Variant A as its non-native fallback.
 //
-// The window.open() call is expected to work everywhere this branch runs,
-// including an installed iOS home-screen PWA (app/manifest.ts's
-// display: "standalone") — but WebKit's standalone display mode is known to
-// sometimes block/no-op window.open(..., "_blank") even under a synchronous
-// user gesture. window.open() returns null (not a thrown error) when
-// blocked, so falling back to a same-tab navigation on that signal is a
-// low-risk, well-established mitigation — worst case on platforms where the
-// popup succeeds, the fallback branch simply never runs.
+// The non-native branch deliberately does NOT try to detect a blocked
+// window.open() via its return value (see isStandalonePwa's comment for
+// why that's unreliable with "noopener"). Instead, an installed home-screen
+// PWA — the one environment where WebKit is known to sometimes block/no-op
+// window.open(..., "_blank") even under a synchronous user gesture — is
+// detected ahead of time and routed straight to a same-tab navigation;
+// every other context (desktop browser, ordinary mobile browser tab) always
+// gets a real new tab, leaving the app itself untouched.
 export function startDefaultNavigation(coords: NavCoords): void {
   const platform = getPlatform()
   if (platform === "android") { navigateWebViewTo(navAppUrl("google", coords)); return }
   if (platform === "ios")     { navigateWebViewTo(navAppUrl("apple",  coords)); return }
   const url = universalMapsUrl(coords)
-  const win = window.open(url, "_blank", "noopener,noreferrer")
-  if (!win) window.location.href = url
+  if (isStandalonePwa()) { window.location.href = url; return }
+  window.open(url, "_blank", "noopener,noreferrer")
 }
 
 // Whether the in-app chooser popover (reduced-scope Variant C, see file
