@@ -438,8 +438,6 @@ const en: Translations = {
     sortOrder:         "Sort order",
     sortConfidence:    "Reliability",
     sortDistance:      "Distance",
-    autoZoom:          "Auto-zoom after search",
-    autoZoomHint:      "Fit map to all results after each search",
     showWeakParking:     "Also non-reserved parking",
     showWeakParkingHint: "Yellow markers: lots without reserved disabled spaces (weaker data)",
     publicToiletsOnly:     "Public/standalone toilets only",

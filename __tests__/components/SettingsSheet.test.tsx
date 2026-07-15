@@ -48,19 +48,6 @@ describe("SettingsSheet", () => {
     expect(screen.queryByText("Start & Suche")).toBeNull()
   })
 
-  it("toggling autoZoom calls onUpdate with { autoZoom: false }", () => {
-    const onUpdate = vi.fn()
-    renderSheet({ ...DEFAULT_APP_SETTINGS, autoZoom: true }, onUpdate)
-    fireEvent.click(screen.getByRole("button", { name: /Einstellungen/i }))
-    // Locate the switch by its row label (robust against other toggles being
-    // added/reordered — usageStats also defaults to checked).
-    const label = screen.getByText("Automatischer Zoom nach Suche")
-    const row = label.parentElement!.parentElement! // <p> → label wrapper → Row root
-    const autoZoomSwitch = within(row).getByRole("switch")
-    fireEvent.click(autoZoomSwitch)
-    expect(onUpdate).toHaveBeenCalledWith({ autoZoom: false })
-  })
-
   it("toggling showWeakParking calls onUpdate with { showWeakParking: true }", () => {
     const onUpdate = vi.fn()
     renderSheet({ ...DEFAULT_APP_SETTINGS, showWeakParking: false }, onUpdate)

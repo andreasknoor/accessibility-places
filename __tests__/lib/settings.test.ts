@@ -27,11 +27,11 @@ describe("loadSettings", () => {
   })
 
   it("merges saved values over defaults", () => {
-    const saved: Partial<AppSettings> = { sortOrder: "distance", autoZoom: false }
+    const saved: Partial<AppSettings> = { sortOrder: "distance", alwaysShowParking: true }
     localStorageMock.setItem(KEY, JSON.stringify(saved))
     const result = loadSettings()
     expect(result.sortOrder).toBe("distance")
-    expect(result.autoZoom).toBe(false)
+    expect(result.alwaysShowParking).toBe(true)
     // unset keys keep their defaults
     expect(result.defaultSearchMode).toBe(DEFAULT_APP_SETTINGS.defaultSearchMode)
     expect(result.defaultMobileView).toBe(DEFAULT_APP_SETTINGS.defaultMobileView)
@@ -58,7 +58,6 @@ describe("loadSettings", () => {
       defaultMobileView: "map",
       defaultChipCat:    "biergarten",
       sortOrder:         "distance",
-      autoZoom:          false,
       alwaysShowParking: true,
       alwaysShowToilets: false,
       showWeakParking:   true,

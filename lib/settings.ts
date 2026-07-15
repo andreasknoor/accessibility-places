@@ -15,7 +15,6 @@ export interface AppSettings {
   // that stored the old positional `defaultChipIdx` are migrated in loadSettings().
   defaultChipCat:     Category | null
   sortOrder:          "confidence" | "distance"
-  autoZoom:           boolean
   alwaysShowParking:  boolean
   alwaysShowToilets:  boolean
   // Show the weak "accessible" parking tier (wheelchair=yes lots without reserved
@@ -44,7 +43,6 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   defaultMobileView:  "map",
   defaultChipCat:     null,
   sortOrder:          "confidence",
-  autoZoom:           true,
   alwaysShowParking:  false,
   alwaysShowToilets:  false,
   showWeakParking:    true,

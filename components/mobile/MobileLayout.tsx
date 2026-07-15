@@ -524,7 +524,6 @@ export default function MobileLayout({
               onSetMapLayers={onSetMapLayers}
               hasToiletData={hasToiletData}
               isLoading={isLoading}
-              autoZoom={settings.autoZoom}
               focusMode={amenityActiveBool}
               focusSearchCenter={amenitySearchCenter}
               onFocusSearchHere={onAmenitySearchHere}

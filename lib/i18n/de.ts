@@ -438,8 +438,6 @@ const de: Translations = {
     sortOrder:         "Sortierung",
     sortConfidence:    "Verlässlichkeit",
     sortDistance:      "Entfernung",
-    autoZoom:          "Automatischer Zoom nach Suche",
-    autoZoomHint:      "Kartenausschnitt auf alle Ergebnisse anpassen",
     showWeakParking:     "Auch nicht reservierte Parkplätze",
     showWeakParkingHint: "Gelbe Marker: Parkplätze ohne reservierte Behindertenplätze (schwächere Datenlage)",
     publicToiletsOnly:     "Nur öffentliche/eigenständige WCs",

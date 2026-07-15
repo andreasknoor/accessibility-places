@@ -189,12 +189,6 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
             {ts.sectionMap}
           </SectionTitle>
           <div className="divide-y divide-border/60">
-            <Row label={ts.autoZoom} hint={ts.autoZoomHint}>
-              <Toggle
-                value={settings.autoZoom}
-                onChange={(v) => onUpdate({ autoZoom: v })}
-              />
-            </Row>
             <Row label={ts.showWeakParking} hint={ts.showWeakParkingHint}>
               <Toggle
                 value={settings.showWeakParking}

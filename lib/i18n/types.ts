@@ -430,8 +430,6 @@ export interface Translations {
     sortOrder:         string
     sortConfidence:    string
     sortDistance:      string
-    autoZoom:          string
-    autoZoomHint:      string
     showWeakParking:     string
     showWeakParkingHint: string
     publicToiletsOnly:     string

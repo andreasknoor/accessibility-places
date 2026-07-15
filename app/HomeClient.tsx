@@ -1717,7 +1717,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             onSetMapLayers={hasParkingToggle || toiletSpots.length > 0 ? handleSetMapLayers : undefined}
             hasToiletData={toiletSpots.length > 0}
             isLoading={isLoading}
-            autoZoom={settings.autoZoom}
             focusMode={amenityActive}
             focusSearchCenter={amenityPanned}
             onFocusSearchHere={handleAmenitySearchHere}

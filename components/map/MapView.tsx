@@ -42,7 +42,6 @@ interface Props {
   // Replaces the old onToggleParking single-toggle.
   onSetMapLayers?:     (parking: boolean, toilets: boolean) => void
   hasToiletData?:      boolean   // controls whether WC segments are shown
-  autoZoom?:           boolean
   // Amenity focus mode: when true, hides place markers and shows only the
   // GPS-radius amenity spots (parking and/or WCs). Triggered from the ChatPanel
   // layer chips in nearby mode. The caller decides which layers are active and
@@ -345,7 +344,6 @@ export default function MapView({
   onSetMapLayers,
   hasToiletData = false,
   isLoading = false,
-  autoZoom = true,
   focusMode = false,
   focusSearchCenter = null,
   onFocusSearchHere,
@@ -1110,9 +1108,8 @@ export default function MapView({
   // Fit bounds to show all results — runs only when places changes, not on marker click.
   // Separating this from the selectedId effect prevents fitBounds from firing when the
   // user clicks a marker (which changes selectedId but not places).
-  // Skipped entirely when autoZoom is disabled.
   useEffect(() => {
-    if (!mapInst.current || !L || places.length === 0 || !autoZoom) return
+    if (!mapInst.current || !L || places.length === 0) return
     if (focusMode) return  // focus-mode fit handled below
     const latlngs: [number, number][] = places.map((p) => [p.coordinates.lat, p.coordinates.lon])
     // Frame the SEARCH area, not the user's GPS dot. After "search here" in nearby
@@ -1124,7 +1121,7 @@ export default function MapView({
     lastProgrammaticMoveRef.current = Date.now()
     mapInst.current.fitBounds(L!.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 15 })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [places, mapReady, autoZoom, focusMode])
+  }, [places, mapReady, focusMode])
 
   // Pan/zoom to selected — also re-fires when panTrigger increments so that
   // clicking the same result after manually panning the map still re-centers.
