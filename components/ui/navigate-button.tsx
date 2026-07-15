@@ -22,13 +22,20 @@ interface Props {
   className?: string
 }
 
+// "sticky" is deliberately NOT a filled bg-primary button — this app uses
+// filled blue specifically for "this executes now, in the app" (see the
+// search row's nearby-search button); navigate-here always exits the app, so
+// giving it that same treatment miscast it as the sheet's default/primary
+// action instead of one option among several (accessibility details being
+// the sheet's actual purpose). Neutral surface, same tier as the close
+// button below it — only the icon keeps a primary tint as a quiet hint.
 const TRIGGER_CLASS: Record<Props["variant"], string> = {
-  sticky:  "flex items-center justify-center gap-2 w-full rounded-lg bg-primary text-primary-foreground px-4 py-3 text-sm font-semibold shadow-sm hover:bg-primary/90 transition-colors",
+  sticky:  "flex items-center justify-center gap-2 w-full rounded-lg bg-muted text-foreground border border-border px-4 py-2.5 text-sm font-medium hover:bg-muted/70 transition-colors",
   labeled: "flex items-center gap-1 text-xs text-primary-foreground bg-primary hover:bg-primary/90 transition-colors rounded-full px-2.5 py-1 shadow-sm",
   icon:    "p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors",
 }
 const ICON_CLASS: Record<Props["variant"], string> = {
-  sticky:  "w-4 h-4 shrink-0",
+  sticky:  "w-4 h-4 shrink-0 text-primary",
   labeled: "w-[1.1rem] h-[1.1rem] shrink-0",
   icon:    "w-[1.1rem] h-[1.1rem]",
 }

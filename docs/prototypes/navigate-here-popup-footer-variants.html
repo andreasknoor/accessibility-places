@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<title>Karten-Popup — Footer-Neukonzept (homogenisiert)</title>
+<style>
+  :root {
+    --bg: #eef1f5;
+    --card: #fff;
+    --border: #e5e7eb;
+    --muted: #f1f3f6;
+    --foreground: #1f2937;
+    --muted-foreground: #71717a;
+    --primary: #2563eb;
+    --amber: #92400e;
+    --amber-bg: #fef3e2;
+    --green: #15803d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    margin: 0;
+    padding: 32px 16px 80px;
+    color: var(--foreground);
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.intro { color: var(--muted-foreground); font-size: 14px; max-width: 820px; margin: 0 0 12px; line-height: 1.5; }
+  p.rule { font-size: 13px; background: #eaf1ff; border: 1px solid #cfe0ff; color: #1d4ed8; padding: 8px 12px; border-radius: 8px; max-width: 820px; margin: 0 0 12px; line-height: 1.5; }
+  p.rule.alt { background: #fff7e6; border-color: #f3dcb8; color: var(--amber); }
+  .section { margin-bottom: 48px; padding-top: 8px; border-top: 2px solid #dfe3ea; }
+  .section-title { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--foreground); margin: 20px 0 4px; }
+  .section-verdict { font-size: 12.5px; color: var(--muted-foreground); max-width: 900px; line-height: 1.55; margin: 0 0 16px; }
+
+  .row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    max-width: 1400px;
+  }
+  .popup-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 14px 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+    width: 270px;
+    flex-shrink: 0;
+  }
+  .popup-card .kind { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted-foreground); margin-bottom: 8px; }
+
+  /* ── faux popup shell, matches the app's real popup layout ── */
+  .popup { width: 100%; display: flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,.08); font-size: 12px; }
+  .popup .bar { width: 5px; flex-shrink: 0; background: #2979ff; }
+  .popup.wc .bar { background: #d6249f; }
+  .popup.venue .bar { background: #16a34a; }
+  .popup .pad { padding: 12px 14px; flex: 1; min-width: 0; }
+  .popup-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .popup-head.split { justify-content: space-between; align-items: baseline; padding-right: 0; }
+  .popup-badge { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px; flex-shrink: 0; background: #2979ff; color: #fff; font-weight: 700; font-size: 13px; }
+  .popup.wc .popup-badge { background: #fbe3f4; font-size: 14px; }
+  .popup-title { font-weight: 700; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .popup-conf { font-size: 11px; font-weight: 700; white-space: nowrap; color: var(--green); }
+  .popup-sub { font-size: 11px; color: var(--muted-foreground); margin: -6px 0 9px; }
+  .popup-kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; margin-bottom: 4px; }
+  .popup-kv .k { font-size: 11px; color: var(--muted-foreground); }
+  .popup-kv .v { font-size: 12px; font-weight: 600; text-align: right; }
+  .popup-footer { border-top: 1px solid #f0f0f0; margin-top: 10px; padding-top: 9px; }
+
+  button, .btnlike { font-family: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .icon { width: 13px; height: 13px; flex-shrink: 0; }
+
+  /* ── Variant 1: uniform icon toolbar ── */
+  .toolbar1 { display: flex; gap: 6px; }
+  .tbtn1 {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    height: 32px; border: 1px solid var(--border); border-radius: 7px;
+    background: var(--muted); color: var(--foreground);
+  }
+  .tbtn1.warn { color: var(--amber); }
+
+  /* ── Variant 2: uniform pill chips, wrapped ── */
+  .chiprow2 { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip2 {
+    display: flex; align-items: center; gap: 5px;
+    border: 1px solid var(--border); border-radius: 999px;
+    background: var(--muted); color: var(--foreground);
+    padding: 5px 10px; font-size: 11px; font-weight: 500;
+  }
+  .chip2.warn { background: var(--amber-bg); color: var(--amber); border-color: #f3dcb8; }
+
+  /* ── Variant 3: 2-column grid ── */
+  .gridbtns3 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .gbtn3 {
+    display: flex; align-items: center; gap: 6px;
+    border: 1px solid var(--border); border-radius: 7px;
+    background: var(--muted); color: var(--foreground);
+    padding: 7px 8px; font-size: 11px; font-weight: 500;
+  }
+  .gbtn3.warn { color: var(--amber); }
+  .gbtn3.span2 { grid-column: 1 / -1; }
+
+  /* ── Variant 4: 2 primary options + "Mehr" expandable ── */
+  .row4 { display: flex; gap: 6px; }
+  .obtn4 {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+    border: 1px solid var(--border); border-radius: 7px;
+    background: var(--muted); color: var(--foreground);
+    padding: 7px 8px; font-size: 11.5px; font-weight: 600;
+  }
+  .more4 {
+    margin-top: 6px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 4px;
+    border: none; background: none; color: var(--muted-foreground); font-size: 11px; padding: 4px; text-decoration: underline;
+  }
+  .more4list { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; border-top: 1px dashed var(--border); padding-top: 6px; }
+  .mbtn4 { display: flex; align-items: center; gap: 6px; border: none; background: none; color: var(--foreground); font-size: 11.5px; padding: 4px 2px; text-align: left; }
+  .mbtn4.warn { color: var(--amber); }
+
+  svg { display: block; }
+
+  /* icon defs reused across variants via <use> would need <symbol>; inline is simpler for a static prototype */
+</style>
+</head>
+<body>
+
+<h1>Karten-Popup-Footer — homogenisiertes Konzept für alle 3 Popup-Typen</h1>
+<p class="intro">
+  Erweitert die letzte Runde um den dritten Popup-Typ: das <b>Ort-Popup</b> (Restaurant, Café
+  etc. — bisher „Details anzeigen" als voll gefüllter blauer Balken + ein Text-Link
+  „In Ergebnissen zeigen"). Jede Variante unten zeigt jetzt alle drei Popups
+  (Parkplatz / WC / Ort) im exakt selben Footer-Stil — nur die enthaltenen Aktionen
+  unterscheiden sich je nach Typ.
+</p>
+<p class="rule">
+  Homogenisierungsregel: <b>ein</b> Footer-Baukasten für alle drei Popups. Aktionen je Typ:
+  Parkplatz = Navigation, Google Maps, Ergebnisse, (Fehler melden bei „weak"-Tier);
+  WC = Navigation, Wheelmap, Google Maps, Ergebnisse; Ort = Details anzeigen, Navigation,
+  Ergebnisse.
+</p>
+<p class="rule alt">
+  Offene Design-Entscheidung, die die Homogenisierung erzwingt: Soll „Details anzeigen"
+  beim Ort-Popup weiterhin farblich hervorgehoben bleiben, weil es (anders als Navigation/
+  Maps/Wheelmap) eine <b>In-App-Aktion</b> ist und damit eigentlich unter die App-weite
+  Konvention „Blau = passiert hier in der App" fällt? Jede Variante unten zeigt beide
+  Lesarten nebeneinander (Ort-Popup „gleichrangig" vs. Ort-Popup „Details bleibt betont").
+</p>
+
+<!-- ══════════════════════════════════ VARIANTE 1 ══════════════════════════════════ -->
+<div class="section">
+  <p class="section-title">Variante 1 — Einheitliche Icon-Toolbar</p>
+  <p class="section-verdict">Alle Aktionen als gleich große, randlose Icon-Buttons in einer Reihe, kein Text im Footer.</p>
+  <div class="row">
+
+    <div class="popup-card">
+      <div class="kind">Parkplatz</div>
+      <div class="popup">
+        <div class="bar"></div>
+        <div class="pad">
+          <div class="popup-head"><span class="popup-badge">P</span><span class="popup-title">4 Plätze</span></div>
+          <div class="popup-kv"><span class="k">Reserviert</span><span class="v" style="color:var(--green)">☑ Ja</span><span class="k">Entfernung</span><span class="v">30 m</span></div>
+          <div class="popup-footer">
+            <div class="toolbar1">
+              <button class="tbtn1" title="Navigation"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></button>
+              <button class="tbtn1" title="Google Maps"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></button>
+              <button class="tbtn1" title="Ergebnisse"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
+              <button class="tbtn1 warn" title="Fehler melden"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-card">
+      <div class="kind">WC</div>
+      <div class="popup wc">
+        <div class="bar"></div>
+        <div class="pad">
+          <div class="popup-head"><span class="popup-badge">🚻</span><span class="popup-title">Rollstuhl-WC</span></div>
+          <div class="popup-kv"><span class="k">♿ Rollstuhlgerecht</span><span class="v" style="color:var(--green)">Designiert</span><span class="k">🔑 Euroschlüssel</span><span class="v">Ja</span></div>
+          <div class="popup-footer">
+            <div class="toolbar1">
+              <button class="tbtn1" title="Navigation"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></button>
+              <button class="tbtn1" title="Wheelmap"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg></button>
+              <button class="tbtn1" title="Google Maps"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></button>
+              <button class="tbtn1" title="Ergebnisse"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-card">
+      <div class="kind">Ort — gleichrangig</div>
+      <div class="popup venue">
+        <div class="bar"></div>
+        <div class="pad">
+          <div class="popup-head split"><span class="popup-title">Cancun</span><span class="popup-conf">86 % · Verlässlich</span></div>
+          <div class="popup-sub">🍽️ Restaurant · Anhalter Str. 1</div>
+          <div class="popup-kv"><span class="k">Eingang</span><span class="v" style="color:var(--green)">Ja</span><span class="k">Toilette</span><span class="v" style="color:var(--green)">Ja</span></div>
+          <div class="popup-footer">
+            <div class="toolbar1">
+              <button class="tbtn1" title="Details anzeigen"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>
+              <button class="tbtn1" title="Navigation"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></button>
+              <button class="tbtn1" title="Ergebnisse"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-card">
+      <div class="kind">Ort — Details betont</div>
+      <div class="popup venue">
+        <div class="bar"></div>
+        <div class="pad">
+          <div class="popup-head split"><span class="popup-title">Cancun</span><span class="popup-conf">86 % · Verlässlich</span></div>
+          <div class="popup-sub">🍽️ Restaurant · Anhalter Str. 1</div>
+          <div class="popup-kv"><span class="k">Eingang</span><span class="v" style="color:var(--green)">Ja</span><span class="k">Toilette</span><span class="v" style="color:var(--green)">Ja</span></div>
+          <div class="popup-footer">
+            <div class="toolbar1">
+              <button class="tbtn1" style="background:var(--primary);color:#fff;border-color:var(--primary)" title="Details anzeigen"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>
+              <button class="tbtn1" title="Navigation"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></button>
+              <button class="tbtn1" title="Ergebnisse"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════ VARIANTE 2 ══════════════════════════════════ -->
+<div class="section">
+  <p class="section-title">Variante 2 — Einheitliche Pill-Chips (Icon + Text)</p>
+  <p class="section-verdict">Jede Aktion als kleines, gleich gestaltetes Chip mit Icon + Kurztext. Selbsterklärend ohne Tooltip.</p>
+  <div class="row">
+
+    <div class="popup-card">
+      <div class="kind">Parkplatz</div>
+      <div class="popup">
+        <div class="bar"></div>
+        <div class="pad">
+          <div class="popup-head"><span class="popup-badge">P</span><span class="popup-title">4 Plätze</span></div>
+          <div class="popup-kv"><span class="k">Reserviert</span><span class="v" style="color:var(--green)">☑ Ja</span><span class="k">Entfernung</span><span class="v">30 m</span></div>
+          <div class="popup-footer">
+            <div class="chiprow2">
+              <span class="chip2"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Navigation</span>
+              <span class="chip2"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Google Maps</span>
+              <span class="chip2"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Ergebnisse</span>
+              <span class="chip2 warn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>Melden</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-card">
+      <div class="kind">WC</div>
+      <div class="popup wc">
+        <div class="bar"></div>
+        <div class="pad">
+          <div class="popup-head"><span class="popup-badge">🚻</span><span class="popup-title">Rollstuhl-WC</span></div>
+          <div class="popup-kv"><span class="k">♿ Rollstuhlgerecht</span><span class="v" style="color:var(--green)">Designiert</span><span class="k">🔑 Euroschlüssel</span><span class="v">Ja</span></div>
+          <div class="popup-footer">
+            <div class="chiprow2">
+              <span class="chip2"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Navigation</span>
+              <span class="chip2"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>Wheelmap</span>
+              <span class="chip2"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Google Maps</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-card">
+      <div class="kind">Ort — gleichrangig</div>
+      <div class="popup venue">
+        <div class="bar"></div>
+        <div class="pad">
+          <div class="popup-head split"><span class="popup-title">Cancun</span><span class="popup-conf">86 % · Verlässlich</span></div>
+          <div class="popup-sub">🍽️ Restaurant · Anhalter Str. 1</div>
+          <div class="popup-kv"><span class="k">Eingang</span><span class="v" style="color:var(--green)">Ja</span><span class="k">Toilette</span><span class="v" style="color:var(--green)">Ja</span></div>
+          <div class="popup-footer">
+            <div class="chiprow2">
+              <span class="chip2"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Details</span>
+              <span class="chip2"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Navigation</span>
+              <span class="chip2"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Ergebnisse</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-card">
+      <div class="kind">Ort — Details betont</div>
+      <div class="popup venue">
+        <div class="bar"></div>
+        <div class="pad">
+          <div class="popup-head split"><span class="popup-title">Cancun</span><span class="popup-conf">86 % · Verlässlich</span></div>
+          <div class="popup-sub">🍽️ Restaurant · Anhalter Str. 1</div>
+          <div class="popup-kv"><span class="k">Eingang</span><span class="v" style="color:var(--green)">Ja</span><span class="k">Toilette</span><span class="v" style="color:var(--green)">Ja</span></div>
+          <div class="popup-footer">
+            <div class="chiprow2">
+              <span class="chip2" style="background:var(--primary);color:#fff;border-color:var(--primary)"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Details</span>
+              <span class="chip2"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Navigation</span>
+              <span class="chip2"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Ergebnisse</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════ VARIANTE 3 ══════════════════════════════════ -->
+<div class="section">
+  <p class="section-title">Variante 3 — 2-spaltiges Aktions-Raster</p>
+  <p class="section-verdict">Feste 2-Spalten-Kachel, jede Aktion gleich breit/hoch. Bei ungerader Anzahl spannt die letzte Kachel über beide Spalten.</p>
+  <div class="row">
+
+    <div class="popup-card">
+      <div class="kind">Parkplatz</div>
+      <div class="popup">
+        <div class="bar"></div>
+        <div class="pad">
+          <div class="popup-head"><span class="popup-badge">P</span><span class="popup-title">4 Plätze</span></div>
+          <div class="popup-kv"><span class="k">Reserviert</span><span class="v" style="color:var(--green)">☑ Ja</span><span class="k">Entfernung</span><span class="v">30 m</span></div>
+          <div class="popup-footer">
+            <div class="gridbtns3">
+              <button class="gbtn3"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Navigation</button>
+              <button class="gbtn3"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Maps</button>
+              <button class="gbtn3"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Ergebnisse</button>
+              <button class="gbtn3 warn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>Melden</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-card">
+      <div class="kind">WC</div>
+      <div class="popup wc">
+        <div class="bar"></div>
+        <div class="pad">
+          <div class="popup-head"><span class="popup-badge">🚻</span><span class="popup-title">Rollstuhl-WC</span></div>
+          <div class="popup-kv"><span class="k">♿ Rollstuhlgerecht</span><span class="v" style="color:var(--green)">Designiert</span><span class="k">🔑 Euroschlüssel</span><span class="v">Ja</span></div>
+          <div class="popup-footer">
+            <div class="gridbtns3">
+              <button class="gbtn3"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Navigation</button>
+              <button class="gbtn3"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>Wheelmap</button>
+              <button class="gbtn3 span2"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Google Maps</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-card">
+      <div class="kind">Ort — gleichrangig</div>
+      <div class="popup venue">
+        <div class="bar"></div>
+        <div class="pad">
+          <div class="popup-head split"><span class="popup-title">Cancun</span><span class="popup-conf">86 % · Verlässlich</span></div>
+          <div class="popup-sub">🍽️ Restaurant · Anhalter Str. 1</div>
+          <div class="popup-kv"><span class="k">Eingang</span><span class="v" style="color:var(--green)">Ja</span><span class="k">Toilette</span><span class="v" style="color:var(--green)">Ja</span></div>
+          <div class="popup-footer">
+            <div class="gridbtns3">
+              <button class="gbtn3"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Details</button>
+              <button class="gbtn3"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Navigation</button>
+              <button class="gbtn3 span2"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Ergebnisse</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-card">
+      <div class="kind">Ort — Details betont</div>
+      <div class="popup venue">
+        <div class="bar"></div>
+        <div class="pad">
+          <div class="popup-head split"><span class="popup-title">Cancun</span><span class="popup-conf">86 % · Verlässlich</span></div>
+          <div class="popup-sub">🍽️ Restaurant · Anhalter Str. 1</div>
+          <div class="popup-kv"><span class="k">Eingang</span><span class="v" style="color:var(--green)">Ja</span><span class="k">Toilette</span><span class="v" style="color:var(--green)">Ja</span></div>
+          <div class="popup-footer">
+            <div class="gridbtns3">
+              <button class="gbtn3" style="background:var(--primary);color:#fff;border-color:var(--primary)"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Details</button>
+              <button class="gbtn3"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Navigation</button>
+              <button class="gbtn3 span2"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Ergebnisse</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════ VARIANTE 4 ══════════════════════════════════ -->
+<div class="section">
+  <p class="section-title">Variante 4 — 2 Haupt-Optionen + „Mehr" ausklappbar</p>
+  <p class="section-verdict">Nur die zwei wichtigsten Optionen direkt sichtbar; seltenere Aktionen (Ergebnisse, Fehler melden) hinter „Mehr". Beim Ort-Popup: Details + Navigation direkt, Ergebnisse hinter „Mehr".</p>
+  <div class="row">
+
+    <div class="popup-card">
+      <div class="kind">Parkplatz (eingeklappt)</div>
+      <div class="popup">
+        <div class="bar"></div>
+        <div class="pad">
+          <div class="popup-head"><span class="popup-badge">P</span><span class="popup-title">4 Plätze</span></div>
+          <div class="popup-kv"><span class="k">Reserviert</span><span class="v" style="color:var(--green)">☑ Ja</span><span class="k">Entfernung</span><span class="v">30 m</span></div>
+          <div class="popup-footer">
+            <div class="row4">
+              <button class="obtn4"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Navigation</button>
+              <button class="obtn4"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Maps</button>
+            </div>
+            <button class="more4">Weitere Optionen ▾</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-card">
+      <div class="kind">WC (ausgeklappt)</div>
+      <div class="popup wc">
+        <div class="bar"></div>
+        <div class="pad">
+          <div class="popup-head"><span class="popup-badge">🚻</span><span class="popup-title">Rollstuhl-WC</span></div>
+          <div class="popup-kv"><span class="k">♿ Rollstuhlgerecht</span><span class="v" style="color:var(--green)">Designiert</span><span class="k">🔑 Euroschlüssel</span><span class="v">Ja</span></div>
+          <div class="popup-footer">
+            <div class="row4">
+              <button class="obtn4"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Navigation</button>
+              <button class="obtn4"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>Wheelmap</button>
+            </div>
+            <div class="more4list">
+              <button class="mbtn4"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Google Maps</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-card">
+      <div class="kind">Ort — gleichrangig (ausgeklappt)</div>
+      <div class="popup venue">
+        <div class="bar"></div>
+        <div class="pad">
+          <div class="popup-head split"><span class="popup-title">Cancun</span><span class="popup-conf">86 % · Verlässlich</span></div>
+          <div class="popup-sub">🍽️ Restaurant · Anhalter Str. 1</div>
+          <div class="popup-kv"><span class="k">Eingang</span><span class="v" style="color:var(--green)">Ja</span><span class="k">Toilette</span><span class="v" style="color:var(--green)">Ja</span></div>
+          <div class="popup-footer">
+            <div class="row4">
+              <button class="obtn4"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Details</button>
+              <button class="obtn4"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Navigation</button>
+            </div>
+            <div class="more4list">
+              <button class="mbtn4"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>In Ergebnissen zeigen</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-card">
+      <div class="kind">Ort — Details betont (eingeklappt)</div>
+      <div class="popup venue">
+        <div class="bar"></div>
+        <div class="pad">
+          <div class="popup-head split"><span class="popup-title">Cancun</span><span class="popup-conf">86 % · Verlässlich</span></div>
+          <div class="popup-sub">🍽️ Restaurant · Anhalter Str. 1</div>
+          <div class="popup-kv"><span class="k">Eingang</span><span class="v" style="color:var(--green)">Ja</span><span class="k">Toilette</span><span class="v" style="color:var(--green)">Ja</span></div>
+          <div class="popup-footer">
+            <div class="row4">
+              <button class="obtn4" style="background:var(--primary);color:#fff;border-color:var(--primary)"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Details</button>
+              <button class="obtn4"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Navigation</button>
+            </div>
+            <button class="more4">Weitere Optionen ▾</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
