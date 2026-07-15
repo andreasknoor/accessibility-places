@@ -240,6 +240,17 @@ function popupRow(label: string, value: string, opts: { color?: string; dot?: st
   return `<span style="font-size:11px;color:#71717a">${label}</span><span style="${valStyle}">${dotEl}${value}${opts.chip ?? ""}</span>`
 }
 
+// Indented sub-row spanning both KV grid columns (docs/prototypes/navigate-
+// here-popup-distance-row-variants.html, "Variante A") — used to hang the
+// parking popup's nearest-place name off its own Entfernung row without
+// risking the long-name wrap that a single combined "342 m from <name>"
+// value used to cause. `value` gets an unconditional CSS ellipsis (in
+// addition to the JS truncateName() cap) so it can never wrap regardless of
+// name length.
+function popupSubRow(label: string, value: string): string {
+  return `<div style="grid-column:1/-1;display:flex;align-items:baseline;gap:6px;margin-top:-1px;padding-left:14px;border-left:2px solid #e5e7eb;font-size:10.5px;color:#71717a;overflow:hidden"><span style="flex-shrink:0">${label}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${value}</span></div>`
+}
+
 // Wires the "Navigate here" primary CTA button (docs/plans/native-navigate-
 // here.md, "Map marker popup placement") — shared by the parking and toilet
 // marker popups, which used to each hand-roll this querySelector + DomEvent
@@ -758,9 +769,8 @@ export default function MapView({
         const d = haversineMetres(spot, p.coordinates)
         return best === null || d < best.dist ? { name: p.name, dist: d } : best
       }, null)
-      const distText = nearest !== null
-        ? t.map.parkingDistanceTo(t.results.distanceFromHere(Math.round(nearest.dist)), esc(truncateName(nearest.name)))
-        : null
+      const distText = nearest !== null ? t.results.distanceShort(Math.round(nearest.dist)) : null
+      const nearNameText = nearest !== null ? esc(truncateName(nearest.name)) : null
 
       // Fee badge: show only when tag is present
       const feeText = spot.fee === "no"  ? t.map.parkingFree
@@ -794,6 +804,7 @@ export default function MapView({
       const rows = [
         popupRow(t.map.parkingReservedLabel, reservedValue, { color: reservedColor }),
         distText    ? popupRow(t.map.parkingDistanceLabel, distText) : "",
+        nearNameText ? popupSubRow(t.map.parkingNearLabel, nearNameText) : "",
         feeText     ? popupRow(t.map.parkingFeeLabel, esc(feeText), { color: spot.fee === "no" ? "#15803d" : undefined }) : "",
         maxstayText ? popupRow(t.map.parkingMaxstay, esc(maxstayText)) : "",
         accessText  ? popupRow(t.map.parkingAccessLabel, accessText, { color: "#b45309" }) : "",

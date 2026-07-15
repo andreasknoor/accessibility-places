@@ -161,6 +161,10 @@ export interface Translations {
     adjustFilters:        string
     adjustFiltersHint:    string
     distanceFromHere:     (m: number) => string
+    // Bare distance, no "away"/"entfernt" suffix — the parking popup's
+    // Entfernung row (MapView.tsx) supplies its own label, so appending the
+    // suffix again read redundant once split from the nearest-place name.
+    distanceShort:        (m: number) => string
     amenityParkingLabel:  string
     amenityToiletLabel:   string
     amenityCapacity:      (n: number) => string
@@ -274,7 +278,10 @@ export interface Translations {
     legendToilet:           string
     legendToiletStandalone: string
     legendToiletVenue:      string
-    parkingDistanceTo:      (dist: string, name: string) => string
+    // Indented sub-row label under the Entfernung row, naming the nearest
+    // place ("↳ bei Kulturhaus …") — kept on its own row so a long name can
+    // never wrap the Entfernung row itself (see truncateName in MapView.tsx).
+    parkingNearLabel:       string
     parkingReportButton:    string
     parkingReportDone:      string
     parkingReportError:     string
