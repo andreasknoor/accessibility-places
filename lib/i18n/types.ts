@@ -235,6 +235,19 @@ export interface Translations {
     }
     showInResults:          string
     showDetails:            string
+    // Short chip labels for the map marker popup footers (parking/WC/venue —
+    // MapView.tsx's POPUP_CHIP row). Deliberately shorter than the sentence-
+    // style results.navigateHere/googleMapsLink/wheelmapLink and map.showDetails/
+    // showInResults/parkingReportButton used as aria-label/title/button text
+    // elsewhere: the popup's max-width (250px) doesn't fit two full-sentence
+    // chips side by side, which defeated the point of the pill-chip footer
+    // redesign (docs/prototypes/navigate-here-popup-footer-variants.html).
+    popupChipNavigate:      string
+    popupChipGoogleMaps:    string
+    popupChipWheelmap:      string
+    popupChipResults:       string
+    popupChipDetails:       string
+    popupChipReport:        string
     parkingSpot:            string
     parkingSpots:           (n: number) => string
     parkingAccessible:      string

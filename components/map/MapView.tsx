@@ -800,10 +800,10 @@ export default function MapView({
         <div style="${POPUP_KV}">${rows}</div>
         <div style="${POPUP_FOOTER}">
           <div style="${POPUP_CHIPS}">
-            <button data-navigate style="${POPUP_CHIP}">${POPUP_NAV_SVG}${t.results.navigateHere}</button>
-            <button data-gmaps style="${POPUP_CHIP}">${POPUP_GMAPS_SVG}${t.results.googleMapsLink}</button>
-            ${showResults ? `<button data-show-results style="${POPUP_CHIP}">${POPUP_LIST_SVG}${t.map.showInResults}</button>` : ""}
-            ${tier === "weak" ? `<button data-report style="${POPUP_CHIP_WARN}">${POPUP_FLAG_SVG}${t.map.parkingReportButton}</button>` : ""}
+            <button data-navigate style="${POPUP_CHIP}">${POPUP_NAV_SVG}${t.map.popupChipNavigate}</button>
+            <button data-gmaps style="${POPUP_CHIP}">${POPUP_GMAPS_SVG}${t.map.popupChipGoogleMaps}</button>
+            ${showResults ? `<button data-show-results style="${POPUP_CHIP}">${POPUP_LIST_SVG}${t.map.popupChipResults}</button>` : ""}
+            ${tier === "weak" ? `<button data-report style="${POPUP_CHIP_WARN}">${POPUP_FLAG_SVG}${t.map.popupChipReport}</button>` : ""}
           </div>
         </div>
       `)
@@ -915,10 +915,10 @@ export default function MapView({
         <div style="${POPUP_KV}">${rows}</div>
         <div style="${POPUP_FOOTER}">
           <div style="${POPUP_CHIPS}">
-            <button data-navigate style="${POPUP_CHIP}">${POPUP_NAV_SVG}${t.results.navigateHere}</button>
-            ${wheelmapUrl ? `<button data-wheelmap style="${POPUP_CHIP}">${POPUP_WHEELMAP_SVG}${t.results.wheelmapLink}</button>` : ""}
-            <button data-gmaps style="${POPUP_CHIP}">${POPUP_GMAPS_SVG}${t.results.googleMapsLink}</button>
-            ${showResults ? `<button data-show-results style="${POPUP_CHIP}">${POPUP_LIST_SVG}${t.map.showInResults}</button>` : ""}
+            <button data-navigate style="${POPUP_CHIP}">${POPUP_NAV_SVG}${t.map.popupChipNavigate}</button>
+            ${wheelmapUrl ? `<button data-wheelmap style="${POPUP_CHIP}">${POPUP_WHEELMAP_SVG}${t.map.popupChipWheelmap}</button>` : ""}
+            <button data-gmaps style="${POPUP_CHIP}">${POPUP_GMAPS_SVG}${t.map.popupChipGoogleMaps}</button>
+            ${showResults ? `<button data-show-results style="${POPUP_CHIP}">${POPUP_LIST_SVG}${t.map.popupChipResults}</button>` : ""}
           </div>
         </div>
       `)
@@ -1039,9 +1039,9 @@ export default function MapView({
           </div>
           <div style="${POPUP_FOOTER}">
             <div style="${POPUP_CHIPS}">
-              <button data-show-details style="${POPUP_CHIP_PRIMARY}">${POPUP_INFO_SVG}${esc(t.map.showDetails)}</button>
-              <button data-navigate style="${POPUP_CHIP}">${POPUP_NAV_SVG}${t.results.navigateHere}</button>
-              ${onShowInResults ? `<button data-show-id style="${POPUP_CHIP}">${POPUP_LIST_SVG}${esc(t.map.showInResults)}</button>` : ""}
+              <button data-show-details style="${POPUP_CHIP_PRIMARY}">${POPUP_INFO_SVG}${esc(t.map.popupChipDetails)}</button>
+              <button data-navigate style="${POPUP_CHIP}">${POPUP_NAV_SVG}${t.map.popupChipNavigate}</button>
+              ${onShowInResults ? `<button data-show-id style="${POPUP_CHIP}">${POPUP_LIST_SVG}${esc(t.map.popupChipResults)}</button>` : ""}
             </div>
           </div>
         `)
