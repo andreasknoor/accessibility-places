@@ -327,6 +327,19 @@ export function confidenceLabel(c: number): "high" | "medium" | "low" {
   return "low"
 }
 
+// Trigger for the "Achtung: evtl. nicht barrierefrei" micro-copy
+// (docs/prototypes/unknown-value-microcopy.html) — entrance or toilet being
+// "no" or "unknown" is exactly the pattern users misread as "the app has a
+// data error" rather than "we simply don't know". Deliberately excludes
+// parking/seating: those are secondary criteria with much sparser data and
+// would fire the warning far too often to stay meaningful. Shared by
+// PlaceCard, PlaceDebugSheet, and MapView's venue popup so the three
+// surfaces can never disagree on when to show it.
+export function placeMayNotBeAccessible(place: Place): boolean {
+  const flagged = (v: string) => v === "no" || v === "unknown"
+  return flagged(place.accessibility.entrance.value) || flagged(place.accessibility.toilet.value)
+}
+
 // ─── Filter places by active criteria ─────────────────────────────────────
 
 // Like passesFilters but only considers a single source's contribution to each

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<title>Micro-Copy „Achtung: evtl. nicht barrierefrei" — finales Konzept</title>
+<style>
+  :root {
+    --bg: #eef1f5;
+    --card: #fff;
+    --border: #e5e7eb;
+    --card-border: #d8dce3;
+    --muted: #f1f3f6;
+    --foreground: #1f2937;
+    --muted-foreground: #71717a;
+    --primary: #2563eb;
+    --green: #16a34a; --green-bg: #f0fdf4;
+    --yellow: #ca8a04; --yellow-bg: #fefce8;
+    --red: #dc2626; --red-bg: #fef2f2;
+    --slate: #94a3b8; --slate-bg: #f8fafc; --slate-text: #64748b;
+    --warn: #b91c1c; --warn-bg: #fef2f2; --warn-border: #fecaca;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    margin: 0;
+    padding: 32px 16px 90px;
+    color: var(--foreground);
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.intro { color: var(--muted-foreground); font-size: 14px; max-width: 880px; margin: 0 0 12px; line-height: 1.5; }
+  p.rule { font-size: 13px; background: #eaf1ff; border: 1px solid #cfe0ff; color: #1d4ed8; padding: 8px 12px; border-radius: 8px; max-width: 880px; margin: 0 0 10px; line-height: 1.5; }
+  ul.rules { max-width: 880px; margin: 0 0 32px; padding-left: 20px; font-size: 13px; line-height: 1.6; color: var(--foreground); }
+  ul.rules li { margin-bottom: 4px; }
+  ul.rules b { }
+
+  .section { margin-bottom: 48px; padding-top: 10px; border-top: 2px solid #dfe3ea; }
+  .section-title { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--foreground); margin: 20px 0 4px; }
+  .section-verdict { font-size: 12.5px; color: var(--muted-foreground); max-width: 900px; line-height: 1.55; margin: 0 0 18px; }
+
+  .row { display: flex; gap: 24px; flex-wrap: wrap; max-width: 1400px; align-items: flex-start; }
+  .col { width: 320px; }
+  .col-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--muted-foreground); margin-bottom: 8px; }
+  .col-desc { font-size: 12px; color: var(--muted-foreground); line-height: 1.5; margin: 0 0 12px; min-height: 34px; }
+
+  .frame { background: var(--card); border: 1px solid var(--card-border); border-radius: 12px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+
+  /* ── Ergebnisliste (PlaceCard) mock ── */
+  .pc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+  .pc-name { font-weight: 700; font-size: 14px; }
+  .pc-cat { font-size: 11px; color: var(--muted-foreground); }
+  .pc-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .pc-badge.green { background: var(--green-bg); color: var(--green); }
+  .pc-badge.yellow { background: var(--yellow-bg); color: var(--yellow); }
+  .crit-list { display: flex; flex-direction: column; gap: 6px; }
+  .crit-row { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .crit-row .ci { width: 14px; height: 14px; flex-shrink: 0; }
+  .crit-row .label { color: var(--muted-foreground); width: 62px; flex-shrink: 0; }
+  .crit-row .val { font-weight: 500; display: flex; align-items: center; gap: 4px; }
+  .crit-row.yes .ci, .crit-row.yes .val { color: var(--green); }
+  .crit-row.no .ci, .crit-row.no .val { color: var(--red); }
+  .crit-row.unknown .ci, .crit-row.unknown .val { color: var(--slate-text); }
+
+  .warn-toggle {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 15px; height: 15px; border-radius: 50%; flex-shrink: 0;
+    background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn-border);
+    font-size: 10px; font-weight: 700; cursor: pointer;
+  }
+  .warn-box {
+    margin-top: 8px; display: flex; align-items: flex-start; gap: 6px;
+    background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 7px;
+    padding: 7px 9px; font-size: 11.5px; color: var(--warn); line-height: 1.45;
+  }
+  .warn-box svg { flex-shrink: 0; margin-top: 1px; }
+  .warn-box u { text-decoration: none; font-weight: 700; }
+  .collapsed-hint { font-size: 10px; color: #9ca3af; margin-top: 4px; padding-left: 21px; }
+
+  /* ── Detailansicht (PlaceDebugSheet) mock ── */
+  .db-row { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .db-row:last-child { border-bottom: none; }
+  .db-head { display: flex; align-items: center; justify-content: space-between; }
+  .db-crit { display: flex; align-items: center; gap: 8px; }
+  .db-crit .ci { width: 16px; height: 16px; }
+  .db-label { font-size: 13px; font-weight: 600; }
+  .db-val { font-size: 12px; font-weight: 500; }
+  .pill { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid; display: inline-flex; align-items: center; gap: 4px; }
+  .pill.green { background: var(--green-bg); color: #15803d; border-color: #bbf7d0; }
+  .pill.slate { background: var(--slate-bg); color: var(--slate-text); border-color: #e2e8f0; }
+  .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .db-warn {
+    margin-top: 10px; display: flex; align-items: flex-start; gap: 7px;
+    background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 8px;
+    padding: 8px 10px; font-size: 12.5px; color: var(--warn); line-height: 1.5;
+  }
+  .db-warn svg { flex-shrink: 0; margin-top: 1px; }
+  .db-warn u { text-decoration: none; font-weight: 700; }
+
+  /* ── Karten-Popup mock ── */
+  .popup { width: 250px; display: flex; border: 1px solid var(--card-border); border-radius: 10px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,.1); font-size: 12px; margin: 0 auto; }
+  .popup .bar { width: 5px; flex-shrink: 0; }
+  .popup .pad { padding: 12px 14px; flex: 1; min-width: 0; }
+  .popup-title { font-weight: 700; font-size: 14px; }
+  .popup-conf { font-size: 11px; font-weight: 700; }
+  .popup-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 2px; }
+  .popup-sub { font-size: 11px; color: var(--muted-foreground); margin-bottom: 9px; }
+  .popup-kv { display: grid; grid-template-columns: auto 1fr; gap: 7px 10px; align-items: center; }
+  .popup-kv .k { font-size: 11px; color: var(--muted-foreground); }
+  .popup-kv .v { font-size: 12px; font-weight: 600; text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
+  .popup-warn {
+    grid-column: 1 / -1; margin-top: 5px; display: flex; align-items: flex-start; gap: 5px;
+    background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 6px;
+    padding: 6px 8px; font-size: 10.5px; color: var(--warn); line-height: 1.45;
+  }
+  .popup-warn svg { flex-shrink: 0; margin-top: 1px; width: 11px; height: 11px; }
+  .popup-warn u { text-decoration: none; font-weight: 700; }
+
+  svg { display: block; }
+
+  .callout {
+    max-width: 1300px; margin-top: 8px; background: #fff; border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 18px; font-size: 13px; line-height: 1.6;
+  }
+  .callout h3 { font-size: 13px; margin: 0 0 8px; }
+  .callout code { background: var(--muted); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<h1>Micro-Copy „Achtung: Dieser Ort ist evtl. <u style="text-decoration:none;font-weight:700">nicht</u> barrierefrei." — finales Konzept</h1>
+<p class="intro">
+  Aktualisiert nach Entscheidung: kein Ein-Klick-Filter, kein CTA-Link. Nur noch eine reine
+  Hinweis-Copy, unterschiedlich dargestellt je nach Oberfläche.
+</p>
+<ul class="rules">
+  <li><b>Auslöser:</b> nur wenn Eingang <u>oder</u> Toilette den Wert „Nein" oder „Unbekannt" hat. Sind beide positiv (Ja/Eingeschränkt), erscheint gar nichts.</li>
+  <li><b>Wortlaut, überall identisch:</b> „Achtung: Dieser Ort ist evtl. <b>nicht</b> barrierefrei." — das Wort „nicht" fett hervorgehoben.</li>
+  <li><b>Kein Button, kein Link.</b> Reine Information, keine Handlungsaufforderung.</li>
+  <li><b>Ergebnisliste:</b> ein-/ausklappbar — standardmäßig eingeklappt, ein kleines Warnsymbol neben dem betroffenen Wert öffnet den Text bei Tap.</li>
+  <li><b>Detailansicht + Karten-Popup (Ort):</b> immer sichtbar, keine Interaktion nötig.</li>
+  <li><b>Parkplatz-/WC-Popups betroffen? Nein</b> — diese haben gar keine Eingang-/Toilette-Werte (siehe Hinweis unten), der Auslöser kann dort strukturell nicht eintreten.</li>
+</ul>
+
+<!-- ══════════════════════════════ ERGEBNISLISTE ══════════════════════════════ -->
+<div class="section">
+  <p class="section-title">Ergebnisliste — eingeklappt (Standard) → ausgeklappt (nach Tap)</p>
+  <p class="section-verdict">
+    Kleines rotes Warnsymbol direkt neben dem betroffenen Wert. Im eingeklappten Zustand
+    fällt es auf, ohne Platz für einen ganzen Satz zu beanspruchen; ein Tap klappt die
+    Erklärung darunter auf.
+  </p>
+  <div class="row">
+
+    <div class="col">
+      <div class="col-label">Eingeklappt (Standard-Zustand)</div>
+      <div class="col-desc">So sieht die Karte beim normalen Scrollen durch die Liste aus.</div>
+      <div class="frame">
+        <div class="pc-head">
+          <div><div class="pc-name">Kleines Café am Markt</div><div class="pc-cat">Café · 610 m</div></div>
+          <span class="pc-badge yellow">42% Mittel</span>
+        </div>
+        <div class="crit-list">
+          <div class="crit-row yes">
+            <svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+            <span class="label">Eingang</span><span class="val">Ja</span>
+          </div>
+          <div class="crit-row unknown">
+            <svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 2-3 4"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span class="label">Toilette</span>
+            <span class="val">Unbekannt <button class="warn-toggle">!</button></span>
+          </div>
+        </div>
+        <div class="collapsed-hint">↑ Tap auf „!" klappt den Hinweis auf</div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="col-label">Ausgeklappt (nach Tap)</div>
+      <div class="col-desc">Nach Tap auf das Warnsymbol erscheint der Satz direkt unter den
+        Kriterien-Zeilen.</div>
+      <div class="frame">
+        <div class="pc-head">
+          <div><div class="pc-name">Kleines Café am Markt</div><div class="pc-cat">Café · 610 m</div></div>
+          <span class="pc-badge yellow">42% Mittel</span>
+        </div>
+        <div class="crit-list">
+          <div class="crit-row yes">
+            <svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+            <span class="label">Eingang</span><span class="val">Ja</span>
+          </div>
+          <div class="crit-row unknown">
+            <svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 2-3 4"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span class="label">Toilette</span>
+            <span class="val">Unbekannt <button class="warn-toggle" style="background:var(--warn);color:#fff">!</button></span>
+          </div>
+        </div>
+        <div class="warn-box">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span>Achtung: Dieser Ort ist evtl. <u>nicht</u> barrierefrei.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="col-label">Kein Hinweis nötig</div>
+      <div class="col-desc">Sind Eingang <u style="text-decoration:underline">und</u> Toilette
+        positiv, erscheint weder Symbol noch Text — kein Grundrauschen bei den meisten,
+        tatsächlich bestätigten Orten.</div>
+      <div class="frame">
+        <div class="pc-head">
+          <div><div class="pc-name">Cancun</div><div class="pc-cat">Restaurant · 320 m</div></div>
+          <span class="pc-badge green">86% Verlässlich</span>
+        </div>
+        <div class="crit-list">
+          <div class="crit-row yes">
+            <svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+            <span class="label">Eingang</span><span class="val">Ja</span>
+          </div>
+          <div class="crit-row yes">
+            <svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+            <span class="label">Toilette</span><span class="val">Ja</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════ DETAILANSICHT ══════════════════════════════ -->
+<div class="section">
+  <p class="section-title">Detailansicht — immer sichtbar</p>
+  <p class="section-verdict">
+    Kein Ein-/Ausklappen — wer bis hierhin vorgedrungen ist, hat gezieltes Interesse an
+    genau diesem Ort, da lohnt sich der permanente Hinweis.
+  </p>
+  <div class="row">
+    <div class="col" style="width:360px">
+      <div class="frame">
+        <div class="db-row">
+          <div class="db-head">
+            <div class="db-crit">
+              <svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--green)"><path d="M20 6 9 17l-5-5"/></svg>
+              <span class="db-label">Eingang</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="db-val" style="color:var(--green)">Ja</span>
+              <span class="pill green"><span class="dot"></span>Verlässlich</span>
+            </div>
+          </div>
+        </div>
+        <div class="db-row">
+          <div class="db-head">
+            <div class="db-crit">
+              <svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--slate-text)"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 2-3 4"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span class="db-label">Toilette</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="db-val" style="color:var(--slate-text)">Unbekannt</span>
+              <span class="pill slate">Keine Daten</span>
+            </div>
+          </div>
+          <div class="db-warn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span>Achtung: Dieser Ort ist evtl. <u>nicht</u> barrierefrei.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ KARTEN-POPUP ══════════════════════════════ -->
+<div class="section">
+  <p class="section-title">Karten-Popup (Ort) — immer sichtbar</p>
+  <p class="section-verdict">
+    Gleicher Text, gleiche Regel, permanent sichtbar wie in der Detailansicht — nur
+    kompakter an das schmale Popup-Format angepasst.
+  </p>
+  <div class="row">
+    <div class="col">
+      <div class="popup">
+        <div class="bar" style="background:#ca8a04"></div>
+        <div class="pad">
+          <div class="popup-head"><span class="popup-title">Kleines Café</span><span class="popup-conf" style="color:#ca8a04">42% · Mittel</span></div>
+          <div class="popup-sub">☕ Café · Marktstr. 4</div>
+          <div class="popup-kv">
+            <span class="k">Eingang</span><span class="v" style="color:var(--green)">Ja</span>
+            <span class="k">Toilette</span><span class="v" style="color:var(--slate-text)">Unbekannt</span>
+            <div class="popup-warn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span>Achtung: evtl. <u>nicht</u> barrierefrei.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="col-desc" style="margin-top:8px">
+        <b>Parkplatz- und WC-Popups (Schnellsuche 🅿/🚻):</b> bekommen diesen Hinweis nicht.
+        Sie zeigen keine Eingang-/Toilette-Werte — der Popup-Inhalt <em>ist</em> bereits die
+        Toilette bzw. der Parkplatz selbst, keine Venue mit mehreren Kriterien. Der Auslöser
+        „Eingang oder Toilette = Nein/Unbekannt" kann dort strukturell gar nicht eintreten.
+      </div>
+      <div class="popup" style="opacity:.5;margin-top:14px">
+        <div class="bar" style="background:#2979ff"></div>
+        <div class="pad">
+          <div class="popup-head"><span class="popup-title">4 Plätze</span></div>
+          <div class="popup-kv">
+            <span class="k">Reserviert</span><span class="v" style="color:var(--green)">☑ Ja</span>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center;font-size:10.5px;color:var(--muted-foreground);margin-top:6px">kein Eingang/Toilette-Feld vorhanden → kein Hinweis möglich</div>
+    </div>
+  </div>
+</div>
+
+<div class="callout">
+  <h3>Zusammenfassung</h3>
+  <p style="margin:0">
+    Eine Copy, drei Auftrittsformen: <b>ein-/ausklappbar</b> in der Ergebnisliste (Platz ist
+    dort knapp, viele Karten gleichzeitig), <b>permanent sichtbar</b> in Detailansicht und
+    Orts-Popup (gezieltes Interesse an genau diesem Ort). Auslöser ist ausschließlich
+    Eingang oder Toilette = Nein/Unbekannt; Parkplatz fließt nicht mit ein. Kein Button,
+    keine Aktion — reine Information.
+  </p>
+</div>
+
+</body>
+</html>

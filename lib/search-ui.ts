@@ -81,16 +81,20 @@ interface RerunArgs {
   amenityActive: boolean
   amenitySearch: AmenityType | null
   amenitySearchCenter: { lat: number; lon: number } | undefined
-  chatMode: "text" | "nearby"
   lastQuery: string | undefined
 }
 
 // Which search should "Rerun" / "Neu laden" repeat: the active amenity search
 // takes priority over any leftover venue query from earlier in the session — a
-// venue search never resurfaces while an amenity search is showing.
+// venue search never resurfaces while an amenity search is showing. Mirrors
+// expandRadiusTarget below — no chatMode gate on the venue branch: since the
+// old always-visible "Suche starten" button was removed, "Filter anwenden" is
+// the only way to re-run a search after a filter change, in every mode, not
+// just nearby (that restriction was a leftover from before the removal — a
+// text search had no way at all to apply changed filters).
 export function rerunTarget(args: RerunArgs): "amenity" | "venue" | "none" {
   if (args.amenityActive && args.amenitySearch && args.amenitySearchCenter) return "amenity"
-  if (!args.amenityActive && args.chatMode === "nearby" && args.lastQuery) return "venue"
+  if (!args.amenityActive && args.lastQuery) return "venue"
   return "none"
 }
 

@@ -10,10 +10,12 @@ import { Badge } from "@/components/ui/badge"
 import ConfidenceBadge, { VerifiedBadge } from "./ConfidenceBadge"
 import A11yAttribute    from "./A11yAttribute"
 import PlaceDebugSheet  from "./PlaceDebugSheet"
+import { NotAccessibleWarningBox, NotAccessibleWarningToggle } from "./NotAccessibleWarning"
 import { track } from "@/lib/analytics"
 import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS }   from "@/lib/config"
 import { CATEGORY_ICONS }  from "@/lib/category-icons"
+import { placeMayNotBeAccessible } from "@/lib/matching/merge"
 import { cn } from "@/lib/utils"
 import type { Place } from "@/lib/types"
 
@@ -28,6 +30,12 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
   const t = useTranslations()
   const [expanded,  setExpanded]  = useState(false)
   const [showDebug, setShowDebug] = useState(false)
+  const [warnExpanded, setWarnExpanded] = useState(false)
+  const showNotAccessibleWarning = placeMayNotBeAccessible(place)
+  const notAccessibleToggle = (value: string) =>
+    showNotAccessibleWarning && (value === "no" || value === "unknown")
+      ? <NotAccessibleWarningToggle expanded={warnExpanded} onToggle={() => setWarnExpanded((v) => !v)} />
+      : undefined
 
   const addr = [place.address.street, place.address.houseNumber, place.address.city]
     .filter(Boolean).join(" ")
@@ -174,13 +182,15 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
 
         {/* ── Accessibility attributes ── */}
         <div className="flex flex-col gap-1.5">
-          <A11yAttribute label={t.criteria.entrance} attr={place.accessibility.entrance} detailType="entrance" showDetails={expanded} />
-          <A11yAttribute label={t.criteria.toilet}   attr={place.accessibility.toilet}   detailType="toilet"   showDetails={expanded} />
+          <A11yAttribute label={t.criteria.entrance} attr={place.accessibility.entrance} detailType="entrance" showDetails={expanded} headerExtra={notAccessibleToggle(place.accessibility.entrance.value)} />
+          <A11yAttribute label={t.criteria.toilet}   attr={place.accessibility.toilet}   detailType="toilet"   showDetails={expanded} headerExtra={notAccessibleToggle(place.accessibility.toilet.value)} />
           <A11yAttribute label={t.criteria.parking} attr={place.accessibility.parking} detailType="parking" showDetails={expanded} />
           {place.accessibility.seating && (
             <A11yAttribute label={t.criteria.seating} attr={place.accessibility.seating} detailType="seating" showDetails={expanded} />
           )}
         </div>
+
+        {showNotAccessibleWarning && warnExpanded && <NotAccessibleWarningBox />}
 
         {/* ── Expand / contact ── */}
         <div className="flex items-center justify-between mt-0.5">

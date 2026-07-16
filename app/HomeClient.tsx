@@ -1360,7 +1360,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // layouts always agree on which search "Rerun"/"Suchradius erweitern" repeats
   // — an amenity search active never resurfaces a stale venue query, and a
   // first-ever amenity search with zero results still gets an expand action.
-  const rerun = rerunTarget({ amenityActive, amenitySearch, amenitySearchCenter: searchCenter, chatMode, lastQuery })
+  const rerun = rerunTarget({ amenityActive, amenitySearch, amenitySearchCenter: searchCenter, lastQuery })
   const resolvedOnRerun = rerun === "amenity"
     ? () => { if (amenitySearch && searchCenter) handleAmenitySearch(amenitySearch, searchCenter, amenityRadiusKm) }
     : rerun === "venue"

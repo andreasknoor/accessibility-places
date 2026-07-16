@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<title>Kontextabhängiges Label für „Datenfehler melden" / „Info ergänzen"</title>
+<style>
+  :root {
+    --bg: #eef1f5;
+    --card: #fff;
+    --border: #e5e7eb;
+    --card-border: #d8dce3;
+    --muted: #f1f3f6;
+    --foreground: #1f2937;
+    --muted-foreground: #71717a;
+    --primary-strong: #1d4ed8;
+    --green: #16a34a; --green-bg: #f0fdf4;
+    --red: #dc2626; --red-bg: #fef2f2;
+    --slate: #94a3b8; --slate-bg: #f8fafc; --slate-text: #64748b;
+    --warn: #b91c1c; --warn-bg: #fef2f2; --warn-border: #fecaca;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    margin: 0;
+    padding: 32px 16px 90px;
+    color: var(--foreground);
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.intro { color: var(--muted-foreground); font-size: 14px; max-width: 880px; margin: 0 0 12px; line-height: 1.5; }
+  p.rule { font-size: 13px; background: #eaf1ff; border: 1px solid #cfe0ff; color: #1d4ed8; padding: 8px 12px; border-radius: 8px; max-width: 880px; margin: 0 0 32px; line-height: 1.5; }
+  code { background: var(--muted); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+
+  .row { display: flex; gap: 24px; flex-wrap: wrap; max-width: 1400px; align-items: flex-start; }
+  .col { width: 320px; }
+  .col-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--muted-foreground); margin-bottom: 8px; }
+  .col-tag {
+    display: inline-block; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+    margin-bottom: 8px;
+  }
+  .col-tag.report { background: var(--warn-bg); color: var(--warn); }
+  .col-tag.contribute { background: #eaf1ff; color: var(--primary-strong); }
+  .col-desc { font-size: 12px; color: var(--muted-foreground); line-height: 1.5; margin: 0 0 12px; min-height: 68px; }
+
+  .frame { background: var(--card); border: 1px solid var(--card-border); border-radius: 12px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+
+  .db-row { padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .db-row:last-child { border-bottom: none; }
+  .db-head { display: flex; align-items: center; justify-content: space-between; }
+  .db-crit { display: flex; align-items: center; gap: 8px; }
+  .db-crit .ci { width: 15px; height: 15px; }
+  .db-label { font-size: 12.5px; font-weight: 600; }
+  .db-val { font-size: 11.5px; font-weight: 500; }
+  .pill { font-size: 9.5px; font-weight: 600; padding: 2px 7px; border-radius: 999px; border: 1px solid; display: inline-flex; align-items: center; gap: 4px; }
+  .pill.green { background: var(--green-bg); color: #15803d; border-color: #bbf7d0; }
+  .pill.slate { background: var(--slate-bg); color: var(--slate-text); border-color: #e2e8f0; }
+  .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .warn-box {
+    margin: 8px 0; display: flex; align-items: flex-start; gap: 6px;
+    background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 7px;
+    padding: 7px 9px; font-size: 11px; color: var(--warn); line-height: 1.45;
+  }
+  .warn-box svg { flex-shrink: 0; margin-top: 1px; }
+  .warn-box u { text-decoration: none; font-weight: 700; }
+
+  .report-btn {
+    display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500;
+    background: none; border: none; cursor: pointer; padding: 6px 0;
+    color: var(--primary-strong);
+  }
+  .report-btn.contribute { color: #15803d; }
+  .report-btn u { text-decoration: underline; }
+
+  svg { display: block; }
+
+  .callout {
+    max-width: 1300px; margin-top: 8px; background: #fff; border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 18px; font-size: 13px; line-height: 1.6;
+  }
+  .callout h3 { font-size: 13px; margin: 0 0 8px; }
+  .callout table { border-collapse: collapse; margin-top: 10px; font-size: 12.5px; }
+  .callout td, .callout th { padding: 5px 12px 5px 0; text-align: left; border-bottom: 1px solid var(--border); }
+  .callout th { color: var(--muted-foreground); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .02em; }
+</style>
+</head>
+<body>
+
+<h1>Kontextabhängiges Label: „Info ergänzen" statt „Datenfehler melden"</h1>
+<p class="intro">
+  Gleicher Button, gleicher Ort (unten in der Detailansicht), aber Text + Icon hängen davon
+  ab, was tatsächlich fehlt bzw. bestritten wird — keine neue Interaktion, kein Dialog,
+  nur eine andere Beschriftung je nach Datenlage.
+</p>
+<p class="rule">
+  Logik: Ist bei Eingang <u>oder</u> Toilette der Wert „Nein" gesetzt → „Datenfehler
+  melden" bleibt (es gibt eine konkrete Aussage, die bestritten werden kann). Ist keiner
+  „Nein", aber mindestens einer „Unbekannt" → „Info ergänzen" (es gibt nichts zu
+  korrigieren, nur etwas beizutragen). Sind beide positiv → Standardtext „Datenfehler
+  melden" bleibt als allgemeine Kontaktmöglichkeit.
+</p>
+
+<div class="row">
+
+  <div class="col">
+    <div class="col-tag report">Datenfehler melden</div>
+    <div class="col-label">Beide Kriterien bekannt &amp; positiv</div>
+    <div class="col-desc">Normalfall — nichts ändert sich gegenüber heute. Der Button
+      bleibt eine allgemeine „hier stimmt etwas nicht"-Kontaktmöglichkeit.</div>
+    <div class="frame">
+      <div class="db-row">
+        <div class="db-head">
+          <div class="db-crit">
+            <svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--green)"><path d="M20 6 9 17l-5-5"/></svg>
+            <span class="db-label">Eingang</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="db-val" style="color:var(--green)">Ja</span>
+            <span class="pill green"><span class="dot"></span>Verlässlich</span>
+          </div>
+        </div>
+      </div>
+      <div class="db-row">
+        <div class="db-head">
+          <div class="db-crit">
+            <svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--green)"><path d="M20 6 9 17l-5-5"/></svg>
+            <span class="db-label">Toilette</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="db-val" style="color:var(--green)">Ja</span>
+            <span class="pill green"><span class="dot"></span>Verlässlich</span>
+          </div>
+        </div>
+      </div>
+      <button class="report-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+        Datenfehler melden
+      </button>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="col-tag contribute">Info ergänzen</div>
+    <div class="col-label">Unbekannt vorhanden, kein „Nein"</div>
+    <div class="col-desc">Grüner Stift statt roter Flagge, Text wechselt von „melden" zu
+      „ergänzen" — passt zur bereits sichtbaren Warnbox darüber: Die App hat die Lücke schon
+      erkannt, der Button lädt jetzt dazu ein, sie zu schließen statt sie zu „melden".</div>
+    <div class="frame">
+      <div class="db-row">
+        <div class="db-head">
+          <div class="db-crit">
+            <svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--green)"><path d="M20 6 9 17l-5-5"/></svg>
+            <span class="db-label">Eingang</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="db-val" style="color:var(--green)">Ja</span>
+            <span class="pill green"><span class="dot"></span>Verlässlich</span>
+          </div>
+        </div>
+      </div>
+      <div class="db-row">
+        <div class="db-head">
+          <div class="db-crit">
+            <svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--slate-text)"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 2-3 4"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span class="db-label">Toilette</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="db-val" style="color:var(--slate-text)">Unbekannt</span>
+            <span class="pill slate">Keine Daten</span>
+          </div>
+        </div>
+      </div>
+      <div class="warn-box">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>Achtung: Dieser Ort ist evtl. <u>nicht</u> barrierefrei.</span>
+      </div>
+      <button class="report-btn contribute">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        Info ergänzen
+      </button>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="col-tag report">Datenfehler melden</div>
+    <div class="col-label">Ein „Nein" ist gesetzt</div>
+    <div class="col-desc">Bleibt unverändert bei der roten Flagge — es gibt eine konkrete
+      Aussage („kein barrierefreier Eingang"), die jemand vor Ort widerlegen können soll.
+      „Ergänzen" würde hier falsch klingen, da ja bereits ein Wert vorliegt.</div>
+    <div class="frame">
+      <div class="db-row">
+        <div class="db-head">
+          <div class="db-crit">
+            <svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--red)"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            <span class="db-label">Eingang</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="db-val" style="color:var(--red)">Nein</span>
+            <span class="pill green"><span class="dot"></span>Verlässlich</span>
+          </div>
+        </div>
+      </div>
+      <div class="db-row">
+        <div class="db-head">
+          <div class="db-crit">
+            <svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--slate-text)"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 2-3 4"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span class="db-label">Toilette</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="db-val" style="color:var(--slate-text)">Unbekannt</span>
+            <span class="pill slate">Keine Daten</span>
+          </div>
+        </div>
+      </div>
+      <div class="warn-box">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>Achtung: Dieser Ort ist evtl. <u>nicht</u> barrierefrei.</span>
+      </div>
+      <button class="report-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+        Datenfehler melden
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<div class="callout">
+  <h3>Zusammenfassung der Logik</h3>
+  <table>
+    <tr><th>Eingang</th><th>Toilette</th><th>Button</th></tr>
+    <tr><td>Ja / Eingeschränkt</td><td>Ja / Eingeschränkt</td><td>Datenfehler melden <i>(Standard, unverändert)</i></td></tr>
+    <tr><td>Unbekannt</td><td>Ja / Eingeschränkt / Unbekannt</td><td><b>Info ergänzen</b></td></tr>
+    <tr><td>Ja / Eingeschränkt / Unbekannt</td><td>Unbekannt</td><td><b>Info ergänzen</b></td></tr>
+    <tr><td>Nein</td><td>egal</td><td>Datenfehler melden <i>(Nein hat Vorrang vor Unbekannt)</i></td></tr>
+    <tr><td>egal</td><td>Nein</td><td>Datenfehler melden <i>(Nein hat Vorrang vor Unbekannt)</i></td></tr>
+  </table>
+  <p style="margin-top:12px">
+    Keine Änderung am Klickverhalten selbst — öffnet weiterhin dasselbe Tally-Formular mit
+    denselben Hidden Fields. Nur Label + Icon wechseln. Formular-Vorbefüllung mit sichtbarem
+    Kontext („Aktuell zeigen wir: Toilette = Unbekannt") wäre ein separater, größerer Schritt
+    (Vorschlag #3) und ist hier bewusst nicht enthalten.
+  </p>
+</div>
+
+</body>
+</html>

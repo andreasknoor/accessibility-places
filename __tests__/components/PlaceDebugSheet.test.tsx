@@ -305,9 +305,11 @@ describe("PlaceDebugSheet report data error", () => {
   it("closes the sheet and opens the Tally popup prefilled with the place deep link", async () => {
     const { openTallyPopup } = await import("@/lib/tally")
     const onClose = vi.fn()
+    // toilet is "unknown" (no "no" on entrance/toilet) → contribute mode, see
+    // the "contextual label" describe block below.
     renderSheet(makePlace(), onClose)
 
-    fireEvent.click(screen.getByText("Datenfehler melden"))
+    fireEvent.click(screen.getByText("Info ergänzen"))
     expect(onClose).toHaveBeenCalledOnce()
 
     await vi.waitFor(() => expect(openTallyPopup).toHaveBeenCalledOnce())
@@ -322,6 +324,46 @@ describe("PlaceDebugSheet report data error", () => {
     expect(hiddenFields.parking).toBe("no")
     expect(hiddenFields.sources).toBe("osm")
     expect(hiddenFields.osmUrl).toBe("https://www.openstreetmap.org/node/12345678")
+  })
+})
+
+// ─── Report button contextual label ───────────────────────────────────────────
+
+describe("PlaceDebugSheet report button contextual label", () => {
+  it("shows 'Datenfehler melden' when both entrance and toilet are known (no 'no', no 'unknown')", () => {
+    renderSheet(makePlace({
+      accessibility: {
+        entrance: { value: "yes", confidence: 0.75, conflict: false, sources: [], details: {} },
+        toilet:   { value: "yes", confidence: 0.75, conflict: false, sources: [], details: {} },
+        parking:  { value: "no",  confidence: 0.75, conflict: false, sources: [], details: {} },
+      },
+    }))
+    expect(screen.getByText("Datenfehler melden")).toBeInTheDocument()
+    expect(screen.queryByText("Info ergänzen")).not.toBeInTheDocument()
+  })
+
+  it("shows 'Info ergänzen' when a criterion is unknown and none is 'no'", () => {
+    renderSheet(makePlace({
+      accessibility: {
+        entrance: { value: "yes",     confidence: 0.75, conflict: false, sources: [], details: {} },
+        toilet:   { value: "unknown", confidence: 0,    conflict: false, sources: [], details: {} },
+        parking:  { value: "yes",     confidence: 0.75, conflict: false, sources: [], details: {} },
+      },
+    }))
+    expect(screen.getByText("Info ergänzen")).toBeInTheDocument()
+    expect(screen.queryByText("Datenfehler melden")).not.toBeInTheDocument()
+  })
+
+  it("prefers 'Datenfehler melden' over 'Info ergänzen' when both a 'no' and an 'unknown' are present", () => {
+    renderSheet(makePlace({
+      accessibility: {
+        entrance: { value: "no",      confidence: 0.75, conflict: false, sources: [], details: {} },
+        toilet:   { value: "unknown", confidence: 0,    conflict: false, sources: [], details: {} },
+        parking:  { value: "yes",     confidence: 0.75, conflict: false, sources: [], details: {} },
+      },
+    }))
+    expect(screen.getByText("Datenfehler melden")).toBeInTheDocument()
+    expect(screen.queryByText("Info ergänzen")).not.toBeInTheDocument()
   })
 })
 

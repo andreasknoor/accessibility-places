@@ -11,7 +11,7 @@ import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { openExternalUrl } from "@/lib/native/browser"
 import { startDefaultNavigation } from "@/lib/native/navigation"
 import { hapticLight } from "@/lib/native/haptics"
-import { confidenceLabel } from "@/lib/matching/merge"
+import { confidenceLabel, placeMayNotBeAccessible } from "@/lib/matching/merge"
 import { haversineMetres } from "@/lib/matching/match"
 import type { Place, ParkingSpot, AmenityFeature, AmenityTier, AmenityType } from "@/lib/types"
 
@@ -215,6 +215,18 @@ const POPUP_WHEELMAP_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="13" h
 const POPUP_LIST_SVG     = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h.01"/><path d="M3 12h.01"/><path d="M3 19h.01"/><path d="M8 5h13"/><path d="M8 12h13"/><path d="M8 19h13"/></svg>` // lucide List
 const POPUP_INFO_SVG     = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>` // lucide Info
 const POPUP_FLAG_SVG     = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>` // lucide Flag
+const POPUP_WARN_SVG     = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>` // lucide AlertTriangle
+
+// "Achtung: evtl. nicht barrierefrei" — always-visible venue popup warning,
+// same trigger/wording as PlaceCard/PlaceDebugSheet's NotAccessibleWarningBox
+// (see placeMayNotBeAccessible in lib/matching/merge.ts). Built once per
+// render since it's plain HTML (this popup isn't React) but the trigger
+// condition is evaluated per place at the call site. No esc() here — these
+// are static i18n strings, not OSM-sourced data (see the popup XSS rule in
+// CLAUDE.md: i18n strings and numbers are trusted).
+function popupNotAccessibleWarning(t: ReturnType<typeof useTranslations>): string {
+  return `<div style="grid-column:1/-1;display:flex;align-items:flex-start;gap:5px;margin-top:5px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:6px 8px;font-size:10.5px;color:#b91c1c;line-height:1.45">${POPUP_WARN_SVG}<span>${t.results.notAccessibleWarningPre}<b>${t.results.notAccessibleWarningBold}</b>${t.results.notAccessibleWarningPost}</span></div>`
+}
 
 // Wraps popup content in the flush-bar shell. `bar` is the accent colour.
 function popupShell(bar: string, inner: string): string {
@@ -1054,6 +1066,7 @@ export default function MapView({
             ${popupRow(t.criteria.entrance, t.a11y[ent.value] ?? ent.value, { color: VALUE_TEXT_COLORS[ent.value], chip: ent.value !== "unknown" ? confidenceChip(ent.confidence, t.map.confidenceShort) : undefined })}
             ${popupRow(t.criteria.toilet,   t.a11y[toi.value] ?? toi.value, { color: VALUE_TEXT_COLORS[toi.value], chip: toi.value !== "unknown" ? confidenceChip(toi.confidence, t.map.confidenceShort) : undefined })}
             ${popupRow(t.criteria.parking,  parkingText,                    { color: VALUE_TEXT_COLORS[par.value], chip: par.value !== "unknown" ? confidenceChip(par.confidence, t.map.confidenceShort) : undefined })}
+            ${placeMayNotBeAccessible(place) ? popupNotAccessibleWarning(t) : ""}
           </div>
           <div style="${POPUP_FOOTER}">
             <div style="${POPUP_CHIPS}">

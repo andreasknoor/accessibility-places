@@ -116,6 +116,10 @@ const en: Translations = {
     lowConfidenceHint: "Low reliability",
     primarySource: "Best source",
     noData: "No data",
+    notAccessibleWarningPre:  "Warning: This place may ",
+    notAccessibleWarningBold: "not",
+    notAccessibleWarningPost: " be accessible.",
+    notAccessibleWarningToggle: "Show hint",
     websiteLink:    "Visit website",
     phoneLink:      "Call",
     wheelmapLink:   "Check on Wheelmap.org",
@@ -391,6 +395,7 @@ const en: Translations = {
     rawDataLoading:     "Loading raw data …",
     rawDataUnavailable: "(raw data unavailable)",
     reportDataError:    "Report data error",
+    contributeDataInfo: "Add missing info",
   },
   faq: {
     title:         "Frequently Asked Questions",

@@ -1,5 +1,6 @@
 "use client"
 
+import { Fragment, type ReactNode } from "react"
 import { AlertTriangle } from "lucide-react"
 import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS } from "@/lib/config"
@@ -11,9 +12,12 @@ interface Props {
   attr:        AccessibilityAttribute
   detailType?: "entrance" | "toilet" | "parking" | "seating"
   showDetails?: boolean
+  // Extra content appended after the conflict icon (if any) in the header —
+  // e.g. NotAccessibleWarningToggle (see PlaceCard.tsx).
+  headerExtra?: ReactNode
 }
 
-export default function A11yAttribute({ label, attr, detailType, showDetails }: Props) {
+export default function A11yAttribute({ label, attr, detailType, showDetails, headerExtra }: Props) {
   const t = useTranslations()
 
   // Parking that was upgraded from "unknown" → "yes" via a nearby OSM
@@ -63,9 +67,12 @@ export default function A11yAttribute({ label, attr, detailType, showDetails }: 
       confidence={attr.confidence}
       rows={rows}
       note={description}
-      headerExtra={attr.conflict
-        ? <AlertTriangle className="w-3 h-3 text-amber-500 ml-1" aria-label={t.results.conflict} />
-        : undefined}
+      headerExtra={(attr.conflict || headerExtra) && (
+        <Fragment>
+          {attr.conflict && <AlertTriangle className="w-3 h-3 text-amber-500 ml-1" aria-label={t.results.conflict} />}
+          {headerExtra}
+        </Fragment>
+      )}
     >
       {/* Conflict: show all source values */}
       {attr.conflict && (

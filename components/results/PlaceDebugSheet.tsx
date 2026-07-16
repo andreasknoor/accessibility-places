@@ -7,7 +7,7 @@ import {
   Utensils, Leaf, Dog, Wifi, Star, DollarSign,
   MessageSquare, ExternalLink, Accessibility,
   ShieldCheck, Award, ChevronDown, ChevronUp,
-  Truck, ShoppingBag, Share2, Car, Hash, Navigation, Copy, Flag,
+  Truck, ShoppingBag, Share2, Car, Hash, Navigation, Copy, Flag, PenLine,
 } from "lucide-react"
 import { shareOrCopy } from "@/lib/native/share"
 import { hapticLight, hapticSuccess } from "@/lib/native/haptics"
@@ -19,8 +19,9 @@ import { useTranslations, useLocale } from "@/lib/i18n"
 import { buildPlaceDeepLink } from "@/lib/place-link"
 import { openTallyPopup } from "@/lib/tally"
 import { track } from "@/lib/analytics"
-import { confidenceLabel } from "@/lib/matching/merge"
+import { confidenceLabel, placeMayNotBeAccessible } from "@/lib/matching/merge"
 import { ScoreContent } from "./ConfidenceBadge"
+import { NotAccessibleWarningBox } from "./NotAccessibleWarning"
 import { cn } from "@/lib/utils"
 import type { Place, SourceId, ParkingDetails, EntranceDetails, ToiletDetails, SeatingDetails } from "@/lib/types"
 
@@ -190,9 +191,22 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
   const { locale } = useLocale()
   const reportFormId = TALLY_DATA_ERROR_FORMS[locale]
 
+  // "Nein" outranks "Unbekannt": a set "no" is a concrete claim someone can
+  // dispute ("Datenfehler melden"); "unbekannt" alone has nothing to dispute,
+  // only a gap to fill ("Info ergänzen") — docs/prototypes/report-button-
+  // context-label.html. Same button, same Tally form either way; only the
+  // label/icon change so the wording matches what's actually being asked of
+  // the reporter.
+  const reportButtonMode: "report" | "contribute" =
+    place.accessibility.entrance.value === "no" || place.accessibility.toilet.value === "no"
+      ? "report"
+      : place.accessibility.entrance.value === "unknown" || place.accessibility.toilet.value === "unknown"
+        ? "contribute"
+        : "report"
+
   function handleReportDataError() {
     hapticLight()
-    track("report_data_error", { category: place.category })
+    track("report_data_error", { category: place.category, mode: reportButtonMode })
     const hiddenFields: Record<string, string> = {
       deeplink:   buildPlaceDeepLink(place),
       placeName:  place.name,
@@ -572,6 +586,7 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
                 )}
               </div>
             )}
+            {placeMayNotBeAccessible(place) && <NotAccessibleWarningBox className="ml-6" />}
             {acceslibreCommentaire && (
               <InfoRow icon={MessageSquare} label={ti.description}>
                 <span className="italic">{acceslibreCommentaire}</span>
@@ -580,10 +595,15 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
             {reportFormId && (
               <button
                 onClick={handleReportDataError}
-                className="flex items-center gap-1.5 text-xs text-primary-strong hover:underline cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm py-1 transition-colors"
+                className={cn(
+                  "flex items-center gap-1.5 text-xs hover:underline cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm py-1 transition-colors",
+                  reportButtonMode === "contribute" ? "text-green-700" : "text-primary-strong",
+                )}
               >
-                <Flag className="w-3.5 h-3.5" />
-                {ti.reportDataError}
+                {reportButtonMode === "contribute"
+                  ? <PenLine className="w-3.5 h-3.5" />
+                  : <Flag className="w-3.5 h-3.5" />}
+                {reportButtonMode === "contribute" ? ti.contributeDataInfo : ti.reportDataError}
               </button>
             )}
           </Section>

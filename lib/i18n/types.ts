@@ -122,6 +122,14 @@ export interface Translations {
     lowConfidenceHint: string
     primarySource:     string
     noData:            string
+    // "Not accessible" warning shown when entrance or toilet is "no"/"unknown"
+    // (docs/prototypes/unknown-value-microcopy.html) — split into three parts
+    // so the middle word can be rendered bold without embedding markup in the
+    // translation string itself.
+    notAccessibleWarningPre:  string
+    notAccessibleWarningBold: string
+    notAccessibleWarningPost: string
+    notAccessibleWarningToggle: string
     websiteLink:       string
     phoneLink:         string
     wheelmapLink:      string
@@ -383,6 +391,9 @@ export interface Translations {
     rawDataLoading:     string
     rawDataUnavailable: string
     reportDataError:    string
+    // Shown instead of reportDataError when entrance/toilet is "unknown" (not
+    // "no") — see reportButtonMode in components/results/PlaceDebugSheet.tsx.
+    contributeDataInfo: string
   }
   impressum: {
     title:      string

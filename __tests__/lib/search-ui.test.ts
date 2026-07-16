@@ -28,28 +28,25 @@ describe("rerunTarget — finding F2 (Rerun must never resurrect a stale venue s
       amenityActive: true,
       amenitySearch: "parking",
       amenitySearchCenter: center,
-      chatMode: "nearby",
       lastQuery: "Restaurants in Berlin",
     })).toBe("amenity")
   })
 
-  it("does not target venue when amenity is active even though chatMode is nearby and lastQuery is set", () => {
+  it("does not target venue when amenity is active even though lastQuery is set", () => {
     const result = rerunTarget({
       amenityActive: true,
       amenitySearch: "toilet",
       amenitySearchCenter: center,
-      chatMode: "nearby",
       lastQuery: "Cafés in Hamburg",
     })
     expect(result).not.toBe("venue")
   })
 
-  it("targets venue when no amenity search is active", () => {
+  it("targets venue when no amenity search is active — regardless of chat mode (text or nearby): 'Filter anwenden' is the only way to re-run a search after a filter change since the old always-visible search button was removed, so it can't be restricted to nearby mode alone", () => {
     expect(rerunTarget({
       amenityActive: false,
       amenitySearch: null,
       amenitySearchCenter: undefined,
-      chatMode: "nearby",
       lastQuery: "Restaurants in Berlin",
     })).toBe("venue")
   })
@@ -59,17 +56,15 @@ describe("rerunTarget — finding F2 (Rerun must never resurrect a stale venue s
       amenityActive: true,
       amenitySearch: "parking",
       amenitySearchCenter: undefined,
-      chatMode: "nearby",
       lastQuery: undefined,
     })).toBe("none")
   })
 
-  it("targets none in text mode with no amenity search and no query", () => {
+  it("targets none with no amenity search and no query", () => {
     expect(rerunTarget({
       amenityActive: false,
       amenitySearch: null,
       amenitySearchCenter: undefined,
-      chatMode: "text",
       lastQuery: undefined,
     })).toBe("none")
   })
