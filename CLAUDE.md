@@ -290,6 +290,8 @@ The app targets **WCAG 2.2 AA** and is itself an accessibility product, so keep 
 
 `APP_VERSION` in `lib/config.ts` — bump on **every commit** (established convention; the commit message carries the version as a `(vX.Y)` suffix). Shown in the Impressum alongside `BUILD_DATE`, which is auto-injected by `next.config.ts` at build time (`new Date().toISOString().split("T")[0]` → `"YYYY-MM-DD"`). `BUILD_DATE` is a build-time env var — it is set automatically, never manually configured.
 
+`CHANGELOG.md` (repo root) — a table of user-facing **features** (date, name, description, size S/M/L/XL), newest first. Add a row whenever a genuinely new feature ships — not bugfixes, renames, or purely visual tweaks. Multiple commits building the same feature (e.g. multi-phase rollouts) collapse into one row dated at first introduction.
+
 ## Environment variables (server-side only)
 
 All optional unless noted; a source with a missing key is silently skipped.

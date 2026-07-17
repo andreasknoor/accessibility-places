@@ -1,5 +1,40 @@
 # Changelog
 
+Tabellarische Übersicht neu hinzugekommener **Funktionen** — keine Bugfixes, keine rein
+optischen Anpassungen, keine Umbenennungen. Mehrere Commits, die zur selben Funktion
+gehören (z. B. mehrstufige Ausbau-Phasen), zählen als eine Zeile mit dem Datum der
+Ersteinführung. Neueste Einträge oben; wird bei jeder neuen Funktion fortgeführt.
+
+| Datum | Funktion | Beschreibung | Umfang |
+|---|---|---|---|
+| 2026-07-16 | Hinweis bei möglicherweise nicht barrierefreien Orten | Neuer Warnhinweis + kontextabhängiger „Info ergänzen"-statt-„Melden"-Button, wenn Eingang/WC unbekannt oder negativ sind | M |
+| 2026-07-14 | „Navigation starten" | Ein-Klick-Wegweiser vom Ort zur bevorzugten Karten-App des Geräts (Google Maps, Apple Maps) | M |
+| 2026-07-13 | Freitext-Erkennung für Parkplatz/WC | Eingaben wie „Parkplatz in Köln" werden automatisch als Amenity-Suche statt als Kategoriesuche erkannt | S |
+| 2026-07-11 | 12 weitere Kategorien + Gruppen-Chips | Zweite Kategorien-Erweiterung mit zweistufiger Drill-in-Navigation (Oberkategorie → Unterkategorie) | M |
+| 2026-07-08 | Android App Links | Geteilte Ortslinks öffnen direkt in der App statt in einer Browser-Auswahl | M |
+| 2026-07-07 | Verlässlichkeits-Anzeige pro Kriterium | Zeigt für Eingang/WC/Parkplatz einzeln an, wie verlässlich die jeweilige Angabe ist (Detailansicht, Karte, Liste) | M |
+| 2026-07-06 | Android App Shortcuts | Long-Press aufs App-Icon öffnet Schnellzugriffe (z. B. direkt zur Umkreissuche) | S |
+| 2026-07-02 | Anonyme Nutzungsstatistik | Öffentliches Dashboard mit Top-Nutzer:innen, Streak-Zählung, nach Plattform filterbar | M |
+| 2026-07-02 | „Datenfehler melden" | Nutzer können über ein vorausgefülltes externes Formular fehlerhafte Daten zu einem Ort melden | M |
+| 2026-06-26 | Ortssensitives Einzel-Suchfeld | Löst die getrennten Modus-Tabs (Umkreis/Text) durch ein einziges intelligentes Suchfeld ab | L |
+| 2026-06-25 | WC/Parkplatz als eigene Schnellsuche | Aus der Hintergrund-Datenschicht wird ein sichtbarer, eigenständiger Suchmodus mit eigenen Chips | L |
+| 2026-06-20 | WCAG-Barrierefreiheits-Überarbeitung | Sechsstufiges Programm: Landmarks, Tastaturbedienung, Fokus-Fallen, Live-Regions, Kontrast-Check, automatisierte Tests | XL |
+| 2026-06-17 | iOS Quick Actions & Universal Links | Long-Press-Menü aufs App-Icon, geteilte Links öffnen direkt in der App statt im Browser | M |
+| 2026-06-17 | Natives Teilen & Haptik | Systemeigenes Share-Sheet und Vibrationsfeedback statt Web-Fallback | S |
+| 2026-06-16 | Native iOS-App | Capacitor-Shell fürs iPhone, gleiche Codebasis wie Android | L |
+| 2026-06-16 | Internationaler Suchmodus | Opt-in-Erweiterung über DACH hinaus (FR, GB, NL, ES, IT, US), inkl. neuer Datenquelle AccèsLibre für Frankreich | L |
+| 2026-06-14 | Standort-Button „Hier suchen" | GPS-Positionierung auf der Karte mit direkter Möglichkeit, den sichtbaren Ausschnitt zu durchsuchen | M |
+| 2026-06-13 | 12 neue Alltagskategorien (Tranche 1) | Ärzte, Apotheken, Supermärkte, Bäckereien u. a. als durchsuchbare Kategorien | M |
+| 2026-06-12 | Vereinheitlichtes Ort-/Namens-Suchfeld | Ein Suchfeld statt getrennter Felder, gruppierte Vorschläge (Orte vs. konkrete Venues) | M |
+| 2026-06-06 | WC-/Parkplatz-Datenpipeline | Grundlage für eine eigene Suche nach barrierefreien Toiletten/Parkplätzen (Backend + erste Kartenanzeige) | L |
+| 2026-06-06 | Easter Eggs | Verstecktes Rollstuhlrennen, Schütteln-zum-Mischen, Dev-Konsole per Tastenkombination | S |
+| 2026-06-02/04 | Native Android-App | Erst als TWA, dann als Capacitor-Shell — App lädt die Live-Website nativ, inkl. GPS-Zugriff | L |
+| 2026-05-31 | Schwache Parkplatz-Stufe | Zweite Anzeige-Kategorie für rollstuhlgerechte (aber nicht reservierte) Parkplätze auf der Karte | M |
+
+---
+
+## Archiv (älteres Format, bis v9.0)
+
 ## v9.0 — Unified Search & Amenity-Chips (2026-06-28)
 
 Major release: Einheitliches Suchfeld, Parkplatz- und WC-Suche als Chips, überarbeitete Karten-Popups, WCAG AA.
