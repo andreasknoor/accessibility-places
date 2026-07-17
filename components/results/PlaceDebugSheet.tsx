@@ -586,7 +586,7 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
                 )}
               </div>
             )}
-            {placeMayNotBeAccessible(place) && <NotAccessibleWarningBox className="ml-6" />}
+            {placeMayNotBeAccessible(place) && <NotAccessibleWarningBox />}
             {acceslibreCommentaire && (
               <InfoRow icon={MessageSquare} label={ti.description}>
                 <span className="italic">{acceslibreCommentaire}</span>

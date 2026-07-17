@@ -1,33 +1,43 @@
 # Accessible Places
 
-> A free web app that helps people with wheelchairs or limited mobility find accessible venues in Germany, Austria and Switzerland (DACH region).
+> A free web app that helps people with wheelchairs or limited mobility find accessible venues — restaurants, cafés, hotels, doctors, pharmacies, shops, and more — across Germany, Austria and Switzerland, with an opt-in mode to search additional countries.
 
 ## About
 
-Accessible Places aggregates wheelchair accessibility data from multiple open data sources, deduplicates and merges records, assigns a per-criterion confidence score, and presents results on an interactive map and list view.
+Accessible Places aggregates wheelchair accessibility data from five independent open data sources, deduplicates and merges matching records into a single canonical place, and computes a per-criterion (entrance, toilet, parking, seating) confidence score weighted by source reliability. Results appear on an interactive map and a sortable list, each showing which sources agree or disagree.
 
-The app is a private, non-commercial hobby project by Andreas Knoor.
+Besides ordinary category search, the app supports: searching near the user's current location, searching for a specific named venue, and a dedicated search mode for nearby disabled parking spaces and wheelchair-accessible public toilets (independent of any venue).
+
+The app is a free, non-commercial hobby project by Andreas Knoor. It is available as a web app / installable Progressive Web App, and as native iOS and Android apps.
 
 ## Supported countries
 
-Germany (Deutschland), Austria (Österreich), Switzerland (Schweiz)
+- Always available: Germany (Deutschland), Austria (Österreich), Switzerland (Schweiz) — the "DACH" region.
+- Opt-in "international mode": additionally France, United Kingdom, Netherlands, Spain, Italy, United States. Data density outside DACH varies and is generally lower away from major cities.
 
 ## Supported categories
 
-Restaurants, cafés, hotels, beer gardens, pubs, museums, theatres, cinemas, ice cream shops
+39 categories, including: cafés & ice cream, restaurants, bars, pubs, beer gardens, fast food, hotels, hostels, apartments, campsites, museums, theatres, cinemas, libraries, galleries, attractions, zoos, swimming pools, fitness centres, playgrounds, parks, pharmacies, doctors, dentists, veterinarians, hospitals, physiotherapists, chemists, supermarkets, bakeries, hairdressers, banks, post offices, medical supply stores, hearing aid stores, opticians, town halls, places of worship, and railway stations.
+
+Two further, separate search modes cover disabled parking spaces and wheelchair-accessible public toilets, searchable on their own without picking a venue category.
 
 ## Data sources
 
 - OpenStreetMap (OSM) — community-maintained open map data
-- accessibility.cloud — aggregated accessibility data from ~170 datasets
-- Wheelmap.org — crowd-sourced wheelchair accessibility ratings
+- Ginto — accessibility data with a Swiss focus, some coverage across DACH
+- accessibility.cloud — aggregated accessibility data from roughly 170 datasets
+- AccèsLibre — French government accessibility database (used for France searches in international mode)
+- Google Places — supplementary coverage; only enabled by default in international mode
 
 ## Languages
 
-German (Deutsch), English
+German (Deutsch, default), English
 
 ## Key pages
 
 - /: Main search interface
+- /[city]/[category]: SEO landing pages for accessible venues by city and category (32 DACH cities × 10 categories: cafés, restaurants, bars, pubs, beer gardens, hotels, museums, theatres, cinemas, attractions), also available under /en/[city]/[category]
 - /faq: Frequently asked questions (DE + EN)
-- /impressum: Legal notice / Impressum
+- /ueber-uns (English: /en/about): About the app
+- /datenschutz (English: /en/privacy): Privacy policy
+- /impressum (English: /en/legal-notice): Legal notice / Impressum
