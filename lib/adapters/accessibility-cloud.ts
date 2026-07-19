@@ -134,6 +134,7 @@ function mapCategory(props: any): Category | undefined {
   if (cat.includes("gallery") || cat.includes("galerie"))                         return "gallery"
   if (cat.includes("attraction") || cat.includes("theme_park"))                       return "attraction"
   if (cat.includes("pharmacy") || cat.includes("apotheke"))                           return "pharmacy"
+  if (cat.includes("rehabilitation") || cat.includes("reha"))                         return "rehabilitation"
   if (cat.includes("doctor") || cat.includes("arztpraxis") || cat.includes("clinic") || cat.includes("praxis")) return "doctors"
   if (cat.includes("dentist") || cat.includes("zahnarzt"))                            return "dentist"
   if (cat.includes("veterinary") || cat.includes("tierarzt") || cat.includes("vet")) return "veterinary"
@@ -161,6 +162,17 @@ function mapCategory(props: any): Category | undefined {
   if (cat.includes("townhall") || cat.includes("town_hall") || cat.includes("rathaus")) return "townhall"
   if (cat.includes("place_of_worship") || cat.includes("kirche") || cat.includes("church")) return "place_of_worship"
   if (cat.includes("railway_station") || cat.includes("train_station") || cat.includes("bahnhof")) return "railway_station"
+  if (cat.includes("fuel") || cat.includes("gas_station") || cat.includes("tankstelle")) return "fuel"
+  if (cat.includes("shoes") || cat.includes("shoe_store") || cat.includes("schuhgeschäft")) return "shoes"
+  if (cat.includes("clothes") || cat.includes("clothing_store") || cat.includes("bekleidung")) return "clothes"
+  if (cat.includes("convenience"))                                                   return "convenience"
+  if (cat.includes("bicycle") || cat.includes("fahrrad"))                             return "bicycle"
+  if (cat.includes("furniture") || cat.includes("möbel"))                             return "furniture"
+  if (cat.includes("butcher") || cat.includes("metzgerei") || cat.includes("fleischerei")) return "butcher"
+  if (cat.includes("florist") || cat.includes("blumen"))                              return "florist"
+  if (cat.includes("laundry") || cat.includes("waschsalon"))                          return "laundry"
+  if (cat.includes("books") || cat.includes("book_store") || cat.includes("buchhandlung")) return "books"
+  if (cat.includes("sports_centre") || cat.includes("sports_complex") || cat.includes("sporthalle")) return "sports_centre"
   return undefined
 }
 

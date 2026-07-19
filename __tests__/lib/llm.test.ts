@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest"
-import { extractLocationFallback, extractQuotedName, inferAmenityType, inferCategories, parseQuery } from "@/lib/llm"
+import { ALL_CATEGORIES, extractLocationFallback, extractQuotedName, inferAmenityType, inferCategories, parseQuery } from "@/lib/llm"
 
 // ─── extractLocationFallback ──────────────────────────────────────────────────
 
@@ -228,13 +228,13 @@ describe("parseQuery", () => {
 
   it("'in <city>' (no category part) returns all categories", () => {
     const r = parseQuery("in Berlin")
-    expect(r.categories.length).toBe(39)
+    expect(r.categories.length).toBe(ALL_CATEGORIES.length)
     expect(r.locationQuery).toBe("Berlin")
   })
 
   it("does not infer categories from the location part: city 'Essen' is not a restaurant hint", () => {
     const r = parseQuery("in Essen")
-    expect(r.categories.length).toBe(39)
+    expect(r.categories.length).toBe(ALL_CATEGORIES.length)
     expect(r.locationQuery).toBe("Essen")
   })
 
@@ -247,7 +247,7 @@ describe("parseQuery", () => {
   it("plain city name without 'in' geocodes as location", () => {
     const r = parseQuery("Berlin")
     expect(r.locationQuery).toBe("Berlin")
-    expect(r.categories.length).toBe(39)
+    expect(r.categories.length).toBe(ALL_CATEGORIES.length)
   })
 
   it("free text with category term and 'in' scopes correctly ('Sushi in Hamburg')", () => {
@@ -336,7 +336,7 @@ describe("inferAmenityType", () => {
 // of bugs lives.
 
 describe("parseQuery — client query shapes", () => {
-  const ALL = 39 // all-categories fallback size
+  const ALL = ALL_CATEGORIES.length // all-categories fallback size
 
   it.each([
     // [query, expected locationQuery, expected categories ("all" = fallback)]
@@ -388,7 +388,6 @@ describe("parseQuery — client query shapes", () => {
 
 import de from "@/lib/i18n/de"
 import en from "@/lib/i18n/en"
-import { ALL_CATEGORIES } from "@/lib/llm"
 import type { Category } from "@/lib/types"
 
 describe("category chip labels self-classify", () => {

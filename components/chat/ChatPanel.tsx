@@ -110,22 +110,26 @@ interface ChipGroup {
 
 // Exported for a completeness test only (every Category must appear in
 // exactly one group) — not part of the component's runtime public API.
+// Within each group, `cats` is sorted alphabetically by the German chip label
+// (the app's default locale) — not by OSM tag, key name, or add-order. Keep
+// this sorted when adding a category to a group.
 export const CHIP_GROUPS: ChipGroup[] = [
   { id: "gastro",  icon: "🍽", de: "Gastronomie",            en: "Food & Drink",
-    cats: ["restaurant", "cafe", "bar", "pub", "biergarten", "fast_food"] },
+    cats: ["bar", "biergarten", "cafe", "fast_food", "pub", "restaurant"] },
   { id: "stay",    icon: "🏨", de: "Unterkunft",             en: "Accommodation",
-    cats: ["hotel", "hostel", "apartment", "camp_site"] },
+    cats: ["camp_site", "apartment", "hostel", "hotel"] },
   { id: "culture", icon: "🎭", de: "Kultur",                 en: "Culture",
-    cats: ["museum", "theater", "cinema", "library", "gallery", "attraction", "zoo"] },
+    cats: ["library", "books", "gallery", "cinema", "museum", "attraction", "theater", "zoo"] },
   { id: "sport",   icon: "🤸", de: "Sport & Freizeit",       en: "Sport & Leisure",
-    cats: ["swimming_pool", "fitness_centre", "playground", "park"] },
+    cats: ["fitness_centre", "park", "swimming_pool", "playground", "sports_centre"] },
   { id: "health",  icon: "🩺", de: "Gesundheit",             en: "Health",
-    cats: ["pharmacy", "doctors", "dentist", "veterinary", "hospital", "chemist",
-           "physiotherapist", "medical_supply", "hearing_aids", "optician"] },
+    cats: ["pharmacy", "doctors", "chemist", "hearing_aids", "hospital", "optician",
+           "physiotherapist", "rehabilitation", "medical_supply", "veterinary", "dentist"] },
   { id: "daily",   icon: "🛒", de: "Alltag",                 en: "Everyday",
-    cats: ["supermarket", "bakery", "hairdresser", "bank", "post_office"] },
+    cats: ["bakery", "bank", "clothes", "florist", "bicycle", "hairdresser",
+           "convenience", "butcher", "furniture", "post_office", "shoes", "supermarket", "laundry"] },
   { id: "public",  icon: "🏛", de: "Öffentlich & Unterwegs", en: "Public & Transit",
-    cats: ["townhall", "place_of_worship", "railway_station"] },
+    cats: ["railway_station", "place_of_worship", "townhall", "fuel"] },
 ]
 
 // Flat, ordered list of every category chip across all groups — selectedIdx

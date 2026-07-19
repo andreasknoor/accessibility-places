@@ -18,13 +18,14 @@ export type SourceId =
 export type Category =
   | "cafe" | "restaurant" | "bar" | "pub" | "biergarten" | "fast_food"
   | "hotel" | "hostel" | "apartment" | "camp_site"
-  | "museum" | "theater" | "cinema" | "library" | "gallery" | "attraction"
-  | "pharmacy" | "doctors" | "dentist" | "veterinary" | "hospital"
+  | "museum" | "theater" | "cinema" | "library" | "gallery" | "attraction" | "books"
+  | "pharmacy" | "doctors" | "dentist" | "veterinary" | "hospital" | "rehabilitation"
   | "chemist" | "supermarket" | "bakery" | "hairdresser"
   | "bank" | "post_office" | "zoo"
-  | "swimming_pool" | "fitness_centre" | "playground" | "park"
+  | "swimming_pool" | "fitness_centre" | "playground" | "park" | "sports_centre"
   | "physiotherapist" | "medical_supply" | "hearing_aids" | "optician"
-  | "townhall" | "place_of_worship" | "railway_station"
+  | "townhall" | "place_of_worship" | "railway_station" | "fuel"
+  | "shoes" | "clothes" | "convenience" | "bicycle" | "furniture" | "butcher" | "florist" | "laundry"
 
 // ─── Sub-attributes per criterion ──────────────────────────────────────────
 

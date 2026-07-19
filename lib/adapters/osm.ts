@@ -136,7 +136,7 @@ export function buildOverpassQuery(params: SearchParams): string {
   // fully close the gap at Berlin-density for a single popular category
   // (2224 > 2000), but raising further risks the 20s client-side abort —
   // out 5000 took ~14s for this one category alone in testing, and the
-  // all-categories query (39 unioned category tags in one request) is already
+  // all-categories query (51 unioned category tags in one request) is already
   // materially slower than a single-category query at the same radius.
   return `[out:json][timeout:12];(${clauses.join("")});out 2000 center tags;`
 }
@@ -213,6 +213,18 @@ function osmCategory(tags: Record<string, string>): Category {
   if (amenity === "townhall")                                          return "townhall"
   if (amenity === "place_of_worship")                                  return "place_of_worship"
   if (["station","halt"].includes(railway))                            return "railway_station"
+  if (amenity === "fuel")                                              return "fuel"
+  if (shop === "shoes")                                                return "shoes"
+  if (shop === "clothes")                                              return "clothes"
+  if (shop === "convenience")                                          return "convenience"
+  if (shop === "bicycle")                                              return "bicycle"
+  if (shop === "furniture")                                            return "furniture"
+  if (shop === "butcher")                                              return "butcher"
+  if (shop === "florist")                                              return "florist"
+  if (shop === "laundry")                                              return "laundry"
+  if (shop === "books")                                                return "books"
+  if (healthcare === "rehabilitation")                                 return "rehabilitation"
+  if (leisure === "sports_centre")                                     return "sports_centre"
   return "attraction"
 }
 

@@ -17,7 +17,7 @@ The app is a free, non-commercial hobby project by Andreas Knoor. It is availabl
 
 ## Supported categories
 
-39 categories, including: cafés & ice cream, restaurants, bars, pubs, beer gardens, fast food, hotels, hostels, apartments, campsites, museums, theatres, cinemas, libraries, galleries, attractions, zoos, swimming pools, fitness centres, playgrounds, parks, pharmacies, doctors, dentists, veterinarians, hospitals, physiotherapists, chemists, supermarkets, bakeries, hairdressers, banks, post offices, medical supply stores, hearing aid stores, opticians, town halls, places of worship, and railway stations.
+51 categories, including: cafés & ice cream, restaurants, bars, pubs, beer gardens, fast food, hotels, hostels, apartments, campsites, museums, theatres, cinemas, libraries, galleries, attractions, zoos, bookshops, swimming pools, fitness centres, playgrounds, parks, sports centres, pharmacies, doctors, dentists, veterinarians, hospitals, physiotherapists, chemists, rehabilitation centers, supermarkets, bakeries, hairdressers, banks, post offices, shoe shops, clothing stores, convenience stores, bicycle shops, furniture stores, butchers, florists, laundromats, medical supply stores, hearing aid stores, opticians, town halls, places of worship, railway stations, and petrol stations.
 
 Two further, separate search modes cover disabled parking spaces and wheelchair-accessible public toilets, searchable on their own without picking a venue category.
 

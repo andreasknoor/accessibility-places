@@ -53,22 +53,23 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
 }
 
 // Every category the default-chip picker (SettingsSheet, a plain <select>) can
-// offer, in a fixed display order (legacy-12 first for continuity, then the
-// remaining categories grouped loosely by theme). Label text prefers the
+// offer, in the same group order and within-group alphabetical (by German
+// label) order as ChatPanel's CHIP_GROUPS — kept identical so the two
+// pickers show a consistent, predictable sequence. Label text prefers the
 // chip-specific `chipLabels` override (the legacy dozen's short/plural
 // phrasing) and falls back to the singular `categories` badge text — same
 // precedence as ChatPanel's drill-in chips. The default-chip picker stores
 // `cat`, never a positional index, so this list can be reordered freely.
 const SETTING_CHIP_ORDER: Category[] = [
-  "restaurant", "cafe", "hotel", "biergarten", "pub", "museum", "theater",
-  "cinema", "bar", "attraction", "pharmacy", "doctors",
-  "fast_food", "hostel", "apartment", "camp_site",
-  "library", "gallery", "zoo",
-  "dentist", "veterinary", "hospital", "chemist",
-  "physiotherapist", "medical_supply", "hearing_aids", "optician",
-  "supermarket", "bakery", "hairdresser", "bank", "post_office",
-  "swimming_pool", "fitness_centre", "playground", "park",
-  "townhall", "place_of_worship", "railway_station",
+  "bar", "biergarten", "cafe", "fast_food", "pub", "restaurant",
+  "camp_site", "apartment", "hostel", "hotel",
+  "library", "books", "gallery", "cinema", "museum", "attraction", "theater", "zoo",
+  "fitness_centre", "park", "swimming_pool", "playground", "sports_centre",
+  "pharmacy", "doctors", "chemist", "hearing_aids", "hospital", "optician",
+  "physiotherapist", "rehabilitation", "medical_supply", "veterinary", "dentist",
+  "bakery", "bank", "clothes", "florist", "bicycle", "hairdresser",
+  "convenience", "butcher", "furniture", "post_office", "shoes", "supermarket", "laundry",
+  "railway_station", "place_of_worship", "townhall", "fuel",
 ]
 
 export const SETTING_CHIPS: { cat: Category; icon: string; de: string; en: string }[] =

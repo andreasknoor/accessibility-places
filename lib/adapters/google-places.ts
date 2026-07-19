@@ -68,6 +68,18 @@ const CATEGORY_QUERY: Record<Category, { de: string; en: string }> = {
   townhall:          { de: "Rathaus",         en: "town hall" },
   place_of_worship:  { de: "Gotteshaus",      en: "place of worship" },
   railway_station:   { de: "Bahnhof",         en: "train station" },
+  fuel:            { de: "Tankstelle",         en: "gas station" },
+  shoes:           { de: "Schuhgeschäft",      en: "shoe store" },
+  clothes:         { de: "Bekleidungsgeschäft", en: "clothing store" },
+  convenience:     { de: "Kiosk",              en: "convenience store" },
+  bicycle:         { de: "Fahrradladen",       en: "bicycle shop" },
+  furniture:       { de: "Möbelgeschäft",      en: "furniture store" },
+  butcher:         { de: "Metzgerei",          en: "butcher shop" },
+  florist:         { de: "Blumenladen",        en: "florist" },
+  laundry:         { de: "Waschsalon",         en: "laundromat" },
+  books:           { de: "Buchhandlung",       en: "bookshop" },
+  rehabilitation:  { de: "Reha-Zentrum",       en: "rehabilitation center" },
+  sports_centre:   { de: "Sporthalle",         en: "sports centre" },
 }
 
 const CATEGORY_TYPES: Record<Category, string[]> = {
@@ -120,6 +132,22 @@ const CATEGORY_TYPES: Record<Category, string[]> = {
   playground:      ["playground"],
   optician:        ["optician"],
   medical_supply:  ["medical_supply"],
+  // Verified against the current Places API (New) Table A list (2026-07-19).
+  fuel:        ["gas_station"],
+  shoes:       ["shoe_store"],
+  clothes:     ["clothing_store"],
+  convenience: ["convenience_store"],
+  bicycle:     ["bicycle_store"],
+  furniture:   ["furniture_store"],
+  butcher:     ["butcher_shop"],
+  florist:     ["florist"],
+  laundry:     ["laundry"],
+  books:       ["book_store"],
+  sports_centre: ["sports_complex"],
+  // No dedicated Table A type for rehabilitation centers — reuses the closest
+  // real type (physiotherapist) as a best-effort guess, same treatment as the
+  // three entries above. Revisit if this under-returns in practice.
+  rehabilitation: ["physiotherapist"],
 }
 
 // ─── Boolean option → A11yValue ────────────────────────────────────────────

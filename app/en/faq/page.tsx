@@ -61,16 +61,16 @@ const FAQ_CATEGORIES_EN: FaqCategory[] = [
         a: (
           <>
             <p>
-              With the &ldquo;All&rdquo; chip, Accessible Places searches the following 39 place categories at once, grouped into the same 7 groups you see when you open a category chip:
+              With the &ldquo;All&rdquo; chip, Accessible Places searches the following 51 place categories at once, grouped into the same 7 groups you see when you open a category chip:
             </p>
             <p className="mt-2">
-              <strong className="font-semibold text-foreground">Food &amp; drink:</strong> Restaurant, Café &amp; Ice Cream, Bar, Pub, Beer Garden, Fast Food ·{" "}
-              <strong className="font-semibold text-foreground">Accommodation:</strong> Hotel, Hostel, Apartment, Campsite ·{" "}
-              <strong className="font-semibold text-foreground">Culture:</strong> Museum, Theater, Cinema, Library, Gallery, Attraction, Zoo/Aquarium ·{" "}
-              <strong className="font-semibold text-foreground">Sport &amp; leisure:</strong> Swimming Pool, Fitness Center, Playground, Park ·{" "}
-              <strong className="font-semibold text-foreground">Health:</strong> Pharmacy, Doctor&apos;s Office, Dentist, Veterinarian, Hospital, Drugstore, Physiotherapy, Medical Supply Store, Hearing Aids, Optician ·{" "}
-              <strong className="font-semibold text-foreground">Everyday:</strong> Supermarket, Bakery, Hairdresser, Bank, Post Office ·{" "}
-              <strong className="font-semibold text-foreground">Public &amp; transit:</strong> Town Hall, Place of Worship, Train Station
+              <strong className="font-semibold text-foreground">Food &amp; drink:</strong> Bar, Beer Garden, Café &amp; Ice Cream, Fast Food, Pub, Restaurant ·{" "}
+              <strong className="font-semibold text-foreground">Accommodation:</strong> Campsite, Apartment, Hostel, Hotel ·{" "}
+              <strong className="font-semibold text-foreground">Culture:</strong> Library, Bookshop, Gallery, Cinema, Museum, Attraction, Theater, Zoo/Aquarium ·{" "}
+              <strong className="font-semibold text-foreground">Sport &amp; leisure:</strong> Fitness Center, Park, Swimming Pool, Playground, Sports Centre ·{" "}
+              <strong className="font-semibold text-foreground">Health:</strong> Pharmacy, Doctor&apos;s Office, Drugstore, Hearing Aids, Hospital, Optician, Physiotherapy, Rehabilitation Center, Medical Supply Store, Veterinarian, Dentist ·{" "}
+              <strong className="font-semibold text-foreground">Everyday:</strong> Bakery, Bank, Clothing Store, Florist, Bicycle Shop, Hairdresser, Convenience Store, Butcher, Furniture Store, Post Office, Shoe Shop, Supermarket, Laundromat ·{" "}
+              <strong className="font-semibold text-foreground">Public &amp; transit:</strong> Train Station, Place of Worship, Town Hall, Petrol Station
             </p>
             <p className="mt-2">
               The visible category chips are just a selection of the most popular categories — &ldquo;All&rdquo; goes beyond them. Not included are the quick-search chips 🅿 Parking and 🚻 Toilets: they start a separate search for parking spots or toilets and are not place categories.
@@ -78,7 +78,7 @@ const FAQ_CATEGORIES_EN: FaqCategory[] = [
           </>
         ),
         schemaText:
-          "With the “All” chip, Accessible Places searches the following 39 place categories at once, grouped into 7 groups: food & drink (restaurant, café & ice cream, bar, pub, beer garden, fast food), accommodation (hotel, hostel, apartment, campsite), culture (museum, theater, cinema, library, gallery, attraction, zoo/aquarium), sport & leisure (swimming pool, fitness center, playground, park), health (pharmacy, doctor's office, dentist, veterinarian, hospital, drugstore, physiotherapy, medical supply store, hearing aids, optician), everyday (supermarket, bakery, hairdresser, bank, post office) and public & transit (town hall, place of worship, train station). The visible category chips are just a selection of the most popular categories — “All” goes beyond them. Not included are the quick-search chips 🅿 Parking and 🚻 Toilets: they start a separate search for parking spots or toilets and are not place categories.",
+          "With the “All” chip, Accessible Places searches the following 51 place categories at once, grouped into 7 groups: food & drink (bar, beer garden, café & ice cream, fast food, pub, restaurant), accommodation (campsite, apartment, hostel, hotel), culture (library, bookshop, gallery, cinema, museum, attraction, theater, zoo/aquarium), sport & leisure (fitness center, park, swimming pool, playground, sports centre), health (pharmacy, doctor's office, drugstore, hearing aids, hospital, optician, physiotherapy, rehabilitation center, medical supply store, veterinarian, dentist), everyday (bakery, bank, clothing store, florist, bicycle shop, hairdresser, convenience store, butcher, furniture store, post office, shoe shop, supermarket, laundromat) and public & transit (train station, place of worship, town hall, petrol station). The visible category chips are just a selection of the most popular categories — “All” goes beyond them. Not included are the quick-search chips 🅿 Parking and 🚻 Toilets: they start a separate search for parking spots or toilets and are not place categories.",
       },
       {
         id: "international-search",

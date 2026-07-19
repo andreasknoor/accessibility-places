@@ -347,6 +347,18 @@ export interface Translations {
     townhall:          string
     place_of_worship:  string
     railway_station:   string
+    fuel:              string
+    shoes:             string
+    clothes:           string
+    convenience:       string
+    bicycle:           string
+    furniture:         string
+    butcher:           string
+    florist:           string
+    laundry:           string
+    books:             string
+    rehabilitation:    string
+    sports_centre:     string
   }
   // Chip-specific short/plural phrasing for the legacy chip set (the original
   // 12 pre-drill-in chips) — distinct from `categories` above, which is
