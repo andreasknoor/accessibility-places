@@ -1007,6 +1007,17 @@ export default function MapView({
       }
     }
 
+    // markercluster only resets its internal grid/cluster-tree state (_topClusterLevel,
+    // _gridClusters, _gridUnclustered) inside clearLayers() — removing every layer one by
+    // one via removeLayer() above (e.g. a fresh search whose results share no place IDs
+    // with the previous one) leaves that state stale. The next addLayer() then walks a
+    // broken __parent chain and throws "Cannot read properties of undefined (reading
+    // '_zoom')". clearLayers() on an already-empty group is a harmless no-op, so this is
+    // safe to call unconditionally whenever the group is empty.
+    if (markers.current.size === 0) {
+      placeClusterRef.current.clearLayers()
+    }
+
     // Add / update markers
     for (const place of places) {
       const isSelected = place.id === selectedId

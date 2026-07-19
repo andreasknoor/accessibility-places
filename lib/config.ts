@@ -2,7 +2,7 @@ import type { SourceId, Category } from "./types"
 
 // User-visible app version, shown in the header next to the subtitle.
 // Bump on every meaningful release.
-export const APP_VERSION = "10.16"
+export const APP_VERSION = "10.17"
 
 // Tally form IDs for the per-place "report data error" flow (PlaceDebugSheet).
 // Empty string = feature hidden. Fill in after creating the DE/EN forms in
@@ -251,4 +251,16 @@ export const CATEGORY_OSM_TAGS: Record<Category, {
   townhall:          { amenity: ["townhall"] },
   place_of_worship:  { amenity: ["place_of_worship"] },
   railway_station:   { railway: ["station", "halt"] },
+  fuel:              { amenity: ["fuel"] },
+  shoes:             { shop: ["shoes"] },
+  clothes:           { shop: ["clothes"] },
+  convenience:       { shop: ["convenience"] },
+  bicycle:           { shop: ["bicycle"] },
+  furniture:         { shop: ["furniture"] },
+  butcher:           { shop: ["butcher"] },
+  florist:           { shop: ["florist"] },
+  laundry:           { shop: ["laundry"] },
+  books:             { shop: ["books"] },
+  rehabilitation:    { healthcare: ["rehabilitation"] },
+  sports_centre:     { leisure: ["sports_centre"] },
 }
