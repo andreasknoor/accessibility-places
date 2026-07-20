@@ -819,23 +819,44 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Auto-trigger search when arriving via a place deep-link (selectLat/selectLon without a
-  // city query). nameHint = place name bypasses passesFilters server-side, so the linked place
-  // always appears regardless of its accessibility values or the receiver's filter settings.
-  useEffect(() => {
-    if (initialCity || !initialSelectLat || !initialSelectLon || autoSearchFiredRef.current) return
-    autoSearchFiredRef.current = true
-    const query = initialCategory
-      ? initialCategory.replace(/_/g, " ")
-      : (initialSelectName ?? "orte")
+  // Runs a place deep-link (selectLat/selectLon, optional selectName/cat). nameHint =
+  // place name bypasses passesFilters server-side, so the linked place always appears
+  // regardless of its accessibility values or the receiver's filter settings. Callers
+  // are responsible for their own dedup (this is deliberately NOT gated by
+  // autoSearchFiredRef — unlike the one-shot mount effects, this can legitimately run
+  // more than once per app session: a warm app can receive a second, different deep
+  // link later, and that tap must still search, not be silently swallowed by a
+  // permanent "already fired" flag left over from the first one). Two entry points:
+  // the mount-time effect below (props from page.tsx, the only route that ever
+  // populates them on Android/web) and the native appUrlOpen/getLaunchUrl bridge below
+  // (iOS: the remote-URL WebView never navigates to the incoming link itself, so props
+  // are never populated there — this is the only path, for both cold AND warm taps).
+  const runPlaceDeepLink = useCallback((lat: number, lon: number, name: string | undefined, cat: string | undefined) => {
+    selectTarget.current    = { lat, lon }
+    hasAutoSelected.current = false
+    // Matches isPlaceDeepLink's initial chatMode ("text", never the nearby default) —
+    // necessary here too since this can run well after that initial-state computation,
+    // on an already-mounted app whose chatMode may currently be "nearby".
+    setChatMode("text")
+    setIsFirstVisit(false)
+    const query = cat ? cat.replace(/_/g, " ") : (name ?? "orte")
     handleSearch(
       query,
       undefined,
-      { lat: initialSelectLat, lon: initialSelectLon },
-      initialSelectName,
+      { lat, lon },
+      name,
       undefined,
       { osm: true, accessibility_cloud: true, reisen_fuer_alle: true, ginto: true, acceslibre: true, google_places: true },
     )
+  }, [handleSearch])
+
+  // Auto-trigger search when arriving via a place deep-link through page.tsx's own
+  // searchParams (Android App Links navigate the WebView directly, so these props are
+  // populated there; iOS never populates them — see runPlaceDeepLink above).
+  useEffect(() => {
+    if (initialCity || !initialSelectLat || !initialSelectLon || autoSearchFiredRef.current) return
+    autoSearchFiredRef.current = true
+    runPlaceDeepLink(initialSelectLat, initialSelectLon, initialSelectName, initialCategory)
   // Only run once on mount — URL params are stable
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -1137,9 +1158,17 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   //     GPS is available. `quickActionActiveRef` keeps handleSearch from wiping
   //     the focus while the launch is in flight.
   //  2. Universal Links — since the shell loads a remote URL, an incoming
-  //     place-detail link (…?selectLat=…) does NOT auto-navigate the WebView;
-  //     appUrlOpen fires instead, so we navigate to the link and let page.tsx
-  //     re-read the query params (which trigger the existing deep-link effect).
+  //     place-detail link (…?selectLat=…) does NOT auto-navigate the WebView, so
+  //     page.tsx's searchParams never see it on iOS. Previously this reloaded the
+  //     WebView (`window.location.href = u.href`) to force page.tsx to re-read the
+  //     params — reliable right after cold-launch (getLaunchUrl, JS boot still in
+  //     progress) but silently a no-op on a warm relaunch (appUrlOpen firing into an
+  //     already-interactive WebView/service-worker session): tapping a place link
+  //     while the app was already open just foregrounded it with the previous
+  //     results still showing (issue: deep link opens but doesn't search). Parsing
+  //     the URL and driving runPlaceDeepLink directly — the same call the mount
+  //     effect above makes from page.tsx's props — sidesteps the reload path
+  //     entirely, so cold and warm now go through identical, reload-independent code.
   useEffect(() => {
     let cancelled = false
 
@@ -1157,17 +1186,23 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
     checkAction()
 
-    // Navigate the WebView to an incoming place-detail deep link so page.tsx
-    // re-reads selectLat/selectLon/selectName. Only links carrying selectLat are
-    // place-detail links (matches the AASA scope); everything else is ignored.
+    // Only links carrying selectLat are place-detail links (matches the AASA scope);
+    // everything else is ignored. `lastUrl` dedups getLaunchUrl vs. an early appUrlOpen
+    // both delivering the SAME cold-launch event — but deliberately does NOT block a
+    // later, different deep-link tap in the same (warm) app session.
+    let lastUrl: string | null = null
     function maybeFollowDeepLink(url: string) {
+      if (url === lastUrl) return
+      lastUrl = url
       try {
         const u = new URL(url)
-        if (!u.searchParams.has("selectLat")) return
-        const target = u.pathname + u.search
-        if (target !== window.location.pathname + window.location.search) {
-          window.location.href = u.href // full reload → page.tsx re-reads params
-        }
+        const latRaw = u.searchParams.get("selectLat")
+        const lonRaw = u.searchParams.get("selectLon")
+        if (latRaw == null || lonRaw == null) return
+        const lat = parseFloat(latRaw)
+        const lon = parseFloat(lonRaw)
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) return
+        runPlaceDeepLink(lat, lon, u.searchParams.get("selectName") ?? undefined, u.searchParams.get("cat") ?? undefined)
       } catch { /* malformed URL — ignore */ }
     }
 
