@@ -61,15 +61,16 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
         a: (
           <>
             <p>
-              Mit dem Chip &bdquo;Alle&ldquo; durchsucht Accessible Places folgende 51 Orts-Kategorien gleichzeitig, unterteilt in 7 Gruppen (dieselben, die auch beim Aufklappen eines Kategorie-Chips erscheinen):
+              Mit dem Chip &bdquo;Alle&ldquo; durchsucht Accessible Places folgende 51 Orts-Kategorien gleichzeitig, unterteilt in 8 Gruppen (dieselben, die auch beim Aufklappen eines Kategorie-Chips erscheinen):
             </p>
             <p className="mt-2">
               <strong className="font-semibold text-foreground">Gastronomie:</strong> Bar, Biergarten, Café &amp; Eis, Imbiss/Fast Food, Kneipe/Pub, Restaurant ·{" "}
               <strong className="font-semibold text-foreground">Unterkunft:</strong> Campingplatz, Ferienwohnung, Hostel, Hotel ·{" "}
-              <strong className="font-semibold text-foreground">Kultur:</strong> Bibliothek, Buchhandlung, Galerie, Kino, Museum, Sehenswürdigkeit, Theater, Zoo/Tierpark ·{" "}
+              <strong className="font-semibold text-foreground">Kultur:</strong> Bibliothek, Galerie, Kino, Museum, Sehenswürdigkeit, Theater, Zoo/Tierpark ·{" "}
               <strong className="font-semibold text-foreground">Sport &amp; Freizeit:</strong> Fitnessstudio, Park, Schwimmbad, Spielplatz, Sporthalle ·{" "}
-              <strong className="font-semibold text-foreground">Gesundheit:</strong> Apotheke, Arztpraxis, Drogerie, Hörakustiker, Krankenhaus, Optiker, Physiotherapie, Reha-Zentrum, Sanitätshaus, Tierarzt, Zahnarzt ·{" "}
-              <strong className="font-semibold text-foreground">Alltag:</strong> Bäckerei, Bank, Bekleidungsgeschäft, Blumenladen, Fahrradladen, Friseur, Kiosk, Metzgerei, Möbelgeschäft, Post, Schuhgeschäft, Supermarkt, Waschsalon ·{" "}
+              <strong className="font-semibold text-foreground">Gesundheit:</strong> Apotheke, Arztpraxis, Hörakustiker, Krankenhaus, Optiker, Physiotherapie, Reha-Zentrum, Sanitätshaus, Tierarzt, Zahnarzt ·{" "}
+              <strong className="font-semibold text-foreground">Einkauf:</strong> Bäckerei, Bekleidungsgeschäft, Blumenladen, Buchhandlung, Drogerie, Fahrradladen, Kiosk, Metzgerei, Möbelgeschäft, Schuhgeschäft, Supermarkt ·{" "}
+              <strong className="font-semibold text-foreground">Alltag &amp; Service:</strong> Bank, Friseur, Post, Waschsalon ·{" "}
               <strong className="font-semibold text-foreground">Öffentlich &amp; Unterwegs:</strong> Bahnhof, Gotteshaus, Rathaus, Tankstelle
             </p>
             <p className="mt-2">
@@ -78,7 +79,7 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
           </>
         ),
         schemaText:
-          "Mit dem Chip „Alle“ durchsucht Accessible Places folgende 51 Orts-Kategorien gleichzeitig, unterteilt in 7 Gruppen: Gastronomie (Bar, Biergarten, Café & Eis, Imbiss/Fast Food, Kneipe/Pub, Restaurant), Unterkunft (Campingplatz, Ferienwohnung, Hostel, Hotel), Kultur (Bibliothek, Buchhandlung, Galerie, Kino, Museum, Sehenswürdigkeit, Theater, Zoo/Tierpark), Sport & Freizeit (Fitnessstudio, Park, Schwimmbad, Spielplatz, Sporthalle), Gesundheit (Apotheke, Arztpraxis, Drogerie, Hörakustiker, Krankenhaus, Optiker, Physiotherapie, Reha-Zentrum, Sanitätshaus, Tierarzt, Zahnarzt), Alltag (Bäckerei, Bank, Bekleidungsgeschäft, Blumenladen, Fahrradladen, Friseur, Kiosk, Metzgerei, Möbelgeschäft, Post, Schuhgeschäft, Supermarkt, Waschsalon) und Öffentlich & Unterwegs (Bahnhof, Gotteshaus, Rathaus, Tankstelle). Die sichtbaren Kategorie-Chips sind nur eine Auswahl der beliebtesten Kategorien — „Alle“ geht darüber hinaus. Nicht enthalten sind die Schnellsuche-Chips 🅿 Parken und 🚻 WC: Sie starten eine eigene Suche nach Parkplätzen bzw. WCs und sind keine Orts-Kategorie.",
+          "Mit dem Chip „Alle“ durchsucht Accessible Places folgende 51 Orts-Kategorien gleichzeitig, unterteilt in 8 Gruppen: Gastronomie (Bar, Biergarten, Café & Eis, Imbiss/Fast Food, Kneipe/Pub, Restaurant), Unterkunft (Campingplatz, Ferienwohnung, Hostel, Hotel), Kultur (Bibliothek, Galerie, Kino, Museum, Sehenswürdigkeit, Theater, Zoo/Tierpark), Sport & Freizeit (Fitnessstudio, Park, Schwimmbad, Spielplatz, Sporthalle), Gesundheit (Apotheke, Arztpraxis, Hörakustiker, Krankenhaus, Optiker, Physiotherapie, Reha-Zentrum, Sanitätshaus, Tierarzt, Zahnarzt), Einkauf (Bäckerei, Bekleidungsgeschäft, Blumenladen, Buchhandlung, Drogerie, Fahrradladen, Kiosk, Metzgerei, Möbelgeschäft, Schuhgeschäft, Supermarkt), Alltag & Service (Bank, Friseur, Post, Waschsalon) und Öffentlich & Unterwegs (Bahnhof, Gotteshaus, Rathaus, Tankstelle). Die sichtbaren Kategorie-Chips sind nur eine Auswahl der beliebtesten Kategorien — „Alle“ geht darüber hinaus. Nicht enthalten sind die Schnellsuche-Chips 🅿 Parken und 🚻 WC: Sie starten eine eigene Suche nach Parkplätzen bzw. WCs und sind keine Orts-Kategorie.",
       },
       {
         id: "international-search",

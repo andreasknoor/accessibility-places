@@ -63,12 +63,13 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
 const SETTING_CHIP_ORDER: Category[] = [
   "bar", "biergarten", "cafe", "fast_food", "pub", "restaurant",
   "camp_site", "apartment", "hostel", "hotel",
-  "library", "books", "gallery", "cinema", "museum", "attraction", "theater", "zoo",
+  "library", "gallery", "cinema", "museum", "attraction", "theater", "zoo",
   "fitness_centre", "park", "swimming_pool", "playground", "sports_centre",
-  "pharmacy", "doctors", "chemist", "hearing_aids", "hospital", "optician",
+  "pharmacy", "doctors", "hearing_aids", "hospital", "optician",
   "physiotherapist", "rehabilitation", "medical_supply", "veterinary", "dentist",
-  "bakery", "bank", "clothes", "florist", "bicycle", "hairdresser",
-  "convenience", "butcher", "furniture", "post_office", "shoes", "supermarket", "laundry",
+  "bakery", "clothes", "florist", "books", "chemist", "bicycle",
+  "convenience", "butcher", "furniture", "shoes", "supermarket",
+  "bank", "hairdresser", "post_office", "laundry",
   "railway_station", "place_of_worship", "townhall", "fuel",
 ]
 
