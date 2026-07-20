@@ -1549,20 +1549,26 @@ export default function MapView({
           <button
             type="button"
             aria-disabled={focusMode}
-            aria-label={t.map.layersExpand}
+            aria-label={[
+              t.map.layersExpand,
+              showParking ? t.chat.focusChipParking : null,
+              hasToiletData && showToilets ? t.chat.focusChipToilet : null,
+            ].filter(Boolean).join(" · ")}
             onClick={toggleLayersCollapsed}
             disabled={focusMode}
             className={`absolute bottom-3 left-3 z-[1000] flex items-center gap-1.5 rounded-xl border border-border bg-background/95 backdrop-blur-sm shadow-md px-2.5 py-1.5 ${focusMode ? "opacity-50 pointer-events-none" : "hover:bg-muted transition-colors"}`}
           >
             <Layers className="w-3.5 h-3.5 text-muted-foreground shrink-0" aria-hidden />
+            {/* Icon-only (no label text) — the button's own aria-label already
+                names which layers are active for screen readers. */}
             {showParking && (
-              <span className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-600/10 rounded-full px-2 py-0.5">
-                🅿 {t.chat.focusChipParking}
+              <span aria-hidden className="flex items-center justify-center w-5 h-5 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-600/10 rounded-full">
+                🅿
               </span>
             )}
             {hasToiletData && showToilets && (
-              <span className="flex items-center gap-1 text-xs font-semibold text-pink-700 dark:text-pink-400 bg-pink-700/10 rounded-full px-2 py-0.5">
-                🚻 {t.chat.focusChipToilet}
+              <span aria-hidden className="flex items-center justify-center w-5 h-5 text-xs font-semibold text-pink-700 dark:text-pink-400 bg-pink-700/10 rounded-full">
+                🚻
               </span>
             )}
             <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0 rotate-180" aria-hidden />
