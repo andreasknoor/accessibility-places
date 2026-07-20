@@ -49,6 +49,7 @@ export default function RadiusPresetPopover({ radiusKm, onChange, presets = RADI
                 <button
                   type="button"
                   onClick={() => { if (km !== radiusKm) onChange(km) }}
+                  aria-pressed={isActive}
                   className={cn(
                     "text-xs font-medium rounded-md px-2.5 py-1 border transition-colors cursor-pointer",
                     isActive

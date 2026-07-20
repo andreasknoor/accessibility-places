@@ -198,10 +198,13 @@ const POPUP_PAD     = "padding:12px 14px;flex:1;min-width:0"
 const POPUP_KV      = "display:grid;grid-template-columns:auto 1fr;gap:7px 10px;align-items:center"
 const POPUP_FOOTER  = "border-top:1px solid #f0f0f0;margin-top:11px;padding-top:9px"
 const POPUP_CHIPS   = "display:flex;flex-wrap:wrap;gap:6px"
-const POPUP_CHIP    = "display:inline-flex;align-items:center;gap:5px;border:1px solid #e5e7eb;border-radius:999px;background:#f1f3f6;color:#1f2937;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap"
+// padding:6px (not the visually-tighter 5px) so computed chip height clears
+// the WCAG 2.2 2.5.8 24px target-size minimum — these are real tap targets on
+// a touch surface (the map), not inline text links.
+const POPUP_CHIP    = "display:inline-flex;align-items:center;gap:5px;border:1px solid #e5e7eb;border-radius:999px;background:#f1f3f6;color:#1f2937;padding:6px 10px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap"
 // The one filled/primary chip — reserved for the venue popup's "Details anzeigen" (see header comment above).
-const POPUP_CHIP_PRIMARY = "display:inline-flex;align-items:center;gap:5px;border:1px solid #2563eb;border-radius:999px;background:#2563eb;color:#fff;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap"
-const POPUP_CHIP_WARN    = "display:inline-flex;align-items:center;gap:5px;border:1px solid #f3dcb8;border-radius:999px;background:#fef3e2;color:#92400e;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap"
+const POPUP_CHIP_PRIMARY = "display:inline-flex;align-items:center;gap:5px;border:1px solid #2563eb;border-radius:999px;background:#2563eb;color:#fff;padding:6px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap"
+const POPUP_CHIP_WARN    = "display:inline-flex;align-items:center;gap:5px;border:1px solid #f3dcb8;border-radius:999px;background:#fef3e2;color:#92400e;padding:6px 10px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap"
 // POPUP_TITLE: overflow control prevents long names pushing the pill/badge off-screen.
 const POPUP_TITLE   = "font-weight:700;font-size:14px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
 const POPUP_SUB     = "font-size:11px;color:#71717a;margin:2px 0 11px"
@@ -333,10 +336,15 @@ const PARKING_TIER_STYLE: Record<AmenityTier, { fill: string; text: string }> = 
   weak:   { fill: "#ff9100", text: "#1f2937" }, // signal orange, dark P
 }
 
+// WCAG 1.4.1 (Use of Color): the two tiers must not be distinguishable by hue
+// alone. "strong" keeps a squared badge (rx=5); "weak" uses a fully rounded
+// (pill/circle) badge — a shape difference on top of the existing colour
+// difference, so it still reads correctly for colour-blind users.
 function svgParkingMarker(tier: AmenityTier = "strong") {
   const { fill, text } = PARKING_TIER_STYLE[tier]
+  const rx = tier === "weak" ? 12 : 5
   return `<svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 26 26">
-    <rect x="1" y="1" width="24" height="24" rx="5" fill="${fill}" stroke="white" stroke-width="1.5"/>
+    <rect x="1" y="1" width="24" height="24" rx="${rx}" fill="${fill}" stroke="white" stroke-width="1.5"/>
     <text x="13" y="19" text-anchor="middle" font-size="15" font-weight="bold" fill="${text}" font-family="sans-serif">P</text>
   </svg>`
 }
@@ -904,7 +912,7 @@ export default function MapView({
             <button data-navigate style="${POPUP_CHIP}">${POPUP_NAV_SVG}${t.map.popupChipNavigate}</button>
             <button data-gmaps style="${POPUP_CHIP}">${POPUP_GMAPS_SVG}${t.map.popupChipGoogleMaps}</button>
             ${showResults ? `<button data-show-results style="${POPUP_CHIP}">${POPUP_LIST_SVG}${t.map.popupChipResults}</button>` : ""}
-            ${tier === "weak" ? `<button data-report style="${POPUP_CHIP_WARN}">${POPUP_FLAG_SVG}${t.map.popupChipReport}</button>` : ""}
+            ${tier === "weak" ? `<button data-report aria-live="polite" style="${POPUP_CHIP_WARN}">${POPUP_FLAG_SVG}${t.map.popupChipReport}</button>` : ""}
           </div>
         </div>
       `)

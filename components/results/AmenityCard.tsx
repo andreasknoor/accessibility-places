@@ -181,6 +181,7 @@ export default function AmenityCard({ spot, amenityType, isSelected, onClick, di
               <button
                 onClick={(e) => { e.stopPropagation(); if (reportState === "idle") reportWeakParking() }}
                 disabled={reportState !== "idle"}
+                aria-live="polite"
                 className="flex items-center gap-1 text-xs text-amber-700 hover:underline disabled:no-underline disabled:opacity-70"
               >
                 <Flag className="w-[1.1rem] h-[1.1rem] shrink-0" />

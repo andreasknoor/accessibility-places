@@ -22,6 +22,7 @@ const de: Translations = {
     skipToContent: "Zum Inhalt springen",
   },
   chat: {
+    searchFieldLabel: "Ort oder Name suchen",
     unifiedPlaceholder: 'Ort oder Name, z. B. „Restaurants in Berlin" oder „Hotel Adlon"',
     suggestGroupAreas:  "Orte",
     suggestGroupVenues: "Lokationen",

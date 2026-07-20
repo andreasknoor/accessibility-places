@@ -374,6 +374,7 @@ export default function MobileLayout({
                   <button
                     key={v}
                     onClick={() => { onUpdateSettings({ defaultMobileView: v }); setActiveTab(v) }}
+                    aria-pressed={isActive}
                     className={cn(
                       "flex items-center gap-2 rounded-lg border-2 px-3 py-2.5 transition-colors text-left",
                       isActive
@@ -381,11 +382,11 @@ export default function MobileLayout({
                         : "border-border bg-card hover:bg-muted"
                     )}
                   >
-                    {v === "results" ? <List className="w-4 h-4 shrink-0 text-primary" /> : <Map className="w-4 h-4 shrink-0 text-primary" />}
+                    {v === "results" ? <List className="w-4 h-4 shrink-0 text-primary" aria-hidden /> : <Map className="w-4 h-4 shrink-0 text-primary" aria-hidden />}
                     <span className="text-sm font-medium text-foreground">
                       {v === "results" ? t.chat.welcomeViewList : t.chat.welcomeViewMap}
                     </span>
-                    {isActive && <CheckCircle2 className="w-4 h-4 text-primary ml-auto shrink-0" />}
+                    {isActive && <CheckCircle2 className="w-4 h-4 text-primary ml-auto shrink-0" aria-hidden />}
                   </button>
                 )
               })}

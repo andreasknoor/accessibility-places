@@ -133,13 +133,18 @@ function Section({
           className={cn(chipClasses, "cursor-pointer hover:opacity-80 transition-opacity")}
         >
           <Icon className="w-3 h-3 shrink-0" />
-          <span className="uppercase tracking-wide">{title}</span>
+          {/* role=heading (not a literal <h3>): this span sits inside a <button>
+              in the expandable case, and heading content isn't valid inside
+              button's phrasing-content model — the ARIA role gives screen
+              readers section-heading navigation (WCAG 1.3.1/2.4.6) without an
+              invalid DOM nesting. */}
+          <span role="heading" aria-level={3} className="uppercase tracking-wide">{title}</span>
           {expanded ? <ChevronUp className="w-3 h-3 shrink-0" /> : <ChevronDown className="w-3 h-3 shrink-0" />}
         </button>
       ) : (
         <div className={chipClasses}>
           <Icon className="w-3 h-3 shrink-0" />
-          <span className="uppercase tracking-wide">{title}</span>
+          <span role="heading" aria-level={3} className="uppercase tracking-wide">{title}</span>
         </div>
       )}
       {expandable && expanded && (
@@ -444,7 +449,7 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
         {/* Header */}
         <div className="flex items-start justify-between gap-3 px-4 py-3 border-b border-border shrink-0">
           <div className="min-w-0">
-            <p id="place-sheet-title" className="font-semibold text-sm truncate">{place.name}</p>
+            <h2 id="place-sheet-title" className="font-semibold text-sm truncate">{place.name}</h2>
             <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
               <span aria-hidden>{CATEGORY_ICONS[place.category] ?? "📍"}</span>
               <span>{(t.categories as Record<string, string>)[place.category] ?? place.category}</span>

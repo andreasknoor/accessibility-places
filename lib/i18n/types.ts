@@ -20,6 +20,9 @@ export interface Translations {
     skipToContent: string
   }
   chat: {
+    // Accessible name for the unified search field (aria-label) — distinct from
+    // the placeholder, which disappears on input and isn't a valid WCAG label.
+    searchFieldLabel: string
     unifiedPlaceholder: string
     suggestGroupAreas:  string
     suggestGroupVenues: string

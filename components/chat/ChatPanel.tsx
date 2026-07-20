@@ -1349,6 +1349,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
               onBlur={scheduleDropdownClose}
               onFocus={() => { cancelDropdownClose(); if (freetextEligible) setShowSuggestions(true) }}
               placeholder={showLocationToken ? t.chat.nearbyTokenPlaceholder : t.chat.unifiedPlaceholder}
+              aria-label={t.chat.searchFieldLabel}
               disabled={isLoading}
               autoFocus={autoFocus}
               // "search" so mobile keyboards label the return key accordingly —
