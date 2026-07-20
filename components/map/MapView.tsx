@@ -442,27 +442,17 @@ export default function MapView({
     if (typeof window === "undefined") return false
     return window.localStorage.getItem(LAYERS_COLLAPSED_KEY) === "1"
   })
-  // Layers box and the marker legend (below) sit in opposite bottom corners
-  // and can overlap on narrow map widths if both are open at once. Mutually
-  // exclusive instead of width-measuring: expanding one collapses the other
-  // into its own existing compact form. Only the explicit expand direction
-  // forces the other closed — collapsing one doesn't reopen the other.
   function toggleLayersCollapsed() {
-    const next = !layersCollapsed
-    setLayersCollapsed(next)
-    try {
-      window.localStorage.setItem(LAYERS_COLLAPSED_KEY, next ? "1" : "0")
-    } catch {
-      // localStorage unavailable (private browsing etc.) — collapse state
-      // just won't persist, no functional impact.
-    }
-    if (!next) setLegendOpen(false)
-  }
-  function openLegend() {
-    setLegendOpen(true)
-    // Transient — not persisted, so the layers box's own stored preference
-    // is unaffected once the legend closes again.
-    setLayersCollapsed(true)
+    setLayersCollapsed((prev) => {
+      const next = !prev
+      try {
+        window.localStorage.setItem(LAYERS_COLLAPSED_KEY, next ? "1" : "0")
+      } catch {
+        // localStorage unavailable (private browsing etc.) — collapse state
+        // just won't persist, no functional impact.
+      }
+      return next
+    })
   }
   // Place whose detail sheet is open over the map (from the popup "Details
   // anzeigen" link). Rendered as a portal overlay so the Leaflet map underneath
@@ -1537,155 +1527,170 @@ export default function MapView({
         </div>
       )}
 
-      {/* ── Layer box (bottom-left): "Ebenen" label + two checkbox-style
-          toggles, grouped in one bordered box instead of two loose pills.
-          Deliberately NOT styled like the Schnellsuche amenity chips (rounded
-          pills) — the checkbox look + shared "layers" label read as "these
-          add an overlay to the existing results", vs. the chips' pill look,
-          which reads as "this replaces the results with a new search". Same
-          widget, same two colours (blue/parking, green/WC) as everywhere else
-          disabled parking/WC markers appear, only the container differs.
-          Disabled in amenity focus mode (the count there would be stale).
+      {/* ── Bottom row: layer box (left) + marker legend (right), sharing one
+          flex-wrap container instead of two independently `absolute`-
+          positioned corners. On narrow map widths, where the two used to
+          overlap regardless of open/collapsed state (there was never a
+          real width conflict to resolve by coupling their open states —
+          the default-expanded layers box vs. the default-collapsed legend
+          pill already didn't fit side by side), the legend now wraps onto
+          its own row below instead. `ml-auto` keeps the legend right-
+          aligned whether it's sharing the row or has wrapped alone. ── */}
+      <div className="absolute inset-x-3 bottom-3 z-[1000] flex flex-wrap items-start gap-2">
+        {/* Layer box: "Ebenen" label + two checkbox-style toggles, grouped in
+            one bordered box instead of two loose pills. Deliberately NOT
+            styled like the Schnellsuche amenity chips (rounded pills) — the
+            checkbox look + shared "layers" label read as "these add an
+            overlay to the existing results", vs. the chips' pill look, which
+            reads as "this replaces the results with a new search". Same
+            widget, same two colours (blue/parking, green/WC) as everywhere
+            else disabled parking/WC markers appear, only the container
+            differs. Disabled in amenity focus mode (the count there would
+            be stale).
 
-          Collapsible (defaults expanded, persisted via layersCollapsed):
-          collapsed shows a compact chip per *active* layer only (none for an
-          inactive layer) plus a chevron, and — since there are no checkboxes
-          left to click while collapsed — the whole compact box is itself the
-          expand trigger, not just the chevron. Expanded keeps the original
-          checkbox buttons untouched; only the chevron toggles collapse there,
-          so tapping a checkbox can't accidentally collapse the box. ── */}
-      {onSetMapLayers && (
-        layersCollapsed ? (
-          <button
-            type="button"
-            aria-disabled={focusMode}
-            aria-label={[
-              t.map.layersExpand,
-              showParking ? t.chat.focusChipParking : null,
-              hasToiletData && showToilets ? t.chat.focusChipToilet : null,
-            ].filter(Boolean).join(" · ")}
-            onClick={toggleLayersCollapsed}
-            disabled={focusMode}
-            className={`absolute bottom-3 left-3 z-[1000] flex items-center gap-1.5 rounded-xl border border-border bg-background/95 backdrop-blur-sm shadow-md px-2.5 py-1.5 ${focusMode ? "opacity-50 pointer-events-none" : "hover:bg-muted transition-colors"}`}
-          >
-            <Layers className="w-3.5 h-3.5 text-muted-foreground shrink-0" aria-hidden />
-            {/* Icon-only (no label text) — the button's own aria-label already
-                names which layers are active for screen readers. */}
-            {showParking && (
-              <span aria-hidden className="flex items-center justify-center w-5 h-5 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-600/10 rounded-full">
-                🅿
-              </span>
-            )}
-            {hasToiletData && showToilets && (
-              <span aria-hidden className="flex items-center justify-center w-5 h-5 text-xs font-semibold text-pink-700 dark:text-pink-400 bg-pink-700/10 rounded-full">
-                🚻
-              </span>
-            )}
-            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0 rotate-180" aria-hidden />
-          </button>
-        ) : (
-          <div
-            aria-disabled={focusMode}
-            role="group"
-            aria-label={t.map.layersLabel}
-            className={`absolute bottom-3 left-3 z-[1000] flex items-center gap-2 rounded-xl border border-border bg-background/95 backdrop-blur-sm shadow-md px-2.5 py-1.5 ${focusMode ? "opacity-50 pointer-events-none" : ""}`}
-          >
-            <span className="flex items-center gap-1 text-[11px] font-bold text-muted-foreground shrink-0">
-              <Layers className="w-3.5 h-3.5" aria-hidden />
-              {t.map.layersLabel}
-            </span>
-            <span className="w-px self-stretch bg-border" aria-hidden />
-            <span className="flex items-center gap-2.5">
-              <button
-                onClick={() => onSetMapLayers(!(showParking ?? false), showToilets ?? false)}
-                aria-pressed={showParking ?? false}
-                className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <span className={`w-[0.95rem] h-[0.95rem] rounded-[0.2rem] border-[1.5px] flex items-center justify-center shrink-0 transition-colors
-                  ${showParking ? "bg-blue-600 border-blue-600" : "border-current"}`}>
-                  {showParking && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3.5} aria-hidden />}
+            Collapsible (defaults expanded, persisted via layersCollapsed):
+            collapsed shows a compact chip per *active* layer only (none for
+            an inactive layer) plus a chevron, and — since there are no
+            checkboxes left to click while collapsed — the whole compact box
+            is itself the expand trigger, not just the chevron. Expanded
+            keeps the original checkbox buttons untouched; only the chevron
+            toggles collapse there, so tapping a checkbox can't accidentally
+            collapse the box. ── */}
+        {onSetMapLayers && (
+          layersCollapsed ? (
+            <button
+              type="button"
+              aria-disabled={focusMode}
+              aria-label={[
+                t.map.layersExpand,
+                showParking ? t.chat.focusChipParking : null,
+                hasToiletData && showToilets ? t.chat.focusChipToilet : null,
+              ].filter(Boolean).join(" · ")}
+              onClick={toggleLayersCollapsed}
+              disabled={focusMode}
+              className={`shrink-0 flex items-center gap-1.5 rounded-xl border border-border bg-background/95 backdrop-blur-sm shadow-md px-2.5 py-1.5 ${focusMode ? "opacity-50 pointer-events-none" : "hover:bg-muted transition-colors"}`}
+            >
+              <Layers className="w-3.5 h-3.5 text-muted-foreground shrink-0" aria-hidden />
+              {/* Icon-only (no label text) — the button's own aria-label already
+                  names which layers are active for screen readers. */}
+              {showParking && (
+                <span aria-hidden className="flex items-center justify-center w-5 h-5 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-600/10 rounded-full">
+                  🅿
                 </span>
-                <span aria-hidden>🅿</span>
-                <span className={showParking ? "text-foreground" : undefined}>{t.chat.focusChipParking}</span>
-              </button>
-              {hasToiletData && (
+              )}
+              {hasToiletData && showToilets && (
+                <span aria-hidden className="flex items-center justify-center w-5 h-5 text-xs font-semibold text-pink-700 dark:text-pink-400 bg-pink-700/10 rounded-full">
+                  🚻
+                </span>
+              )}
+              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0 rotate-180" aria-hidden />
+            </button>
+          ) : (
+            <div
+              aria-disabled={focusMode}
+              role="group"
+              aria-label={t.map.layersLabel}
+              className={`shrink-0 flex items-center gap-2 rounded-xl border border-border bg-background/95 backdrop-blur-sm shadow-md px-2.5 py-1.5 ${focusMode ? "opacity-50 pointer-events-none" : ""}`}
+            >
+              <span className="flex items-center gap-1 text-[11px] font-bold text-muted-foreground shrink-0">
+                <Layers className="w-3.5 h-3.5" aria-hidden />
+                {t.map.layersLabel}
+              </span>
+              <span className="w-px self-stretch bg-border" aria-hidden />
+              <span className="flex items-center gap-2.5">
                 <button
-                  onClick={() => onSetMapLayers(showParking ?? false, !(showToilets ?? false))}
-                  aria-pressed={showToilets ?? false}
+                  onClick={() => onSetMapLayers(!(showParking ?? false), showToilets ?? false)}
+                  aria-pressed={showParking ?? false}
                   className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <span className={`w-[0.95rem] h-[0.95rem] rounded-[0.2rem] border-[1.5px] flex items-center justify-center shrink-0 transition-colors
-                    ${showToilets ? "bg-pink-700 border-pink-700" : "border-current"}`}>
-                    {showToilets && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3.5} aria-hidden />}
+                    ${showParking ? "bg-blue-600 border-blue-600" : "border-current"}`}>
+                    {showParking && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3.5} aria-hidden />}
                   </span>
-                  <span aria-hidden>🚻</span>
-                  <span className={showToilets ? "text-foreground" : undefined}>{t.chat.focusChipToilet}</span>
+                  <span aria-hidden>🅿</span>
+                  <span className={showParking ? "text-foreground" : undefined}>{t.chat.focusChipParking}</span>
                 </button>
-              )}
-            </span>
-            <button
-              type="button"
-              onClick={toggleLayersCollapsed}
-              aria-label={t.map.layersCollapse}
-              className="shrink-0 -mr-1 p-0.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            >
-              <ChevronDown className="w-3.5 h-3.5" aria-hidden />
-            </button>
-          </div>
-        )
-      )}
+                {hasToiletData && (
+                  <button
+                    onClick={() => onSetMapLayers(showParking ?? false, !(showToilets ?? false))}
+                    aria-pressed={showToilets ?? false}
+                    className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <span className={`w-[0.95rem] h-[0.95rem] rounded-[0.2rem] border-[1.5px] flex items-center justify-center shrink-0 transition-colors
+                      ${showToilets ? "bg-pink-700 border-pink-700" : "border-current"}`}>
+                      {showToilets && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3.5} aria-hidden />}
+                    </span>
+                    <span aria-hidden>🚻</span>
+                    <span className={showToilets ? "text-foreground" : undefined}>{t.chat.focusChipToilet}</span>
+                  </button>
+                )}
+              </span>
+              <button
+                type="button"
+                onClick={toggleLayersCollapsed}
+                aria-label={t.map.layersCollapse}
+                className="shrink-0 -mr-1 p-0.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <ChevronDown className="w-3.5 h-3.5" aria-hidden />
+              </button>
+            </div>
+          )
+        )}
 
-      {/* ── Marker legend (collapsible) — shown when parking or WC markers are present ── */}
-      {((parkingSpots?.length ?? 0) > 0 || (toiletSpots?.length ?? 0) > 0) && (
-        <div className="absolute bottom-3 right-3 z-[1000]">
-          {legendOpen ? (
-            <div className="rounded-lg bg-background/95 backdrop-blur-sm shadow-md border border-border p-2.5 text-xs">
-              <div className="flex items-center justify-between gap-3 mb-1.5">
-                <span className="font-semibold">{t.map.legend}</span>
-                <button
-                  onClick={() => setLegendOpen(false)}
-                  className="text-muted-foreground hover:text-foreground"
-                  aria-label={t.common.close}
-                >✕</button>
-              </div>
-              {(parkingSpots?.length ?? 0) > 0 && (<>
-                <div className="flex items-center gap-2 py-0.5">
-                  <span dangerouslySetInnerHTML={{ __html: svgParkingMarker("strong") }} />
-                  <span>{t.map.legendDisabled}</span>
+        {/* Marker legend (collapsible) — shown when parking or WC markers are
+            present. `ml-auto` keeps it right-aligned on the shared row, or at
+            the row's right edge if it has wrapped onto its own line. */}
+        {((parkingSpots?.length ?? 0) > 0 || (toiletSpots?.length ?? 0) > 0) && (
+          <div className="shrink-0 ml-auto">
+            {legendOpen ? (
+              <div className="rounded-lg bg-background/95 backdrop-blur-sm shadow-md border border-border p-2.5 text-xs">
+                <div className="flex items-center justify-between gap-3 mb-1.5">
+                  <span className="font-semibold">{t.map.legend}</span>
+                  <button
+                    onClick={() => setLegendOpen(false)}
+                    className="text-muted-foreground hover:text-foreground"
+                    aria-label={t.common.close}
+                  >✕</button>
                 </div>
-                {showWeakParking && (
+                {(parkingSpots?.length ?? 0) > 0 && (<>
                   <div className="flex items-center gap-2 py-0.5">
-                    <span dangerouslySetInnerHTML={{ __html: svgParkingMarker("weak") }} />
-                    <span>{t.map.legendAccessible}</span>
+                    <span dangerouslySetInnerHTML={{ __html: svgParkingMarker("strong") }} />
+                    <span>{t.map.legendDisabled}</span>
+                  </div>
+                  {showWeakParking && (
+                    <div className="flex items-center gap-2 py-0.5">
+                      <span dangerouslySetInnerHTML={{ __html: svgParkingMarker("weak") }} />
+                      <span>{t.map.legendAccessible}</span>
+                    </div>
+                  )}
+                </>)}
+                {(toiletSpots ?? []).some((s) => s.host?.kind !== "venue") && (
+                  <div className="flex items-center gap-2 py-0.5">
+                    <span dangerouslySetInnerHTML={{ __html: svgToiletMarker("standalone") }} />
+                    <span>{t.map.legendToiletStandalone ?? "Eigenständiges WC"}</span>
                   </div>
                 )}
-              </>)}
-              {(toiletSpots ?? []).some((s) => s.host?.kind !== "venue") && (
-                <div className="flex items-center gap-2 py-0.5">
-                  <span dangerouslySetInnerHTML={{ __html: svgToiletMarker("standalone") }} />
-                  <span>{t.map.legendToiletStandalone ?? "Eigenständiges WC"}</span>
-                </div>
-              )}
-              {(toiletSpots ?? []).some((s) => s.host?.kind === "venue") && (
-                <div className="flex items-center gap-2 py-0.5">
-                  <span dangerouslySetInnerHTML={{ __html: svgToiletMarker("venue") }} />
-                  <span>{t.map.legendToiletVenue ?? "WC in Lokalität"}</span>
-                </div>
-              )}
-            </div>
-          ) : (
-            <button
-              onClick={openLegend}
-              title={t.map.legend}
-              aria-label={t.map.legend}
-              className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium shadow-md border border-border bg-background/95 backdrop-blur-sm hover:bg-muted transition-colors"
-            >
-              <span dangerouslySetInnerHTML={{ __html: (parkingSpots?.length ?? 0) > 0 ? svgParkingMarker("strong") : svgToiletMarker("standalone") }} />
-              <span>{t.map.legend}</span>
-            </button>
-          )}
-        </div>
-      )}
+                {(toiletSpots ?? []).some((s) => s.host?.kind === "venue") && (
+                  <div className="flex items-center gap-2 py-0.5">
+                    <span dangerouslySetInnerHTML={{ __html: svgToiletMarker("venue") }} />
+                    <span>{t.map.legendToiletVenue ?? "WC in Lokalität"}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={() => setLegendOpen(true)}
+                title={t.map.legend}
+                aria-label={t.map.legend}
+                className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium shadow-md border border-border bg-background/95 backdrop-blur-sm hover:bg-muted transition-colors"
+              >
+                <span dangerouslySetInnerHTML={{ __html: (parkingSpots?.length ?? 0) > 0 ? svgParkingMarker("strong") : svgToiletMarker("standalone") }} />
+                <span>{t.map.legend}</span>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Detail sheet opened from a map popup. Portal overlay — the map underneath
           is untouched, so closing returns to the exact same view. */}
