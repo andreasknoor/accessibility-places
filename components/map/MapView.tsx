@@ -442,17 +442,27 @@ export default function MapView({
     if (typeof window === "undefined") return false
     return window.localStorage.getItem(LAYERS_COLLAPSED_KEY) === "1"
   })
+  // Layers box and the marker legend (below) sit in opposite bottom corners
+  // and can overlap on narrow map widths if both are open at once. Mutually
+  // exclusive instead of width-measuring: expanding one collapses the other
+  // into its own existing compact form. Only the explicit expand direction
+  // forces the other closed — collapsing one doesn't reopen the other.
   function toggleLayersCollapsed() {
-    setLayersCollapsed((prev) => {
-      const next = !prev
-      try {
-        window.localStorage.setItem(LAYERS_COLLAPSED_KEY, next ? "1" : "0")
-      } catch {
-        // localStorage unavailable (private browsing etc.) — collapse state
-        // just won't persist, no functional impact.
-      }
-      return next
-    })
+    const next = !layersCollapsed
+    setLayersCollapsed(next)
+    try {
+      window.localStorage.setItem(LAYERS_COLLAPSED_KEY, next ? "1" : "0")
+    } catch {
+      // localStorage unavailable (private browsing etc.) — collapse state
+      // just won't persist, no functional impact.
+    }
+    if (!next) setLegendOpen(false)
+  }
+  function openLegend() {
+    setLegendOpen(true)
+    // Transient — not persisted, so the layers box's own stored preference
+    // is unaffected once the legend closes again.
+    setLayersCollapsed(true)
   }
   // Place whose detail sheet is open over the map (from the popup "Details
   // anzeigen" link). Rendered as a portal overlay so the Leaflet map underneath
@@ -1665,7 +1675,7 @@ export default function MapView({
             </div>
           ) : (
             <button
-              onClick={() => setLegendOpen(true)}
+              onClick={openLegend}
               title={t.map.legend}
               aria-label={t.map.legend}
               className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium shadow-md border border-border bg-background/95 backdrop-blur-sm hover:bg-muted transition-colors"
