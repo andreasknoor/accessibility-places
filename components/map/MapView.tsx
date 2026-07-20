@@ -233,6 +233,49 @@ function popupShell(bar: string, inner: string): string {
   return `<div style="display:flex"><div style="width:5px;flex-shrink:0;background:${bar}"></div><div style="${POPUP_PAD}">${inner}</div></div>`
 }
 
+// ─── Popup overflow guard (issue #43) ─────────────────────────────────────
+// At high Android display/font scaling, popup content can grow tall enough
+// that Leaflet's own auto-pan can't keep both the top and bottom edges on
+// screen (Popup._adjustPan lets the bottom run off once popup height >
+// map height), and none of the four popup call sites capped maxHeight at
+// all. popupMaxHeight() derives a cap from the *current* map size instead of
+// a guessed constant, so it still leaves map context visible on small
+// devices and doesn't clip unnecessarily on large ones.
+function popupMaxHeight(mapHeightPx: number): number {
+  return Math.max(160, Math.round(mapHeightPx * 0.55))
+}
+
+// Above this fraction of the map's current height, the venue popup switches
+// to the reduced template (see buildPlacePopupContent) instead of relying on
+// the maxHeight cap + scroll alone.
+const REDUCED_POPUP_THRESHOLD = 0.6
+
+// Renders `html` off-screen at the popup's real content width to measure how
+// tall the *full* (uncapped) content would be, before Leaflet ever opens it.
+// Used to decide whether to fall back to a reduced template (see
+// buildPlacePopupContent) rather than relying solely on scrolling inside a
+// tiny speech bubble — a poor interaction for this app's target users.
+function measureContentHeight(html: string, widthPx: number): number {
+  if (typeof document === "undefined") return 0
+  const probe = document.createElement("div")
+  probe.style.cssText = `position:absolute;visibility:hidden;left:-9999px;top:0;width:${widthPx}px;font-family:sans-serif;line-height:1.5`
+  probe.innerHTML = html
+  document.body.appendChild(probe)
+  const height = probe.offsetHeight
+  document.body.removeChild(probe)
+  return height
+}
+
+// Compact criterion indicator for the reduced venue popup template — a
+// checkmark row (🚪 ✓ / 🚻 ✗ / 🅿 ?) instead of the full label+value+
+// confidence-chip row, so the reduced template stays a couple of lines tall
+// regardless of text scale.
+function reducedCriterionBadge(icon: string, value: string): string {
+  const mark  = value === "yes" || value === "limited" ? "✓" : value === "no" ? "✗" : "?"
+  const color = VALUE_TEXT_COLORS[value] ?? VALUE_TEXT_COLORS.unknown
+  return `<span style="display:inline-flex;align-items:center;gap:3px;font-size:13px;font-weight:700;color:${color}">${icon}<span>${mark}</span></span>`
+}
+
 // Caps a place name so the parking popup's "342 m from <name>" row can't blow
 // up the popup's height — the value cell has no overflow/nowrap clipping (it
 // wraps normally, unlike the fixed-width labels), so a long venue name like
@@ -884,7 +927,12 @@ export default function MapView({
       }
 
       const marker = L.marker([spot.lat, spot.lon], { icon, zIndexOffset: -200 })
-        .bindPopup(div, { maxWidth: 250, className: "ap-popup" })
+        .bindPopup(div, {
+          maxWidth:       250,
+          maxHeight:      popupMaxHeight(mapInst.current.getSize().y),
+          autoPanPadding: [24, 24],
+          className:      "ap-popup",
+        })
         .addTo(mapInst.current)
       marker.on("click", () => onAmenityMarkerClick?.({ osmId: spot.osmId, lat: spot.lat, lon: spot.lon }))
       parkingMarkersRef.current.push(marker)
@@ -973,7 +1021,12 @@ export default function MapView({
       }
 
       const marker = L.marker([spot.lat, spot.lon], { icon })
-        .bindPopup(div, { maxWidth: 240, className: "ap-popup" })
+        .bindPopup(div, {
+          maxWidth:       240,
+          maxHeight:      popupMaxHeight(mapInst.current.getSize().y),
+          autoPanPadding: [24, 24],
+          className:      "ap-popup",
+        })
         .addTo(mapInst.current)
       marker.on("click", () => onAmenityMarkerClick?.({ osmId: spot.osmId, lat: spot.lat, lon: spot.lon }))
       toiletMarkersRef.current.push(marker)
@@ -1067,7 +1120,7 @@ export default function MapView({
         const par = place.accessibility.parking
         const meta = `${categoryIcon} ${esc(categoryLabel)}${addr ? ` · ${esc(addr)}` : ""}`
 
-        div.innerHTML = popupShell(barColor, `
+        const fullContent = `
           <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding-right:16px">
             <span style="${POPUP_TITLE}">${esc(place.name)}</span>
             <span style="color:${textColor(place.overallConfidence)};font-size:11px;font-weight:700;white-space:nowrap">${conf} % · ${confLabel}</span>
@@ -1086,7 +1139,32 @@ export default function MapView({
               ${onShowInResults ? `<button data-show-id style="${POPUP_CHIP}">${POPUP_LIST_SVG}${esc(t.map.popupChipResults)}</button>` : ""}
             </div>
           </div>
+        `
+        const fullHtml = popupShell(barColor, fullContent)
+
+        // Reduced template (issue #43): criteria collapse to a single
+        // icon+checkmark row and only the primary "Details" CTA remains, so
+        // the popup stays a couple of lines tall regardless of text scale.
+        // No information is lost — it just moves into PlaceDebugSheet, which
+        // the same "Details" button already opens (via data-show-details).
+        const reducedHtml = popupShell(barColor, `
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding-right:16px">
+            <span style="${POPUP_TITLE}">${esc(place.name)}</span>
+            <span style="color:${textColor(place.overallConfidence)};font-size:11px;font-weight:700;white-space:nowrap">${conf} %</span>
+          </div>
+          <div style="display:flex;gap:12px;margin:7px 0 10px">
+            ${reducedCriterionBadge("🚪", ent.value)}
+            ${reducedCriterionBadge("🚻", toi.value)}
+            ${reducedCriterionBadge("🅿", par.value)}
+          </div>
+          <div style="${POPUP_FOOTER}">
+            <button data-show-details style="${POPUP_CHIP_PRIMARY};width:100%;justify-content:center">${POPUP_INFO_SVG}${esc(t.map.popupChipDetails)}</button>
+          </div>
         `)
+
+        const mapHeightPx = mapInst.current.getSize().y
+        const fullHeightPx = measureContentHeight(fullHtml, 280)
+        div.innerHTML = fullHeightPx > mapHeightPx * REDUCED_POPUP_THRESHOLD ? reducedHtml : fullHtml
 
         const detailsBtn = div.querySelector<HTMLElement>("[data-show-details]")
         if (detailsBtn) {
@@ -1110,7 +1188,12 @@ export default function MapView({
             })
           }
         }
-        const popup = L!.popup({ maxWidth: 280, className: "ap-popup" }).setContent(div)
+        const popup = L!.popup({
+          maxWidth:       280,
+          maxHeight:      popupMaxHeight(mapHeightPx),
+          autoPanPadding: [24, 24],
+          className:      "ap-popup",
+        }).setContent(div)
 
         const marker = L!.marker(
           [place.coordinates.lat, place.coordinates.lon],

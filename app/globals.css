@@ -186,6 +186,13 @@ body {
   margin: 0;
   font-family: sans-serif;
   line-height: 1.5;
+  /* Fallback safety net (issue #43): MapView.tsx computes an explicit
+     maxHeight per popup from the current map size, but this CSS cap ensures
+     a popup that forgets to set it (or renders before JS applies it) still
+     degrades to a scrollable box instead of covering the whole map at high
+     Android display/font scaling. */
+  max-height: min(320px, 55dvh);
+  overflow-y: auto;
 }
 .ap-popup .leaflet-popup-close-button {
   top: 5px;
