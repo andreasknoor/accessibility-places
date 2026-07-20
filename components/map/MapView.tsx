@@ -648,6 +648,12 @@ export default function MapView({
         attributionControl: true,
       })
 
+      // Drop Leaflet's own "Leaflet |" prefix — a courtesy credit to the
+      // library, not a licence requirement. The OpenStreetMap attribution
+      // itself stays: OSM's ODbL requires visible credit wherever the map
+      // data is displayed, so that part can't be removed or shortened.
+      map.attributionControl.setPrefix(false)
+
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         maxZoom: 19,
