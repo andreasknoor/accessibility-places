@@ -319,6 +319,10 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   const [amenityLocateError, setAmenityLocateError] = useState<string | null>(null)
   const selectedIdxRef       = useRef<number | null>(null)
   const selectedGroupRef     = useRef<string | null>(null)
+  // Row 1's scrollable chip strip — see the isLoading effect below (scroll
+  // resync after a search, e.g. re-searching a new location via Enter after
+  // scrolling to a category far along the strip).
+  const chipRowRef           = useRef<HTMLDivElement>(null)
   // True once the startup category has been definitively established — by a SEO
   // deep-link, a restored last search, the user's default-category setting, or a
   // manual chip pick. Gates the async default-chip effect so it applies the
@@ -383,6 +387,29 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   useEffect(() => {
     if (initialMode !== undefined) setMode(initialMode === "place" ? "text" : initialMode)
   }, [initialMode])
+
+  // Re-syncs the horizontally-scrolled chip strip so the active chip/group
+  // stays visible after a search finishes. On mobile, submitting a new
+  // location via Enter closes the on-screen keyboard, which can shift the
+  // strip's scroll position (e.g. a chip several groups along, scrolled into
+  // view before the search, ends up off-screen afterwards). Horizontal-only —
+  // deliberately not scrollIntoView(), which can also move the page's
+  // vertical scroll if the row isn't fully in the viewport.
+  useEffect(() => {
+    if (isLoading) return
+    const container = chipRowRef.current
+    if (!container) return
+    const active = container.querySelector<HTMLElement>('[aria-checked="true"]')
+    if (!active) return
+    const containerRect = container.getBoundingClientRect()
+    const activeRect = active.getBoundingClientRect()
+    const pad = 8
+    if (activeRect.left < containerRect.left) {
+      container.scrollLeft -= containerRect.left - activeRect.left + pad
+    } else if (activeRect.right > containerRect.right) {
+      container.scrollLeft += activeRect.right - containerRect.right + pad
+    }
+  }, [isLoading])
 
   // Restore last search on mount (chip + location, never nearby mode).
   // URL-derived initialLocation takes priority over localStorage.
@@ -1560,6 +1587,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
 
       {/* Row 1 — venue categories (drill-in) */}
       <div
+        ref={chipRowRef}
         role="radiogroup"
         aria-label={t.chat.chipsGroupLabel}
         className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none] -mx-4 px-4"
