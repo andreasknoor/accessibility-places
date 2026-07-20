@@ -434,13 +434,14 @@ export default function MapView({
   const userMarker = useRef<any>(null)
   const [mapReady, setMapReady] = useState(false)
   // Ebenen box (parking/WC layer toggles, merged with their own legend rows)
-  // collapse state — persisted across sessions, defaults to expanded
-  // (today's behaviour). A plain localStorage
-  // flag rather than AppSettings: purely cosmetic map-UI state, not a search
-  // preference, so it doesn't belong in the SettingsSheet surface.
+  // collapse state — persisted across sessions, defaults to collapsed. A
+  // plain localStorage flag rather than AppSettings: purely cosmetic map-UI
+  // state, not a search preference, so it doesn't belong in the
+  // SettingsSheet surface. Only an explicit stored "0" (the user expanded it
+  // before) overrides the collapsed default — absent or "1" both collapse.
   const [layersCollapsed, setLayersCollapsed] = useState(() => {
-    if (typeof window === "undefined") return false
-    return window.localStorage.getItem(LAYERS_COLLAPSED_KEY) === "1"
+    if (typeof window === "undefined") return true
+    return window.localStorage.getItem(LAYERS_COLLAPSED_KEY) !== "0"
   })
   function toggleLayersCollapsed() {
     setLayersCollapsed((prev) => {
@@ -1544,7 +1545,7 @@ export default function MapView({
           search". Disabled in amenity focus mode (the count there would be
           stale).
 
-          Collapsible (defaults expanded, persisted via layersCollapsed):
+          Collapsible (defaults collapsed, persisted via layersCollapsed):
           collapsed shows a compact chip per *active* layer only (none for
           an inactive layer) plus a chevron, and — since there are no
           checkboxes left to click while collapsed — the whole compact box
