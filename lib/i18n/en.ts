@@ -116,7 +116,7 @@ const en: Translations = {
     lowConfidenceHint: "Low reliability",
     primarySource: "Best source",
     noData: "No data",
-    notAccessibleWarningPre:  "Warning: This place may ",
+    notAccessibleWarningPre:  "Warning: May ",
     notAccessibleWarningBold: "not",
     notAccessibleWarningPost: " be accessible.",
     notAccessibleWarningToggle: "Show hint",

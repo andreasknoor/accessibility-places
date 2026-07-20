@@ -116,7 +116,7 @@ const de: Translations = {
     lowConfidenceHint: "Geringe Verlässlichkeit",
     primarySource: "Beste Quelle",
     noData: "Keine Daten",
-    notAccessibleWarningPre:  "Achtung: Dieser Ort ist evtl. ",
+    notAccessibleWarningPre:  "Achtung: Evtl. ",
     notAccessibleWarningBold: "nicht",
     notAccessibleWarningPost: " barrierefrei.",
     notAccessibleWarningToggle: "Hinweis anzeigen",
