@@ -271,6 +271,10 @@ export interface Translations {
     // Short group label for the map's layer toggle box ("Ebenen" + the two
     // checkbox-style items below it — see focusChipParking/focusChipToilet).
     layersLabel:            string
+    // aria-labels for the collapse/expand toggle on the layer box (issue: keep
+    // a compact active-layers summary visible when collapsed).
+    layersExpand:           string
+    layersCollapse:         string
     nearbyParking:          string
     parkingFree:            string
     parkingPaid:            string

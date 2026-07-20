@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { Maximize2, Minimize2, Search, LocateFixed, Loader2, Layers, Check } from "lucide-react"
+import { Maximize2, Minimize2, Search, LocateFixed, Loader2, Layers, Check, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import PlaceDebugSheet from "@/components/results/PlaceDebugSheet"
 import { useTranslations } from "@/lib/i18n"
@@ -20,6 +20,7 @@ let L: typeof import("leaflet") | null = null
 
 const PLACE_CLUSTER_MAX_RADIUS = 50            // px — grouping radius at low zoom
 const PLACE_CLUSTER_DISABLE_AT_ZOOM = 17       // street-level: always show every pin
+const LAYERS_COLLAPSED_KEY = "ap_layers_collapsed"
 
 interface Props {
   places:        Place[]
@@ -433,6 +434,26 @@ export default function MapView({
   const userMarker = useRef<any>(null)
   const [mapReady, setMapReady] = useState(false)
   const [legendOpen, setLegendOpen] = useState(false)
+  // Ebenen box (parking/WC layer toggles) collapse state — persisted across
+  // sessions, defaults to expanded (today's behaviour). A plain localStorage
+  // flag rather than AppSettings: purely cosmetic map-UI state, not a search
+  // preference, so it doesn't belong in the SettingsSheet surface.
+  const [layersCollapsed, setLayersCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false
+    return window.localStorage.getItem(LAYERS_COLLAPSED_KEY) === "1"
+  })
+  function toggleLayersCollapsed() {
+    setLayersCollapsed((prev) => {
+      const next = !prev
+      try {
+        window.localStorage.setItem(LAYERS_COLLAPSED_KEY, next ? "1" : "0")
+      } catch {
+        // localStorage unavailable (private browsing etc.) — collapse state
+        // just won't persist, no functional impact.
+      }
+      return next
+    })
+  }
   // Place whose detail sheet is open over the map (from the popup "Details
   // anzeigen" link). Rendered as a portal overlay so the Leaflet map underneath
   // keeps its centre/zoom/open popup — closing the sheet reveals the map exactly
@@ -1514,48 +1535,88 @@ export default function MapView({
           which reads as "this replaces the results with a new search". Same
           widget, same two colours (blue/parking, green/WC) as everywhere else
           disabled parking/WC markers appear, only the container differs.
-          Disabled in amenity focus mode (the count there would be stale). ── */}
+          Disabled in amenity focus mode (the count there would be stale).
+
+          Collapsible (defaults expanded, persisted via layersCollapsed):
+          collapsed shows a compact chip per *active* layer only (none for an
+          inactive layer) plus a chevron, and — since there are no checkboxes
+          left to click while collapsed — the whole compact box is itself the
+          expand trigger, not just the chevron. Expanded keeps the original
+          checkbox buttons untouched; only the chevron toggles collapse there,
+          so tapping a checkbox can't accidentally collapse the box. ── */}
       {onSetMapLayers && (
-        <div
-          aria-disabled={focusMode}
-          role="group"
-          aria-label={t.map.layersLabel}
-          className={`absolute bottom-3 left-3 z-[1000] flex items-center gap-2 rounded-xl border border-border bg-background/95 backdrop-blur-sm shadow-md px-2.5 py-1.5 ${focusMode ? "opacity-50 pointer-events-none" : ""}`}
-        >
-          <span className="flex items-center gap-1 text-[11px] font-bold text-muted-foreground shrink-0">
-            <Layers className="w-3.5 h-3.5" aria-hidden />
-            {t.map.layersLabel}
-          </span>
-          <span className="w-px self-stretch bg-border" aria-hidden />
-          <span className="flex items-center gap-2.5">
-            <button
-              onClick={() => onSetMapLayers(!(showParking ?? false), showToilets ?? false)}
-              aria-pressed={showParking ?? false}
-              className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <span className={`w-[0.95rem] h-[0.95rem] rounded-[0.2rem] border-[1.5px] flex items-center justify-center shrink-0 transition-colors
-                ${showParking ? "bg-blue-600 border-blue-600" : "border-current"}`}>
-                {showParking && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3.5} aria-hidden />}
+        layersCollapsed ? (
+          <button
+            type="button"
+            aria-disabled={focusMode}
+            aria-label={t.map.layersExpand}
+            onClick={toggleLayersCollapsed}
+            disabled={focusMode}
+            className={`absolute bottom-3 left-3 z-[1000] flex items-center gap-1.5 rounded-xl border border-border bg-background/95 backdrop-blur-sm shadow-md px-2.5 py-1.5 ${focusMode ? "opacity-50 pointer-events-none" : "hover:bg-muted transition-colors"}`}
+          >
+            <Layers className="w-3.5 h-3.5 text-muted-foreground shrink-0" aria-hidden />
+            {showParking && (
+              <span className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-600/10 rounded-full px-2 py-0.5">
+                🅿 {t.chat.focusChipParking}
               </span>
-              <span aria-hidden>🅿</span>
-              <span className={showParking ? "text-foreground" : undefined}>{t.chat.focusChipParking}</span>
-            </button>
-            {hasToiletData && (
+            )}
+            {hasToiletData && showToilets && (
+              <span className="flex items-center gap-1 text-xs font-semibold text-pink-700 dark:text-pink-400 bg-pink-700/10 rounded-full px-2 py-0.5">
+                🚻 {t.chat.focusChipToilet}
+              </span>
+            )}
+            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0 rotate-180" aria-hidden />
+          </button>
+        ) : (
+          <div
+            aria-disabled={focusMode}
+            role="group"
+            aria-label={t.map.layersLabel}
+            className={`absolute bottom-3 left-3 z-[1000] flex items-center gap-2 rounded-xl border border-border bg-background/95 backdrop-blur-sm shadow-md px-2.5 py-1.5 ${focusMode ? "opacity-50 pointer-events-none" : ""}`}
+          >
+            <span className="flex items-center gap-1 text-[11px] font-bold text-muted-foreground shrink-0">
+              <Layers className="w-3.5 h-3.5" aria-hidden />
+              {t.map.layersLabel}
+            </span>
+            <span className="w-px self-stretch bg-border" aria-hidden />
+            <span className="flex items-center gap-2.5">
               <button
-                onClick={() => onSetMapLayers(showParking ?? false, !(showToilets ?? false))}
-                aria-pressed={showToilets ?? false}
+                onClick={() => onSetMapLayers(!(showParking ?? false), showToilets ?? false)}
+                aria-pressed={showParking ?? false}
                 className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
                 <span className={`w-[0.95rem] h-[0.95rem] rounded-[0.2rem] border-[1.5px] flex items-center justify-center shrink-0 transition-colors
-                  ${showToilets ? "bg-pink-700 border-pink-700" : "border-current"}`}>
-                  {showToilets && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3.5} aria-hidden />}
+                  ${showParking ? "bg-blue-600 border-blue-600" : "border-current"}`}>
+                  {showParking && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3.5} aria-hidden />}
                 </span>
-                <span aria-hidden>🚻</span>
-                <span className={showToilets ? "text-foreground" : undefined}>{t.chat.focusChipToilet}</span>
+                <span aria-hidden>🅿</span>
+                <span className={showParking ? "text-foreground" : undefined}>{t.chat.focusChipParking}</span>
               </button>
-            )}
-          </span>
-        </div>
+              {hasToiletData && (
+                <button
+                  onClick={() => onSetMapLayers(showParking ?? false, !(showToilets ?? false))}
+                  aria-pressed={showToilets ?? false}
+                  className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <span className={`w-[0.95rem] h-[0.95rem] rounded-[0.2rem] border-[1.5px] flex items-center justify-center shrink-0 transition-colors
+                    ${showToilets ? "bg-pink-700 border-pink-700" : "border-current"}`}>
+                    {showToilets && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3.5} aria-hidden />}
+                  </span>
+                  <span aria-hidden>🚻</span>
+                  <span className={showToilets ? "text-foreground" : undefined}>{t.chat.focusChipToilet}</span>
+                </button>
+              )}
+            </span>
+            <button
+              type="button"
+              onClick={toggleLayersCollapsed}
+              aria-label={t.map.layersCollapse}
+              className="shrink-0 -mr-1 p-0.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <ChevronDown className="w-3.5 h-3.5" aria-hidden />
+            </button>
+          </div>
+        )
       )}
 
       {/* ── Marker legend (collapsible) — shown when parking or WC markers are present ── */}

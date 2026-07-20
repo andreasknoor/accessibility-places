@@ -7,6 +7,7 @@ Ersteinführung. Neueste Einträge oben; wird bei jeder neuen Funktion fortgefü
 
 | Datum | Funktion | Beschreibung | Umfang |
 |---|---|---|---|
+| 2026-07-20 | Ein-/ausklappbare Ebenen-Box | „Ebenen: Parkplatz/WC" auf der Karte lässt sich einklappen (Zustand bleibt sitzungsübergreifend gespeichert); eingeklappt zeigt sie kompakte Chips nur für aktive Ebenen | S |
 | 2026-07-20 | 12 weitere Alltagskategorien | Schuhgeschäft, Bekleidung, Kiosk, Fahrradladen, Möbel, Metzgerei, Blumenladen, Waschsalon, Buchhandlung, Reha-Zentrum, Sporthalle, Tankstelle (51 Kategorien insgesamt) | M |
 | 2026-07-16 | Hinweis bei möglicherweise nicht barrierefreien Orten | Neuer Warnhinweis + kontextabhängiger „Info ergänzen"-statt-„Melden"-Button, wenn Eingang/WC unbekannt oder negativ sind | M |
 | 2026-07-14 | „Navigation starten" | Ein-Klick-Wegweiser vom Ort zur bevorzugten Karten-App des Geräts (Google Maps, Apple Maps) | M |

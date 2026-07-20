@@ -270,6 +270,8 @@ const en: Translations = {
     parkingDedicatedLabel:   "Dedicated wheelchair spaces",
     toggleParking:  "Show wheelchair parking on map",
     layersLabel:    "Layers",
+    layersExpand:   "Show layers",
+    layersCollapse: "Collapse layers",
     nearbyParking:  "Nearby parking",
     parkingFree:      "Free",
     parkingPaid:      "Paid",

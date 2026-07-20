@@ -270,6 +270,8 @@ const de: Translations = {
     parkingDedicatedLabel:   "Dedizierte Rollstuhlplätze",
     toggleParking:  "Rollstuhlparkplätze in Karte anzeigen",
     layersLabel:    "Ebenen",
+    layersExpand:   "Ebenen anzeigen",
+    layersCollapse: "Ebenen einklappen",
     nearbyParking:  "Parkplätze in der Nähe",
     parkingFree:      "Kostenlos",
     parkingPaid:      "Kostenpflichtig",
