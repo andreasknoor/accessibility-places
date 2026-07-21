@@ -1207,65 +1207,112 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
     checkAction()
 
+    // TEMPORARY diagnostic instrumentation (remove once the deep-link bug is
+    // confirmed fixed on-device) — every plain, non-deep-link cold launch also
+    // takes this path (getLaunchUrl always gets polled), so this intentionally
+    // fires on every native app open for now, not just deep-link taps.
+    function dl(message: string, data?: Record<string, unknown>) {
+      Sentry.addBreadcrumb({ category: "deeplink", message, level: "info", data })
+    }
+    function dlReport(outcome: string, data?: Record<string, unknown>) {
+      Sentry.captureMessage(`deeplink: ${outcome}`, { level: "info", tags: { area: "deeplink", outcome }, extra: data })
+    }
+    dl("native bridge effect mounted")
+
     // Only links carrying selectLat are place-detail links (matches the AASA scope);
-    // everything else is ignored. `lastUrl` dedups getLaunchUrl vs. an early appUrlOpen
-    // both delivering the SAME cold-launch event — but deliberately does NOT block a
-    // later, different deep-link tap in the same (warm) app session.
+    // everything else is ignored. `lastUrl`/`lastUrlAt` dedup getLaunchUrl vs. an
+    // early appUrlOpen delivering the SAME cold-launch event within a short window —
+    // but (unlike a permanent per-session flag) do NOT block a later tap of the
+    // identical link, which is a completely normal warm-relaunch scenario (e.g.
+    // re-testing the same email link) and must still search.
     let lastUrl: string | null = null
-    function maybeFollowDeepLink(url: string) {
-      if (url === lastUrl) return
+    let lastUrlAt = 0
+    const DEDUP_WINDOW_MS = 1500
+    function maybeFollowDeepLink(url: string, source: "appUrlOpen" | "launchUrl") {
+      dl("maybeFollowDeepLink called", { source, url })
+      const now = Date.now()
+      if (url === lastUrl && now - lastUrlAt < DEDUP_WINDOW_MS) {
+        dl("dedup: same URL within window, skipped", { source })
+        return
+      }
       lastUrl = url
+      lastUrlAt = now
       try {
         const u = new URL(url)
         const latRaw = u.searchParams.get("selectLat")
         const lonRaw = u.searchParams.get("selectLon")
-        if (latRaw == null || lonRaw == null) return
+        if (latRaw == null || lonRaw == null) {
+          dl("no selectLat/selectLon on URL — not a place link, ignored", { source })
+          return
+        }
         const lat = parseFloat(latRaw)
         const lon = parseFloat(lonRaw)
-        if (!Number.isFinite(lat) || !Number.isFinite(lon)) return
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+          dl("selectLat/selectLon not finite numbers, ignored", { source, latRaw, lonRaw })
+          return
+        }
+        dlReport("place_link_processed", { source, lat, lon })
         runPlaceDeepLink(lat, lon, u.searchParams.get("selectName") ?? undefined, u.searchParams.get("cat") ?? undefined)
-      } catch { /* malformed URL — ignore */ }
+      } catch (e) {
+        dlReport("malformed_url", { source, error: String(e) })
+      }
     }
 
     const cleanups: Array<() => void> = []
     import("@capacitor/app").then(({ App: CapApp }) => {
       if (cancelled) return
+      dl("capacitor/app loaded")
       // Re-check the pending quick action whenever the app resumes (warm launch).
+      // Also re-poll getLaunchUrl here: on iOS the continue-userActivity delivery
+      // can lag behind our own poll window (cold-start boot reported at 6–8 s), so
+      // a resume shortly after launch is a second, cheap chance to catch a launch
+      // URL that settled late. launchDeepLinkConsumed still gates it to fire at
+      // most once for the original launch URL.
       CapApp.addListener("appStateChange", ({ isActive }) => {
-        if (isActive) checkAction()
+        if (isActive) {
+          checkAction()
+          pollLaunchUrl()
+        }
       }).then((handle) => { cleanups.push(() => handle.remove()) })
 
       // Universal Link arriving while/after the app is open (warm).
-      CapApp.addListener("appUrlOpen", ({ url }) => maybeFollowDeepLink(url))
-        .then((handle) => { cleanups.push(() => handle.remove()) })
+      CapApp.addListener("appUrlOpen", ({ url }) => {
+        dl("appUrlOpen fired", { url })
+        maybeFollowDeepLink(url, "appUrlOpen")
+      }).then((handle) => { cleanups.push(() => handle.remove()) })
 
       // Cold launch via Universal Link. Two cold-start races make a single
       // getLaunchUrl() check unreliable on iOS: (a) appUrlOpen may have fired
       // before the listener above was attached (it sits behind the async
       // import("@capacitor/app")), and (b) getLaunchUrl() itself often returns
-      // null on the very first check because the continue-userActivity delivery
-      // races the WebView load — the URL only settles a beat later (which is why
-      // the deep link "magically" applied after navigating to the FAQ and back:
-      // that remount re-ran this effect once getLaunchUrl() had populated).
-      // So we POLL getLaunchUrl() until it yields a URL (or we exhaust the
-      // retries), instead of checking exactly once. maybeFollowDeepLink is
-      // dedup'd (lastUrl), so overlap with a caught appUrlOpen is harmless.
+      // null for a while because the continue-userActivity delivery races the
+      // WebView load/boot (reported cold-start duration: 6–8 s) — the URL only
+      // settles later (which is why the deep link "magically" applied after
+      // navigating to the FAQ and back: that remount re-ran this effect and
+      // polled again). So we POLL getLaunchUrl() until it yields a URL or we
+      // exhaust the retries, instead of checking once. maybeFollowDeepLink is
+      // dedup'd, so overlap with a caught appUrlOpen is harmless.
       let launchTries = 0
-      const LAUNCH_MAX_TRIES = 20 // 20 × 200 ms = 4 s — covers the settle delay
+      const LAUNCH_MAX_TRIES = 40 // 40 × 300 ms = 12 s — comfortably past the reported 6–8 s boot
       const pollLaunchUrl = () => {
         if (cancelled || launchDeepLinkConsumed) return
         CapApp.getLaunchUrl().then((res) => {
           if (cancelled || launchDeepLinkConsumed) return
           if (res?.url) {
             // Launch info has settled (deep link or plain launch). Mark it
-            // consumed so a later remount (FAQ → back) doesn't re-fire it, then
+            // consumed so a later remount/resume doesn't re-fire it, then
             // process it — maybeFollowDeepLink ignores non-place URLs — and stop.
             launchDeepLinkConsumed = true
-            maybeFollowDeepLink(res.url)
+            dl("getLaunchUrl settled", { tries: launchTries, url: res.url })
+            maybeFollowDeepLink(res.url, "launchUrl")
             return
           }
-          if (++launchTries < LAUNCH_MAX_TRIES) setTimeout(pollLaunchUrl, 200)
-        }).catch(() => {/* no launch url */})
+          if (++launchTries < LAUNCH_MAX_TRIES) {
+            setTimeout(pollLaunchUrl, 300)
+          } else {
+            dlReport("launch_url_poll_exhausted", { tries: launchTries })
+          }
+        }).catch((e) => { dl("getLaunchUrl threw", { error: String(e) }) })
       }
       pollLaunchUrl()
     }).catch(() => {/* not on native */})

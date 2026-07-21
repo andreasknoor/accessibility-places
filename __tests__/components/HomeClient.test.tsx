@@ -21,6 +21,8 @@ import HomeClient from "@/app/HomeClient"
 vi.mock("@vercel/analytics", () => ({ track: vi.fn() }))
 vi.mock("@sentry/nextjs", () => ({
   captureException: vi.fn(),
+  captureMessage:   vi.fn(),
+  addBreadcrumb:    vi.fn(),
   flush:            vi.fn().mockResolvedValue(undefined),
 }))
 
