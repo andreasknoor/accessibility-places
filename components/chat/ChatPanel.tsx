@@ -31,6 +31,16 @@ interface Props {
   // default survive any chip reordering. Converted to a positional index internally.
   initialChipCat?:   Category | null
   initialMode?:      "text" | "nearby" | "place"  // "place" is treated as "text" (legacy)
+  // Native shells only (HomeClient computes this via Capacitor.isNativePlatform();
+  // always false/undefined on web). While true, defers the cold-start "auto-locate
+  // when starting in nearby mode" effect below — HomeClient hasn't yet confirmed
+  // whether this launch is a place deep-link. Without this, the effect (a CHILD
+  // component's passive effect, which flushes BEFORE the parent's own effects in
+  // the same commit) reliably won the race against HomeClient's async native
+  // appUrlOpen/getLaunchUrl check, firing a "locate + search everything" nearby
+  // search that clobbered the correct deep-linked place before HomeClient could
+  // even find out a deep link existed.
+  deferAutoLocate?:  boolean
   onGpsResolved?:    (coords: Coords) => void
   locateTrigger?:    number
   // Reverse-geocoded district for the map locate button's GPS fix (the inline
@@ -279,7 +289,7 @@ async function geocodeLocation(q: string, international: boolean): Promise<Coord
   return { lat: data.lat, lon: data.lon }
 }
 
-export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipCat, initialMode, onGpsResolved, locateTrigger, mapLocateFix, mapLocateFixKey, exitNearbyTrigger, biasCoords, onAmenitySearch, amenityActive, onExitAmenity, onCategoryQueryChange, activeSearchCoords, searchCenter, international, getViewportOrigin, panPending }: Props) {
+export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeChange, autoFocus, initialLocation, initialChipCat, initialMode, deferAutoLocate, onGpsResolved, locateTrigger, mapLocateFix, mapLocateFixKey, exitNearbyTrigger, biasCoords, onAmenitySearch, amenityActive, onExitAmenity, onCategoryQueryChange, activeSearchCoords, searchCenter, international, getViewportOrigin, panPending }: Props) {
   // Internal positional form of the cat-keyed prop. The mount/default effects below
   // were written against an index; deriving it here keeps that logic untouched while
   // the external contract stays category-keyed.
@@ -500,7 +510,17 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // correction's re-render settles — so any prop/ref read here still sees the
   // stale `false`. localStorage is the ground truth, client-side and timing-
   // independent. (Invisible on web with slow browser GPS; obvious on native.)
+  const autoLocateAttemptedRef = useRef(false)
   useEffect(() => {
+    // Native only (deferAutoLocate is always false/undefined on web — see the
+    // prop's own doc comment): wait for HomeClient's native bridge to confirm
+    // whether this cold start is a place deep-link before running any of the
+    // logic below, including the isReturningNow() restore branch. Re-fires once
+    // deferAutoLocate flips to false; autoLocateAttemptedRef still caps the
+    // actual body to one real attempt, matching the original "run once" effect.
+    if (deferAutoLocate) return
+    if (autoLocateAttemptedRef.current) return
+    autoLocateAttemptedRef.current = true
     // On a session return (home remounted after visiting a static page), HomeClient
     // restores the mode and re-runs the last search itself — do NOT also auto-locate
     // (would fire a second, unwanted nearby search). Instead, restore the located
@@ -538,7 +558,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       handleLocate()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [deferAutoLocate])
 
   // Stop watchPosition and any pending dropdown-close timer on unmount
   useEffect(() => {

@@ -93,6 +93,7 @@ interface Props {
   exitNearbyTrigger?:   number
   onSwitchToText?:      () => void
   chatMode:             "text" | "nearby"
+  deferAutoLocate?:     boolean
   onChatModeChange:     (mode: "text" | "nearby") => void
   biasCoords?:          { lat: number; lon: number }
   onSearchHere?:        (center: { lat: number; lon: number }, radiusKm: number, origin: "drag" | "locate") => void
@@ -113,7 +114,7 @@ export default function MobileLayout({
   showParking, showToilets, onSetMapLayers, hasToiletData, parkingSpotCount,
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
   onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, onStartNearby, locateTrigger, mapLocateFix, mapLocateFixKey, exitNearbyTrigger, onSwitchToText,
-  chatMode, onChatModeChange, biasCoords, onSearchHere, onLocate, locatePanTrigger, gpsCoords, onCategoryQueryChange, activeSearchCoords,
+  chatMode, deferAutoLocate, onChatModeChange, biasCoords, onSearchHere, onLocate, locatePanTrigger, gpsCoords, onCategoryQueryChange, activeSearchCoords,
   amenityActive, onAmenitySearch, onExitAmenity, amenityResults, amenityHint, amenitySearchCenter, onAmenitySearchHere, onAmenityRadius, amenityRadiusKm, intlNotice, placeSearchName,
   onAmenitySelect, selectedAmenityKey, onAmenityMarkerClick, amenityPanTarget, amenityPanTrigger,
   getViewportOrigin, onViewportChange, panPending,
@@ -306,7 +307,7 @@ export default function MobileLayout({
 
       {/* ── Search bar (always visible) ── */}
       <div role="search">
-        <ChatPanel key={resetKey} autoFocus={autoFocusInput} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipCat={initialChipCat} initialMode={chatMode} onGpsResolved={onGpsResolved} locateTrigger={locateTrigger} mapLocateFix={mapLocateFix} mapLocateFixKey={mapLocateFixKey} exitNearbyTrigger={exitNearbyTrigger} biasCoords={biasCoords} onAmenitySearch={handleAmenitySearch} amenityActive={amenityActive} onExitAmenity={onExitAmenity} onCategoryQueryChange={onCategoryQueryChange} activeSearchCoords={activeSearchCoords} searchCenter={searchCenter} international={settings.internationalMode} getViewportOrigin={getViewportOrigin} panPending={panPending} />
+        <ChatPanel key={resetKey} autoFocus={autoFocusInput} onSearch={handleSearch} onPlaceSearch={onPlaceSearch} isLoading={isLoading} onModeChange={onChatModeChange} initialLocation={initialLocation} initialChipCat={initialChipCat} initialMode={chatMode} deferAutoLocate={deferAutoLocate} onGpsResolved={onGpsResolved} locateTrigger={locateTrigger} mapLocateFix={mapLocateFix} mapLocateFixKey={mapLocateFixKey} exitNearbyTrigger={exitNearbyTrigger} biasCoords={biasCoords} onAmenitySearch={handleAmenitySearch} amenityActive={amenityActive} onExitAmenity={onExitAmenity} onCategoryQueryChange={onCategoryQueryChange} activeSearchCoords={activeSearchCoords} searchCenter={searchCenter} international={settings.internationalMode} getViewportOrigin={getViewportOrigin} panPending={panPending} />
       </div>
 
       {/* ── Error banner ── */}

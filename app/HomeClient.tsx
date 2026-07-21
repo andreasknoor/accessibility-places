@@ -28,6 +28,7 @@ import { useSettings, loadSettings, DEFAULT_APP_SETTINGS, SETTINGS_PARKING_RADIU
 import { markMountAndIsReturning, clearReturningFlag, loadActiveMode, saveActiveMode, loadSearchRun, saveSearchRun, clearSearchRun, clearSearchInput, clearSessionSearch } from "@/lib/session-restore"
 import { getCurrentPosition, getBestPosition, isGeolocationAvailable } from "@/lib/native/geolocation"
 import { consumePendingNativeAction } from "@/lib/native/actions"
+import { Capacitor } from "@capacitor/core"
 import { cn } from "@/lib/utils"
 import type { AppSettings } from "@/lib/settings"
 import type { Place, ParkingSpot, AmenityFeature, AmenityType, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug } from "@/lib/types"
@@ -154,6 +155,21 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [chatMode,      setChatMode]     = useState<"text" | "nearby">(
     initialCity || isPlaceDeepLink ? "text" : (DEFAULT_APP_SETTINGS.defaultSearchMode ?? "nearby"),
   )
+  // Native place deep-links never populate initialSelectLat (see isPlaceDeepLink
+  // above) — page.tsx's searchParams are always empty in the native shell, so
+  // the check above can't detect a pending deep link at initial-state time. On
+  // native, ChatPanel's own cold-start nearby auto-locate is a CHILD effect and
+  // therefore flushes BEFORE this component's native-bridge effect (children's
+  // passive effects always precede the parent's in the same commit) — it was
+  // winning the race and firing a "locate + search everything" nearby search
+  // before the async appUrlOpen/getLaunchUrl deep-link check could even run,
+  // clobbering the correct place-search result. Capacitor.isNativePlatform() is
+  // synchronous (no plugin round-trip), so this can gate from the very first
+  // render: true on native (deferred) until the bridge effect below confirms
+  // there is/isn't a pending deep link; always false on web (no change there).
+  const [deferNearbyAutoLocate, setDeferNearbyAutoLocate] = useState(() => {
+    try { return Capacitor.isNativePlatform() } catch { return false }
+  })
   const [filterCollapsed, setFilterCollapsed] = useState(true)
   const [sortBy,        setSortBy]       = useState<"confidence" | "distance">(() => loadSettings().sortOrder)
   const [resetKey,            setResetKey]            = useState(0)
@@ -1219,6 +1235,29 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     }
     dl("native bridge effect mounted")
 
+    // Releases the deferNearbyAutoLocate gate (see the state's own comment above)
+    // so ChatPanel's cold-start nearby auto-locate is allowed to run. Idempotent —
+    // safe to call from multiple signals, only the first call has any effect.
+    // Fires as soon as we have ANY live signal about this launch: appUrlOpen's
+    // first invocation (its listener is registered before the poll even starts,
+    // and its retained event is delivered near-instantly for a real deep link —
+    // confirmed on-device at ~110 ms), or getLaunchUrl's very first resolution
+    // (lastURL is set natively at the very start of a Universal Link cold boot,
+    // well before the WebView/JS even starts loading, so the FIRST check should
+    // already reflect it) — deliberately NOT the full getLaunchUrl retry-poll,
+    // which can run for up to 12 s and would otherwise delay every ordinary,
+    // non-deep-link cold launch's auto-locate by that much. A hard timeout is
+    // the last-resort fallback so a native bridge failure can never permanently
+    // block the normal nearby-search default.
+    let gateOpened = false
+    function openAutoLocateGate(reason: string) {
+      if (gateOpened) return
+      gateOpened = true
+      dl("auto-locate gate opened", { reason })
+      setDeferNearbyAutoLocate(false)
+    }
+    const gateTimeoutId = setTimeout(() => openAutoLocateGate("timeout"), 2000)
+
     // Only links carrying selectLat are place-detail links (matches the AASA scope);
     // everything else is ignored. `lastUrl`/`lastUrlAt` dedup getLaunchUrl vs. an
     // early appUrlOpen delivering the SAME cold-launch event within a short window —
@@ -1278,7 +1317,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       // Universal Link arriving while/after the app is open (warm).
       CapApp.addListener("appUrlOpen", ({ url }) => {
         dl("appUrlOpen fired", { url })
+        // maybeFollowDeepLink first: if this IS a place link, runPlaceDeepLink's
+        // setChatMode("text") is queued synchronously before the gate opens, so
+        // both land in the same React batch and ChatPanel never briefly sees
+        // "nearby" once its deferred auto-locate effect finally runs.
         maybeFollowDeepLink(url, "appUrlOpen")
+        openAutoLocateGate("appUrlOpen")
       }).then((handle) => { cleanups.push(() => handle.remove()) })
 
       // Cold launch via Universal Link. Two cold-start races make a single
@@ -1296,8 +1340,14 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       const LAUNCH_MAX_TRIES = 40 // 40 × 300 ms = 12 s — comfortably past the reported 6–8 s boot
       const pollLaunchUrl = () => {
         if (cancelled || launchDeepLinkConsumed) return
+        const isFirstAttempt = launchTries === 0
         CapApp.getLaunchUrl().then((res) => {
-          if (cancelled || launchDeepLinkConsumed) return
+          if (cancelled) return
+          // Gate opens after the FIRST check regardless of outcome — see
+          // openAutoLocateGate's own comment for why waiting the full retry-poll
+          // would wrongly delay every ordinary cold launch's auto-locate.
+          if (isFirstAttempt) openAutoLocateGate("launchUrl-first-check")
+          if (launchDeepLinkConsumed) return
           if (res?.url) {
             // Launch info has settled (deep link or plain launch). Mark it
             // consumed so a later remount/resume doesn't re-fire it, then
@@ -1319,6 +1369,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
     return () => {
       cancelled = true
+      clearTimeout(gateTimeoutId)
       for (const c of cleanups) c()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1575,6 +1626,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         biasCoords={searchCenter ?? gpsCoords ?? undefined}
         onSwitchToText={() => handleSwitchMode("text")}
         chatMode={chatMode}
+        deferAutoLocate={deferNearbyAutoLocate}
         onChatModeChange={handleModeChange}
         amenityActive={amenitySearch}
         onAmenitySearch={handleAmenitySearch}
@@ -1687,6 +1739,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           initialLocation={resetKey === 0 ? initialCity : undefined}
           initialChipCat={initialCategory && resetKey === 0 ? SEO_CATEGORY_SLUGS[initialCategory] : (settings.defaultChipCat ?? undefined)}
           initialMode={chatMode}
+          deferAutoLocate={deferNearbyAutoLocate}
           onGpsResolved={handleGpsResolved}
           locateTrigger={locateTriggerKey}
           mapLocateFix={mapLocateFix}
