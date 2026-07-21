@@ -98,15 +98,16 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
             its own separate quick-view, so there is exactly one exception-free
             tap target for the whole box, badge included.
 
-            Two rows, not one: the name row (icon + h3 + chevron) never shares
-            space with the confidence badge. At large Android system font
-            sizes the badge (shrink-0, text-xs, rem-scaled) has no upper bound
-            — in a single row it was squeezing the name (the only min-w-0
-            sibling) down to a near-unreadable sliver. The meta row
-            (category/address + badge) is free to wrap on its own without
-            ever affecting the name's width. The chevron stays attached to
-            the name row specifically — it's the "opens details" affordance
-            for the heading, not for the badge. */}
+            Fully stacked, not just two rows: the name row (icon + h3 +
+            chevron), the category line, the address line, and the confidence
+            badge each get their own full-width line. At large Android system
+            font sizes the badge (rem-scaled, no upper bound) was squeezing
+            the name — previously the only shrinkable sibling — down to a
+            near-unreadable sliver whenever it shared a row. Giving every
+            element its own line is the most robust option (also holds up for
+            very long, 2-line names), at the cost of a taller card. The
+            chevron stays attached to the name row specifically — it's the
+            "opens details" affordance for the heading, not for the badge. */}
         <div
           role="button"
           tabIndex={0}
@@ -115,7 +116,7 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
             if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDetails() }
           }}
           aria-label={t.results.openDetails(place.name)}
-          className="flex flex-col gap-1.5 rounded-lg border border-border bg-muted/40 px-2.5 py-2 cursor-pointer hover:bg-muted/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex flex-col gap-1 rounded-lg border border-border bg-muted/40 px-2.5 py-2 cursor-pointer hover:bg-muted/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <div className="flex items-start gap-2">
             <span className="text-base shrink-0" aria-hidden>
@@ -126,25 +127,23 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
             </h3>
             <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 self-start mt-0.5" aria-hidden />
           </div>
-          <div className="flex items-start gap-2 flex-wrap">
-            <div className="min-w-0 flex-1">
-              <p className="text-xs text-muted-foreground">
-                {(t.categories as Record<string, string>)[place.category] ?? place.category}
-              </p>
-              {(addr || distanceM !== undefined) && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                  <MapPin className="w-3 h-3 shrink-0" />
-                  {addr && <span className="truncate min-w-0">{addr}</span>}
-                  {distanceM !== undefined && (
-                    <>
-                      {addr && <span className="shrink-0">·</span>}
-                      <span className="shrink-0">{t.results.distanceFromHere(Math.round(distanceM))}</span>
-                    </>
-                  )}
-                </p>
+          <p className="text-xs text-muted-foreground">
+            {(t.categories as Record<string, string>)[place.category] ?? place.category}
+          </p>
+          {(addr || distanceM !== undefined) && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <MapPin className="w-3 h-3 shrink-0" />
+              {addr && <span className="truncate min-w-0">{addr}</span>}
+              {distanceM !== undefined && (
+                <>
+                  {addr && <span className="shrink-0">·</span>}
+                  <span className="shrink-0">{t.results.distanceFromHere(Math.round(distanceM))}</span>
+                </>
               )}
-            </div>
-            <ConfidenceBadge confidence={place.overallConfidence} place={place} className="shrink-0 self-start ml-auto" />
+            </p>
+          )}
+          <div className="flex justify-end mt-0.5">
+            <ConfidenceBadge confidence={place.overallConfidence} place={place} className="shrink-0" />
           </div>
         </div>
 
