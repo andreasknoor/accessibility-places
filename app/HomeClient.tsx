@@ -837,8 +837,20 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     // Matches isPlaceDeepLink's initial chatMode ("text", never the nearby default) —
     // necessary here too since this can run well after that initial-state computation,
     // on an already-mounted app whose chatMode may currently be "nearby".
+    // modeResolvedRef pins it so the async default-mode effect can't later flip a
+    // native cold-start (isPlaceDeepLink=false) back to the user's "nearby" default.
     setChatMode("text")
+    modeResolvedRef.current = true
     setIsFirstVisit(false)
+    // Critical for native (iOS/Android): the shell loads server.url, so page.tsx never
+    // receives the selectLat params and isPlaceDeepLink is false — which means the
+    // usual startup suppressions don't apply and ChatPanel's cold-start nearby
+    // auto-locate is running. Its GPS fix resolves seconds later and would fire a
+    // nearby search that overwrites this deep-linked place. Bumping exitNearbyTrigger
+    // makes ChatPanel cancel that in-flight locate (exitNearbyState → locateCancelledRef)
+    // so the deep link wins. Same batch as setChatMode("text"), per the exitNearbyTrigger
+    // effect's notifyParent=false contract. Harmless on web (no auto-locate in flight).
+    setExitNearbyTriggerKey((k) => k + 1)
     const query = cat ? cat.replace(/_/g, " ") : (name ?? "orte")
     handleSearch(
       query,

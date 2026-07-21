@@ -336,6 +336,13 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
   // out from under the now-focused user.
   const blurCloseRef         = useRef<ReturnType<typeof setTimeout>>(undefined)
   const locatingRef          = useRef(false)
+  // Set true by exitNearbyState when a locate is aborted mid-flight (mode switch,
+  // token cleared, OR — the reason this ref exists — a place deep-link taking over
+  // the results while a cold-start nearby auto-locate is still awaiting its GPS fix).
+  // handleLocate's async resolve checks it and bails instead of firing a nearby
+  // search that would overwrite the deep-linked place. Reset to false at the start
+  // of every fresh handleLocate, so an intentional locate is never wrongly cancelled.
+  const locateCancelledRef   = useRef(false)
   // Set when an amenity chip is tapped while a "Nearby" locate (handleLocate) is
   // already in flight (nearbyPhase === "locating") — e.g. tapping "In der Nähe
   // suchen" and immediately tapping "WC" before GPS resolves. Rather than firing
@@ -709,6 +716,13 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       clearWatchPosition(watchIdRef.current)
       watchIdRef.current = null
     }
+    // Cancel any locate still awaiting its GPS fix: without this, an in-flight
+    // getCurrentPosition promise resolves later and fires a nearby onSearch even
+    // though we've left nearby mode — which is exactly how a place deep-link's
+    // results used to get clobbered by the cold-start auto-locate. (locatingRef is
+    // deliberately NOT reset here — handleLocate's own resolve/catch clears it; a
+    // reset here would let a second locate start concurrently with the pending one.)
+    locateCancelledRef.current = true
     setNearbyPhase("idle")
     if (mode === "nearby") {
       setMode("text")
@@ -1150,10 +1164,17 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     if (locatingRef.current) return
     if (!isGeolocationAvailable()) { setNearbyPhase("error"); return }
     locatingRef.current = true
+    // Fresh, intentional locate — clear any cancellation left by a prior
+    // exitNearbyState so this one is allowed to fire its search.
+    locateCancelledRef.current = false
     setNearbyPhase("locating")
     getCurrentPosition({ timeout: 30_000, enableHighAccuracy: false, maximumAge: 60_000 })
       .then(async ({ lat, lon }) => {
         locatingRef.current = false
+        // This fix was aborted while in flight (e.g. a place deep-link took over
+        // the results). Drop it silently: firing the nearby search now would
+        // overwrite the deep-linked place with unrelated nearby results.
+        if (locateCancelledRef.current) return
         try {
           const d = await reverseGeocode(lat, lon)
           setNearbyPhase({ district: d, lat, lon })
