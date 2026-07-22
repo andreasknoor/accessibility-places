@@ -1223,18 +1223,6 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
     checkAction()
 
-    // TEMPORARY diagnostic instrumentation (remove once the deep-link bug is
-    // confirmed fixed on-device) — every plain, non-deep-link cold launch also
-    // takes this path (getLaunchUrl always gets polled), so this intentionally
-    // fires on every native app open for now, not just deep-link taps.
-    function dl(message: string, data?: Record<string, unknown>) {
-      Sentry.addBreadcrumb({ category: "deeplink", message, level: "info", data })
-    }
-    function dlReport(outcome: string, data?: Record<string, unknown>) {
-      Sentry.captureMessage(`deeplink: ${outcome}`, { level: "info", tags: { area: "deeplink", outcome }, extra: data })
-    }
-    dl("native bridge effect mounted")
-
     // Releases the deferNearbyAutoLocate gate (see the state's own comment above)
     // so ChatPanel's cold-start nearby auto-locate is allowed to run. Idempotent —
     // safe to call from multiple signals, only the first call has any effect.
@@ -1250,13 +1238,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     // the last-resort fallback so a native bridge failure can never permanently
     // block the normal nearby-search default.
     let gateOpened = false
-    function openAutoLocateGate(reason: string) {
+    function openAutoLocateGate() {
       if (gateOpened) return
       gateOpened = true
-      dl("auto-locate gate opened", { reason })
       setDeferNearbyAutoLocate(false)
     }
-    const gateTimeoutId = setTimeout(() => openAutoLocateGate("timeout"), 2000)
+    const gateTimeoutId = setTimeout(() => openAutoLocateGate(), 2000)
 
     // Only links carrying selectLat are place-detail links (matches the AASA scope);
     // everything else is ignored. `lastUrl`/`lastUrlAt` dedup getLaunchUrl vs. an
@@ -1267,40 +1254,26 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     let lastUrl: string | null = null
     let lastUrlAt = 0
     const DEDUP_WINDOW_MS = 1500
-    function maybeFollowDeepLink(url: string, source: "appUrlOpen" | "launchUrl") {
-      dl("maybeFollowDeepLink called", { source, url })
+    function maybeFollowDeepLink(url: string) {
       const now = Date.now()
-      if (url === lastUrl && now - lastUrlAt < DEDUP_WINDOW_MS) {
-        dl("dedup: same URL within window, skipped", { source })
-        return
-      }
+      if (url === lastUrl && now - lastUrlAt < DEDUP_WINDOW_MS) return
       lastUrl = url
       lastUrlAt = now
       try {
         const u = new URL(url)
         const latRaw = u.searchParams.get("selectLat")
         const lonRaw = u.searchParams.get("selectLon")
-        if (latRaw == null || lonRaw == null) {
-          dl("no selectLat/selectLon on URL — not a place link, ignored", { source })
-          return
-        }
+        if (latRaw == null || lonRaw == null) return
         const lat = parseFloat(latRaw)
         const lon = parseFloat(lonRaw)
-        if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-          dl("selectLat/selectLon not finite numbers, ignored", { source, latRaw, lonRaw })
-          return
-        }
-        dlReport("place_link_processed", { source, lat, lon })
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) return
         runPlaceDeepLink(lat, lon, u.searchParams.get("selectName") ?? undefined, u.searchParams.get("cat") ?? undefined)
-      } catch (e) {
-        dlReport("malformed_url", { source, error: String(e) })
-      }
+      } catch { /* malformed URL — ignore */ }
     }
 
     const cleanups: Array<() => void> = []
     import("@capacitor/app").then(({ App: CapApp }) => {
       if (cancelled) return
-      dl("capacitor/app loaded")
       // Re-check the pending quick action whenever the app resumes (warm launch).
       // Also re-poll getLaunchUrl here: on iOS the continue-userActivity delivery
       // can lag behind our own poll window (cold-start boot reported at 6–8 s), so
@@ -1316,13 +1289,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
       // Universal Link arriving while/after the app is open (warm).
       CapApp.addListener("appUrlOpen", ({ url }) => {
-        dl("appUrlOpen fired", { url })
         // maybeFollowDeepLink first: if this IS a place link, runPlaceDeepLink's
         // setChatMode("text") is queued synchronously before the gate opens, so
         // both land in the same React batch and ChatPanel never briefly sees
         // "nearby" once its deferred auto-locate effect finally runs.
-        maybeFollowDeepLink(url, "appUrlOpen")
-        openAutoLocateGate("appUrlOpen")
+        maybeFollowDeepLink(url)
+        openAutoLocateGate()
       }).then((handle) => { cleanups.push(() => handle.remove()) })
 
       // Cold launch via Universal Link. Two cold-start races make a single
@@ -1346,23 +1318,18 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           // Gate opens after the FIRST check regardless of outcome — see
           // openAutoLocateGate's own comment for why waiting the full retry-poll
           // would wrongly delay every ordinary cold launch's auto-locate.
-          if (isFirstAttempt) openAutoLocateGate("launchUrl-first-check")
+          if (isFirstAttempt) openAutoLocateGate()
           if (launchDeepLinkConsumed) return
           if (res?.url) {
             // Launch info has settled (deep link or plain launch). Mark it
             // consumed so a later remount/resume doesn't re-fire it, then
             // process it — maybeFollowDeepLink ignores non-place URLs — and stop.
             launchDeepLinkConsumed = true
-            dl("getLaunchUrl settled", { tries: launchTries, url: res.url })
-            maybeFollowDeepLink(res.url, "launchUrl")
+            maybeFollowDeepLink(res.url)
             return
           }
-          if (++launchTries < LAUNCH_MAX_TRIES) {
-            setTimeout(pollLaunchUrl, 300)
-          } else {
-            dlReport("launch_url_poll_exhausted", { tries: launchTries })
-          }
-        }).catch((e) => { dl("getLaunchUrl threw", { error: String(e) }) })
+          if (++launchTries < LAUNCH_MAX_TRIES) setTimeout(pollLaunchUrl, 300)
+        }).catch(() => {/* no launch url */})
       }
       pollLaunchUrl()
     }).catch(() => {/* not on native */})
