@@ -1,0 +1,1290 @@
+<title>Andreas Knoor &#8212; Evidence Dossier for Head of AI Product Management</title>
+
+<style>
+  :root {
+    color-scheme: light;
+    --ground:      #F6F8FB;
+    --panel:       #FFFFFF;
+    --panel-2:     #EDF2F9;
+    --ink:         #0D1520;
+    --ink-2:       #46586E;
+    --ink-3:       #7288A3;
+    --rule:        #D7DFEA;
+    --rule-strong: #B9C6D8;
+    --accent:      #1163C7;
+    --accent-deep: #0B4894;
+    --accent-wash: #E4EDFB;
+    --warm:        #C98A2E;
+    --warm-wash:   #F7EEDC;
+    --seq-1:       #CBDDF5;
+    --seq-2:       #97BCEA;
+    --seq-3:       #5E93DB;
+    --seq-4:       #2E6FC4;
+    --seq-5:       #14498F;
+
+    --display: "Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif;
+    --body: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --ground:      #0E141B;
+      --panel:       #151E28;
+      --panel-2:     #1B2733;
+      --ink:         #EAF1F8;
+      --ink-2:       #A3B6CC;
+      --ink-3:       #77899E;
+      --rule:        #24303E;
+      --rule-strong: #37485B;
+      --accent:      #3585DE;
+      --accent-deep: #75AEF0;
+      --accent-wash: #142639;
+      --warm:        #BE8526;
+      --warm-wash:   #2A2213;
+      --seq-1:       #20406B;
+      --seq-2:       #2E5E9C;
+      --seq-3:       #3F80CC;
+      --seq-4:       #6BA3E4;
+      --seq-5:       #A2C7F1;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground:      #0E141B;
+    --panel:       #151E28;
+    --panel-2:     #1B2733;
+    --ink:         #EAF1F8;
+    --ink-2:       #A3B6CC;
+    --ink-3:       #77899E;
+    --rule:        #24303E;
+    --rule-strong: #37485B;
+    --accent:      #3585DE;
+    --accent-deep: #75AEF0;
+    --accent-wash: #142639;
+    --warm:        #BE8526;
+    --warm-wash:   #2A2213;
+    --seq-1:       #20406B;
+    --seq-2:       #2E5E9C;
+    --seq-3:       #3F80CC;
+    --seq-4:       #6BA3E4;
+    --seq-5:       #A2C7F1;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 16.5px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 0 28px 96px;
+  }
+
+  /* ---------- signage type ---------- */
+  .eyebrow {
+    font-family: var(--display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.19em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  h1, h2, h3 {
+    font-family: var(--display);
+    text-wrap: balance;
+    margin: 0;
+  }
+  h1 {
+    font-size: clamp(38px, 6.4vw, 74px);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 0.98;
+  }
+  h2 {
+    font-size: clamp(25px, 3.3vw, 35px);
+    font-weight: 800;
+    letter-spacing: -0.028em;
+    line-height: 1.08;
+  }
+  h3 {
+    font-size: 17.5px;
+    font-weight: 700;
+    letter-spacing: -0.012em;
+    line-height: 1.3;
+  }
+
+  p { margin: 0; max-width: 68ch; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, details:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+
+  .lede { font-size: 19px; line-height: 1.58; color: var(--ink-2); }
+  .muted { color: var(--ink-2); }
+  .small { font-size: 14px; line-height: 1.55; color: var(--ink-2); }
+  .tiny { font-size: 12.5px; line-height: 1.5; color: var(--ink-3); }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 72px 0 40px; }
+  .hero .role {
+    font-family: var(--display);
+    font-size: clamp(15px, 1.9vw, 19px);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    margin-top: 18px;
+  }
+  .hero .thesis {
+    margin-top: 26px;
+    font-size: clamp(18px, 2.1vw, 22px);
+    line-height: 1.5;
+    color: var(--ink-2);
+    max-width: 60ch;
+  }
+  .hero .thesis strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- departure board ---------- */
+  .board {
+    margin-top: 44px;
+    background: var(--accent-deep);
+    border-radius: 3px;
+    padding: 4px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+    gap: 2px;
+  }
+  .cell {
+    background: var(--panel);
+    padding: 20px 18px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+  }
+  .cell .k {
+    font-family: var(--display);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .cell .v {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: clamp(28px, 3.4vw, 38px);
+    font-weight: 600;
+    letter-spacing: -0.035em;
+    color: var(--ink);
+    line-height: 1;
+  }
+  .cell .v .u { font-size: 0.5em; color: var(--ink-3); margin-left: 3px; letter-spacing: 0; }
+  .cell .n { font-size: 12.5px; line-height: 1.42; color: var(--ink-2); }
+
+  .flip { display: inline-block; }
+  @media (prefers-reduced-motion: no-preference) {
+    .flip { animation: drop .5s cubic-bezier(.2,.7,.3,1) both; }
+    @keyframes drop {
+      from { opacity: 0; transform: translateY(-0.32em); }
+      to   { opacity: 1; transform: none; }
+    }
+  }
+
+  /* ---------- sections ---------- */
+  section { padding-top: 68px; }
+  .sechead {
+    display: grid;
+    grid-template-columns: 108px 1fr;
+    gap: 26px;
+    align-items: start;
+    border-top: 1.5px solid var(--rule-strong);
+    padding-top: 18px;
+  }
+  .sechead .tag { padding-top: 5px; }
+  .sechead .intro { display: flex; flex-direction: column; gap: 14px; }
+
+  .body-block {
+    display: grid;
+    grid-template-columns: 108px 1fr;
+    gap: 26px;
+    margin-top: 32px;
+  }
+  .body-block > .gutter { }
+  .body-block > .content { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+
+  @media (max-width: 720px) {
+    .sechead, .body-block { grid-template-columns: 1fr; gap: 14px; }
+    .wrap { padding: 0 18px 72px; }
+    .hero { padding: 44px 0 28px; }
+  }
+
+  /* ---------- cards ---------- */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(248px, 1fr));
+    gap: 14px;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 18px 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+  .card .num {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 25px;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .card p { font-size: 14px; line-height: 1.5; color: var(--ink-2); }
+
+  /* claim blocks */
+  .claim {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    border-radius: 3px;
+    padding: 18px 20px 20px;
+  }
+  .claim .so {
+    font-size: 14.5px;
+    line-height: 1.55;
+    color: var(--ink-2);
+    padding-top: 10px;
+    border-top: 1px solid var(--rule);
+  }
+  .claim .so b {
+    font-family: var(--display);
+    font-size: 10.5px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 3px;
+    font-weight: 700;
+  }
+
+  /* ---------- tables ---------- */
+  .tbl-scroll { overflow-x: auto; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 14.5px;
+    min-width: 460px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 14px 10px 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  th {
+    font-family: var(--display);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    border-bottom-color: var(--rule-strong);
+    white-space: nowrap;
+  }
+  td.n {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  td.lbl { font-weight: 600; white-space: nowrap; padding-right: 22px; }
+
+  /* ---------- charts ---------- */
+  figure { margin: 0; display: flex; flex-direction: column; gap: 12px; }
+  figcaption { display: flex; flex-direction: column; gap: 4px; }
+  figcaption .t { font-family: var(--display); font-weight: 700; font-size: 15.5px; letter-spacing: -0.01em; }
+  .chart-surface {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 16px 16px 10px;
+    position: relative;
+  }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink-2); }
+  .swatch { width: 11px; height: 11px; border-radius: 2px; flex: none; }
+
+  .tip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--ink);
+    color: var(--ground);
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.45;
+    padding: 7px 9px;
+    border-radius: 3px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity .1s;
+    z-index: 5;
+  }
+
+  details {
+    border-top: 1px solid var(--rule);
+    padding-top: 10px;
+  }
+  summary {
+    cursor: pointer;
+    font-family: var(--display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  summary::marker { color: var(--rule-strong); }
+  details[open] summary { margin-bottom: 12px; }
+
+  /* ---------- misc ---------- */
+  ul.plain { margin: 0; padding-left: 19px; display: flex; flex-direction: column; gap: 9px; }
+  ul.plain li { padding-left: 3px; }
+  ul.plain li::marker { color: var(--rule-strong); }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 5px 10px;
+    border-radius: 2px;
+    background: var(--accent-wash);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+  .pill.live::before {
+    content: "";
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    flex: none;
+  }
+  .pillrow { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  hr.hair { border: 0; border-top: 1px solid var(--rule); margin: 0; }
+
+  footer {
+    margin-top: 76px;
+    border-top: 1.5px solid var(--rule-strong);
+    padding-top: 22px;
+    display: grid;
+    grid-template-columns: 108px 1fr;
+    gap: 26px;
+  }
+  @media (max-width: 720px) { footer { grid-template-columns: 1fr; gap: 14px; } }
+</style>
+
+<div class="wrap">
+
+  <!-- ============================ HERO ============================ -->
+  <header class="hero">
+    <div class="eyebrow">Evidence Dossier &nbsp;&#183;&nbsp; Compiled 22 July 2026</div>
+    <h1>Andreas<br>Knoor</h1>
+    <div class="role">A Field Report on Hands-On AI Coding &#8212; Three Months, Measured</div>
+
+    <p class="thesis">
+      Over 87 days, outside a full-time job, I designed, built and shipped a production
+      accessibility product using AI coding agents as my engineering team.
+      <strong>This page is not a description of that work. It is the measured record of it</strong> &#8212;
+      every figure below is read directly from system logs, not self-reported.
+    </p>
+
+    <div class="board" role="group" aria-label="Headline figures">
+      <div class="cell">
+        <div class="k">Measured hours</div>
+        <div class="v"><span class="flip" style="animation-delay:.05s">300</span><span class="u">h</span></div>
+        <div class="n">Reconstructed from timestamped agent logs &#8212; not estimated</div>
+      </div>
+      <div class="cell">
+        <div class="k">Elapsed</div>
+        <div class="v"><span class="flip" style="animation-delay:.12s">87</span><span class="u">days</span></div>
+        <div class="n">Active on 83 of them. Longest unbroken run: 49 days</div>
+      </div>
+      <div class="cell">
+        <div class="k">Tokens generated</div>
+        <div class="v"><span class="flip" style="animation-delay:.19s">39.5</span><span class="u">m</span></div>
+        <div class="n">Across six different frontier models, chosen per task</div>
+      </div>
+      <div class="cell">
+        <div class="k">Data providers merged</div>
+        <div class="v"><span class="flip" style="animation-delay:.26s">6</span><span class="u">&nbsp;</span></div>
+        <div class="n">Reconciled into one confidence-scored answer per venue</div>
+      </div>
+      <div class="cell">
+        <div class="k">Result</div>
+        <div class="v"><span class="flip" style="animation-delay:.33s">1</span><span class="u">app</span></div>
+        <div class="n">Live on the Apple App Store. Free, ad-free, non-commercial</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================ 00 &#8212; READ THIS FIRST ============================ -->
+  <section>
+    <div class="sechead">
+      <div class="tag"><div class="eyebrow">The short<br>version</div></div>
+      <div class="intro">
+        <h2>Five claims, each with the evidence attached</h2>
+        <p class="lede">
+          Every senior AI role now attracts candidates who can talk fluently about
+          agents, evals and model selection. Very few can show a system they personally
+          shipped with them. This dossier is organised around the five things a hiring
+          committee actually needs to believe.
+        </p>
+      </div>
+    </div>
+
+    <div class="body-block">
+      <div class="gutter"></div>
+      <div class="content">
+        <div class="cards">
+          <div class="card">
+            <h3>1 &nbsp;Genuinely hands-on</h3>
+            <p>Not a sponsor of AI work &#8212; the operator. 3,502 prompts, 20,000+ tool
+            invocations, 859 commits authored through agents.</p>
+          </div>
+          <div class="card">
+            <h3>2 &nbsp;Pushes the frontier</h3>
+            <p>Multi-agent delegation, browser-driving agents for end-to-end testing,
+            self-hosted infrastructure, deliberate cost engineering.</p>
+          </div>
+          <div class="card">
+            <h3>3 &nbsp;Knows what he is talking about</h3>
+            <p>Six models used in production, each selected for the job. A source-reliability
+            model. Automated quality gates that block releases.</p>
+          </div>
+          <div class="card">
+            <h3>4 &nbsp;Ships real outcomes</h3>
+            <p>A live iOS app, a PWA, an Android build, six integrated data providers,
+            33 cities, 53 categories &#8212; at version 10.38.</p>
+          </div>
+          <div class="card">
+            <h3>5 &nbsp;Builds for other people</h3>
+            <p>The product helps wheelchair users find places they can actually enter.
+            No revenue model. No ads. Built as a gift.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ 01 &#8212; THE OUTCOME ============================ -->
+  <section>
+    <div class="sechead">
+      <div class="tag"><div class="eyebrow">01<br>Outcome</div></div>
+      <div class="intro">
+        <h2>It shipped. That is the part that matters.</h2>
+        <p class="lede">
+          <em>Accessible Places</em> answers one question for a wheelchair user:
+          <em>can I actually get into this place?</em> It merges accessibility data from six
+          providers, resolves the same venue appearing in several of them, and attaches a
+          confidence score to every claim &#8212; because the honest answer is often
+          &ldquo;the sources disagree&rdquo;.
+        </p>
+      </div>
+    </div>
+
+    <div class="body-block">
+      <div class="gutter"><div class="eyebrow">Status</div></div>
+      <div class="content">
+        <div class="pillrow">
+          <span class="pill live">Live on the App Store</span>
+          <span class="pill">Android &#8212; closed testing</span>
+          <span class="pill">Installable web app</span>
+          <span class="pill">Version 10.38</span>
+        </div>
+
+        <div class="cards">
+          <div class="card"><div class="num">6</div><h3>Data providers</h3>
+            <p>OpenStreetMap, accessibility.cloud, Reisen f&#252;r Alle, Ginto,
+            Acc&#232;sLibre (French government), Google Places &#8212; queried in parallel,
+            merged into one answer.</p></div>
+          <div class="card"><div class="num">53</div><h3>Venue categories</h3>
+            <p>From restaurants and museums to pharmacies, doctors and supermarkets &#8212;
+            the everyday errands that decide whether a city is livable.</p></div>
+          <div class="card"><div class="num">33</div><h3>Cities</h3>
+            <p>Across Germany, Austria and Switzerland, with an opt-in international
+            mode covering six further countries.</p></div>
+          <div class="card"><div class="num">4</div><h3>Shipped platforms</h3>
+            <p>iOS, Android, installable PWA and web &#8212; one codebase, native shells,
+            real store review processes survived.</p></div>
+          <div class="card"><div class="num">640</div><h3>Generated landing pages</h3>
+            <p>Bilingual city-and-category pages, rendered on demand and refreshed by
+            scheduled jobs &#8212; the product's organic growth channel.</p></div>
+          <div class="card"><div class="num">2</div><h3>Languages</h3>
+            <p>German and English throughout, including every screen-reader label &#8212;
+            enforced as a project rule, not an afterthought.</p></div>
+        </div>
+
+        <div class="claim">
+          <h3>Why an executive should care about this section</h3>
+          <p class="small">
+            The hardest part of AI product work is not the demo. It is closing the loop with
+            real users fast: 43 tracked issues were triaged and shipped in days, not quarters,
+            several of them raised directly by production error telemetry rather than a support
+            queue. It is also surviving upstream reality &#8212; free data providers that rate-limit
+            aggressively, or return an HTTP 200 with a truncated HTML page instead of an honest
+            error when overloaded &#8212; which is why the search pipeline races providers in
+            parallel, retries with backoff, and degrades gracefully instead of failing outright.
+            And it is the unglamorous question of what the product shows when the data is simply
+            missing. All of that was met and solved here.
+          </p>
+          <div class="so"><b>So what</b>
+            Closing that loop end to end &#8212; user report to root cause to shipped fix, under
+            real rate limits and real upstream failures &#8212; builds a sharper instinct for risk
+            assessment and complexity estimation than reading about it does, and the judgement
+            to know when an AI-generated answer can be trusted and when it needs a human
+            to check it.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ 02 &#8212; HANDS ON ============================ -->
+  <section>
+    <div class="sechead">
+      <div class="tag"><div class="eyebrow">02<br>Hands-on</div></div>
+      <div class="intro">
+        <h2>What operating AI agents at volume actually looks like</h2>
+        <p class="lede">
+          These are the numbers from directing coding agents daily for three months.
+          They are worth reading not as a scoreboard, but as the reason the opinions in
+          an interview will be grounded in practice rather than in reading.
+        </p>
+      </div>
+    </div>
+
+    <div class="body-block">
+      <div class="gutter"><div class="eyebrow">Volume</div></div>
+      <div class="content">
+        <div class="tbl-scroll">
+          <table>
+            <caption class="tiny" style="text-align:left;padding-bottom:10px">
+              Full project period, 27 Apr &#8211; 22 Jul 2026
+            </caption>
+            <thead>
+              <tr><th>Measure</th><th>Value</th><th>What it means in practice</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="lbl">Instructions given</td><td class="n">3,502</td>
+                  <td class="small">Every prompt logged with a timestamp. Roughly 40 per active day.</td></tr>
+              <tr><td class="lbl">Tokens generated</td><td class="n">39.5 m</td>
+                  <td class="small">Input and output combined &#8212; code, analysis, review, documentation.</td></tr>
+              <tr><td class="lbl">Context re-read</td><td class="n">7.64 bn</td>
+                  <td class="small">Cached context served back into the models. Measures how much project
+                  knowledge each request carried, not new work produced.</td></tr>
+              <tr><td class="lbl">Tool invocations</td><td class="n">20,000+</td>
+                  <td class="small">Agents reading files, running tests, executing shell commands, driving a browser.</td></tr>
+              <tr><td class="lbl">Work sessions</td><td class="n">297</td>
+                  <td class="small">Distinct focused blocks, separated by real breaks in activity.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="body-block">
+      <div class="gutter"><div class="eyebrow">Model<br>selection</div></div>
+      <div class="content">
+        <figure>
+          <figcaption>
+            <div class="t">Six models, deliberately mixed</div>
+            <div class="small">Share of total tokens. Heavier reasoning models were reserved for
+            architecture and debugging; faster models carried routine edits.</div>
+          </figcaption>
+          <div class="chart-surface"><div id="c-models"></div></div>
+          <details>
+            <summary>View as table</summary>
+            <div class="tbl-scroll"><table>
+              <thead><tr><th>Model</th><th>Share of tokens</th><th>Typical use</th></tr></thead>
+              <tbody>
+                <tr><td class="lbl">Opus 4.8</td><td class="n">32.6%</td><td class="small">Architecture, hard debugging, code review</td></tr>
+                <tr><td class="lbl">Sonnet 4.6</td><td class="n">32.4%</td><td class="small">The daily driver through the build-out phase</td></tr>
+                <tr><td class="lbl">Sonnet 5</td><td class="n">25.0%</td><td class="small">Successor daily driver, adopted on release</td></tr>
+                <tr><td class="lbl">Fable 5</td><td class="n">8.7%</td><td class="small">High-volume routine edits</td></tr>
+                <tr><td class="lbl">Opus 4.7 / Haiku 4.5</td><td class="n">1.4%</td><td class="small">Earlier generation and lightweight tasks</td></tr>
+              </tbody>
+            </table></div>
+          </details>
+        </figure>
+
+        <div class="claim">
+          <h3>Why the mix matters more than the volume</h3>
+          <p class="small">
+            A single-model log would suggest a default was accepted. This distribution shows
+            active routing: expensive reasoning capacity spent where it changes the outcome,
+            cheap capacity everywhere else, and new models adopted within days of release.
+            That is exactly the judgement an AI product organisation needs applied to its own
+            inference bill.
+          </p>
+          <div class="so"><b>So what</b>
+            Model-selection tradeoffs &#8212; capability against latency against cost &#8212; are a
+            lived operational habit here, not a slide.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ 03 &#8212; FRONTIER ============================ -->
+  <section>
+    <div class="sechead">
+      <div class="tag"><div class="eyebrow">03<br>Frontier</div></div>
+      <div class="intro">
+        <h2>Deliberately working past the comfortable edge</h2>
+        <p class="lede">
+          Most AI-assisted development stops at autocomplete. The practices below go
+          considerably further, and each one was adopted because a real problem demanded it &#8212;
+          which is the only way anyone learns where the limits genuinely are.
+        </p>
+      </div>
+    </div>
+
+    <div class="body-block">
+      <div class="gutter"><div class="eyebrow">Practices</div></div>
+      <div class="content">
+        <div class="cards">
+          <div class="card">
+            <h3>Agents that delegate to agents</h3>
+            <p>58 sub-agent delegations: a lead agent decomposing work and dispatching
+            specialised agents for research, planning and review, then integrating their
+            findings. Multi-agent orchestration in daily practice.</p>
+          </div>
+          <div class="card">
+            <h3>Agents that drive a real browser</h3>
+            <p>571 browser-automation calls. Agents opened the running app, clicked through
+            it, read the console and verified their own fixes end to end &#8212; closing the loop
+            between writing code and confirming it works.</p>
+          </div>
+          <div class="card">
+            <h3>A written context system</h3>
+            <p>A ~200-line architecture briefing maintained specifically so agents inherit
+            hard-won project knowledge instead of rediscovering it. Context engineering as
+            an explicit, maintained artefact.</p>
+          </div>
+          <div class="card">
+            <h3>Quality gates agents cannot bypass</h3>
+            <p>Automated accessibility and colour-contrast checks that fail the build, plus a
+            pre-commit hook running the full test suite. Guardrails designed on the
+            assumption that generated code needs verifying.</p>
+          </div>
+          <div class="card">
+            <h3>Self-hosted infrastructure</h3>
+            <p>A dedicated server running a private map-data API, geocoder and error tracker &#8212;
+            provisioned after public services proved too unreliable for a product people
+            would depend on.</p>
+          </div>
+          <div class="card">
+            <h3>Scheduled autonomous work</h3>
+            <p>Recurring agent jobs that validate data coverage and refresh caches nightly,
+            plus long-running background tasks. Agents operating unattended, on a schedule.</p>
+          </div>
+        </div>
+
+        <div class="claim">
+          <h3>The failure that taught the most</h3>
+          <p class="small">
+            A deep-link bug survived seven consecutive attempted fixes across versions 10.31
+            to 10.38. It only fell once error telemetry was wired into the production app and
+            the actual event ordering became visible &#8212; the root cause was a race in component
+            start-up that no amount of reasoning about the code had revealed.
+            The lesson generalises directly: agents are extraordinary at generating plausible
+            explanations, and plausible is not the same as correct.
+            <strong>Observability is what converts an AI-built system into a maintainable one.</strong>
+          </p>
+          <div class="so"><b>So what</b>
+            The limits of these tools are known here from having hit them, which is the
+            only credible basis for setting expectations with a board or a customer.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ 04 &#8212; COMMITMENT ============================ -->
+  <section>
+    <div class="sechead">
+      <div class="tag"><div class="eyebrow">04<br>Commitment</div></div>
+      <div class="intro">
+        <h2>Three months, almost entirely on evenings and weekends</h2>
+        <p class="lede">
+          This is the part that cannot be manufactured after the fact. The two charts below
+          are drawn from independent sources &#8212; the agent logs and the version-control history &#8212;
+          and they show the same shape.
+        </p>
+      </div>
+    </div>
+
+    <div class="body-block">
+      <div class="gutter"><div class="eyebrow">Cadence</div></div>
+      <div class="content">
+        <figure>
+          <figcaption>
+            <div class="t">Daily activity, 27 April &#8211; 22 July 2026</div>
+            <div class="small">Instructions given to agents (upper) and commits shipped (lower),
+            sharing one timeline. Only four days in three months show no activity at all.</div>
+          </figcaption>
+          <div class="chart-surface"><div id="c-daily"></div><div class="tip" id="tip-daily"></div></div>
+          <details>
+            <summary>View as table &#8212; busiest days</summary>
+            <div class="tbl-scroll"><table>
+              <thead><tr><th>Date</th><th>Instructions</th><th>Commits</th><th>Context</th></tr></thead>
+              <tbody id="tbl-daily"></tbody>
+            </table></div>
+          </details>
+        </figure>
+
+        <figure>
+          <figcaption>
+            <div class="t">When the work happened</div>
+            <div class="small">All 3,502 instructions by hour of day. The two tallest bars are
+            10 pm and 11 pm.</div>
+          </figcaption>
+          <div class="chart-surface"><div id="c-hours"></div><div class="tip" id="tip-hours"></div></div>
+          <div class="legend">
+            <span><i class="swatch" style="background:var(--warm)"></i> Standard office hours (08:00&#8211;17:59)</span>
+            <span><i class="swatch" style="background:var(--accent)"></i> Evenings, nights and early mornings</span>
+          </div>
+          <details>
+            <summary>View as table</summary>
+            <div class="tbl-scroll"><table>
+              <thead><tr><th>Hour</th><th>Instructions</th><th>Hour</th><th>Instructions</th></tr></thead>
+              <tbody id="tbl-hours"></tbody>
+            </table></div>
+          </details>
+        </figure>
+
+        <div class="cards">
+          <div class="card"><div class="num">51%</div><h3>Outside office hours</h3>
+            <p>Of all instructions given. Confirmed independently by the commit history at 47%.</p></div>
+          <div class="card"><div class="num">34%</div><h3>On weekends</h3>
+            <p>Saturday and Sunday are the two most productive days of the week. Tuesday is the quietest.</p></div>
+          <div class="card"><div class="num">49</div><h3>Consecutive active days</h3>
+            <p>The longest unbroken run without a single day off the project.</p></div>
+          <div class="card"><div class="num">24.2</div><h3>Hours per week</h3>
+            <p>Sustained average across the full period &#8212; effectively a second half-time role.</p></div>
+        </div>
+
+        <div class="claim">
+          <h3>On the honesty of the 300-hour figure</h3>
+          <p class="small">
+            Hours were not recalled or estimated. For the period where complete event-level
+            logs exist, working time was reconstructed directly from timestamps. For the earlier
+            period only prompt-level records survive, so the same clustering method was applied
+            there &#8212; and then <em>validated</em> against the overlapping weeks where both sources
+            exist. On that overlap the prompt-based method returned 101.0 hours against 104.3
+            measured: a 3% deviation. One inflated-looking metric was discarded outright &#8212; a
+            logged &ldquo;longest session&rdquo; of 261 hours, which counts idle time and means nothing.
+          </p>
+          <div class="so"><b>So what</b>
+            Presented with its own error bars and its own discarded data points. That
+            instinct is the same one that separates a trustworthy product metric from a vanity one.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ 05 &#8212; JUDGEMENT ============================ -->
+  <section>
+    <div class="sechead">
+      <div class="tag"><div class="eyebrow">05<br>Judgement</div></div>
+      <div class="intro">
+        <h2>Engineering discipline, and what it says about product thinking</h2>
+        <p class="lede">
+          Solo projects are where discipline goes to die &#8212; nobody is reviewing, nothing is
+          enforced. These numbers were therefore entirely self-imposed, which is precisely
+          what makes them informative.
+        </p>
+      </div>
+    </div>
+
+    <div class="body-block">
+      <div class="gutter"><div class="eyebrow">Discipline</div></div>
+      <div class="content">
+        <div class="tbl-scroll">
+          <table>
+            <thead><tr><th>Practice</th><th>Measure</th><th>Why it is not cosmetic</th></tr></thead>
+            <tbody>
+              <tr><td class="lbl">Structured commit history</td><td class="n">91%</td>
+                <td class="small">784 of 859 commits follow a strict convention, with no team requiring it.</td></tr>
+              <tr><td class="lbl">Code volume</td><td class="n">+91,938 / &#8722;27,562</td>
+                <td class="small">A quarter of everything written was later deleted &#8212; refactoring, not accumulating.</td></tr>
+              <tr><td class="lbl">Automated tests</td><td class="n">41 files</td>
+                <td class="small">Full suite runs before every commit via an enforced hook.</td></tr>
+              <tr><td class="lbl">Written documentation</td><td class="n">24 documents</td>
+                <td class="small">Architecture decisions, operational runbooks, and written plans preceding implementation.</td></tr>
+              <tr><td class="lbl">Tracked issues</td><td class="n">43</td>
+                <td class="small">A real backlog, triaged and prioritised, on a project with an audience of one.</td></tr>
+              <tr><td class="lbl">Release discipline</td><td class="n">v10.38</td>
+                <td class="small">Every single commit carries a version bump and a changelog decision.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="claim">
+          <h3>Responsible AI, as an enforced gate rather than a principle</h3>
+          <p class="small">
+            The product targets WCAG 2.2 AA and is itself an accessibility tool, so the standard
+            had to be held. Automated checks for screen-reader structure and colour contrast run
+            on every change and fail the build if violated. The honest limits are documented too:
+            what automated testing genuinely cannot verify &#8212; contrast over map imagery, screen-reader
+            behaviour on real devices &#8212; is written down as requiring human testing rather than
+            quietly claimed as passing.
+          </p>
+          <div class="so"><b>So what</b>
+            Ethics implemented as a blocking gate, with its own limitations stated openly.
+            That is what responsible-AI governance looks like when it is real rather than declared.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ 06 &#8212; WHY ============================ -->
+  <section>
+    <div class="sechead">
+      <div class="tag"><div class="eyebrow">06<br>Motivation</div></div>
+      <div class="intro">
+        <h2>Nobody paid for this, and nobody was meant to</h2>
+        <p class="lede">
+          The product is free, carries no advertising, has no revenue model and collects no
+          personal data. It exists because the alternative &#8212; a wheelchair user arriving at a
+          caf&#233; to find one unmarked step at the door &#8212; is a solvable problem that nobody had
+          quite solved for the German-speaking region.
+        </p>
+      </div>
+    </div>
+
+    <div class="body-block">
+      <div class="gutter"><div class="eyebrow">Impact</div></div>
+      <div class="content">
+        <ul class="plain">
+          <li><strong>The problem is specific.</strong> Not &ldquo;is this place nice&rdquo; but
+          &ldquo;can I get through the door, is there a toilet I can use, is there a parking
+          space I can use&rdquo; &#8212; answered separately, because they fail separately.</li>
+          <li><strong>The data was scattered.</strong> Six providers each held part of the
+          answer, in incompatible formats, with no single place to ask. Merging them was the
+          actual product insight.</li>
+          <li><strong>Uncertainty is shown, not hidden.</strong> When the sources cannot
+          confirm accessibility, the app says so and offers a way to contribute better
+          information rather than guessing.</li>
+          <li><strong>It goes where the users are.</strong> Native apps on both mobile
+          platforms, because expecting people to find a website when they are already standing
+          outside the building is a design failure.</li>
+        </ul>
+
+        <div class="claim">
+          <h3>Why this belongs in a hiring conversation</h3>
+          <p class="small">
+            Three hundred hours of unpaid evenings and weekends went into a product whose only
+            return is that some people can leave the house with more confidence.
+            That says something about motivation that no interview answer can. It also happens
+            to be the ideal training ground for AI product leadership: a domain with messy,
+            contradictory real-world data, users who cannot afford a wrong answer, and a hard
+            ethical requirement built into the definition of done.
+          </p>
+          <div class="so"><b>So what</b>
+            The judgement on display here was formed under real constraints and real stakes,
+            not in a sandbox.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ 07 &#8212; TRANSLATION ============================ -->
+  <section>
+    <div class="sechead">
+      <div class="tag"><div class="eyebrow">07<br>The role</div></div>
+      <div class="intro">
+        <h2>What this predicts about the job</h2>
+        <p class="lede">
+          Current hiring guidance for senior AI product roles converges on a short list:
+          practical AI fluency, credibility with engineers, evaluation judgement, cost and
+          latency literacy, responsible-AI ownership, and decision-making under uncertainty.
+          Mapped against the evidence, one line each.
+        </p>
+      </div>
+    </div>
+
+    <div class="body-block">
+      <div class="gutter"><div class="eyebrow">Mapping</div></div>
+      <div class="content">
+        <div class="tbl-scroll">
+          <table>
+            <thead><tr><th>What the role asks for</th><th>The evidence on this page</th></tr></thead>
+            <tbody>
+              <tr><td class="lbl">Practical AI fluency</td>
+                <td class="small">39.5 million tokens generated across six models over three months, with routing decisions made per task.</td></tr>
+              <tr><td class="lbl">Credibility with engineers</td>
+                <td class="small">859 commits, a production system with self-hosted infrastructure, and a debugging story that ends in telemetry rather than guesswork.</td></tr>
+              <tr><td class="lbl">Evaluation and ground truth</td>
+                <td class="small">A six-source reliability-weighting model that resolves disagreement and exposes confidence to the user.</td></tr>
+              <tr><td class="lbl">Cost and latency literacy</td>
+                <td class="small">Rate limits and provider overload handled with parallel racing, retries and graceful degradation rather than a hard failure.</td></tr>
+              <tr><td class="lbl">Responsible AI ownership</td>
+                <td class="small">Accessibility conformance enforced as a build-blocking gate, with the limits of automated testing documented rather than glossed.</td></tr>
+              <tr><td class="lbl">Judgement under uncertainty</td>
+                <td class="small">A product whose core feature is telling users how much to trust an answer &#8212; and a measurement method on this page that publishes its own margin of error.</td></tr>
+              <tr><td class="lbl">Shipping through to production</td>
+                <td class="small">Apple App Store review passed. Android in closed testing. 38 major versions.</td></tr>
+              <tr><td class="lbl">Sustained execution</td>
+                <td class="small">300 measured hours, 83 of 87 days active, alongside a full-time job.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="claim">
+          <h3>The one-sentence version</h3>
+          <p class="small" style="font-size:17px;line-height:1.55;color:var(--ink)">
+            I have personally run an AI-agent engineering operation from first commit to
+            App Store release, paid for it myself, measured it honestly, and used it to build
+            something that helps people who are usually designed around rather than designed for.
+          </p>
+          <div class="so"><b>Publicly available</b>
+            Full source repository, architecture documentation and commit history:
+            <a href="https://github.com/andreasknoor/accessibility-places" target="_blank" rel="noopener">github.com/andreasknoor/accessibility-places</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ METHOD ============================ -->
+  <footer>
+    <div class="eyebrow">Method<br>&amp; sources</div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <p class="small">
+        <strong>Where the numbers come from.</strong> Four independent sources, combined:
+        the version-control history of the repository (commits, code volume, timing);
+        complete event-level agent logs including per-message token accounting;
+        a prompt-level history covering the full period; and daily aggregate usage records.
+        No figure on this page is self-reported.
+      </p>
+      <p class="small">
+        <strong>How working time was derived.</strong> Activity was grouped into sessions by
+        separating blocks with genuine gaps in activity. Where complete event logs exist the
+        result is a direct measurement; for the earlier period the same method was applied to
+        prompt records and calibrated against the overlapping five weeks, where it deviated
+        by 3%.
+      </p>
+      <p class="small">
+        <strong>Attribution and caveats.</strong> The project was renamed mid-flight, so records
+        under both names are merged. Machine-wide token totals are apportioned to this project by
+        its share of logged instructions &#8212; 95% over the period. Token counts are input plus
+        output, matching how the tooling itself reports usage; cached context re-read is tracked
+        separately and reported apart from the headline figure, because it measures context
+        carried rather than new work produced.
+      </p>
+      <p class="tiny">
+        Compiled 22 July 2026 &#183; Product at version 10.38 &#183; Figures cover 27 April &#8211; 22 July 2026
+      </p>
+    </div>
+  </footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const DAILY = [5,13,61,41,35,43,87,31,0,0,37,76,75,39,42,1,37,47,105,78,74,31,74,95,66,62,43,22,76,16,37,32,0,48,62,38,63,67,41,48,86,59,28,8,16,34,35,76,54,35,78,42,44,26,42,32,48,29,5,70,58,66,46,23,11,8,41,34,7,7,25,29,27,15,23,46,79,54,21,19,31,10,0,31,62,21,15];
+  const COMMITS = [1,0,7,10,17,19,35,17,0,0,22,15,17,5,17,1,3,9,31,22,22,10,6,19,25,20,13,8,29,6,6,10,0,2,12,6,10,8,7,27,40,12,8,0,1,7,14,16,15,6,24,18,4,1,19,10,14,3,0,5,9,18,5,7,3,0,10,11,2,1,4,2,4,1,6,4,17,9,2,8,1,2,0,0,15,6,1];
+  const HOURS = [39,0,0,3,0,0,63,255,245,125,156,232,194,119,190,168,161,111,150,145,141,283,423,301];
+
+  const START = new Date(Date.UTC(2026, 3, 27));
+  const dateAt = i => new Date(START.getTime() + i * 864e5);
+  const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const fmt = d => d.getUTCDate() + " " + MON[d.getUTCMonth()];
+  const fmtLong = d => ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d.getUTCDay()] + " " + fmt(d);
+
+  const MILE = [
+    { i: 36, label: "Android app", dy: 0 },
+    { i: 50, label: "iOS app", dy: 0 },
+    { i: 54, label: "Accessibility programme", dy: 15 }
+  ];
+
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const el = (n, a) => {
+    const e = document.createElementNS(SVGNS, n);
+    for (const k in a) e.setAttribute(k, a[k]);
+    return e;
+  };
+
+  /* ---------------- daily small multiples ---------------- */
+  function daily() {
+    const host = document.getElementById("c-daily");
+    const tip = document.getElementById("tip-daily");
+    const W = 1000, PL = 34, PR = 8;
+    const H1 = 116, H2 = 66, GAPY = 40, TOP = 22;
+    const H = TOP + H1 + GAPY + H2 + 26;
+    const n = DAILY.length;
+    const bw = (W - PL - PR) / n;
+    const max1 = Math.max(...DAILY), max2 = Math.max(...COMMITS);
+
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img",
+      "aria-label": "Daily instructions to agents and commits shipped, 27 April to 22 July 2026." });
+
+    const label = (x, y, t, anchor, cls) => {
+      const e = el("text", { x, y, "text-anchor": anchor || "start",
+        "font-size": 11, fill: cls === "dim" ? "var(--ink-3)" : "var(--ink-2)",
+        "font-family": "var(--mono)" });
+      e.textContent = t; return e;
+    };
+
+    // panel titles
+    const t1 = el("text", { x: PL, y: TOP - 8, "font-size": 11, fill: "var(--ink-2)",
+      "font-family": "var(--display)", "letter-spacing": "0.12em" });
+    t1.textContent = "INSTRUCTIONS"; svg.appendChild(t1);
+
+    // gridlines panel 1
+    [0, 0.5, 1].forEach(f => {
+      const y = TOP + H1 - f * H1;
+      svg.appendChild(el("line", { x1: PL, x2: W - PR, y1: y, y2: y,
+        stroke: "var(--rule)", "stroke-width": 1 }));
+      svg.appendChild(label(PL - 6, y + 4, String(Math.round(f * max1)), "end", "dim"));
+    });
+
+    // milestones
+    MILE.forEach(m => {
+      const x = PL + m.i * bw + bw / 2;
+      svg.appendChild(el("line", { x1: x, x2: x, y1: TOP - 4, y2: TOP + H1,
+        stroke: "var(--rule-strong)", "stroke-width": 1, "stroke-dasharray": "2 3" }));
+      const tx = el("text", { x: x + 4, y: TOP + 8 + (m.dy || 0), "font-size": 9.5,
+        fill: "var(--ink-3)", "font-family": "var(--display)" });
+      tx.textContent = m.label;
+      svg.appendChild(tx);
+    });
+
+    const mk = (arr, max, yTop, hh, fill) => {
+      arr.forEach((v, i) => {
+        if (!v) return;
+        const h = Math.max(1.6, (v / max) * hh);
+        svg.appendChild(el("rect", {
+          x: PL + i * bw + 0.9, y: yTop + hh - h,
+          width: Math.max(1.2, bw - 1.8), height: h,
+          fill, rx: Math.min(1.8, bw / 3)
+        }));
+      });
+    };
+    mk(DAILY, max1, TOP, H1, "var(--accent)");
+
+    const y2 = TOP + H1 + GAPY;
+    const t2 = el("text", { x: PL, y: y2 - 8, "font-size": 11, fill: "var(--ink-2)",
+      "font-family": "var(--display)", "letter-spacing": "0.12em" });
+    t2.textContent = "COMMITS"; svg.appendChild(t2);
+    [0, 1].forEach(f => {
+      const y = y2 + H2 - f * H2;
+      svg.appendChild(el("line", { x1: PL, x2: W - PR, y1: y, y2: y,
+        stroke: "var(--rule)", "stroke-width": 1 }));
+      svg.appendChild(label(PL - 6, y + 4, String(Math.round(f * max2)), "end", "dim"));
+    });
+    mk(COMMITS, max2, y2, H2, "var(--accent-deep)");
+
+    // x labels - month starts
+    for (let i = 0; i < n; i++) {
+      const d = dateAt(i);
+      if (d.getUTCDate() === 1) {
+        const x = PL + i * bw;
+        svg.appendChild(el("line", { x1: x, x2: x, y1: y2 + H2, y2: y2 + H2 + 5,
+          stroke: "var(--rule-strong)", "stroke-width": 1 }));
+        svg.appendChild(label(x + 3, y2 + H2 + 17, MON[d.getUTCMonth()]));
+      }
+    }
+
+    // hover
+    const hit = el("rect", { x: PL, y: TOP - 6, width: W - PL - PR,
+      height: H1 + GAPY + H2 + 6, fill: "transparent" });
+    svg.appendChild(hit);
+    const cross = el("line", { x1: 0, x2: 0, y1: TOP - 6, y2: y2 + H2,
+      stroke: "var(--ink-3)", "stroke-width": 1, opacity: 0 });
+    svg.appendChild(cross);
+
+    const move = ev => {
+      const r = svg.getBoundingClientRect();
+      const px = (ev.clientX - r.left) / r.width * W;
+      let i = Math.floor((px - PL) / bw);
+      i = Math.max(0, Math.min(n - 1, i));
+      const x = PL + i * bw + bw / 2;
+      cross.setAttribute("x1", x); cross.setAttribute("x2", x);
+      cross.setAttribute("opacity", 1);
+      tip.style.opacity = 1;
+      tip.innerHTML = fmtLong(dateAt(i)) + "<br>" + DAILY[i] + " instructions<br>" + COMMITS[i] + " commits";
+      const hostR = host.getBoundingClientRect();
+      let left = ev.clientX - hostR.left + 14;
+      if (left + tip.offsetWidth > hostR.width - 4) left = ev.clientX - hostR.left - tip.offsetWidth - 14;
+      tip.style.left = left + "px";
+      tip.style.top = (ev.clientY - hostR.top + 12) + "px";
+    };
+    svg.addEventListener("pointermove", move);
+    svg.addEventListener("pointerleave", () => {
+      cross.setAttribute("opacity", 0); tip.style.opacity = 0;
+    });
+
+    host.appendChild(svg);
+
+    // table - top days
+    const rows = DAILY.map((v, i) => [i, v]).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    const tb = document.getElementById("tbl-daily");
+    const ctx = {};
+    MILE.forEach(m => ctx[m.i] = m.label);
+    rows.forEach(([i, v]) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td class="lbl">${fmtLong(dateAt(i))}</td><td class="n">${v}</td>` +
+        `<td class="n">${COMMITS[i]}</td><td class="small">${ctx[i] || ""}</td>`;
+      tb.appendChild(tr);
+    });
+  }
+
+  /* ---------------- hours ---------------- */
+  function hours() {
+    const host = document.getElementById("c-hours");
+    const tip = document.getElementById("tip-hours");
+    const W = 1000, PL = 34, PR = 8, TOP = 14, HH = 150;
+    const H = TOP + HH + 30;
+    const n = 24, bw = (W - PL - PR) / n;
+    const max = Math.max(...HOURS);
+    const total = HOURS.reduce((a, b) => a + b, 0);
+
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img",
+      "aria-label": "Instructions by hour of day. Peaks at 10 and 11 pm; office hours are the minority." });
+
+    [0, 0.5, 1].forEach(f => {
+      const y = TOP + HH - f * HH;
+      svg.appendChild(el("line", { x1: PL, x2: W - PR, y1: y, y2: y,
+        stroke: "var(--rule)", "stroke-width": 1 }));
+      const t = el("text", { x: PL - 6, y: y + 4, "text-anchor": "end", "font-size": 11,
+        fill: "var(--ink-3)", "font-family": "var(--mono)" });
+      t.textContent = String(Math.round(f * max)); svg.appendChild(t);
+    });
+
+    HOURS.forEach((v, h) => {
+      const office = h >= 8 && h < 18;
+      const bh = Math.max(v ? 1.6 : 0, (v / max) * HH);
+      if (v) {
+        svg.appendChild(el("rect", {
+          x: PL + h * bw + 2, y: TOP + HH - bh,
+          width: bw - 4, height: bh, rx: 3,
+          fill: office ? "var(--warm)" : "var(--accent)"
+        }));
+      }
+      const t = el("text", { x: PL + h * bw + bw / 2, y: TOP + HH + 16,
+        "text-anchor": "middle", "font-size": 10.5, fill: "var(--ink-3)",
+        "font-family": "var(--mono)" });
+      t.textContent = String(h).padStart(2, "0"); svg.appendChild(t);
+      // direct label on the tallest bars - relief for the contrast warning
+      if (v >= 250) {
+        const lt = el("text", { x: PL + h * bw + bw / 2, y: TOP + HH - bh - 6,
+          "text-anchor": "middle", "font-size": 11, fill: "var(--ink)",
+          "font-family": "var(--mono)", "font-weight": 600 });
+        lt.textContent = v; svg.appendChild(lt);
+      }
+    });
+
+    const xl = el("text", { x: PL, y: TOP + HH + 29, "font-size": 10.5,
+      fill: "var(--ink-3)", "font-family": "var(--display)", "letter-spacing": "0.1em" });
+    xl.textContent = "HOUR OF DAY"; svg.appendChild(xl);
+
+    const hit = el("rect", { x: PL, y: TOP, width: W - PL - PR, height: HH, fill: "transparent" });
+    svg.appendChild(hit);
+    svg.addEventListener("pointermove", ev => {
+      const r = svg.getBoundingClientRect();
+      const px = (ev.clientX - r.left) / r.width * W;
+      let h = Math.floor((px - PL) / bw);
+      h = Math.max(0, Math.min(23, h));
+      tip.style.opacity = 1;
+      tip.innerHTML = String(h).padStart(2, "0") + ":00 \u2013 " + String(h).padStart(2, "0") + ":59<br>" +
+        HOURS[h] + " instructions (" + (HOURS[h] / total * 100).toFixed(1) + "%)";
+      const hostR = host.getBoundingClientRect();
+      let left = ev.clientX - hostR.left + 14;
+      if (left + tip.offsetWidth > hostR.width - 4) left = ev.clientX - hostR.left - tip.offsetWidth - 14;
+      tip.style.left = left + "px";
+      tip.style.top = (ev.clientY - hostR.top + 12) + "px";
+    });
+    svg.addEventListener("pointerleave", () => tip.style.opacity = 0);
+
+    host.appendChild(svg);
+
+    const tb = document.getElementById("tbl-hours");
+    for (let i = 0; i < 12; i++) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td class="n">${String(i).padStart(2,"0")}:00</td><td class="n">${HOURS[i]}</td>` +
+        `<td class="n">${String(i+12).padStart(2,"0")}:00</td><td class="n">${HOURS[i+12]}</td>`;
+      tb.appendChild(tr);
+    }
+  }
+
+  /* ---------------- model mix ---------------- */
+  function modelMix() {
+    const host = document.getElementById("c-models");
+    host.innerHTML = "";
+    const data = [
+      { name: "Opus 4.8", pct: 32.6, fill: "var(--seq-5)", ink: "#FFFFFF" },
+      { name: "Sonnet 4.6", pct: 32.4, fill: "var(--seq-4)", ink: "#FFFFFF" },
+      { name: "Sonnet 5", pct: 25.0, fill: "var(--seq-3)", ink: "#FFFFFF" },
+      { name: "Fable 5", pct: 8.7, fill: "var(--seq-2)", ink: "#0D1520" },
+      { name: "Other", pct: 1.4, fill: "var(--seq-1)", ink: "#0D1520" }
+    ];
+    const W = 1000, BH = 56, TOP = 4, H = TOP + BH + 46;
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img",
+      "aria-label": "Share of tokens by model: Opus 4.8 32.6 percent, Sonnet 4.6 32.4 percent, Sonnet 5 25.0 percent, Fable 5 8.7 percent, other models 1.4 percent." });
+
+    let x = 0;
+    data.forEach((d, i) => {
+      const w = d.pct / 100 * W;
+      const gap = i === data.length - 1 ? 0 : 2;
+      svg.appendChild(el("rect", { x, y: TOP, width: Math.max(1, w - gap), height: BH,
+        fill: d.fill, rx: 2 }));
+      if (d.pct >= 8) {
+        const a = el("text", { x: x + 13, y: TOP + 24, "font-size": 14,
+          fill: d.ink, "font-family": "var(--display)", "font-weight": 700 });
+        a.textContent = d.name; svg.appendChild(a);
+        const b = el("text", { x: x + 13, y: TOP + 43, "font-size": 13,
+          fill: d.ink, "font-family": "var(--mono)", "fill-opacity": .88 });
+        b.textContent = d.pct.toFixed(1) + "%"; svg.appendChild(b);
+      } else {
+        const cx = x + w / 2;
+        svg.appendChild(el("line", { x1: cx, x2: cx, y1: TOP + BH + 2, y2: TOP + BH + 13,
+          stroke: "var(--rule-strong)", "stroke-width": 1 }));
+        const t = el("text", { x: Math.min(cx, W - 4), y: TOP + BH + 28, "text-anchor": "end",
+          "font-size": 12, fill: "var(--ink-2)", "font-family": "var(--mono)" });
+        t.textContent = d.name + " " + d.pct.toFixed(1) + "%"; svg.appendChild(t);
+      }
+      x += w;
+    });
+    host.appendChild(svg);
+  }
+
+  daily();
+  hours();
+  modelMix();
+})();
+</script>
