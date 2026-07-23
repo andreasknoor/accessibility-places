@@ -43,7 +43,10 @@ export default function SimpleDetail({ place, distanceM, onBack, onOpenSettings 
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
-      <div className="flex items-center gap-1 px-3 pt-3 pb-1 shrink-0">
+      {/* pt-safe-3, not pt-3 — same notch/status-bar clipping fix as
+          SimpleLayout's shared Header (this screen has its own separate top
+          row instead of reusing that component). */}
+      <div className="flex items-center gap-1 px-3 pt-safe-3 pb-1 shrink-0">
         <button
           onClick={onBack}
           className="flex items-center gap-1 text-sm font-medium text-primary py-1.5 pr-2 -ml-1"

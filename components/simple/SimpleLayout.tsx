@@ -78,7 +78,13 @@ interface Props {
 // through the full UI just to change language.
 function Header({ title, backLabel, settingsLabel, onBack, onOpenSettings }: { title?: string; backLabel: string; settingsLabel: string; onBack?: () => void; onOpenSettings: () => void }) {
   return (
-    <div className="flex items-center gap-2 px-3 pt-3 pb-1 shrink-0 min-h-9">
+    // pt-safe-3, not pt-3: this row sits flush at the very top of the h-svh
+    // root (no browser chrome/native title bar above it, unlike MobileLayout's
+    // header which happens to have the same need — see its own pt-safe-3).
+    // Without the safe-area padding, the back/settings buttons render under
+    // the iPhone notch/status bar and become untappable (reported live on a
+    // real device: the top row was visible but its buttons didn't respond).
+    <div className="flex items-center gap-2 px-3 pt-safe-3 pb-1 shrink-0 min-h-9">
       {onBack ? (
         <button onClick={onBack} className="flex items-center gap-1 text-sm font-medium text-primary py-1.5 pr-2 -ml-1">
           <ChevronLeft className="w-4 h-4" />
@@ -415,7 +421,10 @@ export default function SimpleLayout({
 
         {/* ── Start: the two core jobs ── */}
         {screen === "start" && (
-          <div className="flex-1 flex flex-col px-5 py-3">
+          // pt-safe-3, not the top half of py-3 — this screen has no shared
+          // <Header>, so its own top row (the language switcher) needs the
+          // same safe-area treatment directly; see Header's own comment.
+          <div className="flex-1 flex flex-col px-5 pt-safe-3 pb-3">
             <div className="flex justify-end">
               <LanguageSwitcher />
             </div>
