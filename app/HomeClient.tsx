@@ -799,6 +799,20 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     handleSearch(query, SIMPLE_RADIUS_KM, coords, undefined, SIMPLE_FILTERS_OVERRIDE)
   }, [handleSearch])
 
+  // Simple View's own "search here" (map pan → re-search at the new centre):
+  // deliberately NOT the same handleSearchHere the full UI uses just below —
+  // that one (a) falls back to the ambient `filters` state, dropping
+  // SIMPLE_FILTERS_OVERRIDE, and (b) flips chatMode/exitNearbyTriggerKey, state
+  // owned by ChatPanel's own mode machine that Simple View never touches at
+  // all. `lastQuery` is already the category label handleSimpleNearbySearch
+  // set (or the neutral all-categories word), so reusing it here re-runs the
+  // exact same kind of search, just centred on the panned viewport.
+  const handleSimpleSearchHere = useCallback((coords: { lat: number; lon: number }, viewportRadiusKm: number) => {
+    if (!lastQuery) return
+    const clampedRadius = clampVenueRadiusKm(viewportRadiusKm)
+    handleSearch(lastQuery, clampedRadius, coords, undefined, SIMPLE_FILTERS_OVERRIDE)
+  }, [lastQuery, handleSearch])
+
   const handleSearchHere = useCallback((coords: { lat: number; lon: number }, viewportRadiusKm: number, origin: "drag" | "locate" = "drag") => {
     // Use the viewport-derived radius so the search covers exactly what the user
     // sees, not the last user-setting radius. (Amenity "search here" is wired
@@ -1588,6 +1602,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           amenityHint={amenityHint ?? undefined}
           parkingSpots={visibleParkingSpots}
           toiletSpots={visibleToiletSpots.length > 0 ? visibleToiletSpots : undefined}
+          onSearchHere={handleSimpleSearchHere}
+          onFocusSearchHere={handleAmenitySearchHere}
           settings={settings}
           onUpdateSettings={handleUpdateSettings}
         />

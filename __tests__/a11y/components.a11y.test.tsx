@@ -173,6 +173,8 @@ describe("a11y baseline — SimpleLayout", () => {
         onSimpleNearbySearch={() => {}}
         onPlaceSearch={() => {}}
         onAmenitySearch={() => {}}
+        onSearchHere={() => {}}
+        onFocusSearchHere={() => {}}
         settings={DEFAULT_APP_SETTINGS}
         onUpdateSettings={() => {}}
       />,
@@ -189,6 +191,8 @@ describe("a11y baseline — SimpleLayout", () => {
         onSimpleNearbySearch={() => {}}
         onPlaceSearch={() => {}}
         onAmenitySearch={() => {}}
+        onSearchHere={() => {}}
+        onFocusSearchHere={() => {}}
         settings={DEFAULT_APP_SETTINGS}
         onUpdateSettings={() => {}}
       />,
@@ -206,6 +210,8 @@ describe("a11y baseline — SimpleLayout", () => {
         onSimpleNearbySearch={() => {}}
         onPlaceSearch={() => {}}
         onAmenitySearch={() => {}}
+        onSearchHere={() => {}}
+        onFocusSearchHere={() => {}}
         settings={DEFAULT_APP_SETTINGS}
         onUpdateSettings={() => {}}
       />,

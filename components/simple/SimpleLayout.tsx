@@ -61,6 +61,15 @@ interface Props {
   amenityHint?:    string
   parkingSpots?:   ParkingSpot[]
   toiletSpots?:    AmenityFeature[]
+  // "Hier suchen" — MapView's own built-in pill (rendered whenever these two
+  // are passed and `hideSearchHereButton` is left at its default `false`, so
+  // no new UI needs building here). onSearchHere re-runs the current
+  // category/all-places query at the panned map centre; onFocusSearchHere is
+  // its amenity-mode equivalent ("search this area" for the active Parken/WC
+  // search) and is already filter-agnostic in HomeClient, so it's passed
+  // straight through with no Simple-View-specific wrapper needed.
+  onSearchHere: (coords: { lat: number; lon: number }, viewportRadiusKm: number) => void
+  onFocusSearchHere: (coords: { lat: number; lon: number }, viewportRadiusKm: number) => void
   settings:        AppSettings
   onUpdateSettings: (patch: Partial<AppSettings>) => void
 }
@@ -108,7 +117,7 @@ function Header({ title, backLabel, settingsLabel, onBack, onOpenSettings }: { t
 export default function SimpleLayout({
   places, isLoading, error, searchCenter, gpsCoords, selectedId, onSelect,
   onSimpleNearbySearch, onPlaceSearch, onAmenitySearch, amenityResults, amenityHint,
-  parkingSpots, toiletSpots, settings, onUpdateSettings,
+  parkingSpots, toiletSpots, onSearchHere, onFocusSearchHere, settings, onUpdateSettings,
 }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
@@ -564,9 +573,20 @@ export default function SimpleLayout({
                   parkingSpots={parkingSpots}
                   toiletSpots={toiletSpots}
                   amenityType={selectedAmenityType}
+                  // Drives which of MapView's two "search here" pills can show
+                  // (venue vs. the amenity "search this area") — see onSearchHere/
+                  // onFocusSearchHere below.
+                  focusMode={selectedAmenityType != null}
                   amenityPanTarget={amenityPanTarget}
                   amenityPanTrigger={amenityPanTrigger}
                   onAmenityMarkerClick={handleAmenityMarkerClick}
+                  // "Hier suchen" — MapView renders its own centred pill for
+                  // whichever of these two is active (never both at once,
+                  // gated by focusMode above); no `hideSearchHereButton` is
+                  // passed, so we get MapView's default floating-pill UI for
+                  // free, same as the desktop full-UI map.
+                  onSearchHere={onSearchHere}
+                  onFocusSearchHere={onFocusSearchHere}
                   center={searchCenter ?? gpsCoords ?? undefined}
                   userLocation={gpsCoords ?? undefined}
                   selectedId={selectedId}

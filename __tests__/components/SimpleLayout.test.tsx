@@ -55,6 +55,8 @@ interface Handlers {
   onSimpleNearbySearch: ReturnType<typeof vi.fn<(query: string, coords: { lat: number; lon: number }) => void>>
   onPlaceSearch: ReturnType<typeof vi.fn<(nameHint: string, coords?: { lat: number; lon: number }) => void>>
   onAmenitySearch: ReturnType<typeof vi.fn<(type: AmenityType, coords: { lat: number; lon: number }) => void>>
+  onSearchHere: ReturnType<typeof vi.fn<(coords: { lat: number; lon: number }, viewportRadiusKm: number) => void>>
+  onFocusSearchHere: ReturnType<typeof vi.fn<(coords: { lat: number; lon: number }, viewportRadiusKm: number) => void>>
   onUpdateSettings: ReturnType<typeof vi.fn<(patch: Partial<AppSettings>) => void>>
 }
 
@@ -72,6 +74,8 @@ function renderLayout(props: {
     onSimpleNearbySearch: vi.fn<(query: string, coords: { lat: number; lon: number }) => void>(),
     onPlaceSearch: vi.fn<(nameHint: string, coords?: { lat: number; lon: number }) => void>(),
     onAmenitySearch: vi.fn<(type: AmenityType, coords: { lat: number; lon: number }) => void>(),
+    onSearchHere: vi.fn<(coords: { lat: number; lon: number }, viewportRadiusKm: number) => void>(),
+    onFocusSearchHere: vi.fn<(coords: { lat: number; lon: number }, viewportRadiusKm: number) => void>(),
     onUpdateSettings: vi.fn<(patch: Partial<AppSettings>) => void>(),
     ...handlers,
   }
@@ -88,6 +92,8 @@ function renderLayout(props: {
         onSimpleNearbySearch={h.onSimpleNearbySearch}
         onPlaceSearch={h.onPlaceSearch}
         onAmenitySearch={h.onAmenitySearch}
+        onSearchHere={h.onSearchHere}
+        onFocusSearchHere={h.onFocusSearchHere}
         settings={props.settings ?? DEFAULT_APP_SETTINGS}
         onUpdateSettings={h.onUpdateSettings}
       />
@@ -140,6 +146,8 @@ function VenueHarness({ settings = DEFAULT_APP_SETTINGS }: { settings?: AppSetti
       onSimpleNearbySearch={vi.fn<(query: string, coords: { lat: number; lon: number }) => void>()}
       onPlaceSearch={onPlaceSearch}
       onAmenitySearch={vi.fn<(type: AmenityType, coords: { lat: number; lon: number }) => void>()}
+      onSearchHere={vi.fn()}
+      onFocusSearchHere={vi.fn()}
       settings={settings}
       onUpdateSettings={vi.fn<(patch: Partial<AppSettings>) => void>()}
     />
@@ -254,6 +262,17 @@ describe("SimpleLayout — results screen", () => {
     return utils
   }
 
+  // "Hier suchen" — MapView renders its own built-in pill for whichever of
+  // these two is passed (see MapView's own searchHereCenter/focusMode logic);
+  // SimpleLayout only needs to forward the right prop and set focusMode
+  // correctly so the venue pill and the amenity "search this area" pill can
+  // never both be eligible at once.
+  it("passes onSearchHere through to MapView, with focusMode false during a venue search", async () => {
+    const { handlers } = await goToResults()
+    expect(mapViewProps.current.onSearchHere).toBe(handlers.onSearchHere)
+    expect(mapViewProps.current.focusMode).toBe(false)
+  })
+
   it("shows a loading spinner and the search-in-progress bar while isLoading is true", async () => {
     const { rerender, handlers } = await goToResults()
     // isLoading defaults to false in goToResults's own render — simulate the
@@ -268,6 +287,8 @@ describe("SimpleLayout — results screen", () => {
           onSimpleNearbySearch={handlers.onSimpleNearbySearch}
           onPlaceSearch={handlers.onPlaceSearch}
           onAmenitySearch={handlers.onAmenitySearch}
+          onSearchHere={vi.fn()}
+          onFocusSearchHere={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -290,6 +311,8 @@ describe("SimpleLayout — results screen", () => {
           onSimpleNearbySearch={handlers.onSimpleNearbySearch}
           onPlaceSearch={handlers.onPlaceSearch}
           onAmenitySearch={handlers.onAmenitySearch}
+          onSearchHere={vi.fn()}
+          onFocusSearchHere={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -310,6 +333,8 @@ describe("SimpleLayout — results screen", () => {
           onSimpleNearbySearch={vi.fn<(query: string, coords: { lat: number; lon: number }) => void>()}
           onPlaceSearch={vi.fn()}
           onAmenitySearch={vi.fn()}
+          onSearchHere={vi.fn()}
+          onFocusSearchHere={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={vi.fn<(patch: Partial<AppSettings>) => void>()}
         />
@@ -331,6 +356,8 @@ describe("SimpleLayout — results screen", () => {
           onSimpleNearbySearch={vi.fn<(query: string, coords: { lat: number; lon: number }) => void>()}
           onPlaceSearch={vi.fn()}
           onAmenitySearch={vi.fn()}
+          onSearchHere={vi.fn()}
+          onFocusSearchHere={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={vi.fn<(patch: Partial<AppSettings>) => void>()}
         />
@@ -352,6 +379,8 @@ describe("SimpleLayout — results screen", () => {
           onSimpleNearbySearch={vi.fn<(query: string, coords: { lat: number; lon: number }) => void>()}
           onPlaceSearch={vi.fn()}
           onAmenitySearch={vi.fn()}
+          onSearchHere={vi.fn()}
+          onFocusSearchHere={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={vi.fn<(patch: Partial<AppSettings>) => void>()}
         />
@@ -373,6 +402,8 @@ describe("SimpleLayout — results screen", () => {
           onSimpleNearbySearch={vi.fn<(query: string, coords: { lat: number; lon: number }) => void>()}
           onPlaceSearch={vi.fn()}
           onAmenitySearch={vi.fn()}
+          onSearchHere={vi.fn()}
+          onFocusSearchHere={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={vi.fn<(patch: Partial<AppSettings>) => void>()}
         />
@@ -419,6 +450,8 @@ describe("SimpleLayout — results screen", () => {
           onSimpleNearbySearch={handlers.onSimpleNearbySearch}
           onPlaceSearch={handlers.onPlaceSearch}
           onAmenitySearch={handlers.onAmenitySearch}
+          onSearchHere={vi.fn()}
+          onFocusSearchHere={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -451,6 +484,8 @@ describe("SimpleLayout — results screen", () => {
           onSimpleNearbySearch={handlers.onSimpleNearbySearch}
           onPlaceSearch={handlers.onPlaceSearch}
           onAmenitySearch={handlers.onAmenitySearch}
+          onSearchHere={vi.fn()}
+          onFocusSearchHere={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -482,6 +517,8 @@ describe("SimpleLayout — results screen", () => {
           onSimpleNearbySearch={handlers.onSimpleNearbySearch}
           onPlaceSearch={handlers.onPlaceSearch}
           onAmenitySearch={handlers.onAmenitySearch}
+          onSearchHere={vi.fn()}
+          onFocusSearchHere={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -628,6 +665,12 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
     return utils
   }
 
+  it("passes onFocusSearchHere through to MapView, with focusMode true during an amenity search", async () => {
+    const { handlers } = await goToParkingResults()
+    expect(mapViewProps.current.onFocusSearchHere).toBe(handlers.onFocusSearchHere)
+    expect(mapViewProps.current.focusMode).toBe(true)
+  })
+
   it("renders amenity results as AmenityCards, not SimplePlaceCards", async () => {
     const { rerender, handlers } = await goToParkingResults()
     rerender(
@@ -641,6 +684,8 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
           onPlaceSearch={handlers.onPlaceSearch}
           onAmenitySearch={handlers.onAmenitySearch}
           amenityResults={[makeSpot()]}
+          onSearchHere={vi.fn()}
+          onFocusSearchHere={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -664,6 +709,8 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
           onAmenitySearch={handlers.onAmenitySearch}
           amenityResults={[]}
           amenityHint="Keine Behindertenparkplätze in der Nähe gefunden."
+          onSearchHere={vi.fn()}
+          onFocusSearchHere={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -687,6 +734,8 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
           onAmenitySearch={handlers.onAmenitySearch}
           amenityResults={spots}
           parkingSpots={spots}
+          onSearchHere={vi.fn()}
+          onFocusSearchHere={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -712,6 +761,8 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
           onPlaceSearch={handlers.onPlaceSearch}
           onAmenitySearch={handlers.onAmenitySearch}
           amenityResults={[makeSpot()]}
+          onSearchHere={vi.fn()}
+          onFocusSearchHere={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -740,6 +791,8 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
           onPlaceSearch={handlers.onPlaceSearch}
           onAmenitySearch={handlers.onAmenitySearch}
           amenityResults={[makeSpot()]}
+          onSearchHere={vi.fn()}
+          onFocusSearchHere={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
