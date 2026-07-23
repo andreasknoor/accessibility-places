@@ -84,6 +84,21 @@ describe("SimpleDetail", () => {
     expect(onOpenSettings).toHaveBeenCalledTimes(1)
   })
 
+  // Confidence score — the same ConfidenceBadge PlaceCard/PlaceDebugSheet use,
+  // between the criteria box and the possibly-not-accessible warning; no
+  // `place` prop passed to it, so it stays a plain badge without the
+  // interactive score-formula breakdown (out of scope here, like the rest of
+  // this reduced screen).
+  it("shows the confidence score badge with its percentage and label", () => {
+    renderWithProvider(<SimpleDetail place={makePlace({ overallConfidence: 0.75 })} onBack={vi.fn()} onOpenSettings={vi.fn()} />)
+    expect(screen.getByText("Daten: 75% · Verlässlich")).toBeInTheDocument()
+  })
+
+  it("reflects a low confidence score with its own label", () => {
+    renderWithProvider(<SimpleDetail place={makePlace({ overallConfidence: 0.2 })} onBack={vi.fn()} onOpenSettings={vi.fn()} />)
+    expect(screen.getByText("Daten: 20% · Unsicher")).toBeInTheDocument()
+  })
+
   // Same trigger (placeMayNotBeAccessible: entrance/toilet "no"/"unknown") and
   // wording as PlaceCard/PlaceDebugSheet's shared NotAccessibleWarningBox —
   // Simple View's reduced detail screen must not silently drop this warning.

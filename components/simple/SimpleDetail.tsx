@@ -5,6 +5,7 @@ import { NativeLink } from "@/components/ui/native-link"
 import LanguageSwitcher from "@/components/LanguageSwitcher"
 import NavigateButton from "@/components/ui/navigate-button"
 import { NotAccessibleWarningBox } from "@/components/results/NotAccessibleWarning"
+import ConfidenceBadge from "@/components/results/ConfidenceBadge"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { useTranslations } from "@/lib/i18n"
 import { placeMayNotBeAccessible } from "@/lib/matching/merge"
@@ -78,6 +79,14 @@ export default function SimpleDetail({ place, distanceM, onBack, onOpenSettings 
           <CriterionRow label={criterionSentence(t, "toilet", place.accessibility.toilet.value)} dot={CRITERION_DOT_CLASS[place.accessibility.toilet.value]} />
           <CriterionRow label={criterionSentence(t, "parking", place.accessibility.parking.value)} dot={CRITERION_DOT_CLASS[place.accessibility.parking.value]} />
         </div>
+
+        {/* The plain badge only (no `place` prop) — deliberately skips the
+            interactive score-formula breakdown ConfidenceBadge otherwise offers
+            (tooltip on desktop, tap-through on mobile), matching this screen's
+            existing "no score formula" scope cut (see the component comment
+            above). Still shows the % and Verlässlich/Mittel/Unsicher label the
+            user asked for, just as a static fact rather than an interactive one. */}
+        <ConfidenceBadge confidence={place.overallConfidence} className="self-start" />
 
         {/* Same trigger (placeMayNotBeAccessible: entrance/toilet "no"/"unknown")
             and unconditional (not toggle-gated) rendering as PlaceDebugSheet's
