@@ -193,6 +193,27 @@ body {
      Android display/font scaling. */
   max-height: min(320px, 55dvh);
   overflow-y: auto;
+  /* Scroll-shadow hint (issue: cut-off popup buttons) — when a popup's content
+     is taller than its capped max-height, Leaflet correctly makes it scrollable,
+     but nothing signalled that: the box just ended at a rounded corner, exactly
+     like a complete popup, so a hidden last button row (e.g. a WC popup's
+     wrapped Wheelmap/Google-Maps/Results chips) read as "missing", not
+     "scroll for more". This is the classic JS-free scroll-shadow technique:
+     two solid-colour gradients fade the very top/bottom edge, two radial
+     "shadow" gradients sit just past them; the solid ones scroll WITH the
+     content (background-attachment: local) so they only cover real content,
+     while the shadows stay fixed to the viewport (scroll) and only become
+     visible once there's more to reveal in that direction — no JS needed to
+     show/hide it, it falls out of how background-attachment positions work. */
+  background:
+    linear-gradient(#fff 30%, rgba(255, 255, 255, 0)),
+    linear-gradient(rgba(255, 255, 255, 0), #fff 70%) 0 100%,
+    radial-gradient(farthest-side at 50% 0, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0)),
+    radial-gradient(farthest-side at 50% 100%, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0)) 0 100%;
+  background-repeat: no-repeat;
+  background-color: #fff;
+  background-size: 100% 24px, 100% 24px, 100% 10px, 100% 10px;
+  background-attachment: local, local, scroll, scroll;
 }
 .ap-popup .leaflet-popup-close-button {
   top: 5px;

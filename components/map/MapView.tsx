@@ -32,6 +32,14 @@ interface Props {
   panTrigger?:   number
   onSelect:      (place: Place) => void
   onShowInResults?:    (place: Place) => void
+  // Overrides the venue popup's own "Details" chip, which otherwise ALWAYS
+  // opens the full PlaceDebugSheet internally (setDetailPlace below) —
+  // independent of onShowInResults, which only drives the separate "Zeige in
+  // Ergebnissen" chip (and isn't even rendered in the reduced popup variant
+  // small map heights fall back to). Simple View's map screens pass this to
+  // route straight to their own reduced detail screen instead; omitted, the
+  // existing rich-sheet behaviour is unchanged for every other caller.
+  onOpenDetails?:      (place: Place) => void
   isFullscreen:        boolean
   onToggleFullscreen:  () => void
   showFullscreenToggle?: boolean
@@ -245,8 +253,21 @@ function popupShell(bar: string, inner: string): string {
 // all. popupMaxHeight() derives a cap from the *current* map size instead of
 // a guessed constant, so it still leaves map context visible on small
 // devices and doesn't clip unnecessarily on large ones.
+//
+// The 160px floor below is deliberately clamped against the map's OWN height
+// too (verified live): Simple View's map/list split is freely resizable down
+// to SPLIT_PANE_MIN_PX=90px (components/simple/SimpleLayout.tsx), and both
+// `.leaflet-container` and its own wrapper clip anything taller than the
+// container — a popup allowed to grow past the container isn't merely
+// "needs scrolling" at that point, the overflow is clipped by an ANCESTOR,
+// not the popup's own scrollable region, so it becomes genuinely unreachable
+// (a shrunk WC popup showed only its title + one row, with the entire button
+// footer gone and no way to scroll it back). Reserving ~40px leaves room for
+// the popup's own tip/arrow and a sliver of visible map context underneath.
 function popupMaxHeight(mapHeightPx: number): number {
-  return Math.max(160, Math.round(mapHeightPx * 0.55))
+  const cap = Math.max(160, Math.round(mapHeightPx * 0.55))
+  const containerLimit = Math.max(60, mapHeightPx - 40)
+  return Math.min(cap, containerLimit)
 }
 
 // Above this fraction of the map's current height, the venue popup switches
@@ -399,6 +420,7 @@ export default function MapView({
   panTrigger,
   onSelect,
   onShowInResults,
+  onOpenDetails,
   isFullscreen,
   onToggleFullscreen,
   showFullscreenToggle = true,
@@ -473,6 +495,7 @@ export default function MapView({
   }
 
   const onShowInResultsRef  = useRef(onShowInResults)
+  const onOpenDetailsRef    = useRef(onOpenDetails)
   const onShowAmenityInResultsRef = useRef(onShowAmenityInResults)
   const placesRef           = useRef(places)
   const userLocationRef     = useRef(userLocation)
@@ -485,6 +508,7 @@ export default function MapView({
   useEffect(() => { onPannedRef.current = onPanned }, [onPanned])
   useEffect(() => { onViewportChangeRef.current = onViewportChange }, [onViewportChange])
   useEffect(() => { onShowInResultsRef.current = onShowInResults }, [onShowInResults])
+  useEffect(() => { onOpenDetailsRef.current = onOpenDetails }, [onOpenDetails])
   useEffect(() => { onShowAmenityInResultsRef.current = onShowAmenityInResults }, [onShowAmenityInResults])
   useEffect(() => { placesRef.current = places }, [places])
   useEffect(() => { userLocationRef.current = userLocation }, [userLocation])
@@ -679,7 +703,24 @@ export default function MapView({
       // lastProgrammaticMoveRef just before it runs; a moveend within the window
       // after that stamp is app-driven and ignored. Any later moveend is a user pan.
       // Fade the floating buttons while a popup is open (see popupOpen state).
-      map.on("popupopen",  () => { setPopupOpen(true);  onPopupOpenChange?.(true)  })
+      map.on("popupopen",  (e) => {
+        setPopupOpen(true)
+        onPopupOpenChange?.(true)
+        // Re-derive the height cap from the map's CURRENT size, not whatever it
+        // was when this popup's marker was built (popupMaxHeight() is otherwise
+        // only evaluated once, at bindPopup() time). Simple View's map/list split
+        // is freely resizable at any point after markers already exist, and
+        // Leaflet's own _updateLayout only reads options.maxHeight when a popup
+        // OPENS — so a popup bound while the map was tall keeps that larger cap
+        // even after the container has since been dragged much shorter, which is
+        // exactly the sequence that reproduced clipped WC/parking popup buttons.
+        const popup = e.popup
+        const freshMax = popupMaxHeight(map.getSize().y)
+        if (popup.options.maxHeight !== freshMax) {
+          popup.options.maxHeight = freshMax
+          popup.update()
+        }
+      })
       map.on("popupclose", () => { setPopupOpen(false); onPopupOpenChange?.(false) })
 
       // Mark the start of a real user drag-pan. Programmatic moves never fire this,
@@ -1208,7 +1249,9 @@ export default function MapView({
           L!.DomEvent.on(detailsBtn, "click", (ev: Event) => {
             L!.DomEvent.stopPropagation(ev)
             const p = placesRef.current.find((pl) => pl.id === capturedId)
-            if (p) setDetailPlace(p)
+            if (!p) return
+            if (onOpenDetailsRef.current) onOpenDetailsRef.current(p)
+            else setDetailPlace(p)
           })
         }
         wireNavigateButton(div, { lat: place.coordinates.lat, lon: place.coordinates.lon })
@@ -1415,6 +1458,27 @@ export default function MapView({
   // on first mount, so the selection zoom/popup ("show on map") silently fails once.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, isFullscreen, mapReady])
+
+  // Keep Leaflet's internal size in sync with the container's ACTUAL pixel
+  // size continuously, not just on the discrete visible/isFullscreen changes
+  // above — needed for a free-form drag-resizable split (Simple View's
+  // map/list panes), where the container's height changes on every animation
+  // frame of the drag rather than in one jump. rAF-throttled since
+  // invalidateSize triggers a layout read; ResizeObserver can fire faster
+  // than the browser paints during a drag.
+  useEffect(() => {
+    if (!mapRef.current) return
+    let rafId: number | null = null
+    const ro = new ResizeObserver(() => {
+      if (rafId != null) return
+      rafId = requestAnimationFrame(() => {
+        rafId = null
+        mapInst.current?.invalidateSize()
+      })
+    })
+    ro.observe(mapRef.current)
+    return () => { ro.disconnect(); if (rafId != null) cancelAnimationFrame(rafId) }
+  }, [])
 
   return (
     <div className="relative w-full h-full">

@@ -7,6 +7,7 @@ Ersteinführung. Neueste Einträge oben; wird bei jeder neuen Funktion fortgefü
 
 | Datum | Funktion | Beschreibung | Umfang |
 |---|---|---|---|
+| 2026-07-23 | Parken/WC in der Einfachen Ansicht | Die zwei Amenity-Kacheln „Parken"/„WC" ergänzen die Kategorie-Kacheln der Einfachen Ansicht als eigene „Was möchten Sie suchen"-Option, inkl. Karte, Liste und Kartenabgleich wie im Vollmodus | S |
 | 2026-07-20 | Ein-/ausklappbare Ebenen-Box mit integrierter Legende | „Ebenen: Parkplatz/WC" auf der Karte lässt sich einklappen (Zustand bleibt sitzungsübergreifend gespeichert); eingeklappt zeigt sie kompakte Icon-Chips nur für aktive Ebenen. Die frühere separate Karten-Legende ist eingebaut: jede Checkbox-Zeile zeigt direkt die zugehörige Marker-Farbe darunter, statt in einem zweiten Kasten daneben zu stehen | S |
 | 2026-07-20 | 12 weitere Alltagskategorien | Schuhgeschäft, Bekleidung, Kiosk, Fahrradladen, Möbel, Metzgerei, Blumenladen, Waschsalon, Buchhandlung, Reha-Zentrum, Sporthalle, Tankstelle (51 Kategorien insgesamt) | M |
 | 2026-07-16 | Hinweis bei möglicherweise nicht barrierefreien Orten | Neuer Warnhinweis + kontextabhängiger „Info ergänzen"-statt-„Melden"-Button, wenn Eingang/WC unbekannt oder negativ sind | M |

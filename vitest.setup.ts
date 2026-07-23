@@ -25,6 +25,14 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
 }
 
+// jsdom doesn't implement scrollIntoView at all (Element.prototype.scrollIntoView
+// is undefined) — SimpleLayout's map-marker-select → scroll-list-card-into-view
+// interaction calls it defensively (optional-called, not just optional-chained),
+// but a real no-op here lets tests assert it was actually invoked.
+if (typeof Element !== "undefined" && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {}
+}
+
 // ConfidenceBadge uses useIsMobile which calls window.matchMedia — mock it for jsdom.
 // Guard with typeof check because node-environment tests also load this setup file.
 if (typeof window !== "undefined") {

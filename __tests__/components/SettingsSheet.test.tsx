@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent, within } from "@testing-library/react"
-import SettingsSheet from "@/components/settings/SettingsSheet"
+import SettingsSheet, { SettingsPanel } from "@/components/settings/SettingsSheet"
 import { DEFAULT_APP_SETTINGS } from "@/lib/settings"
 import type { AppSettings } from "@/lib/settings"
 
@@ -100,5 +100,38 @@ describe("SettingsSheet", () => {
     expect(options).toContain("text")
     expect(options).toContain("nearby")
     expect(options).not.toContain("place")
+  })
+})
+
+// SettingsPanel's `simple` prop (used by SimpleLayout's own settings entry
+// point): hides every setting Simple View's own code paths never read —
+// verified directly against SimpleLayout's source, not just assumed. Showing
+// a control with zero observable effect there would be actively misleading.
+describe("SettingsPanel — simple mode (opened from within Simple View)", () => {
+  it("hides settings Simple View never reads: start mode, default category, default view, parking/toilet map layers, sort order", () => {
+    render(<SettingsPanel settings={DEFAULT_APP_SETTINGS} onUpdate={vi.fn()} onClose={vi.fn()} simple />)
+    expect(screen.queryByText("Beim Start")).not.toBeInTheDocument()
+    expect(screen.queryByText("Standardkategorie")).not.toBeInTheDocument()
+    expect(screen.queryByText("Standard-Suchansicht")).not.toBeInTheDocument()
+    expect(screen.queryByText("Auch nicht reservierte Parkplätze")).not.toBeInTheDocument()
+    expect(screen.queryByText(/Nur öffentliche/)).not.toBeInTheDocument()
+    expect(screen.queryByText("Sortierung")).not.toBeInTheDocument()
+  })
+
+  it("keeps settings that do apply: Simple View toggle itself, international mode, usage stats", () => {
+    render(<SettingsPanel settings={DEFAULT_APP_SETTINGS} onUpdate={vi.fn()} onClose={vi.fn()} simple />)
+    expect(screen.getByText("Einfache Ansicht")).toBeInTheDocument()
+    expect(screen.getByText("Internationale Suche (Beta)")).toBeInTheDocument()
+    expect(screen.getByText("Anonyme Nutzungsstatistik")).toBeInTheDocument()
+    expect(screen.getByText("Auf Standard zurücksetzen")).toBeInTheDocument()
+  })
+
+  it("shows everything when `simple` is omitted (the full-UI gear icon's own usage)", () => {
+    render(<SettingsPanel settings={DEFAULT_APP_SETTINGS} onUpdate={vi.fn()} onClose={vi.fn()} />)
+    expect(screen.getByText("Beim Start")).toBeInTheDocument()
+    expect(screen.getByText("Standardkategorie")).toBeInTheDocument()
+    expect(screen.getByText("Standard-Suchansicht")).toBeInTheDocument()
+    expect(screen.getByText("Auch nicht reservierte Parkplätze")).toBeInTheDocument()
+    expect(screen.getByText("Sortierung")).toBeInTheDocument()
   })
 })
