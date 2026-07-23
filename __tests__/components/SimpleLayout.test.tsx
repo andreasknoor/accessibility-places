@@ -166,7 +166,7 @@ describe("SimpleLayout — start screen", () => {
   it("shows both core-job choices", () => {
     renderLayout()
     expect(screen.getByText("In meiner Nähe suchen")).toBeInTheDocument()
-    expect(screen.getByText("Ein Lokal prüfen")).toBeInTheDocument()
+    expect(screen.getByText("Einen konkreten Ort prüfen")).toBeInTheDocument()
   })
 
   it("the return-to-full-UI link is present", () => {
@@ -772,7 +772,7 @@ describe("SimpleLayout — venue flow", () => {
 
   it("navigates to the venue screen and shows a hint before typing", () => {
     renderLayout()
-    fireEvent.click(screen.getByText("Ein Lokal prüfen"))
+    fireEvent.click(screen.getByText("Einen konkreten Ort prüfen"))
     expect(screen.getByText("Tippen Sie einen Namen ein, um zu suchen.")).toBeInTheDocument()
   })
 
@@ -782,7 +782,7 @@ describe("SimpleLayout — venue flow", () => {
       { kind: "venue", name: "Café Sonnenschein", display: "Café Sonnenschein, Köln", lat: 50.93, lon: 6.93 },
     ])
     renderLayout()
-    fireEvent.click(screen.getByText("Ein Lokal prüfen"))
+    fireEvent.click(screen.getByText("Einen konkreten Ort prüfen"))
     fireEvent.change(screen.getByPlaceholderText("Name des Lokals …"), { target: { value: "Café" } })
     await waitFor(() => expect(screen.getByText("Café Sonnenschein, Köln")).toBeInTheDocument())
     expect(screen.queryByText("Köln")).not.toBeInTheDocument()
@@ -791,7 +791,7 @@ describe("SimpleLayout — venue flow", () => {
   it("picking a suggestion calls onPlaceSearch and jumps to detail once results arrive", async () => {
     mockSuggestResponse([{ kind: "venue", name: "Café Sonnenschein", display: "Café Sonnenschein, Köln", lat: 50.93, lon: 6.93 }])
     renderVenueHarness()
-    fireEvent.click(screen.getByText("Ein Lokal prüfen"))
+    fireEvent.click(screen.getByText("Einen konkreten Ort prüfen"))
     fireEvent.change(screen.getByPlaceholderText("Name des Lokals …"), { target: { value: "Café" } })
     await waitFor(() => expect(screen.getByText("Café Sonnenschein, Köln")).toBeInTheDocument())
     fireEvent.click(screen.getByText("Café Sonnenschein, Köln"))
@@ -816,7 +816,7 @@ describe("SimpleLayout — venue flow", () => {
   it("does not show a distance on a venue-originated detail screen", async () => {
     mockSuggestResponse([{ kind: "venue", name: "Café Sonnenschein", display: "Café Sonnenschein, Köln", lat: 50.93, lon: 6.93 }])
     renderVenueHarness()
-    fireEvent.click(screen.getByText("Ein Lokal prüfen"))
+    fireEvent.click(screen.getByText("Einen konkreten Ort prüfen"))
     fireEvent.change(screen.getByPlaceholderText("Name des Lokals …"), { target: { value: "Café" } })
     await waitFor(() => expect(screen.getByText("Café Sonnenschein, Köln")).toBeInTheDocument())
     fireEvent.click(screen.getByText("Café Sonnenschein, Köln"))
@@ -833,7 +833,7 @@ describe("SimpleLayout — venue flow", () => {
   it("does not reopen a stale previous venue's detail when the new lookup fails", async () => {
     mockSuggestResponse([{ kind: "venue", name: "Café Sonnenschein", display: "Café Sonnenschein, Köln", lat: 50.93, lon: 6.93 }])
     renderVenueHarness()
-    fireEvent.click(screen.getByText("Ein Lokal prüfen"))
+    fireEvent.click(screen.getByText("Einen konkreten Ort prüfen"))
     fireEvent.change(screen.getByPlaceholderText("Name des Lokals …"), { target: { value: "Café" } })
     await waitFor(() => expect(screen.getByText("Café Sonnenschein, Köln")).toBeInTheDocument())
     fireEvent.click(screen.getByText("Café Sonnenschein, Köln"))
@@ -859,7 +859,7 @@ describe("SimpleLayout — venue flow", () => {
   it("does not force-navigate to detail if the user already left the venue screen", async () => {
     mockSuggestResponse([{ kind: "venue", name: "Café Sonnenschein", display: "Café Sonnenschein, Köln", lat: 50.93, lon: 6.93 }])
     renderVenueHarness()
-    fireEvent.click(screen.getByText("Ein Lokal prüfen"))
+    fireEvent.click(screen.getByText("Einen konkreten Ort prüfen"))
     fireEvent.change(screen.getByPlaceholderText("Name des Lokals …"), { target: { value: "Café" } })
     await waitFor(() => expect(screen.getByText("Café Sonnenschein, Köln")).toBeInTheDocument())
     fireEvent.click(screen.getByText("Café Sonnenschein, Köln"))
@@ -876,7 +876,7 @@ describe("SimpleLayout — venue flow", () => {
   it("shows 'no matches' when the geocode lookup returns zero places without an error", async () => {
     mockSuggestResponse([{ kind: "venue", name: "Nirgendwo", display: "Nirgendwo", lat: 1, lon: 1 }])
     renderVenueHarness()
-    fireEvent.click(screen.getByText("Ein Lokal prüfen"))
+    fireEvent.click(screen.getByText("Einen konkreten Ort prüfen"))
     fireEvent.change(screen.getByPlaceholderText("Name des Lokals …"), { target: { value: "Nirgendwo" } })
     await waitFor(() => expect(screen.getByText("Nirgendwo")).toBeInTheDocument())
     fireEvent.click(screen.getByText("Nirgendwo"))
@@ -896,7 +896,7 @@ describe("SimpleLayout — settings always reachable", () => {
 
   it("is reachable from the venue search screen", () => {
     renderLayout()
-    fireEvent.click(screen.getByText("Ein Lokal prüfen"))
+    fireEvent.click(screen.getByText("Einen konkreten Ort prüfen"))
     fireEvent.click(screen.getByRole("button", { name: "Einstellungen" }))
     expect(screen.getByText("Einfache Ansicht")).toBeInTheDocument()
   })

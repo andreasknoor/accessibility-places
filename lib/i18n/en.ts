@@ -478,7 +478,7 @@ const en: Translations = {
     startTitle:      "What would you like to do?",
     startNearby:     "Search nearby",
     startNearbyHint: "Shows accessible places around you",
-    startVenue:      "Check a place",
+    startVenue:      "Check a specific place",
     startVenueHint:  "Enter a name, see its accessibility",
     showFullApp:     "Show all features",
     back:            "Back",

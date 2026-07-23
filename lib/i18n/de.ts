@@ -478,7 +478,7 @@ const de: Translations = {
     startTitle:      "Was möchten Sie?",
     startNearby:     "In meiner Nähe suchen",
     startNearbyHint: "Zeigt barrierefreie Orte um Sie herum",
-    startVenue:      "Ein Lokal prüfen",
+    startVenue:      "Einen konkreten Ort prüfen",
     startVenueHint:  "Name eingeben, Barrierefreiheit ansehen",
     showFullApp:     "Alle Funktionen anzeigen",
     back:            "Zurück",
