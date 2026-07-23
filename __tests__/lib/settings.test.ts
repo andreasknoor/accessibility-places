@@ -12,8 +12,10 @@ const localStorageMock = {
 ;(global as unknown as { window: unknown }).window  = { localStorage: localStorageMock }
 ;(global as unknown as { localStorage: unknown }).localStorage = localStorageMock
 
-import { loadSettings, DEFAULT_APP_SETTINGS } from "@/lib/settings"
+import { loadSettings, DEFAULT_APP_SETTINGS, SIMPLE_CATEGORIES } from "@/lib/settings"
 import type { AppSettings } from "@/lib/settings"
+import { ALL_CATEGORIES } from "@/lib/llm"
+import { CATEGORY_ICONS } from "@/lib/category-icons"
 
 const KEY = "ap_settings"
 
@@ -65,6 +67,7 @@ describe("loadSettings", () => {
       parkingRadiusKm:   1,
       internationalMode: true,
       usageStats:        false,
+      simpleView:        true,
     }
     localStorageMock.setItem(KEY, JSON.stringify(custom))
     expect(loadSettings()).toEqual(custom)
@@ -120,6 +123,33 @@ describe("SETTING_CHIPS completeness", () => {
       expect(chip.icon).toBeTruthy()
       expect(chip.de).toBeTruthy()
       expect(chip.en).toBeTruthy()
+    }
+  })
+})
+
+// ── Simple View (Variante B) fixed category favourites ─────────────────────
+// A short, deliberately unconfigurable list (unlike SETTING_CHIPS, which
+// covers every Category) — still worth guarding against a typo'd Category
+// that would silently fail to compile, or a duplicate that would render the
+// same tile twice.
+describe("SIMPLE_CATEGORIES", () => {
+  it("has exactly 6 entries (the Simple View tile grid is a fixed 2-column layout)", () => {
+    expect(SIMPLE_CATEGORIES).toHaveLength(6)
+  })
+
+  it("has no duplicates", () => {
+    expect(new Set(SIMPLE_CATEGORIES).size).toBe(SIMPLE_CATEGORIES.length)
+  })
+
+  it("every entry is a real, currently-defined Category", () => {
+    for (const cat of SIMPLE_CATEGORIES) {
+      expect(ALL_CATEGORIES).toContain(cat)
+    }
+  })
+
+  it("every entry has a category icon", () => {
+    for (const cat of SIMPLE_CATEGORIES) {
+      expect(CATEGORY_ICONS[cat]).toBeTruthy()
     }
   })
 })

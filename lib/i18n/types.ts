@@ -473,5 +473,44 @@ export interface Translations {
     internationalModeHint: string
     usageStats:            string
     usageStatsHint:        string
+    simpleView:            string
+    simpleViewHint:        string
+  }
+  // Simple View ("Variante B — Zwei Wege"): reduced mobile layout, see
+  // components/simple/SimpleLayout.tsx. Plain-language sentences per
+  // accessibility criterion replace the badge/score vocabulary used elsewhere.
+  simple: {
+    startTitle:      string
+    startNearby:     string
+    startNearbyHint: string
+    startVenue:      string
+    startVenueHint:  string
+    showFullApp:     string
+    back:            string
+    tilesTitle:      string
+    tileAll:         string
+    locating:        string
+    locateError:     string
+    resultsTitle:    (label: string) => string
+    resultsCount:    (n: number) => string
+    resizeHandle:    string
+    noResultsTitle:  string
+    noResultsHint:   string
+    venuePlaceholder: string
+    venueHint:        string
+    venueNoMatches:   string
+    entranceGood:    string
+    entranceLimited: string
+    entranceBad:     string
+    entranceUnknown: string
+    toiletGood:      string
+    toiletLimited:   string
+    toiletBad:       string
+    toiletUnknown:   string
+    parkingGood:     string
+    parkingLimited:  string
+    parkingBad:      string
+    parkingUnknown:  string
+    call:            string
   }
 }

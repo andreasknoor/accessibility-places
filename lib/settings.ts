@@ -36,6 +36,16 @@ export interface AppSettings {
   // counter in Redis; no IP, no queries, no coordinates). Turning this off deletes
   // the local ID and stops sending — see docs/plans/top-users-stats.md.
   usageStats:         boolean
+  // Simple View ("Variante B — Zwei Wege"): a reduced mobile layout for a fast,
+  // low-friction first search (no tabs, no filter UI, 6 fixed category tiles).
+  // A pure presentation switch — no separate search logic, no persisted filter
+  // override (see SimpleLayout's handleSimpleNearbySearch in HomeClient, which
+  // passes a fixed filter/radius preset directly to the existing search call
+  // instead of mutating the shared `filters`/`radiusKm` state). This toggle is
+  // the ONLY way back to the full UI once Simple View is active — it must
+  // always be reachable from within SimpleLayout (its "Alle Funktionen
+  // anzeigen" link opens the same SettingsSheet used by the full UI).
+  simpleView:         boolean
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -50,7 +60,16 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   parkingRadiusKm:    4.0,
   internationalMode:  false,
   usageStats:         true,
+  simpleView:         false,
 }
+
+// The 6 fixed category favourites shown as tiles in Simple View (Variante B).
+// Deliberately a short, hardcoded list — Simple View's whole premise is fewer
+// decisions, so this is NOT meant to be reorderable/configurable. Kept next to
+// SETTING_CHIPS so a completeness test can check every entry is a real Category.
+export const SIMPLE_CATEGORIES: Category[] = [
+  "cafe", "restaurant", "hotel", "doctors", "pharmacy", "supermarket",
+]
 
 // Every category the default-chip picker (SettingsSheet, a plain <select>) can
 // offer, in the same group order and within-group alphabetical (by German

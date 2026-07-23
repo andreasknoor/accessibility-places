@@ -16,6 +16,7 @@ import FilterPanel  from "@/components/filters/FilterPanel"
 import ResultsList  from "@/components/results/ResultsList"
 import LanguageSwitcher from "@/components/LanguageSwitcher"
 import MobileLayout from "@/components/mobile/MobileLayout"
+import SimpleLayout from "@/components/simple/SimpleLayout"
 import SettingsSheet from "@/components/settings/SettingsSheet"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { useTranslations, useLocale } from "@/lib/i18n"
@@ -51,6 +52,25 @@ const DEFAULT_FILTERS: SearchFilters = {
   alwaysShowParking: false,
   alwaysShowToilets: false,
 }
+
+// Simple View (Variante B) fixed search preset — passed as handleSearch's
+// filtersOverride/radiusKmOverride params directly, NEVER by mutating the
+// shared `filters`/`radiusKm` state above. Those two are persisted to
+// localStorage by the effect further down (PREFS_KEY) the moment they
+// change; writing the preset into them would silently overwrite the user's
+// real, full-UI preferences the instant Simple View activates. Only
+// `entrance` is checked — Simple View's whole premise is a fast first
+// success, not a filtered search — and acceptUnknown is on so a merely
+// under-documented place isn't hidden.
+const SIMPLE_FILTERS_OVERRIDE: Partial<SearchFilters> = {
+  entrance:      true,
+  toilet:        false,
+  parking:       false,
+  seating:       false,
+  onlyVerified:  false,
+  acceptUnknown: true,
+}
+const SIMPLE_RADIUS_KM = 5
 
 const DEFAULT_SOURCES: ActiveSources = {
   accessibility_cloud: true,
@@ -770,6 +790,14 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       setIsLoading(false)
     }
   }, [searchCenter, t, handleSearch, settings.internationalMode])
+
+  // Simple View (Variante B) nearby search: a plain wrapper around handleSearch
+  // that always supplies the fixed SIMPLE_FILTERS_OVERRIDE/SIMPLE_RADIUS_KM —
+  // see the comment on those constants for why this bypasses `filters`/`radiusKm`
+  // entirely instead of setting them.
+  const handleSimpleNearbySearch = useCallback((query: string, coords: { lat: number; lon: number }) => {
+    handleSearch(query, SIMPLE_RADIUS_KM, coords, undefined, SIMPLE_FILTERS_OVERRIDE)
+  }, [handleSearch])
 
   const handleSearchHere = useCallback((coords: { lat: number; lon: number }, viewportRadiusKm: number, origin: "drag" | "locate" = "drag") => {
     // Use the viewport-derived radius so the search covers exactly what the user
@@ -1519,6 +1547,54 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const showResultsRadiusPicker = canShowResultsRadiusPicker(amenityActive)
   const resolvedOnRadiusChange  = showResultsRadiusPicker ? handleRadiusChange : undefined
   const displayedRadiusKm       = amenityActive ? amenityRadiusKm : radiusKm
+
+  // Simple View (Variante B): a pure user preference, deliberately NOT gated
+  // behind isMobile — it's a reduced presentation layer, not a separate
+  // search path (reuses the exact same `places`/`isLoading`/`error` state and
+  // search handlers as MobileLayout/the desktop layout below, just through a
+  // much smaller set of screens). Checked before the isMobile branch so
+  // toggling it on works from a normal-width desktop browser window too, not
+  // only on an actual narrow/touch device — a desktop-width window otherwise
+  // never re-renders when the setting flips, since neither layout branch
+  // below is aware of it. The max-w-md wrapper keeps it a sensible phone-like
+  // column on wide screens; on an actually-narrow viewport it's a no-op (the
+  // available width is already under the max). SplashOverlay stays the first
+  // child here too (same reconciliation-by-position reasoning as the
+  // isMobile flip further down), so toggling settings.simpleView on/off
+  // doesn't remount it. IntlHintBanner is deliberately NOT shown here —
+  // international mode is an advanced toggle out of scope for Simple View's
+  // "fewer decisions" premise; it's still reachable via the full UI once the
+  // user switches back (SimpleLayout's "Alle Funktionen anzeigen" → the
+  // settings toggle).
+  if (settings.simpleView) {
+    return (
+      <>
+      <SplashOverlay />
+      {showRace && <WheelchairRace onDone={() => setShowRace(false)} />}
+      <div className="mx-auto h-svh w-full max-w-md overflow-hidden border-x border-border">
+        <SimpleLayout
+          key={resetKey}
+          places={places}
+          isLoading={isLoading}
+          error={error}
+          searchCenter={searchCenter}
+          gpsCoords={gpsCoords}
+          selectedId={selectedId}
+          onSelect={(p) => setSelectedId(p.id)}
+          onSimpleNearbySearch={handleSimpleNearbySearch}
+          onPlaceSearch={handlePlaceSearch}
+          onAmenitySearch={handleAmenitySearch}
+          amenityResults={amenitySpots}
+          amenityHint={amenityHint ?? undefined}
+          parkingSpots={visibleParkingSpots}
+          toiletSpots={visibleToiletSpots.length > 0 ? visibleToiletSpots : undefined}
+          settings={settings}
+          onUpdateSettings={handleUpdateSettings}
+        />
+      </div>
+      </>
+    )
+  }
 
   // Mobile layout
   if (isMobile) {

@@ -15,6 +15,18 @@ interface Props {
   settings:           AppSettings
   onUpdate:           (patch: Partial<AppSettings>) => void
   onResetOnboarding?: () => void
+  // When true (opened from within Simple View), hides every setting that
+  // isn't a meaningful decision inside Simple View's reduced surface —
+  // verified directly against SimpleLayout: usageStats is read by the shared
+  // handleSearch (so it still applies); defaultSearchMode/defaultChipCat/
+  // defaultMobileView/sortOrder are full-UI-only concepts (Simple View has no
+  // chip picker, no tabs, always sorts by distance). showWeakParking/
+  // publicToiletsOnly DO now affect Simple View too (its 🅿/🚻 tiles reuse
+  // HomeClient's own parkingSpots/toiletSpots, already gated by these two
+  // settings) but stay hidden by design — they're advanced tuning knobs, and
+  // Simple View's whole premise is fewer decisions, not full parity. Still
+  // reachable via "Alle Funktionen anzeigen" → the full settings panel.
+  simple?: boolean
 }
 
 function Toggle({ value, onChange, ...aria }: { value: boolean; onChange: (v: boolean) => void } & React.AriaAttributes) {
@@ -91,7 +103,11 @@ function SelectInput({ value, onChange, children, ...aria }: {
   )
 }
 
-function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props & { onClose: () => void }) {
+// Exported (in addition to the default SettingsSheet trigger+panel pair below)
+// so SimpleLayout can render the panel from its own "Alle Funktionen anzeigen"
+// link, which is not a gear icon and needs to control the open/closed state
+// itself rather than owning a second, redundant trigger button.
+export function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose, simple }: Props & { onClose: () => void }) {
   const t  = useTranslations()
   const ts = t.settings
   const { locale } = useLocale()
@@ -135,41 +151,57 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
             {ts.sectionGeneral}
           </SectionTitle>
           <div className="divide-y divide-border/60">
-            <Row label={ts.searchMode}>
-              {/* Two real behaviours only: auto-locate on launch vs. start empty.
-                  A stored null (legacy "no preference") behaves as auto-locate
-                  (loadSettings().defaultSearchMode ?? "nearby"), so it maps to the
-                  "nearby" option here rather than a third, ambiguous entry. */}
-              <SelectInput
-                value={settings.defaultSearchMode === "text" ? "text" : "nearby"}
-                onChange={(v) => onUpdate({ defaultSearchMode: v as "text" | "nearby" })}
-              >
-                <option value="nearby">{ts.searchModeNearby}</option>
-                <option value="text">{ts.searchModeText}</option>
-              </SelectInput>
+            {/* This toggle is the ONLY way back to the full UI once Simple View
+                is active — SimpleLayout's "Alle Funktionen anzeigen" link opens
+                this exact sheet, scrolled to the top, so the row is always the
+                first thing reachable regardless of which layout is showing. */}
+            <Row label={ts.simpleView} hint={ts.simpleViewHint}>
+              <Toggle
+                value={settings.simpleView}
+                onChange={(v) => onUpdate({ simpleView: v })}
+              />
             </Row>
-            <Row label={ts.defaultCategory}>
-              <SelectInput
-                value={settings.defaultChipCat ?? ""}
-                onChange={(v) => onUpdate({ defaultChipCat: v === "" ? null : (v as Category) })}
-              >
-                <option value="">{ts.categoryNone}</option>
-                {SETTING_CHIPS.map((chip) => (
-                  <option key={chip.cat} value={chip.cat}>
-                    {chip.icon} {locale === "en" ? chip.en : chip.de}
-                  </option>
-                ))}
-              </SelectInput>
-            </Row>
-            <Row label={ts.mobileView}>
-              <SelectInput
-                value={settings.defaultMobileView}
-                onChange={(v) => onUpdate({ defaultMobileView: v as "results" | "map" })}
-              >
-                <option value="results">{ts.mobileViewList}</option>
-                <option value="map">{ts.mobileViewMap}</option>
-              </SelectInput>
-            </Row>
+            {!simple && (
+              <Row label={ts.searchMode}>
+                {/* Two real behaviours only: auto-locate on launch vs. start empty.
+                    A stored null (legacy "no preference") behaves as auto-locate
+                    (loadSettings().defaultSearchMode ?? "nearby"), so it maps to the
+                    "nearby" option here rather than a third, ambiguous entry. */}
+                <SelectInput
+                  value={settings.defaultSearchMode === "text" ? "text" : "nearby"}
+                  onChange={(v) => onUpdate({ defaultSearchMode: v as "text" | "nearby" })}
+                >
+                  <option value="nearby">{ts.searchModeNearby}</option>
+                  <option value="text">{ts.searchModeText}</option>
+                </SelectInput>
+              </Row>
+            )}
+            {!simple && (
+              <Row label={ts.defaultCategory}>
+                <SelectInput
+                  value={settings.defaultChipCat ?? ""}
+                  onChange={(v) => onUpdate({ defaultChipCat: v === "" ? null : (v as Category) })}
+                >
+                  <option value="">{ts.categoryNone}</option>
+                  {SETTING_CHIPS.map((chip) => (
+                    <option key={chip.cat} value={chip.cat}>
+                      {chip.icon} {locale === "en" ? chip.en : chip.de}
+                    </option>
+                  ))}
+                </SelectInput>
+              </Row>
+            )}
+            {!simple && (
+              <Row label={ts.mobileView}>
+                <SelectInput
+                  value={settings.defaultMobileView}
+                  onChange={(v) => onUpdate({ defaultMobileView: v as "results" | "map" })}
+                >
+                  <option value="results">{ts.mobileViewList}</option>
+                  <option value="map">{ts.mobileViewMap}</option>
+                </SelectInput>
+              </Row>
+            )}
             <Row label={ts.internationalMode} hint={ts.internationalModeHint}>
               <Toggle
                 value={settings.internationalMode}
@@ -185,39 +217,47 @@ function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose }: Props
           </div>
 
           {/* ── Map & Parking ── */}
-          <SectionTitle icon={Map} chipClass="bg-green-50 text-green-700 border-green-200">
-            {ts.sectionMap}
-          </SectionTitle>
-          <div className="divide-y divide-border/60">
-            <Row label={ts.showWeakParking} hint={ts.showWeakParkingHint}>
-              <Toggle
-                value={settings.showWeakParking}
-                onChange={(v) => onUpdate({ showWeakParking: v })}
-              />
-            </Row>
-            <Row label={ts.publicToiletsOnly} hint={ts.publicToiletsOnlyHint}>
-              <Toggle
-                value={settings.publicToiletsOnly}
-                onChange={(v) => onUpdate({ publicToiletsOnly: v })}
-              />
-            </Row>
-          </div>
+          {!simple && (
+            <>
+              <SectionTitle icon={Map} chipClass="bg-green-50 text-green-700 border-green-200">
+                {ts.sectionMap}
+              </SectionTitle>
+              <div className="divide-y divide-border/60">
+                <Row label={ts.showWeakParking} hint={ts.showWeakParkingHint}>
+                  <Toggle
+                    value={settings.showWeakParking}
+                    onChange={(v) => onUpdate({ showWeakParking: v })}
+                  />
+                </Row>
+                <Row label={ts.publicToiletsOnly} hint={ts.publicToiletsOnlyHint}>
+                  <Toggle
+                    value={settings.publicToiletsOnly}
+                    onChange={(v) => onUpdate({ publicToiletsOnly: v })}
+                  />
+                </Row>
+              </div>
+            </>
+          )}
 
           {/* ── Ergebnisse ── */}
-          <SectionTitle icon={SlidersHorizontal} chipClass="bg-amber-50 text-amber-700 border-amber-200">
-            {ts.sectionResults}
-          </SectionTitle>
-          <div className="divide-y divide-border/60">
-            <Row label={ts.sortOrder}>
-              <SelectInput
-                value={settings.sortOrder}
-                onChange={(v) => onUpdate({ sortOrder: v as "confidence" | "distance" })}
-              >
-                <option value="confidence">{ts.sortConfidence}</option>
-                <option value="distance">{ts.sortDistance}</option>
-              </SelectInput>
-            </Row>
-          </div>
+          {!simple && (
+            <>
+              <SectionTitle icon={SlidersHorizontal} chipClass="bg-amber-50 text-amber-700 border-amber-200">
+                {ts.sectionResults}
+              </SectionTitle>
+              <div className="divide-y divide-border/60">
+                <Row label={ts.sortOrder}>
+                  <SelectInput
+                    value={settings.sortOrder}
+                    onChange={(v) => onUpdate({ sortOrder: v as "confidence" | "distance" })}
+                  >
+                    <option value="confidence">{ts.sortConfidence}</option>
+                    <option value="distance">{ts.sortDistance}</option>
+                  </SelectInput>
+                </Row>
+              </div>
+            </>
+          )}
 
           {/* ── Reset ── */}
           <div className="border-t border-border mt-6 pt-4 flex justify-end">
