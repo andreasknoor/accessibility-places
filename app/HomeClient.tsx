@@ -1448,6 +1448,19 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     : toiletSource,
     [settings.publicToiletsOnly, toiletSource])
 
+  // Simple View's own parking/toilet markers — deliberately NOT
+  // visibleParkingSpots/visibleToiletSpots directly. Those also carry the
+  // full UI's passive "always show this layer on venue results" preference
+  // (filters.alwaysShowParking/alwaysShowToilets), which is only togglable
+  // via MapView's own "Ebenen" pill — a control Simple View's map never
+  // renders. A user who'd turned that layer on in the full UI would see it
+  // stuck on in Simple View too, with no way to turn it back off there
+  // (reported live). Simple View only ever shows parking/WC markers for its
+  // OWN active amenity search (the 🅿/🚻 tiles), never as a side effect of
+  // that unrelated full-UI setting.
+  const simpleParkingSpots = amenitySearch === "parking" ? visibleParkingSpots : undefined
+  const simpleToiletSpots  = amenitySearch === "toilet"  ? visibleToiletSpots  : undefined
+
   // Data-coverage caveat banner: only when international mode is on AND the
   // resolved search centre is outside DACH. DACH searches never show it.
   const intlNotice = settings.internationalMode && searchCenter &&
@@ -1600,8 +1613,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           onAmenitySearch={handleAmenitySearch}
           amenityResults={amenitySpots}
           amenityHint={amenityHint ?? undefined}
-          parkingSpots={visibleParkingSpots}
-          toiletSpots={visibleToiletSpots.length > 0 ? visibleToiletSpots : undefined}
+          parkingSpots={simpleParkingSpots}
+          toiletSpots={simpleToiletSpots}
           onSearchHere={handleSimpleSearchHere}
           onFocusSearchHere={handleAmenitySearchHere}
           settings={settings}

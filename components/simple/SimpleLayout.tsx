@@ -566,10 +566,12 @@ export default function SimpleLayout({
               >
                 <MapView
                   places={sortedPlaces}
-                  // Always passed through — HomeClient already guarantees mutual
-                  // exclusivity (handleSearch clears amenitySpots-derived arrays,
-                  // handleAmenitySearch clears places), so these are simply empty
-                  // outside an active parking/WC search. No local filtering needed.
+                  // Always passed through — HomeClient's simpleParkingSpots/
+                  // simpleToiletSpots are already `undefined` outside Simple
+                  // View's OWN active parking/WC search (never the full UI's
+                  // independent "always show this layer" preference, which
+                  // Simple View has no Ebenen-pill control to turn back off —
+                  // see the comment there). No local filtering needed here.
                   parkingSpots={parkingSpots}
                   toiletSpots={toiletSpots}
                   amenityType={selectedAmenityType}

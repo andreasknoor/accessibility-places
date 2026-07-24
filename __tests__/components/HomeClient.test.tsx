@@ -15,8 +15,9 @@
 // doesn't depend on Leaflet, geolocation, or the full search UI.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { render, screen, act } from "@testing-library/react"
+import { render, screen, act, fireEvent, waitFor } from "@testing-library/react"
 import HomeClient from "@/app/HomeClient"
+import { DEFAULT_APP_SETTINGS } from "@/lib/settings"
 
 vi.mock("@vercel/analytics", () => ({ track: vi.fn() }))
 vi.mock("@sentry/nextjs", () => ({
@@ -71,6 +72,22 @@ vi.mock("@/components/LanguageSwitcher",       () => ({ default: () => null }))
 vi.mock("@/components/SplashOverlay",          () => ({ default: () => null }))
 vi.mock("@/components/IntlHintBanner",         () => ({ default: () => null }))
 vi.mock("@/components/easter-eggs/WheelchairRace", () => ({ default: () => null }))
+
+// Only needed by the Simple View describe block below (its "start" -> "tiles"
+// -> "results" flow calls the real getBestPosition) — mocked module-wide since
+// vi.mock must live at the top level, but every other describe block in this
+// file renders the full UI and never touches it.
+const mockGetBestPosition = vi.fn()
+vi.mock("@/lib/native/geolocation", () => ({
+  getBestPosition: (...args: unknown[]) => mockGetBestPosition(...args),
+  isGeolocationAvailable: () => true,
+}))
+vi.mock("@/lib/native/haptics", () => ({ hapticLight: vi.fn(), hapticMedium: vi.fn() }))
+vi.mock("@/lib/native/navigation", () => ({
+  startDefaultNavigation: vi.fn(),
+  startNavigationWithApp: vi.fn(),
+  shouldShowChooser: () => false,
+}))
 
 function ndjsonResponse(events: object[]): Response {
   const text = events.map((e) => JSON.stringify(e)).join("\n") + "\n"
@@ -138,6 +155,7 @@ beforeEach(() => {
   mapViewProps.current = null
   chatPanelProps.current = null
   resultsListProps.current = null
+  mockGetBestPosition.mockReset()
 })
 
 afterEach(() => {
@@ -277,5 +295,33 @@ describe("HomeClient — handleSearchHere branches on pill-arm origin", () => {
 
     await triggerSearchHere({ lat: 52.52, lon: 13.41 }, 9.0, "drag")
     expect(chatPanelProps.current.initialMode).toBe("text")
+  })
+})
+
+// ─── Simple View's map must never inherit the full UI's independent "always
+// show parking/WC layer" preference (filters.alwaysShowParking/Toilets, only
+// togglable via MapView's own "Ebenen" pill — a control Simple View's map
+// never renders). Reported live: a user who'd turned that layer on in the
+// full UI saw WC/parking markers stuck on in Simple View too, with no way to
+// turn them back off there. Fixed by deriving simpleParkingSpots/
+// simpleToiletSpots from Simple View's OWN active amenity search only. ─────
+describe("HomeClient — Simple View never shows the full UI's passive parking/WC layer", () => {
+  it("passes no parkingSpots/toiletSpots to MapView during a plain category search, even with alwaysShowParking/Toilets on", async () => {
+    localStorage.setItem("ap_settings", JSON.stringify({
+      ...DEFAULT_APP_SETTINGS,
+      simpleView:        true,
+      alwaysShowParking: true,
+      alwaysShowToilets: true,
+    }))
+    mockGetBestPosition.mockResolvedValue({ lat: 52.5, lon: 13.4 })
+    vi.stubGlobal("fetch", mockSearchFetch())
+
+    render(<HomeClient />)
+    fireEvent.click(await screen.findByText("In meiner Nähe suchen"))
+    fireEvent.click(screen.getByText("Cafés & Eis"))
+    await waitFor(() => expect(screen.getByText("Cafés & Eis in Ihrer Nähe")).toBeInTheDocument())
+
+    expect(mapViewProps.current.parkingSpots).toBeUndefined()
+    expect(mapViewProps.current.toiletSpots).toBeUndefined()
   })
 })
