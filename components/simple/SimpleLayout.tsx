@@ -311,6 +311,13 @@ export default function SimpleLayout({
   // granted location get the head start; everyone else keeps today's
   // behaviour (permission/fetch happens on the actual tap).
   const pendingLocationRef = useRef<Promise<GeoPosition> | null>(null)
+  // Code-review finding: when the prefetch was actually STARTED — the cached-
+  // position path below already enforces POSITION_CACHE_MS freshness, but the
+  // prefetch itself didn't: a user who spent a long time in the city/venue
+  // flow before ever calling resolvePosition() for a GPS search would get an
+  // arbitrarily stale fix consumed unconditionally, bypassing the freshness
+  // guarantee entirely. Checked alongside pendingLocationRef below.
+  const pendingLocationStartedAtRef = useRef<number | null>(null)
   // Last successfully-resolved fix + when it was acquired — reused by
   // resolvePosition() within POSITION_CACHE_MS instead of re-acquiring GPS.
   // Only set from an actual acquisition (prefetch or fresh fetch), never
@@ -322,6 +329,7 @@ export default function SimpleLayout({
     let cancelled = false
     hasLocationPermission().then((granted) => {
       if (!granted || cancelled) return
+      pendingLocationStartedAtRef.current = Date.now()
       const promise = getBestPosition({ timeout: 20_000, windowMs: 4_000, desiredAccuracyM: 50 })
       // A silent catch purely to avoid an unhandled-rejection console warning
       // if the prefetch fails before anyone consumes it (e.g. the user never
@@ -333,15 +341,17 @@ export default function SimpleLayout({
     return () => { cancelled = true }
   }, [])
 
-  // Consumes the prefetched fix if one is in flight/done; otherwise reuses the
-  // last acquired fix if it's still within POSITION_CACHE_MS (e.g. picking a
-  // category, viewing results, going back and picking another one shortly
-  // after shouldn't re-acquire GPS from scratch); otherwise falls back to a
-  // fresh request.
+  // Consumes the prefetched fix if one is in flight/done AND still within
+  // POSITION_CACHE_MS of when it was started; otherwise reuses the last
+  // acquired fix if it's still fresh (e.g. picking a category, viewing
+  // results, going back and picking another one shortly after shouldn't
+  // re-acquire GPS from scratch); otherwise falls back to a fresh request.
   function resolvePosition(): Promise<GeoPosition> {
     const pending = pendingLocationRef.current
+    const pendingStartedAt = pendingLocationStartedAtRef.current
     pendingLocationRef.current = null
-    if (pending) {
+    pendingLocationStartedAtRef.current = null
+    if (pending && pendingStartedAt != null && Date.now() - pendingStartedAt < POSITION_CACHE_MS) {
       return pending.then((coords) => {
         lastPositionRef.current = { coords, at: Date.now() }
         return coords
@@ -529,6 +539,23 @@ export default function SimpleLayout({
     setPickedCity(null)
   }
 
+  // Code-review finding: "Hier suchen" / "Diesen Bereich durchsuchen" (map
+  // pan → re-search at the new centre) used to leave `pickedCity` untouched,
+  // so the results title kept showing the ORIGINAL picked city's name (e.g.
+  // "Cafés & Eis in Hamburg") even after the user manually re-centred the
+  // search somewhere else on the map. Once the user has explicitly chosen a
+  // different centre by panning, the picked-city framing is no longer
+  // accurate — clear it so the title falls back to the generic "in Deiner
+  // Nähe" phrasing, same as the plain GPS flow.
+  function handleResultsSearchHere(coords: { lat: number; lon: number }, viewportRadiusKm: number) {
+    setPickedCity(null)
+    onSearchHere(coords, viewportRadiusKm)
+  }
+  function handleResultsFocusSearchHere(coords: { lat: number; lon: number }, viewportRadiusKm: number) {
+    setPickedCity(null)
+    onFocusSearchHere(coords, viewportRadiusKm)
+  }
+
   // Once a venue search settles, jump straight to its detail screen (the
   // whole point of "check a place" is a single answer, not a results list).
   // Two guards, both defending against a user who navigates away while the
@@ -554,6 +581,16 @@ export default function SimpleLayout({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [venuePending, isLoading, places, error, screen])
+
+  // Defensive fallback (code-review finding): `screen === "detail"` always
+  // renders alongside `selectedPlace` today (openDetail sets both together,
+  // in the same call), so this is currently unreachable — but the render
+  // below has no else-branch for "detail" without a place, which would
+  // otherwise strand the user on a completely blank, un-navigable screen.
+  // Bounce back to a safe screen rather than rendering nothing.
+  useEffect(() => {
+    if (screen === "detail" && !selectedPlace) setScreen(detailReturnTo)
+  }, [screen, selectedPlace, detailReturnTo])
 
   const distanceFor = (place: Place): number | undefined =>
     searchCenter ? haversineMetres(searchCenter, place.coordinates) : undefined
@@ -791,8 +828,8 @@ export default function SimpleLayout({
                   // gated by focusMode above); no `hideSearchHereButton` is
                   // passed, so we get MapView's default floating-pill UI for
                   // free, same as the desktop full-UI map.
-                  onSearchHere={onSearchHere}
-                  onFocusSearchHere={onFocusSearchHere}
+                  onSearchHere={handleResultsSearchHere}
+                  onFocusSearchHere={handleResultsFocusSearchHere}
                   center={searchCenter ?? gpsCoords ?? undefined}
                   userLocation={gpsCoords ?? undefined}
                   selectedId={selectedId}

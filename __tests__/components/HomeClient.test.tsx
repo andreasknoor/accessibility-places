@@ -353,6 +353,30 @@ describe("HomeClient — Simple View's fixed filter preset", () => {
   })
 })
 
+// Code-review finding: Simple View's search calls used to omit a
+// sourcesOverride entirely, silently inheriting whatever `sources` toggles
+// were last persisted from the full UI (ap_prefs) — the opposite of Simple
+// View's whole premise (a fixed preset, independent of ambient full-UI
+// state). Fixed by passing DEFAULT_SOURCES explicitly.
+describe("HomeClient — Simple View always searches with the fixed default sources", () => {
+  it("ignores a full-UI source disabled via persisted prefs (ap_prefs)", async () => {
+    localStorage.setItem("ap_settings", JSON.stringify({ ...DEFAULT_APP_SETTINGS, simpleView: true }))
+    // Simulate a user who previously turned OSM off in the full UI.
+    localStorage.setItem("ap_prefs", JSON.stringify({ sources: { osm: false } }))
+    mockGetBestPosition.mockResolvedValue({ lat: 52.5, lon: 13.4 })
+    const fetchMock = mockSearchFetch()
+    vi.stubGlobal("fetch", fetchMock)
+
+    render(<HomeClient />)
+    fireEvent.click(await screen.findByText("In meiner Nähe suchen"))
+    fireEvent.click(screen.getByText("Cafés & Eis"))
+    await waitFor(() => expect(screen.getByText("Cafés & Eis in Deiner Nähe")).toBeInTheDocument())
+
+    const body = lastSearchRequestBody(fetchMock) as unknown as { sources?: Record<string, boolean> }
+    expect(body.sources?.osm).toBe(true)
+  })
+})
+
 // ─── Simple View's extra per-category rule: cafés/restaurants/hotels
 // additionally require a wheelchair toilet ("yes" only, not "limited") — a
 // client-side post-filter (HomeClient's simplePlaces) since a single
@@ -562,6 +586,30 @@ describe("HomeClient — Simple View's own (non-persisted) amenity radius", () =
       fireEvent.click(screen.getByText("Suchradius vergrößern?"))
       await waitFor(() => expect(lastAmenityRadius(fetchMock)).toBe(expected))
     }
+  })
+
+  // Code-review finding: "search this area" (map pan during an active
+  // Parken/WC search) was still wired to the full UI's own
+  // handleAmenitySearchHere, which sets AND PERSISTS amenityRadiusKm/
+  // parkingRadiusKm — exactly the leak the two tests above already guard
+  // against for the plain search/expand paths, just missed for this third
+  // entry point. Fixed via a dedicated handleSimpleAmenitySearchHere.
+  it("'search this area' during a Parken search doesn't persist to the full UI's parkingRadiusKm setting", async () => {
+    localStorage.setItem("ap_settings", JSON.stringify({ ...DEFAULT_APP_SETTINGS, simpleView: true, parkingRadiusKm: 10 }))
+    mockGetBestPosition.mockResolvedValue({ lat: 52.5, lon: 13.4 })
+    const fetchMock = mockAmenityFetch()
+    vi.stubGlobal("fetch", fetchMock)
+
+    render(<HomeClient />)
+    fireEvent.click(await screen.findByText("In meiner Nähe suchen"))
+    fireEvent.click(screen.getByText("Parken"))
+    await waitFor(() => expect(lastAmenityRadius(fetchMock)).toBe(4))
+
+    act(() => { mapViewProps.current.onFocusSearchHere({ lat: 52.6, lon: 13.5 }, 7.3) })
+    await waitFor(() => expect(lastAmenityRadius(fetchMock)).toBeCloseTo(7.3, 5))
+
+    const stored = JSON.parse(localStorage.getItem("ap_settings")!)
+    expect(stored.parkingRadiusKm).toBe(10)
   })
 })
 

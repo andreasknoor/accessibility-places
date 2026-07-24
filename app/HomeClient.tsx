@@ -840,7 +840,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const handleSimpleNearbySearch = useCallback((query: string, coords: { lat: number; lon: number }, cat: Category | null) => {
     const startRadius = cat === null ? SIMPLE_ALL_RADIUS_KM : SIMPLE_RADIUS_KM
     setSimpleRadiusKm(startRadius)
-    handleSearch(query, startRadius, coords, undefined, SIMPLE_FILTERS_OVERRIDE)
+    // DEFAULT_SOURCES, not the ambient `sources` state: Simple View's whole
+    // premise is a fixed preset independent of whatever the full UI's source
+    // toggles happen to be — without this override, a user who disabled a
+    // source in the full UI would get silently degraded Simple View results
+    // with no way to see or fix it there (Simple View has no source UI at all).
+    handleSearch(query, startRadius, coords, undefined, SIMPLE_FILTERS_OVERRIDE, DEFAULT_SOURCES)
   }, [handleSearch])
 
   // "Suchradius vergrößern" for Simple View's own empty state — mirrors
@@ -853,7 +858,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     const newRadius = nextSimpleRadiusStep(simpleRadiusKm)
     track("expand_radius", { from_km: simpleRadiusKm, to_km: newRadius })
     setSimpleRadiusKm(newRadius)
-    handleSearch(lastQuery, newRadius, lastCoords, undefined, SIMPLE_FILTERS_OVERRIDE)
+    handleSearch(lastQuery, newRadius, lastCoords, undefined, SIMPLE_FILTERS_OVERRIDE, DEFAULT_SOURCES)
   }, [lastQuery, lastCoords, simpleRadiusKm, handleSearch])
 
   // Simple View's own "search here" (map pan → re-search at the new centre):
@@ -868,7 +873,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     if (!lastQuery) return
     const clampedRadius = clampVenueRadiusKm(viewportRadiusKm)
     setSimpleRadiusKm(clampedRadius)
-    handleSearch(lastQuery, clampedRadius, coords, undefined, SIMPLE_FILTERS_OVERRIDE)
+    handleSearch(lastQuery, clampedRadius, coords, undefined, SIMPLE_FILTERS_OVERRIDE, DEFAULT_SOURCES)
   }, [lastQuery, handleSearch])
 
   const handleSearchHere = useCallback((coords: { lat: number; lon: number }, viewportRadiusKm: number, origin: "drag" | "locate" = "drag") => {
@@ -1254,6 +1259,21 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     setSimpleAmenityRadiusKm(next)
     void handleAmenitySearch(amenitySearch, searchCenter, next)
   }, [amenitySearch, searchCenter, simpleAmenityRadiusKm, handleAmenitySearch])
+
+  // Simple View's own "search this area" for an active Parken/WC search
+  // (map pan → re-search at the new centre). Code-review finding: this used
+  // to be wired straight to handleAmenitySearchHere below, which sets AND
+  // PERSISTS the full UI's amenityRadiusKm/parkingRadiusKm setting — exactly
+  // the cross-contamination handleSimpleAmenitySearch/
+  // handleSimpleAmenityExpandRadius above were built to avoid, just missed
+  // for this third entry point. Mirrors handleAmenitySearchHere's own
+  // snapping, but touches only simpleAmenityRadiusKm and never persists.
+  const handleSimpleAmenitySearchHere = useCallback((center: { lat: number; lon: number }, viewportRadiusKm: number) => {
+    if (!amenitySearch) return
+    const snapped = snapAmenityRadiusKm(viewportRadiusKm)
+    setSimpleAmenityRadiusKm(snapped)
+    void handleAmenitySearch(amenitySearch, center, snapped)
+  }, [amenitySearch, handleAmenitySearch])
 
   // Leave amenity mode without running a search (e.g. tapping "Alle" while no
   // location is set, so no venue search fires to clear it).
@@ -1701,8 +1721,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // doesn't remount it. IntlHintBanner is deliberately NOT shown here —
   // international mode is an advanced toggle out of scope for Simple View's
   // "fewer decisions" premise; it's still reachable via the full UI once the
-  // user switches back (SimpleLayout's "Alle Funktionen anzeigen" → the
-  // settings toggle).
+  // user switches back (SimpleLayout's "Turbo-Modus"/showFullApp pill flips
+  // simpleView off directly).
   if (settings.simpleView) {
     return (
       <>
@@ -1726,7 +1746,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           parkingSpots={simpleParkingSpots}
           toiletSpots={simpleToiletSpots}
           onSearchHere={handleSimpleSearchHere}
-          onFocusSearchHere={handleAmenitySearchHere}
+          onFocusSearchHere={handleSimpleAmenitySearchHere}
           onGpsResolved={handleGpsResolved}
           onExpandRadius={handleSimpleExpandRadius}
           onAmenityExpandRadius={handleSimpleAmenityExpandRadius}

@@ -314,6 +314,35 @@ describe("SimpleLayout — background location prefetch", () => {
     expect(mockGetBestPosition).toHaveBeenCalledTimes(1)
   })
 
+  // Code-review finding: the cached-position path already enforced
+  // POSITION_CACHE_MS freshness, but the mount-time prefetch didn't — it was
+  // consumed unconditionally on the first resolvePosition() call no matter
+  // how long ago it started. A user who spent a long time in the city/venue
+  // flow before their first "nearby" search would get an arbitrarily stale
+  // fix instead of a fresh one.
+  it("discards a stale prefetch (started >2 minutes ago) and re-acquires a fresh fix instead", async () => {
+    let now = 1_000_000
+    vi.spyOn(Date, "now").mockImplementation(() => now)
+    mockHasLocationPermission.mockResolvedValue(true)
+    mockGetBestPosition.mockResolvedValue({ lat: 1, lon: 1 })
+    const { handlers } = renderLayout()
+
+    await waitFor(() => expect(mockGetBestPosition).toHaveBeenCalledTimes(1))
+
+    // The user browses for a long time (e.g. the city-search flow) before
+    // ever tapping a "nearby" category — the prefetch is now stale.
+    now += 130_000
+    mockGetBestPosition.mockResolvedValue({ lat: 50.9, lon: 6.9 })
+
+    fireEvent.click(screen.getByText("In meiner Nähe suchen"))
+    fireEvent.click(screen.getByText("Cafés & Eis"))
+    await waitFor(() => expect(handlers.onSimpleNearbySearch).toHaveBeenCalledWith("Cafés & Eis", { lat: 50.9, lon: 6.9 }, "cafe"))
+
+    // A second, fresh acquisition happened — the stale first fix was not used.
+    expect(mockGetBestPosition).toHaveBeenCalledTimes(2)
+    vi.restoreAllMocks()
+  })
+
   it("does not prefetch when permission isn't granted yet, and falls back to a fresh fetch on the actual tap", async () => {
     mockHasLocationPermission.mockResolvedValue(false)
     mockGetBestPosition.mockResolvedValue({ lat: 50.9, lon: 6.9 })
@@ -399,9 +428,14 @@ describe("SimpleLayout — results screen", () => {
   // SimpleLayout only needs to forward the right prop and set focusMode
   // correctly so the venue pill and the amenity "search this area" pill can
   // never both be eligible at once.
+  // MapView gets a small local wrapper (not the raw prop) that also clears
+  // pickedCity — see the "code-review" describe block below — so this checks
+  // behaviour (the underlying handler is invoked with the right args)
+  // instead of referential equality.
   it("passes onSearchHere through to MapView, with focusMode false during a venue search", async () => {
     const { handlers } = await goToResults()
-    expect(mapViewProps.current.onSearchHere).toBe(handlers.onSearchHere)
+    mapViewProps.current.onSearchHere({ lat: 1, lon: 2 }, 3)
+    expect(handlers.onSearchHere).toHaveBeenCalledWith({ lat: 1, lon: 2 }, 3)
     expect(mapViewProps.current.focusMode).toBe(false)
   })
 
@@ -919,7 +953,8 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
 
   it("passes onFocusSearchHere through to MapView, with focusMode true during an amenity search", async () => {
     const { handlers } = await goToParkingResults()
-    expect(mapViewProps.current.onFocusSearchHere).toBe(handlers.onFocusSearchHere)
+    mapViewProps.current.onFocusSearchHere({ lat: 1, lon: 2 }, 3)
+    expect(handlers.onFocusSearchHere).toHaveBeenCalledWith({ lat: 1, lon: 2 }, 3)
     expect(mapViewProps.current.focusMode).toBe(true)
   })
 
@@ -1337,7 +1372,7 @@ describe("SimpleLayout — city flow", () => {
     await waitFor(() => expect(screen.getByText("Hamburg")).toBeInTheDocument())
     fireEvent.click(screen.getByText("Hamburg"))
 
-    fireEvent.click(screen.getByRole("button", { name: "Andere Stadt wählen" }))
+    fireEvent.click(screen.getByRole("button", { name: "Stadt entfernen" }))
     expect(screen.queryByText("Suche in: Hamburg")).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByText("Cafés & Eis"))
@@ -1359,6 +1394,25 @@ describe("SimpleLayout — city flow", () => {
 
     fireEvent.click(screen.getByText("Cafés & Eis"))
     await waitFor(() => expect(handlers.onSimpleNearbySearch).toHaveBeenCalledWith("Cafés & Eis", { lat: 50.9, lon: 6.9 }, "cafe"))
+  })
+
+  // Code-review finding: "Hier suchen" (map pan → re-search at a new centre)
+  // used to leave pickedCity untouched, so the results title kept showing the
+  // ORIGINAL picked city's name even after the user manually re-centred the
+  // search elsewhere on the map.
+  it("clears the picked city once 'Hier suchen' re-centres the search, reverting the title to the generic phrasing", async () => {
+    mockSuggestResponse([{ kind: "area", name: "Hamburg", display: "Hamburg", lat: 53.55, lon: 10.0 }])
+    const { handlers } = renderLayout()
+    pickHamburg()
+    await waitFor(() => expect(screen.getByText("Hamburg")).toBeInTheDocument())
+    fireEvent.click(screen.getByText("Hamburg"))
+    fireEvent.click(screen.getByText("Cafés & Eis"))
+    await waitFor(() => expect(screen.getByText("Cafés & Eis in Hamburg")).toBeInTheDocument())
+
+    act(() => { mapViewProps.current.onSearchHere({ lat: 53.6, lon: 10.1 }, 5) })
+    expect(handlers.onSearchHere).toHaveBeenCalledWith({ lat: 53.6, lon: 10.1 }, 5)
+    expect(screen.getByText("Cafés & Eis in Deiner Nähe")).toBeInTheDocument()
+    expect(screen.queryByText("Cafés & Eis in Hamburg")).not.toBeInTheDocument()
   })
 })
 

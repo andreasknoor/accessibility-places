@@ -502,7 +502,7 @@ const en: Translations = {
     cityHint:        "Type a city name to search.",
     cityNoMatches:   "No matches for that place.",
     citySearchingIn: (city: string) => `Searching in: ${city}`,
-    cityClear:       "Choose a different city",
+    cityClear:       "Remove city",
     entranceGood:    "Step-free entrance",
     entranceLimited: "Entrance partially accessible",
     entranceBad:     "Entrance not accessible",
