@@ -10,6 +10,7 @@ import type { AmenityFeature } from "@/lib/types"
 import { enrichWithNearbyParking, haversineMeters, PARKING_DISPLAY_MAX_M, PARKING_STRONG_DISPLAY_CAP, PARKING_WEAK_DISPLAY_CAP, dedupeToiletFeatures, TOILET_DISPLAY_CAP, dedupeParkingFeatures } from "@/lib/matching/nearby-parking"
 import { parseQuery } from "@/lib/llm"
 import { NOMINATIM_ENDPOINT, RADIUS_MIN_KM, RADIUS_MAX_KM, PUBLIC_OVERPASS_ENDPOINTS, countryCodesParam, regionForCoordinates, INTL_COUNTRIES } from "@/lib/config"
+import { isRateLimited, isGooglePlacesRateLimited } from "@/lib/search-rate-limit"
 import * as Sentry from "@sentry/nextjs"
 
 // Adapter errors come back from safeRun as plain strings (the original Error is
@@ -21,38 +22,6 @@ import * as Sentry from "@sentry/nextjs"
 function isExpectedAdapterError(errStr: string): boolean {
   return /\b[45]\d\d\b/.test(errStr)                                               // HTTP status, e.g. "API error: 503", "returned 429"
       || /timeout|abort|fetch failed|network|ECONN|ENOTFOUND|socket|terminated/i.test(errStr)
-}
-
-// ─── In-memory rate limiters (sliding-window, per IP) ───────────────────────
-// NOTE: these reset on each serverless cold start. For multi-instance
-// deployments a shared store (Redis/Upstash) would be required.
-
-const RATE_LIMIT_WINDOW_MS      = 60_000  // 1 minute
-const RATE_LIMIT_MAX_REQUESTS   = 30      // general: max 30 searches/min per IP
-const RATE_LIMIT_GP_MAX         = 5       // Google Places: max 5 searches/min per IP
-                                          // (each search fans out to up to 9 upstream
-                                          // calls: 3 categories × 3 Text Search pages)
-
-const ipWindows   = new Map<string, number[]>()
-const ipGpWindows = new Map<string, number[]>()
-
-function slidingCount(map: Map<string, number[]>, ip: string, push = true): number {
-  const now    = Date.now()
-  const cutoff = now - RATE_LIMIT_WINDOW_MS
-  const times  = (map.get(ip) ?? []).filter((t) => t > cutoff)
-  if (push) times.push(now)
-  if (times.length === 0) map.delete(ip)
-  else map.set(ip, times)
-  return times.length
-}
-
-function isRateLimited(ip: string): boolean {
-  return slidingCount(ipWindows, ip) > RATE_LIMIT_MAX_REQUESTS
-}
-
-function isGooglePlacesRateLimited(ip: string, requested: boolean): boolean {
-  if (!requested) return false
-  return slidingCount(ipGpWindows, ip) > RATE_LIMIT_GP_MAX
 }
 
 // ─── Internal geocoding ──────────────────────────────────────────────────────
@@ -163,7 +132,7 @@ export async function POST(req: NextRequest) {
 
   // ── Rate limiting ─────────────────────────────────────────────────────────
   // Counted only after the request body parses, so malformed POSTs cannot burn a quota slot.
-  if (isRateLimited(ip)) {
+  if (await isRateLimited(ip)) {
     return new Response(JSON.stringify({ error: "Too many requests. Please wait a minute." }), {
       status:  429,
       headers: { "Content-Type": "application/json", "Retry-After": "60" },
@@ -233,7 +202,7 @@ export async function POST(req: NextRequest) {
     google_places:       Boolean(req_s.google_places)       && Boolean(process.env.GOOGLE_PLACES_API_KEY),
   }
 
-  const gpRateLimited = isGooglePlacesRateLimited(ip, sources.google_places)
+  const gpRateLimited = await isGooglePlacesRateLimited(ip, sources.google_places)
   if (gpRateLimited) {
     sources.google_places = false
   }

@@ -11,6 +11,14 @@ vi.mock("@/lib/stats", () => ({
   getStats:      vi.fn().mockResolvedValue({}),
 }))
 
+// Rate limiting itself has its own dedicated unit tests
+// (__tests__/lib/search-rate-limit.test.ts) — mocked out here so this file's
+// tests exercise search behaviour only, not Redis-backed rate-limit state.
+vi.mock("@/lib/search-rate-limit", () => ({
+  isRateLimited:            vi.fn().mockResolvedValue(false),
+  isGooglePlacesRateLimited: vi.fn().mockResolvedValue(false),
+}))
+
 // Parse the NDJSON stream into an array of event objects
 async function parseEvents(res: Response): Promise<Array<{ type: string; [k: string]: unknown }>> {
   const text = await res.text()
