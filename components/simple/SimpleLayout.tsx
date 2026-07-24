@@ -506,14 +506,14 @@ export default function SimpleLayout({
             {locateError && (
               <p role="alert" className="mx-4 mt-1 mb-0 text-xs text-destructive">{locateError}</p>
             )}
-            <div className="grid grid-cols-2 gap-2.5 p-4 overflow-y-auto">
+            <div className="grid grid-cols-2 gap-2 p-3 overflow-y-auto">
               {SIMPLE_CATEGORIES.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => selectCategory(cat)}
-                  className="flex flex-col items-center gap-1.5 rounded-xl border border-card-border bg-card py-5 hover:bg-muted transition-colors"
+                  className="flex flex-col items-center gap-1 rounded-xl border border-card-border bg-card py-3 hover:bg-muted transition-colors"
                 >
-                  <span className="text-2xl" aria-hidden>{CATEGORY_ICONS[cat] ?? "📍"}</span>
+                  <span className="text-xl" aria-hidden>{CATEGORY_ICONS[cat] ?? "📍"}</span>
                   <span className="text-xs font-semibold">{t.chipLabels[cat] ?? t.categories[cat]}</span>
                 </button>
               ))}
@@ -522,21 +522,21 @@ export default function SimpleLayout({
                   focus mode (mirrors issue #30's reasoning for the full UI). */}
               <button
                 onClick={() => selectAmenity("parking")}
-                className="flex flex-col items-center gap-1.5 rounded-xl border border-card-border bg-card py-5 hover:bg-muted transition-colors"
+                className="flex flex-col items-center gap-1 rounded-xl border border-card-border bg-card py-3 hover:bg-muted transition-colors"
               >
-                <span className="text-2xl" aria-hidden>🅿</span>
+                <span className="text-xl" aria-hidden>🅿</span>
                 <span className="text-xs font-semibold">{t.chat.chipParking}</span>
               </button>
               <button
                 onClick={() => selectAmenity("toilet")}
-                className="flex flex-col items-center gap-1.5 rounded-xl border border-card-border bg-card py-5 hover:bg-muted transition-colors"
+                className="flex flex-col items-center gap-1 rounded-xl border border-card-border bg-card py-3 hover:bg-muted transition-colors"
               >
-                <span className="text-2xl" aria-hidden>🚻</span>
+                <span className="text-xl" aria-hidden>🚻</span>
                 <span className="text-xs font-semibold">{t.chat.chipToilet}</span>
               </button>
               <button
                 onClick={() => selectCategory(null)}
-                className="col-span-2 rounded-xl border border-dashed border-card-border py-3.5 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+                className="col-span-2 rounded-xl border border-dashed border-card-border py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
               >
                 {t.simple.tileAll}
               </button>

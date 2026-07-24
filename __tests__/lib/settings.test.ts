@@ -133,8 +133,8 @@ describe("SETTING_CHIPS completeness", () => {
 // that would silently fail to compile, or a duplicate that would render the
 // same tile twice.
 describe("SIMPLE_CATEGORIES", () => {
-  it("has exactly 6 entries (the Simple View tile grid is a fixed 2-column layout)", () => {
-    expect(SIMPLE_CATEGORIES).toHaveLength(6)
+  it("has exactly 8 entries (grows the 2-column tile grid, layout isn't fixed-size)", () => {
+    expect(SIMPLE_CATEGORIES).toHaveLength(8)
   })
 
   it("has no duplicates", () => {

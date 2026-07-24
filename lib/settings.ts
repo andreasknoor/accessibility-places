@@ -68,7 +68,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
 // decisions, so this is NOT meant to be reorderable/configurable. Kept next to
 // SETTING_CHIPS so a completeness test can check every entry is a real Category.
 export const SIMPLE_CATEGORIES: Category[] = [
-  "cafe", "restaurant", "hotel", "doctors", "pharmacy", "supermarket",
+  "cafe", "restaurant", "hotel", "attraction", "doctors", "pharmacy", "railway_station", "supermarket",
 ]
 
 // Every category the default-chip picker (SettingsSheet, a plain <select>) can
