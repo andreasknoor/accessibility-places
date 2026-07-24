@@ -485,13 +485,15 @@ export interface Translations {
     startNearbyHint: string
     startVenue:      string
     startVenueHint:  string
+    startCity:       string
+    startCityHint:   string
     showFullApp:     string
     back:            string
     tilesTitle:      string
     tileAll:         string
     locating:        string
     locateError:     string
-    resultsTitle:    (label: string) => string
+    resultsTitle:    (label: string, place?: string) => string
     resultsCount:    (n: number) => string
     resizeHandle:    string
     noResultsTitle:  string
@@ -500,6 +502,11 @@ export interface Translations {
     venuePlaceholder: string
     venueHint:        string
     venueNoMatches:   string
+    cityPlaceholder: string
+    cityHint:        string
+    cityNoMatches:   string
+    citySearchingIn: (city: string) => string
+    cityClear:       string
     entranceGood:    string
     entranceLimited: string
     entranceBad:     string

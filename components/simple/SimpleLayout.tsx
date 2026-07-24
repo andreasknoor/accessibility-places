@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import dynamic from "next/dynamic"
-import { ChevronLeft, LocateFixed, Search as SearchIcon, Loader2, Settings as SettingsIcon } from "lucide-react"
+import { ChevronLeft, LocateFixed, Search as SearchIcon, Building2, X as XIcon, Loader2, Settings as SettingsIcon } from "lucide-react"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { getBestPosition, hasLocationPermission, type GeoPosition } from "@/lib/native/geolocation"
 import { haversineMetres } from "@/lib/matching/match"
@@ -37,7 +37,7 @@ const POSITION_CACHE_MS = 2 * 60_000
 // small, not that there's genuinely nothing nearby.
 const LOW_RESULTS_THRESHOLD = 3
 
-type Screen = "start" | "tiles" | "locating" | "results" | "venue" | "detail"
+type Screen = "start" | "tiles" | "locating" | "results" | "venue" | "city" | "detail"
 
 // One suggestion from /api/geocode/unified-suggest — mirrors ChatPanel's own
 // local definition (that route lives under app/api and isn't meant to be
@@ -281,6 +281,19 @@ export default function SimpleLayout({
   const [detailReturnTo, setDetailReturnTo] = useState<"results" | "venue">("results")
   const venueDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const venueAbortRef    = useRef<AbortController | undefined>(undefined)
+
+  // City-search sub-flow ("In einer anderen Stadt suchen") — mirrors the
+  // venue-search state above exactly, but filters unified-suggest results to
+  // `kind === "area"` instead of `"venue"`. Picking a suggestion here doesn't
+  // jump to a detail screen like venue-search does; it sets `pickedCity` and
+  // routes to the SAME category tiles screen the GPS "nearby" flow uses —
+  // selectCategory/selectAmenity below prefer pickedCity's coords over a
+  // fresh GPS resolution whenever it's set.
+  const [cityQuery,       setCityQuery]       = useState("")
+  const [citySuggestions, setCitySuggestions] = useState<UnifiedSuggestion[]>([])
+  const [pickedCity, setPickedCity] = useState<{ label: string; coords: { lat: number; lon: number } } | null>(null)
+  const cityDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const cityAbortRef    = useRef<AbortController | undefined>(undefined)
   // getBestPosition has no AbortSignal support, so a user who backs out of the
   // "locating" screen while it's still pending (GPS/permission dialog can take
   // up to ~20s) can't actually cancel the in-flight request — only suppress
@@ -355,6 +368,19 @@ export default function SimpleLayout({
     setSelectedAmenityType(null)
     setLocateError(null)
     locateCancelledRef.current = false
+
+    // A picked city already has known coords — no GPS wait, no "locating"
+    // screen, and deliberately no onGpsResolved (that call feeds MapView's
+    // blue "you are here" dot; firing it with a distant city's coordinates
+    // would show it in the wrong place — the user isn't actually there).
+    if (pickedCity) {
+      track("simple_nearby_search", { category: cat ?? "all" })
+      setHasSearchedNearby(true)
+      onSimpleNearbySearch(categoryLabel(cat), pickedCity.coords, cat)
+      setScreen("results")
+      return
+    }
+
     setScreen("locating")
     try {
       const coords = await resolvePosition()
@@ -379,6 +405,15 @@ export default function SimpleLayout({
     setSelectedAmenityType(type)
     setLocateError(null)
     locateCancelledRef.current = false
+
+    if (pickedCity) {
+      track("simple_amenity_search", { type })
+      setHasSearchedNearby(true)
+      onAmenitySearch(type, pickedCity.coords)
+      setScreen("results")
+      return
+    }
+
     setScreen("locating")
     try {
       const coords = await resolvePosition()
@@ -454,6 +489,44 @@ export default function SimpleLayout({
     track("simple_venue_search")
     const coords = s.lat != null && s.lon != null ? { lat: s.lat, lon: s.lon } : undefined
     onPlaceSearch(s.name, coords)
+  }
+
+  // City autocomplete — identical shape to the venue effect above, filtered
+  // to area-kind results only (cities/districts/municipalities — anything
+  // Photon classifies as an administrative area, same classification
+  // /api/geocode/unified-suggest already applies for the full UI).
+  useEffect(() => {
+    const query = cityQuery.trim()
+    if (query.length < 2) { setCitySuggestions([]); return }
+    clearTimeout(cityDebounceRef.current)
+    cityAbortRef.current?.abort()
+    cityDebounceRef.current = setTimeout(async () => {
+      const ac = new AbortController()
+      cityAbortRef.current = ac
+      try {
+        const bias = searchCenter ? `&lat=${searchCenter.lat}&lon=${searchCenter.lon}` : gpsCoords ? `&lat=${gpsCoords.lat}&lon=${gpsCoords.lon}` : ""
+        const intl = settings.internationalMode ? "&intl=1" : ""
+        const res = await fetch(`/api/geocode/unified-suggest?q=${encodeURIComponent(query)}&lang=${locale}${bias}${intl}`, { signal: ac.signal })
+        if (!res.ok) return
+        const data: UnifiedSuggestion[] = await res.json()
+        setCitySuggestions(data.filter((s) => s.kind === "area"))
+      } catch { /* ignore — AbortError or network error */ }
+    }, 300)
+    return () => { clearTimeout(cityDebounceRef.current); cityAbortRef.current?.abort() }
+  }, [cityQuery, locale, searchCenter, gpsCoords, settings.internationalMode])
+
+  function pickCity(s: UnifiedSuggestion) {
+    hapticLight()
+    if (s.lat == null || s.lon == null) return
+    track("simple_city_search")
+    setPickedCity({ label: s.name, coords: { lat: s.lat, lon: s.lon } })
+    setCityQuery("")
+    setScreen("tiles")
+  }
+
+  function clearPickedCity() {
+    hapticLight()
+    setPickedCity(null)
   }
 
   // Once a venue search settles, jump straight to its detail screen (the
@@ -538,30 +611,45 @@ export default function SimpleLayout({
             </div>
             <p className="text-center font-semibold text-lg mb-2">{t.simple.startTitle}</p>
 
+            {/* Three equally-weighted entry points (research showed users want
+                both "a category in some city" and "check a named venue", not
+                just "near me" — see docs/plans, Vorschlag 1). Vertical
+                icon-on-top cards (not the old icon-left row) for maximum
+                glanceability — large, evenly sized targets, one deliberate
+                accent colour (primary blue) throughout rather than a distinct
+                hue per tile, matching the app's existing single-accent
+                palette instead of introducing new colours for this screen. */}
             <button
-              onClick={() => { setLocateError(null); setScreen("tiles") }}
-              className="flex items-center gap-3 rounded-xl bg-primary text-primary-foreground px-4 py-4 shadow-sm hover:bg-primary/90 transition-colors text-left"
+              onClick={() => { setLocateError(null); setPickedCity(null); setScreen("tiles") }}
+              className="flex flex-col items-center text-center gap-2 rounded-2xl bg-primary text-primary-foreground px-4 py-5 shadow-sm hover:bg-primary/90 transition-colors"
             >
-              <span className="w-11 h-11 rounded-full bg-primary-foreground/15 flex items-center justify-center shrink-0">
-                <LocateFixed className="w-5 h-5" aria-hidden />
+              <span className="w-14 h-14 rounded-full bg-primary-foreground/15 flex items-center justify-center shrink-0">
+                <LocateFixed className="w-7 h-7" aria-hidden />
               </span>
-              <span className="flex-1 min-w-0">
-                <span className="block text-sm font-semibold">{t.simple.startNearby}</span>
-                <span className="block text-xs opacity-90 mt-0.5">{t.simple.startNearbyHint}</span>
+              <span className="block text-sm font-semibold">{t.simple.startNearby}</span>
+              <span className="block text-xs opacity-90">{t.simple.startNearbyHint}</span>
+            </button>
+
+            <button
+              onClick={() => { setCityQuery(""); setScreen("city") }}
+              className="flex flex-col items-center text-center gap-2 rounded-2xl border border-card-border bg-card px-4 py-5 hover:bg-muted transition-colors"
+            >
+              <span className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Building2 className="w-7 h-7 text-primary" aria-hidden />
               </span>
+              <span className="block text-sm font-semibold">{t.simple.startCity}</span>
+              <span className="block text-xs text-muted-foreground">{t.simple.startCityHint}</span>
             </button>
 
             <button
               onClick={() => { setVenueNotFound(false); setVenueQuery(""); setScreen("venue") }}
-              className="flex items-center gap-3 rounded-xl border border-card-border bg-card px-4 py-4 hover:bg-muted transition-colors text-left"
+              className="flex flex-col items-center text-center gap-2 rounded-2xl border border-card-border bg-card px-4 py-5 hover:bg-muted transition-colors"
             >
-              <span className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <SearchIcon className="w-5 h-5 text-primary" aria-hidden />
+              <span className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <SearchIcon className="w-7 h-7 text-primary" aria-hidden />
               </span>
-              <span className="flex-1 min-w-0">
-                <span className="block text-sm font-semibold">{t.simple.startVenue}</span>
-                <span className="block text-xs text-muted-foreground mt-0.5">{t.simple.startVenueHint}</span>
-              </span>
+              <span className="block text-sm font-semibold">{t.simple.startVenue}</span>
+              <span className="block text-xs text-muted-foreground">{t.simple.startVenueHint}</span>
             </button>
 
             <button
@@ -580,6 +668,15 @@ export default function SimpleLayout({
             <Header title={t.simple.tilesTitle} backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen("start")} onOpenSettings={() => setSettingsOpen(true)} />
             {locateError && (
               <p role="alert" className="mx-4 mt-1 mb-0 text-xs text-destructive">{locateError}</p>
+            )}
+            {pickedCity && (
+              <div className="mx-3 mt-1 mb-0 flex items-center gap-1.5 rounded-lg bg-primary/10 px-2.5 py-1.5 text-xs font-medium text-primary self-start">
+                <Building2 className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                <span className="truncate">{t.simple.citySearchingIn(pickedCity.label)}</span>
+                <button onClick={clearPickedCity} aria-label={t.simple.cityClear} className="shrink-0 p-0.5 -mr-0.5 hover:opacity-70 transition-opacity">
+                  <XIcon className="w-3.5 h-3.5" aria-hidden />
+                </button>
+              </div>
             )}
             <div className="grid grid-cols-2 gap-2 p-3 overflow-y-auto">
               {SIMPLE_CATEGORIES.map((cat) => (
@@ -636,7 +733,7 @@ export default function SimpleLayout({
         {/* ── Results (map strip + single scroll) ── */}
         {screen === "results" && (
           <div className="flex-1 min-h-0 flex flex-col">
-            <Header title={t.simple.resultsTitle(selectedAmenityType ? amenityLabel(selectedAmenityType) : categoryLabel(selectedCategory))} backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen("tiles")} onOpenSettings={() => setSettingsOpen(true)} />
+            <Header title={t.simple.resultsTitle(selectedAmenityType ? amenityLabel(selectedAmenityType) : categoryLabel(selectedCategory), pickedCity?.label)} backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen("tiles")} onOpenSettings={() => setSettingsOpen(true)} />
             {error && <p role="alert" className="mx-4 mb-1 text-xs text-destructive">{error}</p>}
 
             {/* Search-in-progress indicator, directly above the map — same
@@ -868,6 +965,46 @@ export default function SimpleLayout({
                   className="flex items-center gap-2.5 rounded-lg border border-card-border bg-card px-3 py-2.5 text-left hover:bg-muted transition-colors"
                 >
                   <span className="text-base shrink-0" aria-hidden>📍</span>
+                  <span className="text-sm font-medium truncate">{s.display}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── City search ("In einer anderen Stadt suchen") ── */}
+        {screen === "city" && (
+          <div className="flex-1 min-h-0 flex flex-col">
+            <Header backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen("start")} onOpenSettings={() => setSettingsOpen(true)} />
+            <div className="px-4 pb-2">
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2.5">
+                <Building2 className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden />
+                <input
+                  autoFocus
+                  value={cityQuery}
+                  onChange={(e) => setCityQuery(e.target.value)}
+                  placeholder={t.simple.cityPlaceholder}
+                  aria-label={t.simple.cityPlaceholder}
+                  // text-base (16px), not text-sm — same iOS auto-zoom fix as
+                  // the venue screen's input above.
+                  className="flex-1 min-w-0 bg-transparent text-base md:text-sm outline-none placeholder:text-muted-foreground"
+                />
+              </div>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 flex flex-col gap-2">
+              {cityQuery.trim().length >= 2 && citySuggestions.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-6">{t.simple.cityNoMatches}</p>
+              )}
+              {cityQuery.trim().length < 2 && (
+                <p className="text-sm text-muted-foreground text-center py-6">{t.simple.cityHint}</p>
+              )}
+              {citySuggestions.map((s, i) => (
+                <button
+                  key={`${s.name}-${i}`}
+                  onClick={() => pickCity(s)}
+                  className="flex items-center gap-2.5 rounded-lg border border-card-border bg-card px-3 py-2.5 text-left hover:bg-muted transition-colors"
+                >
+                  <Building2 className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden />
                   <span className="text-sm font-medium truncate">{s.display}</span>
                 </button>
               ))}

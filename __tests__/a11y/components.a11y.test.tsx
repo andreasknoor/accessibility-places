@@ -225,7 +225,29 @@ describe("a11y baseline — SimpleLayout", () => {
         onUpdateSettings={() => {}}
       />,
     )
-    fireEvent.click(screen.getByText("Einen konkreten Ort prüfen"))
+    fireEvent.click(screen.getByText("Einen konkreten Ort bzw. Lokalität suchen"))
+    expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it("has no structural axe violations (city-search screen)", async () => {
+    const { container } = renderSimple(
+      <SimpleLayout
+        places={[]}
+        isLoading={false}
+        onSelect={() => {}}
+        onSimpleNearbySearch={() => {}}
+        onPlaceSearch={() => {}}
+        onAmenitySearch={() => {}}
+        onSearchHere={() => {}}
+        onFocusSearchHere={() => {}}
+        onGpsResolved={() => {}}
+        onExpandRadius={() => {}}
+        onAmenityExpandRadius={() => {}}
+        settings={DEFAULT_APP_SETTINGS}
+        onUpdateSettings={() => {}}
+      />,
+    )
+    fireEvent.click(screen.getByText("In einer anderen Stadt suchen"))
     expect(await axe(container)).toHaveNoViolations()
   })
 })
