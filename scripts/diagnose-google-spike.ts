@@ -124,7 +124,6 @@ async function main() {
   console.log(`Google HTTP requests, mid  (×3)             : ${gpCalls * 3} req  ≈ $${(gpCalls * 3 * USD_PER_REQUEST).toFixed(2)}`)
   console.log(`Google HTTP requests, high (×9, 3 cat×3 pg) : ${gpCalls * 9} req  ≈ $${(gpCalls * 9 * USD_PER_REQUEST).toFixed(2)}`)
   console.log(`(SKU assumed: Text Search Enterprise ~$${USD_PER_REQUEST}/req — the field mask requests accessibilityOptions.)`)
-  console.log(`NOTE: Place Photo API (/api/image/google) bills SEPARATELY and is NOT in this counter.`)
 
   // ── 3. Top anonymous users (UI traffic only) ───────────────────────────────
   const today = now.toISOString().slice(0, 10)

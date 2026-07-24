@@ -346,30 +346,18 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
     : t.a11y[parkingAttr.value]
 
   const osmRecord  = place.sourceRecords.find((r) => r.sourceId === "osm")
-  const googleRecord = place.sourceRecords.find((r) => r.sourceId === "google_places")
   const acceslibreCommentaire = getMeta(place, "acceslibre")?.commentaire as string | null | undefined
 
-  // Image priority: Google Places photo (if source active) → OSM image/wikimedia_commons → Wikidata P18
+  // Image priority: OSM image/wikimedia_commons → Wikidata P18. Google Places
+  // photos were dropped (2026-07) — the Photo API bills separately from Text
+  // Search and was an unnecessary cost surface for a "nice to have" feature
+  // (Google is the lowest-weight, off-by-default supplementary source).
   useEffect(() => {
     setPlaceImage(null)
     setImageLoaded(false)
 
     const controller = new AbortController()
 
-    // Google: photoName is stored as photos[0].name in Google Places metadata
-    const googleMeta = googleRecord ? (googleRecord.metadata ?? googleRecord.raw) as Record<string, unknown> | null : null
-    const photoName  = (Array.isArray(googleMeta?.photos) && googleMeta.photos.length > 0)
-      ? (googleMeta.photos[0] as Record<string, unknown>)?.name
-      : undefined
-    if (typeof photoName === "string" && photoName) {
-      fetch(`/api/image/google?photoName=${encodeURIComponent(photoName)}`, { signal: controller.signal })
-        .then((r) => r.ok ? r.json() : null)
-        .then((d) => { if (d?.url) setPlaceImage(d.url) })
-        .catch(() => {})
-      return () => controller.abort()
-    }
-
-    // Fallback: OSM image/wikimedia_commons/wikidata
     const osmMeta = osmRecord ? (osmRecord.metadata ?? osmRecord.raw) as Record<string, unknown> | null : null
     if (!osmMeta) return
 
@@ -406,7 +394,7 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
       .catch(() => {})
     return () => controller.abort()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [googleRecord?.externalId, osmRecord?.externalId])
+  }, [osmRecord?.externalId])
 
   const osmLink    = osmRecord?.externalId
     ? `https://www.openstreetmap.org/${osmRecord.externalId}`

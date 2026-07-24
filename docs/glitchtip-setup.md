@@ -434,9 +434,8 @@ trade-off for keeping `safeRun` side-effect-free).
 
 **Deliberately NOT captured** (expected / best-effort / would be noise): single
 adapter failures in `safeRun`, `/api/nearby-parking`, the geocode autocomplete
-routes (suggest/place-suggest/reverse), the `/api/image/google` proxy, and
-`/api/health` (it is the monitor). These stay as stats counters and/or console
-logs only.
+routes (suggest/place-suggest/reverse), and `/api/health` (it is the monitor).
+These stay as stats counters and/or console logs only.
 
 **Filtering in GlitchTip.** Search by the `kind` tag — `kind:unhandled`,
 `kind:all-sources-failed`, `kind:unexpected` — to triage. Use the `level` field

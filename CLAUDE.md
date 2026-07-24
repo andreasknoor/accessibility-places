@@ -248,7 +248,7 @@ The `countrycodes=de,at,ch` constraint in Nominatim calls and the Photon boundin
 
 ### Rate limiting & production details
 
-Endpoint contracts (`/api/raw`, `/api/image/google`, `/api/stats`, `/api/nearby-parking`, `/api/report-parking`, `/api/health`), the place-photo fallback chain, Vercel Analytics events, and the GlitchTip wiring → **[docs/architecture/api-routes.md](docs/architecture/api-routes.md)**. The non-obvious invariants that bite if violated:
+Endpoint contracts (`/api/raw`, `/api/stats`, `/api/nearby-parking`, `/api/report-parking`, `/api/health`), the place-photo fallback chain (OSM/Wikidata only — the Google Places photo proxy was removed 2026-07 as an unnecessary cost surface), Vercel Analytics events, and the GlitchTip wiring → **[docs/architecture/api-routes.md](docs/architecture/api-routes.md)**. The non-obvious invariants that bite if violated:
 
 - **Rate limits** — `/api/search`: 10 searches/min per IP, 3/min for Google Places; reset on cold start (single-instance only).
 - **`raw` stripping** — production strips `raw` from `sourceRecords` (`stripRaw()`) and allowlists `metadata` (`METADATA_WHITELIST`); a new adapter must set **both** `raw` and `metadata` or the info sheet shows nothing in prod.

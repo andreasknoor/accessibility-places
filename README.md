@@ -117,7 +117,7 @@ Create a `.env.local` in the project root. None of these are exposed to the brow
 | `REISEN_FUER_ALLE_API_BASE` | with key | Base URL for the RfA API (required alongside the key) |
 | `GINTO_API_KEY` | optional | Ginto GraphQL API (Swiss-focused accessibility data, queried DACH-wide) |
 | `GINTO_GEOFENCE` | optional | Set to `1` to restrict Ginto calls to searches that can reach the CH bounding box (emergency brake against rate limits) |
-| `GOOGLE_PLACES_API_KEY` | optional | Google Places (New) data; also enables the photo proxy |
+| `GOOGLE_PLACES_API_KEY` | optional | Google Places (New) data |
 | `GITHUB_REPORT_TOKEN` | optional | Enables `POST /api/report-parking` (user parking reports → GitHub issues) |
 | `NEXT_PUBLIC_SENTRY_DSN` | optional | GlitchTip (Sentry-protocol) error reporting; production only |
 | `OVERPASS_ENDPOINTS` | optional | Comma-separated Overpass URLs (defaults to two public mirrors; production prepends a private server) |
@@ -145,7 +145,6 @@ app/
     search/route.ts             NDJSON streaming search pipeline
     nearby-parking/route.ts     Amenity fetch: disabled parking + wheelchair WCs (?types=)
     geocode/                    route + suggest + place-suggest + reverse (Nominatim / Photon proxies)
-    image/google/route.ts       Google Places photo proxy (SSRF-guarded)
     health/route.ts             Token-protected E2E health check (live + mock modes)
     stats/route.ts              Token-protected adapter usage stats
     report-parking/route.ts     User reports a parking marker → GitHub issue
@@ -343,7 +342,6 @@ In production the search pipeline races a **self-hosted Overpass server** (DACH-
 | `GET /api/geocode/suggest` | Photon city/district autocomplete |
 | `GET /api/geocode/place-suggest` | Photon POI autocomplete (name field) |
 | `GET /api/geocode/reverse` | Nominatim reverse geocode (coords → district) |
-| `GET /api/image/google` | Google Places photo proxy (SSRF-guarded) |
 | `GET /api/health` | Token-protected E2E health check (live + `?mock=1`) |
 | `GET /api/stats` | Token-protected adapter usage stats |
 | `POST /api/report-parking` | User reports a weak-tier parking marker as a likely disabled spot → GitHub issue |

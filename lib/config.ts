@@ -2,7 +2,7 @@ import type { SourceId, Category } from "./types"
 
 // User-visible app version, shown in the header next to the subtitle.
 // Bump on every meaningful release.
-export const APP_VERSION = "10.52"
+export const APP_VERSION = "10.53"
 
 // Tally form IDs for the per-place "report data error" flow (PlaceDebugSheet).
 // Empty string = feature hidden. Fill in after creating the DE/EN forms in

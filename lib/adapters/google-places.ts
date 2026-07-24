@@ -265,7 +265,6 @@ export async function fetchGooglePlaces(params: SearchParams): Promise<Place[]> 
     "places.nationalPhoneNumber",
     "places.types",
     "places.primaryType",
-    "places.photos",
     "nextPageToken", // top-level, required for pagination — a mask of only places.* omits it
   ].join(",")
 

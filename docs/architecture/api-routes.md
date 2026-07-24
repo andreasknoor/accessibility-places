@@ -18,9 +18,7 @@ In production, `raw` adapter response data is stripped from `sourceRecords` befo
 
 ## Place photo
 
-`GET /api/image/google?photoName=` — proxy for Google Places photo URLs. Validates `photoName` against `places/*/photos/*` pattern (SSRF guard), then calls the Places API with `skipHttpRedirect=true` and returns `{ url }` JSON with a 24 h / 7-day SWR cache header. Requires `GOOGLE_PLACES_API_KEY`.
-
-**Place photo** (`PlaceDebugSheet`) — loaded client-side with priority: (1) Google Places via `/api/image/google` (only if Google source is active); (2) OSM `image` tag — `File:…` → Wikimedia Commons `Special:FilePath`, `http…` → direct; (3) OSM `wikimedia_commons` tag; (4) Wikidata P18 claim (fetched from the Wikidata API using the OSM `wikidata` tag). All are best-effort; no photo shown if all fail.
+**Place photo** (`PlaceDebugSheet`) — loaded client-side with priority: (1) OSM `image` tag — `File:…` → Wikimedia Commons `Special:FilePath`, `http…` → direct; (2) OSM `wikimedia_commons` tag; (3) Wikidata P18 claim (fetched from the Wikidata API using the OSM `wikidata` tag). All are best-effort; no photo shown if all fail. A Google Places photo option (via a proxy route, `/api/image/google`) existed until 2026-07 — removed as an unnecessary cost surface: the Photo API bills separately from Text Search (~$7/1000 requests) for a "nice to have" feature on the lowest-weight, off-by-default supplementary source. `lib/adapters/google-places.ts`'s field mask no longer requests `places.photos`.
 
 ## Analytics & stats
 
