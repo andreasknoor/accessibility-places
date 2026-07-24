@@ -95,6 +95,36 @@ describe("SimplePlaceCard", () => {
     expect(openDetailBoxes).toHaveLength(1)
   })
 
+  // Toilet line — only for the three categories where Simple View's search
+  // already requires a wheelchair toilet (cafe/restaurant/hotel), mirroring
+  // the entrance line's own plain-language wording.
+  describe("toilet line (cafe/restaurant/hotel only)", () => {
+    it("shows a plain-language toilet sentence for a cafe", () => {
+      const place = makePlace({
+        accessibility: {
+          entrance: buildAttribute("osm", "yes", "yes", {}),
+          toilet:   buildAttribute("osm", "yes", "yes", {}),
+          parking:  emptyAttribute(),
+        },
+      })
+      renderWithProvider(<SimplePlaceCard place={place} onOpen={vi.fn()} />)
+      expect(screen.getByText("WC rollstuhlgerecht")).toBeInTheDocument()
+    })
+
+    it("does not show a toilet line for a category outside the required set (e.g. doctors)", () => {
+      const place = makePlace({
+        category: "doctors",
+        accessibility: {
+          entrance: buildAttribute("osm", "yes", "yes", {}),
+          toilet:   buildAttribute("osm", "yes", "yes", {}),
+          parking:  emptyAttribute(),
+        },
+      })
+      renderWithProvider(<SimplePlaceCard place={place} onOpen={vi.fn()} />)
+      expect(screen.queryByText("WC rollstuhlgerecht")).not.toBeInTheDocument()
+    })
+  })
+
   describe("onShowOnMap (highlight on map without opening detail)", () => {
     it("is not rendered when the prop is omitted", () => {
       renderWithProvider(<SimplePlaceCard place={makePlace()} onOpen={vi.fn()} />)

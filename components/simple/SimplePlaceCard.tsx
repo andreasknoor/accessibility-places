@@ -5,7 +5,7 @@ import { CRITERION_STYLES } from "@/components/results/CriterionBox"
 import NavigateButton from "@/components/ui/navigate-button"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { useTranslations } from "@/lib/i18n"
-import { criterionSentence, CRITERION_DOT_CLASS } from "@/lib/simple-view"
+import { criterionSentence, CRITERION_DOT_CLASS, SIMPLE_TOILET_REQUIRED_CATEGORIES } from "@/lib/simple-view"
 import { cn } from "@/lib/utils"
 import type { Place } from "@/lib/types"
 
@@ -37,6 +37,17 @@ export default function SimplePlaceCard({ place, distanceM, isSelected, onOpen, 
   const t = useTranslations()
   const entrance = place.accessibility.entrance.value
   const style = CRITERION_STYLES[entrance]
+  // Toilet line, only for categories where Simple View's search already
+  // requires a wheelchair toilet (a hard "yes") on top of entrance — showing
+  // this line only there keeps it meaningful: since HomeClient's post-filter
+  // already excludes anything but "yes" for these categories, the value here
+  // is always "yes" in practice, but rendering it explicitly (rather than
+  // silently relying on the filter) mirrors the entrance line's own honesty
+  // and matches what was asked: toilet info "analog zum Eingang" for these
+  // three categories specifically.
+  const showToilet = SIMPLE_TOILET_REQUIRED_CATEGORIES.has(place.category)
+  const toilet = place.accessibility.toilet.value
+  const toiletStyle = CRITERION_STYLES[toilet]
 
   return (
     <div className={cn(
@@ -65,6 +76,12 @@ export default function SimplePlaceCard({ place, distanceM, isSelected, onOpen, 
           <span className={cn("w-2 h-2 rounded-full shrink-0", CRITERION_DOT_CLASS[entrance])} aria-hidden />
           {criterionSentence(t, "entrance", entrance)}
         </p>
+        {showToilet && (
+          <p className={cn("text-xs flex items-center gap-1.5 pl-7", toiletStyle.color)}>
+            <span className={cn("w-2 h-2 rounded-full shrink-0", CRITERION_DOT_CLASS[toilet])} aria-hidden />
+            {criterionSentence(t, "toilet", toilet)}
+          </p>
+        )}
       </div>
       <div className="pl-7 flex items-center gap-2">
         <NavigateButton coords={place.coordinates} variant="labeled" />

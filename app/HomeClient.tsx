@@ -26,6 +26,7 @@ import { SEO_CATEGORY_SLUGS, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
 import { useSettings, loadSettings, DEFAULT_APP_SETTINGS, SETTINGS_PARKING_RADIUS_MAX_KM } from "@/lib/settings"
+import { SIMPLE_TOILET_REQUIRED_CATEGORIES } from "@/lib/simple-view"
 import { markMountAndIsReturning, clearReturningFlag, loadActiveMode, saveActiveMode, loadSearchRun, saveSearchRun, clearSearchRun, clearSearchInput, clearSessionSearch } from "@/lib/session-restore"
 import { getCurrentPosition, getBestPosition, isGeolocationAvailable } from "@/lib/native/geolocation"
 import { consumePendingNativeAction } from "@/lib/native/actions"
@@ -1467,6 +1468,27 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const simpleParkingSpots = amenitySearch === "parking" ? visibleParkingSpots : undefined
   const simpleToiletSpots  = amenitySearch === "toilet"  ? visibleToiletSpots  : undefined
 
+  // Simple View's extra per-category rule: for cafés/restaurants/hotels, a
+  // wheelchair toilet is a hard requirement (only "yes", not "limited") on
+  // top of SIMPLE_FILTERS_OVERRIDE's entrance-only preset. This can't be
+  // expressed as a single SearchFilters value sent to the server — that
+  // would filter every category in a mixed "Alles anzeigen" result set
+  // uniformly, not just these three — so it's a client-side post-filter over
+  // `places`, keyed on each place's OWN category. A category-specific chip
+  // search (e.g. "Cafés & Eis") only ever returns that one category anyway,
+  // so the same filter applies there unchanged.
+  //
+  // Exempted for a venue name lookup ("Einen konkreten Ort prüfen",
+  // placeSearchName set): the user asked about ONE specific place and must
+  // see it regardless of its toilet status — silently filtering it away
+  // would read as "place not found" for a place that does exist.
+  const simplePlaces = useMemo(() => {
+    if (placeSearchName != null) return places
+    return places.filter((p) =>
+      !SIMPLE_TOILET_REQUIRED_CATEGORIES.has(p.category) || p.accessibility.toilet.value === "yes",
+    )
+  }, [places, placeSearchName])
+
   // Data-coverage caveat banner: only when international mode is on AND the
   // resolved search centre is outside DACH. DACH searches never show it.
   const intlNotice = settings.internationalMode && searchCenter &&
@@ -1607,7 +1629,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       <div className="mx-auto h-svh w-full max-w-md overflow-hidden border-x border-border">
         <SimpleLayout
           key={resetKey}
-          places={places}
+          places={simplePlaces}
           isLoading={isLoading}
           error={error}
           searchCenter={searchCenter}

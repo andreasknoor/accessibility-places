@@ -348,3 +348,80 @@ describe("HomeClient — Simple View's fixed filter preset", () => {
     expect(body.filters?.acceptUnknown).toBe(false)
   })
 })
+
+// ─── Simple View's extra per-category rule: cafés/restaurants/hotels
+// additionally require a wheelchair toilet ("yes" only, not "limited") — a
+// client-side post-filter (HomeClient's simplePlaces) since a single
+// SearchFilters value sent to the server would apply uniformly to every
+// category in a mixed "Alles anzeigen" result set, not just these three. ───
+describe("HomeClient — Simple View's extra toilet requirement for cafés/restaurants/hotels", () => {
+  function testPlace(overrides: { id: string; category: string; toilet: string }) {
+    return {
+      id: overrides.id,
+      name: `Place ${overrides.id}`,
+      category: overrides.category,
+      address: { street: "Teststr.", houseNumber: "1", postalCode: "10115", city: "Berlin", country: "DE" },
+      coordinates: { lat: 52.5, lon: 13.4 },
+      accessibility: {
+        entrance: { value: "yes", confidence: 1, conflict: false, sources: [], details: {} },
+        toilet:   { value: overrides.toilet, confidence: 1, conflict: false, sources: [], details: {} },
+        parking:  { value: "unknown", confidence: 1, conflict: false, sources: [], details: {} },
+      },
+      overallConfidence: 0.8,
+      primarySource: "osm",
+      sourceRecords: [{ sourceId: "osm", externalId: overrides.id, fetchedAt: "", raw: {} }],
+    }
+  }
+
+  it("keeps a café with toilet=yes but drops one with toilet=limited/no/unknown", async () => {
+    localStorage.setItem("ap_settings", JSON.stringify({ ...DEFAULT_APP_SETTINGS, simpleView: true }))
+    mockGetBestPosition.mockResolvedValue({ lat: 52.5, lon: 13.4 })
+    vi.stubGlobal("fetch", vi.fn((url: string) => {
+      if (typeof url === "string" && url.startsWith("/api/search")) {
+        return Promise.resolve(ndjsonResponse([resultEvent({
+          places: [
+            testPlace({ id: "yes",     category: "cafe", toilet: "yes" }),
+            testPlace({ id: "limited", category: "cafe", toilet: "limited" }),
+            testPlace({ id: "no",      category: "cafe", toilet: "no" }),
+            testPlace({ id: "unknown", category: "cafe", toilet: "unknown" }),
+          ],
+        })]))
+      }
+      return Promise.resolve(new Response(null, { status: 204 }))
+    }))
+
+    render(<HomeClient />)
+    fireEvent.click(await screen.findByText("In meiner Nähe suchen"))
+    fireEvent.click(screen.getByText("Cafés & Eis"))
+    await waitFor(() => expect(screen.getByText("Cafés & Eis in Ihrer Nähe")).toBeInTheDocument())
+
+    expect(screen.getByText("Place yes")).toBeInTheDocument()
+    expect(screen.queryByText("Place limited")).not.toBeInTheDocument()
+    expect(screen.queryByText("Place no")).not.toBeInTheDocument()
+    expect(screen.queryByText("Place unknown")).not.toBeInTheDocument()
+  })
+
+  it("does not apply the toilet rule to categories outside cafe/restaurant/hotel, even in the same result set", async () => {
+    localStorage.setItem("ap_settings", JSON.stringify({ ...DEFAULT_APP_SETTINGS, simpleView: true }))
+    mockGetBestPosition.mockResolvedValue({ lat: 52.5, lon: 13.4 })
+    vi.stubGlobal("fetch", vi.fn((url: string) => {
+      if (typeof url === "string" && url.startsWith("/api/search")) {
+        return Promise.resolve(ndjsonResponse([resultEvent({
+          places: [
+            testPlace({ id: "cafe-unknown-toilet",   category: "cafe",    toilet: "unknown" }),
+            testPlace({ id: "pharmacy-unknown-toilet", category: "pharmacy", toilet: "unknown" }),
+          ],
+        })]))
+      }
+      return Promise.resolve(new Response(null, { status: 204 }))
+    }))
+
+    render(<HomeClient />)
+    fireEvent.click(await screen.findByText("In meiner Nähe suchen"))
+    fireEvent.click(screen.getByText("Alles anzeigen"))
+    await waitFor(() => expect(screen.getByText(/in Ihrer Nähe/)).toBeInTheDocument())
+
+    expect(screen.queryByText("Place cafe-unknown-toilet")).not.toBeInTheDocument()
+    expect(screen.getByText("Place pharmacy-unknown-toilet")).toBeInTheDocument()
+  })
+})

@@ -7,6 +7,7 @@ Ersteinführung. Neueste Einträge oben; wird bei jeder neuen Funktion fortgefü
 
 | Datum | Funktion | Beschreibung | Umfang |
 |---|---|---|---|
+| 2026-07-24 | Rollstuhl-WC-Pflicht für Cafés/Restaurants/Hotels in der Einfachen Ansicht | Bei diesen drei Kategorien wird zusätzlich ein rollstuhlgerechtes WC vorausgesetzt (nur „Ja" zählt); die Ergebnisliste zeigt dafür auch die WC-Zeile, analog zum Eingang. Gilt auch bei „Alles anzeigen" | S |
 | 2026-07-24 | „Hier suchen" in der Einfachen Ansicht | Beim Verschieben der Karte erscheint dieselbe „Hier suchen"-Pille wie im Vollmodus (für Orte und für Parken/WC), um am neuen Kartenausschnitt erneut zu suchen | S |
 | 2026-07-23 | Parken/WC in der Einfachen Ansicht | Die zwei Amenity-Kacheln „Parken"/„WC" ergänzen die Kategorie-Kacheln der Einfachen Ansicht als eigene „Was möchten Sie suchen"-Option, inkl. Karte, Liste und Kartenabgleich wie im Vollmodus | S |
 | 2026-07-20 | Ein-/ausklappbare Ebenen-Box mit integrierter Legende | „Ebenen: Parkplatz/WC" auf der Karte lässt sich einklappen (Zustand bleibt sitzungsübergreifend gespeichert); eingeklappt zeigt sie kompakte Icon-Chips nur für aktive Ebenen. Die frühere separate Karten-Legende ist eingebaut: jede Checkbox-Zeile zeigt direkt die zugehörige Marker-Farbe darunter, statt in einem zweiten Kasten daneben zu stehen | S |

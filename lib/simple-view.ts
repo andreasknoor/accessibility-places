@@ -1,5 +1,17 @@
-import type { A11yValue } from "@/lib/types"
+import type { A11yValue, Category } from "@/lib/types"
 import type { Translations } from "@/lib/i18n/types"
+
+// Categories where Simple View treats a wheelchair toilet as a hard
+// requirement on top of the standard entrance yes/limited preset — unlike
+// entrance, "eingeschränkt nutzbar" isn't good enough here, only a plain
+// "yes". Applies even during the "Alles anzeigen" search (mixed categories):
+// HomeClient's post-filter only checks toilet for places whose OWN category
+// is in this set, leaving every other category's results unaffected. Shared
+// between HomeClient (the filter) and SimplePlaceCard (which additionally
+// shows the toilet line for these categories, mirroring the entrance line).
+export const SIMPLE_TOILET_REQUIRED_CATEGORIES: ReadonlySet<Category> = new Set([
+  "cafe", "restaurant", "hotel",
+])
 
 // Solid dot fill per A11yValue, matching CriterionBox's CRITERION_STYLES hues
 // (green/yellow/red/slate) at a stronger shade — CRITERION_STYLES itself only
