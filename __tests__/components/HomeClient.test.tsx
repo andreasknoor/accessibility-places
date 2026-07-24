@@ -81,6 +81,10 @@ const mockGetBestPosition = vi.fn()
 vi.mock("@/lib/native/geolocation", () => ({
   getBestPosition: (...args: unknown[]) => mockGetBestPosition(...args),
   isGeolocationAvailable: () => true,
+  // Simple View's background prefetch (v10.58) gates on this — default to
+  // "not granted" so it stays a no-op and these tests keep exercising the
+  // per-tap fetch path unchanged.
+  hasLocationPermission: () => Promise.resolve(false),
 }))
 vi.mock("@/lib/native/haptics", () => ({ hapticLight: vi.fn(), hapticMedium: vi.fn() }))
 vi.mock("@/lib/native/navigation", () => ({

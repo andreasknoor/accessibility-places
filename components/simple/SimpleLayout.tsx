@@ -5,7 +5,7 @@ import { createPortal } from "react-dom"
 import dynamic from "next/dynamic"
 import { ChevronLeft, LocateFixed, Search as SearchIcon, Loader2, Settings as SettingsIcon } from "lucide-react"
 import { useTranslations, useLocale } from "@/lib/i18n"
-import { getBestPosition } from "@/lib/native/geolocation"
+import { getBestPosition, hasLocationPermission, type GeoPosition } from "@/lib/native/geolocation"
 import { haversineMetres } from "@/lib/matching/match"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { SIMPLE_CATEGORIES } from "@/lib/settings"
@@ -271,6 +271,39 @@ export default function SimpleLayout({
   // screen the user is actually on.
   const locateCancelledRef = useRef(false)
 
+  // Speculative background prefetch: started on mount (effect below), so that
+  // by the time the user has gone start → tiles → picked a category, the fix
+  // has often already resolved and the "locating" screen barely flashes.
+  // Gated on hasLocationPermission() so this never surfaces an unprompted
+  // permission dialog to a first-time user — only returning users who already
+  // granted location get the head start; everyone else keeps today's
+  // behaviour (permission/fetch happens on the actual tap).
+  const pendingLocationRef = useRef<Promise<GeoPosition> | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    hasLocationPermission().then((granted) => {
+      if (!granted || cancelled) return
+      const promise = getBestPosition({ timeout: 20_000, windowMs: 4_000, desiredAccuracyM: 50 })
+      // A silent catch purely to avoid an unhandled-rejection console warning
+      // if the prefetch fails before anyone consumes it (e.g. the user never
+      // taps a category) — resolvePosition() below still awaits the same
+      // promise object and sees the real rejection when it does get used.
+      promise.catch(() => {})
+      pendingLocationRef.current = promise
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  // Consumes the prefetched fix if one is in flight/done; otherwise falls back
+  // to a fresh request (permission wasn't granted yet at mount time, or a
+  // previous selection already consumed the prefetch).
+  function resolvePosition(): Promise<GeoPosition> {
+    const pending = pendingLocationRef.current
+    pendingLocationRef.current = null
+    return pending ?? getBestPosition({ timeout: 20_000, windowMs: 4_000, desiredAccuracyM: 50 })
+  }
+
   const categoryLabel = (cat: Category | null): string =>
     cat ? (t.chipLabels[cat] ?? t.categories[cat]) : (locale === "de" ? "Orte" : "places")
 
@@ -282,7 +315,7 @@ export default function SimpleLayout({
     locateCancelledRef.current = false
     setScreen("locating")
     try {
-      const coords = await getBestPosition({ timeout: 20_000, windowMs: 4_000, desiredAccuracyM: 50 })
+      const coords = await resolvePosition()
       if (locateCancelledRef.current) return
       track("simple_nearby_search", { category: cat ?? "all" })
       setHasSearchedNearby(true)
@@ -306,7 +339,7 @@ export default function SimpleLayout({
     locateCancelledRef.current = false
     setScreen("locating")
     try {
-      const coords = await getBestPosition({ timeout: 20_000, windowMs: 4_000, desiredAccuracyM: 50 })
+      const coords = await resolvePosition()
       if (locateCancelledRef.current) return
       track("simple_amenity_search", { type })
       setHasSearchedNearby(true)

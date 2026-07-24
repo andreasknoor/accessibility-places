@@ -217,3 +217,32 @@ export function isGeolocationAvailable(): boolean {
   if (Capacitor.isNativePlatform()) return true
   return "geolocation" in navigator
 }
+
+// Silent permission check — never triggers the OS/browser permission prompt
+// (unlike getCurrentPosition/getBestPosition, which request it if needed).
+// Used to gate speculative background prefetching: it's fine to start a
+// location fetch before the user has asked for one IF permission is already
+// granted (a returning user), but surfacing an unprompted permission dialog
+// to a first-time user who hasn't indicated they want location yet is a bad
+// pattern — so callers should only prefetch when this resolves true.
+export async function hasLocationPermission(): Promise<boolean> {
+  if (Capacitor.isNativePlatform()) {
+    const { Geolocation } = await import("@capacitor/geolocation")
+    try {
+      const perm = await Geolocation.checkPermissions()
+      return perm.location === "granted"
+    } catch {
+      return false
+    }
+  }
+  // Web: the Permissions API doesn't cover geolocation in every browser
+  // (older Safari lacks it) — treat "can't tell" as "not granted" so we
+  // never speculatively prompt.
+  if (!("permissions" in navigator)) return false
+  try {
+    const status = await navigator.permissions.query({ name: "geolocation" as PermissionName })
+    return status.state === "granted"
+  } catch {
+    return false
+  }
+}

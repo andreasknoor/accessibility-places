@@ -20,8 +20,10 @@ vi.mock("@/lib/analytics", () => ({ track: vi.fn(), getPlatform: () => "web" }))
 vi.mock("@/components/LanguageSwitcher", () => ({ default: () => null }))
 
 const mockGetBestPosition = vi.fn()
+const mockHasLocationPermission = vi.fn()
 vi.mock("@/lib/native/geolocation", () => ({
-  getBestPosition: (...args: unknown[]) => mockGetBestPosition(...args),
+  getBestPosition:         (...args: unknown[]) => mockGetBestPosition(...args),
+  hasLocationPermission:   () => mockHasLocationPermission(),
 }))
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -176,6 +178,11 @@ function renderVenueHarness(settings?: AppSettings) {
 
 beforeEach(() => {
   mockGetBestPosition.mockReset()
+  mockHasLocationPermission.mockReset()
+  // Default: permission not yet granted — the background prefetch effect
+  // stays a no-op, so existing tests keep exercising the per-tap fetch path
+  // (resolvePosition() falling back to a fresh getBestPosition() call).
+  mockHasLocationPermission.mockResolvedValue(false)
   mapViewProps.current = null
   venueSettle = null
   onPlaceSearchSpy.mockReset()
@@ -275,6 +282,42 @@ describe("SimpleLayout — nearby flow", () => {
 
     expect(handlers.onSimpleNearbySearch).not.toHaveBeenCalled()
     expect(screen.getByText("Welche Art von Ort?")).toBeInTheDocument()
+  })
+})
+
+// Background location prefetch: started on mount so the "locating" screen
+// barely flashes once the user actually picks a category — but only when
+// permission is already granted, so a first-time user never sees an
+// unprompted permission dialog before they've chosen anything.
+describe("SimpleLayout — background location prefetch", () => {
+  it("prefetches on mount when permission is already granted, and a later category tap reuses that fetch instead of starting a new one", async () => {
+    mockHasLocationPermission.mockResolvedValue(true)
+    mockGetBestPosition.mockResolvedValue({ lat: 50.9, lon: 6.9 })
+    const { handlers } = renderLayout()
+
+    // The mount effect's permission check resolves asynchronously.
+    await waitFor(() => expect(mockGetBestPosition).toHaveBeenCalledTimes(1))
+
+    fireEvent.click(screen.getByText("In meiner Nähe suchen"))
+    fireEvent.click(screen.getByText("Cafés & Eis"))
+    await waitFor(() => expect(handlers.onSimpleNearbySearch).toHaveBeenCalled())
+
+    // Still exactly one call: the category tap consumed the prefetched
+    // promise instead of triggering a second getBestPosition() request.
+    expect(mockGetBestPosition).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not prefetch when permission isn't granted yet, and falls back to a fresh fetch on the actual tap", async () => {
+    mockHasLocationPermission.mockResolvedValue(false)
+    mockGetBestPosition.mockResolvedValue({ lat: 50.9, lon: 6.9 })
+    renderLayout()
+
+    await waitFor(() => expect(mockHasLocationPermission).toHaveBeenCalled())
+    expect(mockGetBestPosition).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByText("In meiner Nähe suchen"))
+    fireEvent.click(screen.getByText("Cafés & Eis"))
+    await waitFor(() => expect(mockGetBestPosition).toHaveBeenCalledTimes(1))
   })
 })
 
