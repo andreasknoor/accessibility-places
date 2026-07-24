@@ -490,7 +490,7 @@ const de: Translations = {
     resultsCount:    (n: number) => n === 1 ? "1 Ort gefunden" : `${n} Orte gefunden`,
     resizeHandle:    "Größe von Karte und Liste anpassen",
     noResultsTitle:  "Keine barrierefreien Orte in der Nähe gefunden",
-    noResultsHint:   "Versuchen Sie „Alles anzeigen“ oder eine andere Kategorie.",
+    noResultsHint:   "Versuche es mit „Alles anzeigen“, einer anderen Kategorie oder einem größeren Suchradius.",
     venuePlaceholder: "Name des Lokals …",
     venueHint:        "Tippen Sie einen Namen ein, um zu suchen.",
     venueNoMatches:   "Keine Treffer für diesen Namen.",

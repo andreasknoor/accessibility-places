@@ -490,7 +490,7 @@ const en: Translations = {
     resultsCount:    (n: number) => n === 1 ? "1 place found" : `${n} places found`,
     resizeHandle:    "Resize map and list",
     noResultsTitle:  "No accessible places found nearby",
-    noResultsHint:   "Try \"Show everything\" or a different category.",
+    noResultsHint:   "Try \"Show everything\", a different category, or a wider search radius.",
     venuePlaceholder: "Name of the place …",
     venueHint:        "Type a name to search.",
     venueNoMatches:   "No matches for that name.",
