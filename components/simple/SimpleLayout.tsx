@@ -705,7 +705,15 @@ export default function SimpleLayout({
                   onChange={(e) => { setVenueQuery(e.target.value); setVenueNotFound(false) }}
                   placeholder={t.simple.venuePlaceholder}
                   aria-label={t.simple.venuePlaceholder}
-                  className="flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                  // text-base (16px) on mobile, not text-sm — same fix as
+                  // ChatPanel's own search input (see its comment): iOS Safari/
+                  // WKWebView auto-zooms the viewport on focus for any input
+                  // under 16px and does not reliably reset the scale
+                  // afterwards. With `autoFocus` here, that zoom fires the
+                  // instant this screen mounts — reported live on a real
+                  // iPhone as "everything ~10% too wide, back button missing
+                  // its first letter", persisting even after navigating back.
+                  className="flex-1 min-w-0 bg-transparent text-base md:text-sm outline-none placeholder:text-muted-foreground"
                 />
               </div>
             </div>
