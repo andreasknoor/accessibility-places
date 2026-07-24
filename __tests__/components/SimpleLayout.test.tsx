@@ -203,10 +203,15 @@ describe("SimpleLayout — start screen", () => {
     expect(screen.getByText("Turbo-Modus an: Alle Features aktivieren.")).toBeInTheDocument()
   })
 
-  it("opens the settings panel (with the Simple View toggle) from the start screen", () => {
-    renderLayout()
+  // Regression: this button used to just open the Settings sheet, leaving the
+  // user to find and understand the "Einfache Ansicht" toggle themselves — a
+  // detour for an action the button already names explicitly. It must flip
+  // simpleView off directly instead.
+  it("switches off Simple View directly, without opening the Settings sheet", () => {
+    const { handlers } = renderLayout()
     fireEvent.click(screen.getByText("Turbo-Modus an: Alle Features aktivieren."))
-    expect(screen.getByText("Einfache Ansicht (Beta)")).toBeInTheDocument()
+    expect(handlers.onUpdateSettings).toHaveBeenCalledWith({ simpleView: false })
+    expect(screen.queryByText("Einfache Ansicht (Beta)")).not.toBeInTheDocument()
   })
 })
 
@@ -1372,9 +1377,10 @@ describe("SimpleLayout — settings always reachable", () => {
     expect(screen.getByText("Einfache Ansicht (Beta)")).toBeInTheDocument()
   })
 
-  it("toggling it off calls onUpdateSettings({ simpleView: false })", () => {
+  it("toggling it off (via the gear icon → Settings sheet) calls onUpdateSettings({ simpleView: false })", () => {
     const { handlers } = renderLayout({ settings: { ...DEFAULT_APP_SETTINGS, simpleView: true } })
-    fireEvent.click(screen.getByText("Turbo-Modus an: Alle Features aktivieren."))
+    fireEvent.click(screen.getByText("In meiner Nähe suchen"))
+    fireEvent.click(screen.getByRole("button", { name: "Einstellungen" }))
     fireEvent.click(screen.getByRole("switch", { name: /Einfache Ansicht/ }))
     expect(handlers.onUpdateSettings).toHaveBeenCalledWith({ simpleView: false })
   })

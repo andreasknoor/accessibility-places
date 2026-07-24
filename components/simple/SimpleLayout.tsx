@@ -661,7 +661,11 @@ export default function SimpleLayout({
 
             <p className="text-xs text-muted-foreground text-center mt-3">{t.simple.showFullAppAlt}</p>
             <button
-              onClick={() => setSettingsOpen(true)}
+              // Flips simpleView off directly — no detour through the Settings
+              // sheet (that's the toggle a user would otherwise have to find
+              // and understand on their own; this button already IS the
+              // explicit "switch to full app" action, so it should just do it).
+              onClick={() => onUpdateSettings({ simpleView: false })}
               className="flex items-center justify-center gap-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold px-3.5 py-2 mt-1 mx-auto hover:bg-primary/15 transition-colors"
             >
               <Zap className="w-3.5 h-3.5 shrink-0" aria-hidden />
