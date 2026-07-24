@@ -794,6 +794,62 @@ describe("SimpleLayout — results screen", () => {
       expect(mapPanelHeightPx()).toBe(310)
     })
   })
+
+  // A handful of hits often just means the radius is too small — distinct
+  // from the "genuinely zero" empty state above, and deliberately a lighter
+  // touch (plain text + underlined link, no bordered CTA button) since these
+  // ARE real results, not an empty state.
+  it("shows a discreet low-results nudge under the list when there are only a few venue results", async () => {
+    const { rerender, handlers } = await goToResults()
+    rerender(
+      <LocaleProvider initialLocale="de">
+        <SimpleLayout
+          places={[makePlace()]}
+          isLoading={false}
+          searchCenter={{ lat: 50.9, lon: 6.9 }}
+          onSelect={handlers.onSelect}
+          onSimpleNearbySearch={handlers.onSimpleNearbySearch}
+          onPlaceSearch={handlers.onPlaceSearch}
+          onAmenitySearch={handlers.onAmenitySearch}
+          onSearchHere={handlers.onSearchHere}
+          onFocusSearchHere={handlers.onFocusSearchHere}
+          onGpsResolved={handlers.onGpsResolved}
+          onExpandRadius={handlers.onExpandRadius}
+          onAmenityExpandRadius={handlers.onAmenityExpandRadius}
+          settings={DEFAULT_APP_SETTINGS}
+          onUpdateSettings={handlers.onUpdateSettings}
+        />
+      </LocaleProvider>,
+    )
+    expect(screen.getByText("Nicht genug Orte gefunden?")).toBeInTheDocument()
+    fireEvent.click(screen.getByText("Suchradius vergrößern?"))
+    expect(handlers.onExpandRadius).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not show the low-results nudge once there are more than the threshold of venue results", async () => {
+    const { rerender, handlers } = await goToResults()
+    rerender(
+      <LocaleProvider initialLocale="de">
+        <SimpleLayout
+          places={[makePlace(), makePlace({ id: "p2" }), makePlace({ id: "p3" }), makePlace({ id: "p4" })]}
+          isLoading={false}
+          searchCenter={{ lat: 50.9, lon: 6.9 }}
+          onSelect={handlers.onSelect}
+          onSimpleNearbySearch={handlers.onSimpleNearbySearch}
+          onPlaceSearch={handlers.onPlaceSearch}
+          onAmenitySearch={handlers.onAmenitySearch}
+          onSearchHere={handlers.onSearchHere}
+          onFocusSearchHere={handlers.onFocusSearchHere}
+          onGpsResolved={handlers.onGpsResolved}
+          onExpandRadius={handlers.onExpandRadius}
+          onAmenityExpandRadius={handlers.onAmenityExpandRadius}
+          settings={DEFAULT_APP_SETTINGS}
+          onUpdateSettings={handlers.onUpdateSettings}
+        />
+      </LocaleProvider>,
+    )
+    expect(screen.queryByText("Nicht genug Orte gefunden?")).not.toBeInTheDocument()
+  })
 })
 
 // Parking/WC as a first-class "what to search for" tile, alongside the 6
@@ -937,6 +993,34 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
         />
       </LocaleProvider>,
     )
+    fireEvent.click(screen.getByText("Suchradius vergrößern?"))
+    expect(handlers.onAmenityExpandRadius).toHaveBeenCalledTimes(1)
+  })
+
+  it("shows the same discreet low-results nudge under the amenity list when there are only a few results", async () => {
+    const { rerender, handlers } = await goToParkingResults()
+    rerender(
+      <LocaleProvider initialLocale="de">
+        <SimpleLayout
+          places={[]}
+          isLoading={false}
+          searchCenter={{ lat: 50.9, lon: 6.9 }}
+          onSelect={handlers.onSelect}
+          onSimpleNearbySearch={handlers.onSimpleNearbySearch}
+          onPlaceSearch={handlers.onPlaceSearch}
+          onAmenitySearch={handlers.onAmenitySearch}
+          amenityResults={[makeSpot()]}
+          onSearchHere={handlers.onSearchHere}
+          onFocusSearchHere={handlers.onFocusSearchHere}
+          onGpsResolved={handlers.onGpsResolved}
+          onExpandRadius={handlers.onExpandRadius}
+          onAmenityExpandRadius={handlers.onAmenityExpandRadius}
+          settings={DEFAULT_APP_SETTINGS}
+          onUpdateSettings={handlers.onUpdateSettings}
+        />
+      </LocaleProvider>,
+    )
+    expect(screen.getByText("Nicht genug Orte gefunden?")).toBeInTheDocument()
     fireEvent.click(screen.getByText("Suchradius vergrößern?"))
     expect(handlers.onAmenityExpandRadius).toHaveBeenCalledTimes(1)
   })

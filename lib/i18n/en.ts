@@ -491,6 +491,7 @@ const en: Translations = {
     resizeHandle:    "Resize map and list",
     noResultsTitle:  "No accessible places found nearby",
     noResultsHint:   "Try \"Show everything\", a different category, or a wider search radius.",
+    lowResultsHint:  "Not enough places found?",
     venuePlaceholder: "Name of the place …",
     venueHint:        "Type a name to search.",
     venueNoMatches:   "No matches for that name.",

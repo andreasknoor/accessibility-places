@@ -30,6 +30,13 @@ const MapView = dynamic(() => import("@/components/map/MapView"), { ssr: false }
 // that walking/driving a real distance still gets a fresh fix soon after.
 const POSITION_CACHE_MS = 2 * 60_000
 
+// Below this many results, a discreet "not enough places found?" nudge with
+// the same expand-radius action is shown under the list — distinct from the
+// full empty-state block (0 results), which gets the bigger centered
+// treatment. A handful of results often means the search radius is just too
+// small, not that there's genuinely nothing nearby.
+const LOW_RESULTS_THRESHOLD = 3
+
 type Screen = "start" | "tiles" | "locating" | "results" | "venue" | "detail"
 
 // One suggestion from /api/geocode/unified-suggest — mirrors ChatPanel's own
@@ -751,6 +758,17 @@ export default function SimpleLayout({
                         />
                       </div>
                     ))}
+                    {places.length <= LOW_RESULTS_THRESHOLD && (
+                      <div className="flex flex-col items-center gap-0.5 text-center py-2">
+                        <p className="text-xs text-muted-foreground">{t.simple.lowResultsHint}</p>
+                        <button
+                          onClick={onExpandRadius}
+                          className="text-xs font-medium text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+                        >
+                          {t.results.expandRadius}
+                        </button>
+                      </div>
+                    )}
                   </>
                 )}
                 {!isLoading && selectedAmenityType != null && sortedAmenities.length === 0 && hasSearchedNearby && (
@@ -784,6 +802,17 @@ export default function SimpleLayout({
                         </div>
                       )
                     })}
+                    {sortedAmenities.length <= LOW_RESULTS_THRESHOLD && (
+                      <div className="flex flex-col items-center gap-0.5 text-center py-2">
+                        <p className="text-xs text-muted-foreground">{t.simple.lowResultsHint}</p>
+                        <button
+                          onClick={onAmenityExpandRadius}
+                          className="text-xs font-medium text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+                        >
+                          {t.results.expandRadius}
+                        </button>
+                      </div>
+                    )}
                   </>
                 )}
               </div>

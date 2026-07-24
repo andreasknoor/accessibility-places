@@ -491,6 +491,7 @@ const de: Translations = {
     resizeHandle:    "Größe von Karte und Liste anpassen",
     noResultsTitle:  "Keine barrierefreien Orte in der Nähe gefunden",
     noResultsHint:   "Versuche es mit „Alles anzeigen“, einer anderen Kategorie oder einem größeren Suchradius.",
+    lowResultsHint:  "Nicht genug Orte gefunden?",
     venuePlaceholder: "Name des Lokals …",
     venueHint:        "Tippen Sie einen Namen ein, um zu suchen.",
     venueNoMatches:   "Keine Treffer für diesen Namen.",

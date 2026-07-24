@@ -496,6 +496,7 @@ export interface Translations {
     resizeHandle:    string
     noResultsTitle:  string
     noResultsHint:   string
+    lowResultsHint:  string
     venuePlaceholder: string
     venueHint:        string
     venueNoMatches:   string
