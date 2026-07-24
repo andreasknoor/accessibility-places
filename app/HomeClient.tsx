@@ -78,6 +78,25 @@ const SIMPLE_FILTERS_OVERRIDE: Partial<SearchFilters> = {
   acceptUnknown: false,
 }
 const SIMPLE_RADIUS_KM = 5
+// Explicit step table (not plain doubling) so a 30 km rung sits between 20
+// and 40 — requested as a gentler jump than straight-doubling's 20→40 would
+// give. Ends at RADIUS_MAX_KM (not a hardcoded 50) so it can't silently drift
+// out of sync if that shared cap ever changes.
+const SIMPLE_RADIUS_STEPS_KM = [5, 10, 20, 30, 40, RADIUS_MAX_KM]
+
+function nextSimpleRadiusStep(currentKm: number): number {
+  return SIMPLE_RADIUS_STEPS_KM.find((km) => km > currentKm) ?? SIMPLE_RADIUS_STEPS_KM[SIMPLE_RADIUS_STEPS_KM.length - 1]
+}
+
+// Simple View's own amenity (Parken/WC) start radius — deliberately separate
+// from AppSettings.parkingRadiusKm/amenityRadiusKm, which the full UI treats
+// as a persisted user preference (kept in sync via persistParkingStartRadius
+// on every change, read back on next launch). Simple View instead always
+// starts fresh at this fixed value on a new selection, matching
+// SIMPLE_RADIUS_KM's reset-every-time behaviour for the venue/category path
+// — sharing the persisted state would leak Simple View's radius expansions
+// into the full UI's remembered setting and vice versa.
+const SIMPLE_AMENITY_RADIUS_KM = 4.0
 
 const DEFAULT_SOURCES: ActiveSources = {
   accessibility_cloud: true,
@@ -230,6 +249,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // pattern above: loadSettings() is SSR-safe and returns defaults on the
   // server, so no hydration-mismatch dance is needed for this value).
   const [amenityRadiusKm,     setAmenityRadiusKm]     = useState<number>(() => clampAmenityRadiusKm(loadSettings().parkingRadiusKm))
+  // Simple View's own amenity radius — see SIMPLE_AMENITY_RADIUS_KM's comment
+  // for why this is a separate, non-persisted state rather than reusing
+  // amenityRadiusKm above.
+  const [simpleAmenityRadiusKm, setSimpleAmenityRadiusKm] = useState<number>(SIMPLE_AMENITY_RADIUS_KM)
   // "Zur Karte" on an amenity result card: pan/zoom target for MapView, distinct
   // from selectedId/panTrigger (which only track Place markers).
   const [amenityPanTarget,    setAmenityPanTarget]    = useState<{ lat: number; lon: number } | null>(null)
@@ -814,12 +837,13 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   }, [handleSearch])
 
   // "Suchradius vergrößern" for Simple View's own empty state — mirrors
-  // handleExpandRadius below, but doubles simpleRadiusKm (not the full UI's
-  // radiusKm) and keeps SIMPLE_FILTERS_OVERRIDE, same reasoning as
-  // handleSimpleSearchHere just below.
+  // handleExpandRadius below, but steps through SIMPLE_RADIUS_STEPS_KM (not
+  // the full UI's plain doubling of radiusKm) and keeps
+  // SIMPLE_FILTERS_OVERRIDE, same reasoning as handleSimpleSearchHere just
+  // below.
   const handleSimpleExpandRadius = useCallback(() => {
     if (!lastQuery || !lastCoords) return
-    const newRadius = Math.min(simpleRadiusKm * 2, RADIUS_MAX_KM)
+    const newRadius = nextSimpleRadiusStep(simpleRadiusKm)
     track("expand_radius", { from_km: simpleRadiusKm, to_km: newRadius })
     setSimpleRadiusKm(newRadius)
     handleSearch(lastQuery, newRadius, lastCoords, undefined, SIMPLE_FILTERS_OVERRIDE)
@@ -1203,6 +1227,26 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     persistParkingStartRadius(next)
     void handleAmenitySearch(amenitySearch, searchCenter, next)
   }, [amenitySearch, searchCenter, amenityRadiusKm, handleAmenitySearch, persistParkingStartRadius])
+
+  // Simple View's own Parken/WC search + expand — mirror the two handlers
+  // just above, but always reset to SIMPLE_AMENITY_RADIUS_KM on a fresh
+  // selection (matching handleSimpleNearbySearch's reset-every-time
+  // behaviour) and pass the radius as an explicit override with no `panned`
+  // argument, so handleAmenitySearch's own persistParkingStartRadius branch
+  // (gated on `radiusKmOverride != null && panned`) never fires — Simple
+  // View's radius must never bleed into the full UI's persisted
+  // amenityRadiusKm/parkingRadiusKm setting, and vice versa.
+  const handleSimpleAmenitySearch = useCallback((type: AmenityType, coords: { lat: number; lon: number }) => {
+    setSimpleAmenityRadiusKm(SIMPLE_AMENITY_RADIUS_KM)
+    void handleAmenitySearch(type, coords, SIMPLE_AMENITY_RADIUS_KM)
+  }, [handleAmenitySearch])
+
+  const handleSimpleAmenityExpandRadius = useCallback(() => {
+    if (!amenitySearch || !searchCenter) return
+    const next = clampAmenityRadiusKm(simpleAmenityRadiusKm * 2)
+    setSimpleAmenityRadiusKm(next)
+    void handleAmenitySearch(amenitySearch, searchCenter, next)
+  }, [amenitySearch, searchCenter, simpleAmenityRadiusKm, handleAmenitySearch])
 
   // Leave amenity mode without running a search (e.g. tapping "Alle" while no
   // location is set, so no venue search fires to clear it).
@@ -1669,7 +1713,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           onSelect={(p) => setSelectedId(p.id)}
           onSimpleNearbySearch={handleSimpleNearbySearch}
           onPlaceSearch={handlePlaceSearch}
-          onAmenitySearch={handleAmenitySearch}
+          onAmenitySearch={handleSimpleAmenitySearch}
           amenityResults={amenitySpots}
           amenityHint={amenityHint ?? undefined}
           parkingSpots={simpleParkingSpots}
@@ -1678,7 +1722,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           onFocusSearchHere={handleAmenitySearchHere}
           onGpsResolved={handleGpsResolved}
           onExpandRadius={handleSimpleExpandRadius}
-          onAmenityExpandRadius={handleAmenityExpandRadius}
+          onAmenityExpandRadius={handleSimpleAmenityExpandRadius}
           settings={settings}
           onUpdateSettings={handleUpdateSettings}
         />

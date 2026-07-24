@@ -455,6 +455,86 @@ describe("HomeClient — Simple View's expand-radius button", () => {
       expect(body.radiusKm).toBe(10)
     })
   })
+
+  // Requested explicitly: a plain-doubling 20→40 jump felt too coarse, so the
+  // venue radius steps through a fixed table with a 30 km rung between them,
+  // ending at RADIUS_MAX_KM (50) rather than growing forever.
+  it("steps through 5 → 10 → 20 → 30 → 40 → 50, then stays at 50", async () => {
+    localStorage.setItem("ap_settings", JSON.stringify({ ...DEFAULT_APP_SETTINGS, simpleView: true }))
+    mockGetBestPosition.mockResolvedValue({ lat: 52.5, lon: 13.4 })
+    const fetchMock = mockSearchFetch()
+    vi.stubGlobal("fetch", fetchMock)
+
+    render(<HomeClient />)
+    fireEvent.click(await screen.findByText("In meiner Nähe suchen"))
+    fireEvent.click(screen.getByText("Cafés & Eis"))
+    await waitFor(() => expect(screen.getByText("Suchradius vergrößern?")).toBeInTheDocument())
+
+    for (const expected of [10, 20, 30, 40, 50, 50]) {
+      fireEvent.click(screen.getByText("Suchradius vergrößern?"))
+      await waitFor(() => {
+        const body = lastSearchRequestBody(fetchMock) as unknown as { radiusKm?: number }
+        expect(body.radiusKm).toBe(expected)
+      })
+    }
+  })
+})
+
+// Requested explicitly: the Parken/WC radius in Simple View must behave like
+// the venue radius above (fixed start, reset every new selection, doubling,
+// capped) — NOT reuse the full UI's persisted parkingRadiusKm/amenityRadiusKm
+// setting, which would leak Simple View's expansions into the full UI (and
+// vice versa) since that's a single shared value across both UIs.
+describe("HomeClient — Simple View's own (non-persisted) amenity radius", () => {
+  function mockAmenityFetch() {
+    return vi.fn((url: string) => {
+      if (typeof url === "string" && url.startsWith("/api/nearby-parking")) {
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200, headers: { "Content-Type": "application/json" } }))
+      }
+      return Promise.resolve(new Response(null, { status: 204 }))
+    })
+  }
+
+  function lastAmenityRadius(fetchMock: ReturnType<typeof vi.fn>): number {
+    const call = fetchMock.mock.calls.filter(([u]) => typeof u === "string" && u.startsWith("/api/nearby-parking")).at(-1)!
+    return Number(new URL(call[0], "http://localhost").searchParams.get("radius"))
+  }
+
+  it("starts at 4 km regardless of a different persisted parkingRadiusKm setting, and doesn't overwrite it on expand", async () => {
+    localStorage.setItem("ap_settings", JSON.stringify({ ...DEFAULT_APP_SETTINGS, simpleView: true, parkingRadiusKm: 10 }))
+    mockGetBestPosition.mockResolvedValue({ lat: 52.5, lon: 13.4 })
+    const fetchMock = mockAmenityFetch()
+    vi.stubGlobal("fetch", fetchMock)
+
+    render(<HomeClient />)
+    fireEvent.click(await screen.findByText("In meiner Nähe suchen"))
+    fireEvent.click(screen.getByText("Parken"))
+    await waitFor(() => expect(lastAmenityRadius(fetchMock)).toBe(4))
+
+    fireEvent.click(screen.getByText("Suchradius vergrößern?"))
+    await waitFor(() => expect(lastAmenityRadius(fetchMock)).toBe(8))
+
+    // The full UI's persisted setting must be untouched by the Simple View expansion.
+    const stored = JSON.parse(localStorage.getItem("ap_settings")!)
+    expect(stored.parkingRadiusKm).toBe(10)
+  })
+
+  it("doubles 4 → 8 → 16 → 25, then stays at 25 (AMENITY_RADIUS_MAX_KM)", async () => {
+    localStorage.setItem("ap_settings", JSON.stringify({ ...DEFAULT_APP_SETTINGS, simpleView: true }))
+    mockGetBestPosition.mockResolvedValue({ lat: 52.5, lon: 13.4 })
+    const fetchMock = mockAmenityFetch()
+    vi.stubGlobal("fetch", fetchMock)
+
+    render(<HomeClient />)
+    fireEvent.click(await screen.findByText("In meiner Nähe suchen"))
+    fireEvent.click(screen.getByText("Parken"))
+    await waitFor(() => expect(lastAmenityRadius(fetchMock)).toBe(4))
+
+    for (const expected of [8, 16, 25, 25]) {
+      fireEvent.click(screen.getByText("Suchradius vergrößern?"))
+      await waitFor(() => expect(lastAmenityRadius(fetchMock)).toBe(expected))
+    }
+  })
 })
 
 // ─── Cost regression: a place deep-link (SEO "open in app", shared copy-link,
