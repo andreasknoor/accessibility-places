@@ -60,15 +60,21 @@ const DEFAULT_FILTERS: SearchFilters = {
 // change; writing the preset into them would silently overwrite the user's
 // real, full-UI preferences the instant Simple View activates. Only
 // `entrance` is checked — Simple View's whole premise is a fast first
-// success, not a filtered search — and acceptUnknown is on so a merely
-// under-documented place isn't hidden.
+// success, not a filtered search. acceptUnknown is OFF (unlike a first draft
+// of this preset): passesFilters already treats "yes"/"limited" as passing
+// and only "no" as a hard fail, so with acceptUnknown on, a place with no
+// entrance data at all was shown right alongside a genuinely confirmed one —
+// indistinguishable in this screen's plain yes/limited/no sentences, which
+// undermines the whole point of a reduced, trustworthy result set. Off, only
+// entrance "yes" or "limited" ever show; "unknown" is filtered out exactly
+// like "no".
 const SIMPLE_FILTERS_OVERRIDE: Partial<SearchFilters> = {
   entrance:      true,
   toilet:        false,
   parking:       false,
   seating:       false,
   onlyVerified:  false,
-  acceptUnknown: true,
+  acceptUnknown: false,
 }
 const SIMPLE_RADIUS_KM = 5
 

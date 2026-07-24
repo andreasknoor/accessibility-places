@@ -325,3 +325,26 @@ describe("HomeClient — Simple View never shows the full UI's passive parking/W
     expect(mapViewProps.current.toiletSpots).toBeUndefined()
   })
 })
+
+// ─── Simple View's fixed filter preset: only entrance "yes"/"limited" ever
+// show, both "no" and "unknown" are filtered out (acceptUnknown: false).
+// Previously acceptUnknown was true, so a place with no entrance data at all
+// showed right alongside a confirmed-accessible one — indistinguishable in
+// this screen's plain yes/limited/no sentences. ────────────────────────────
+describe("HomeClient — Simple View's fixed filter preset", () => {
+  it("searches with entrance required and acceptUnknown off, so only yes/limited entrances show", async () => {
+    localStorage.setItem("ap_settings", JSON.stringify({ ...DEFAULT_APP_SETTINGS, simpleView: true }))
+    mockGetBestPosition.mockResolvedValue({ lat: 52.5, lon: 13.4 })
+    const fetchMock = mockSearchFetch()
+    vi.stubGlobal("fetch", fetchMock)
+
+    render(<HomeClient />)
+    fireEvent.click(await screen.findByText("In meiner Nähe suchen"))
+    fireEvent.click(screen.getByText("Cafés & Eis"))
+    await waitFor(() => expect(screen.getByText("Cafés & Eis in Ihrer Nähe")).toBeInTheDocument())
+
+    const body = lastSearchRequestBody(fetchMock) as unknown as { filters?: { entrance?: boolean; acceptUnknown?: boolean } }
+    expect(body.filters?.entrance).toBe(true)
+    expect(body.filters?.acceptUnknown).toBe(false)
+  })
+})
