@@ -299,8 +299,10 @@ export default function MobileLayout({
             ariaLabel={t.results.radiusPickerLabel(formatRadiusKm(radiusKm, amenityActiveBool))}
             triggerClassName="flex items-center gap-0.5 text-xs font-semibold text-primary bg-primary/10 border border-primary/20 rounded-full px-2.5 py-1 hover:bg-primary/15 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
-          <SettingsSheet settings={settings} onUpdate={onUpdateSettings} onResetOnboarding={onResetOnboarding} />
+          {/* Language before gear (gear rightmost) — matches Simple View's
+              own Header, which already orders them this way. */}
           <LanguageSwitcher />
+          <SettingsSheet settings={settings} onUpdate={onUpdateSettings} onResetOnboarding={onResetOnboarding} />
         </div>
         <h1 className="sr-only">{t.app.srHeading}</h1>
       </header>

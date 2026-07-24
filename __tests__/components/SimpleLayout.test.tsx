@@ -197,7 +197,7 @@ describe("SimpleLayout — start screen", () => {
   it("opens the settings panel (with the Simple View toggle) from the start screen", () => {
     renderLayout()
     fireEvent.click(screen.getByText("Alle Funktionen anzeigen"))
-    expect(screen.getByText("Einfache Ansicht")).toBeInTheDocument()
+    expect(screen.getByText("Einfache Ansicht (Beta)")).toBeInTheDocument()
   })
 })
 
@@ -1076,14 +1076,14 @@ describe("SimpleLayout — settings always reachable", () => {
     renderLayout()
     fireEvent.click(screen.getByText("In meiner Nähe suchen"))
     fireEvent.click(screen.getByRole("button", { name: "Einstellungen" }))
-    expect(screen.getByText("Einfache Ansicht")).toBeInTheDocument()
+    expect(screen.getByText("Einfache Ansicht (Beta)")).toBeInTheDocument()
   })
 
   it("is reachable from the venue search screen", () => {
     renderLayout()
     fireEvent.click(screen.getByText("Einen konkreten Ort prüfen"))
     fireEvent.click(screen.getByRole("button", { name: "Einstellungen" }))
-    expect(screen.getByText("Einfache Ansicht")).toBeInTheDocument()
+    expect(screen.getByText("Einfache Ansicht (Beta)")).toBeInTheDocument()
   })
 
   it("toggling it off calls onUpdateSettings({ simpleView: false })", () => {

@@ -471,7 +471,7 @@ const en: Translations = {
     internationalModeHint: "Search beyond Germany, Austria and Switzerland (France, United Kingdom, Netherlands, Spain, Italy, USA). Data coverage varies by country and is often sparse outside major cities.",
     usageStats:            "Anonymous usage statistics",
     usageStatsHint:        "Counts your app starts and searches under a random ID — no IP address, search terms, or location. Turning this off deletes the ID immediately. Details in the privacy policy.",
-    simpleView:            "Simple View",
+    simpleView:            "Simple View (Beta)",
     simpleViewHint:        "A reduced layout for a fast start: two paths, six categories, no filters.",
   },
   simple: {

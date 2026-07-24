@@ -1836,8 +1836,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           </button>
         </div>
         <div className="flex items-center gap-1">
-          <SettingsSheet settings={settings} onUpdate={handleUpdateSettings} onResetOnboarding={() => { try { localStorage.removeItem("ap_visited"); localStorage.removeItem("ap_welcome_dismissed") } catch { /* ignore */ }; setIsFirstVisit(true) }} />
+          {/* Language before gear (gear rightmost) — matches Simple View's own
+              Header, which already orders them this way. */}
           <LanguageSwitcher />
+          <SettingsSheet settings={settings} onUpdate={handleUpdateSettings} onResetOnboarding={() => { try { localStorage.removeItem("ap_visited"); localStorage.removeItem("ap_welcome_dismissed") } catch { /* ignore */ }; setIsFirstVisit(true) }} />
         </div>
         <h1 className="sr-only">{t.app.srHeading}</h1>
       </header>

@@ -120,7 +120,7 @@ describe("SettingsPanel — simple mode (opened from within Simple View)", () =>
 
   it("keeps settings that do apply: Simple View toggle itself, international mode, usage stats", () => {
     render(<SettingsPanel settings={DEFAULT_APP_SETTINGS} onUpdate={vi.fn()} onClose={vi.fn()} simple />)
-    expect(screen.getByText("Einfache Ansicht")).toBeInTheDocument()
+    expect(screen.getByText("Einfache Ansicht (Beta)")).toBeInTheDocument()
     expect(screen.getByText("Internationale Suche (Beta)")).toBeInTheDocument()
     expect(screen.getByText("Anonyme Nutzungsstatistik")).toBeInTheDocument()
     expect(screen.getByText("Auf Standard zurücksetzen")).toBeInTheDocument()

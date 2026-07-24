@@ -60,12 +60,19 @@ export default function SimplePlaceCard({ place, distanceM, isSelected, onOpen, 
         onClick={onOpen}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen() } }}
         aria-label={t.results.openDetails(place.name)}
-        className="flex flex-col gap-2 rounded-lg -m-1 p-1 cursor-pointer hover:bg-muted/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        // A persistent (not just :hover) tinted background + border — same
+        // fix PlaceCard already has for this exact "doesn't read as
+        // clickable" problem (its own framed-box convention, v9.67). Without
+        // it the box was visually identical to the rest of the card at rest,
+        // giving no permanent affordance that tapping it opens details.
+        className="flex flex-col gap-2 rounded-lg border border-border bg-muted/40 -m-1 p-1 cursor-pointer hover:bg-muted/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <div className="flex items-start gap-2">
           <span className="text-lg shrink-0 mt-0.5" aria-hidden>{CATEGORY_ICONS[place.category] ?? "📍"}</span>
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-sm leading-snug line-clamp-2 break-words">{place.name}</p>
+            {/* Underlined like a link — an extra affordance beyond the boxed
+                background above, specifically on the name itself. */}
+            <p className="font-semibold text-sm leading-snug line-clamp-2 break-words underline underline-offset-2">{place.name}</p>
           </div>
           {distanceM !== undefined && (
             <span className="text-xs text-muted-foreground shrink-0 mt-0.5">{t.results.distanceShort(Math.round(distanceM))}</span>

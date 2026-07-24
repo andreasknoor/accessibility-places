@@ -471,7 +471,7 @@ const de: Translations = {
     internationalModeHint: "Suche auch außerhalb von Deutschland, Österreich und der Schweiz (Frankreich, Großbritannien, Niederlande, Spanien, Italien, USA). Datenlage variiert je nach Land und ist außerhalb großer Städte oft dünn.",
     usageStats:            "Anonyme Nutzungsstatistik",
     usageStatsHint:        "Zählt deine App-Starts und Suchen unter einer zufälligen ID — ohne IP-Adresse, Suchbegriffe oder Standort. Beim Ausschalten wird die ID sofort gelöscht. Details in der Datenschutzerklärung.",
-    simpleView:            "Einfache Ansicht",
+    simpleView:            "Einfache Ansicht (Beta)",
     simpleViewHint:        "Reduzierte Oberfläche für einen schnellen Einstieg: zwei Wege, sechs Kategorien, keine Filter.",
   },
   simple: {
