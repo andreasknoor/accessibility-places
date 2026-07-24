@@ -494,7 +494,7 @@ const en: Translations = {
     noResultsTitle:  "No accessible places found nearby",
     noResultsHint:   "Try \"Show everything\", a different category, or a wider search radius.",
     lowResultsHint:  "Not enough places found?",
-    venuePlaceholder: "Name of the place …",
+    venuePlaceholder: "Name of the venue (e.g. Adlon Hotel Berlin)",
     venueHint:        "Type a name to search.",
     venueNoMatches:   "No matches for that name.",
     cityPlaceholder: "Enter a city …",

@@ -494,7 +494,7 @@ const de: Translations = {
     noResultsTitle:  "Keine barrierefreien Orte in der Nähe gefunden",
     noResultsHint:   "Versuche es mit „Alles anzeigen“, einer anderen Kategorie oder einem größeren Suchradius.",
     lowResultsHint:  "Nicht genug Orte gefunden?",
-    venuePlaceholder: "Name des Lokals …",
+    venuePlaceholder: "Name der Lokalität (z. B. Adlon Hotel Berlin)",
     venueHint:        "Tippe einen Namen ein, um zu suchen.",
     venueNoMatches:   "Keine Treffer für diesen Namen.",
     cityPlaceholder: "Stadt eingeben …",
