@@ -323,7 +323,7 @@ describe("HomeClient — Simple View never shows the full UI's passive parking/W
     render(<HomeClient />)
     fireEvent.click(await screen.findByText("In meiner Nähe suchen"))
     fireEvent.click(screen.getByText("Cafés & Eis"))
-    await waitFor(() => expect(screen.getByText("Cafés & Eis in Ihrer Nähe")).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText("Cafés & Eis in Deiner Nähe")).toBeInTheDocument())
 
     expect(mapViewProps.current.parkingSpots).toBeUndefined()
     expect(mapViewProps.current.toiletSpots).toBeUndefined()
@@ -345,7 +345,7 @@ describe("HomeClient — Simple View's fixed filter preset", () => {
     render(<HomeClient />)
     fireEvent.click(await screen.findByText("In meiner Nähe suchen"))
     fireEvent.click(screen.getByText("Cafés & Eis"))
-    await waitFor(() => expect(screen.getByText("Cafés & Eis in Ihrer Nähe")).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText("Cafés & Eis in Deiner Nähe")).toBeInTheDocument())
 
     const body = lastSearchRequestBody(fetchMock) as unknown as { filters?: { entrance?: boolean; acceptUnknown?: boolean } }
     expect(body.filters?.entrance).toBe(true)
@@ -397,7 +397,7 @@ describe("HomeClient — Simple View's extra toilet requirement for cafés/resta
     render(<HomeClient />)
     fireEvent.click(await screen.findByText("In meiner Nähe suchen"))
     fireEvent.click(screen.getByText("Cafés & Eis"))
-    await waitFor(() => expect(screen.getByText("Cafés & Eis in Ihrer Nähe")).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText("Cafés & Eis in Deiner Nähe")).toBeInTheDocument())
 
     expect(screen.getByText("Place yes")).toBeInTheDocument()
     expect(screen.queryByText("Place limited")).not.toBeInTheDocument()
@@ -423,7 +423,7 @@ describe("HomeClient — Simple View's extra toilet requirement for cafés/resta
     render(<HomeClient />)
     fireEvent.click(await screen.findByText("In meiner Nähe suchen"))
     fireEvent.click(screen.getByText("Alles anzeigen"))
-    await waitFor(() => expect(screen.getByText(/in Ihrer Nähe/)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText(/in Deiner Nähe/)).toBeInTheDocument())
 
     expect(screen.queryByText("Place cafe-unknown-toilet")).not.toBeInTheDocument()
     expect(screen.getByText("Place pharmacy-unknown-toilet")).toBeInTheDocument()
@@ -443,7 +443,7 @@ describe("HomeClient — Simple View's expand-radius button", () => {
     render(<HomeClient />)
     fireEvent.click(await screen.findByText("In meiner Nähe suchen"))
     fireEvent.click(screen.getByText("Cafés & Eis"))
-    await waitFor(() => expect(screen.getByText("Cafés & Eis in Ihrer Nähe")).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText("Cafés & Eis in Deiner Nähe")).toBeInTheDocument())
 
     // The stub search response returns zero places, so the empty state (and
     // its expand-radius button) should already be showing.

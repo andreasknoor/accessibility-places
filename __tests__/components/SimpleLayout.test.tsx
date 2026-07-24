@@ -225,12 +225,12 @@ describe("SimpleLayout — nearby flow", () => {
     fireEvent.click(screen.getByText("In meiner Nähe suchen"))
     fireEvent.click(screen.getByText("Cafés & Eis"))
 
-    expect(screen.getByText("Ihr Standort wird ermittelt …")).toBeInTheDocument()
+    expect(screen.getByText("Dein Standort wird ermittelt …")).toBeInTheDocument()
 
     await waitFor(() => {
       expect(handlers.onSimpleNearbySearch).toHaveBeenCalledWith("Cafés & Eis", { lat: 50.9, lon: 6.9 }, "cafe")
     })
-    expect(screen.getByText("Cafés & Eis in Ihrer Nähe")).toBeInTheDocument()
+    expect(screen.getByText("Cafés & Eis in Deiner Nähe")).toBeInTheDocument()
   })
 
   // Regression (reported live): the results map never showed the user's own
@@ -274,7 +274,7 @@ describe("SimpleLayout — nearby flow", () => {
     const { handlers } = renderLayout()
     fireEvent.click(screen.getByText("In meiner Nähe suchen"))
     fireEvent.click(screen.getByText("Cafés & Eis"))
-    expect(screen.getByText("Ihr Standort wird ermittelt …")).toBeInTheDocument()
+    expect(screen.getByText("Dein Standort wird ermittelt …")).toBeInTheDocument()
 
     fireEvent.click(screen.getByText("Zurück"))
     expect(screen.getByText("Welche Art von Ort?")).toBeInTheDocument()
@@ -384,7 +384,7 @@ describe("SimpleLayout — results screen", () => {
     const utils = renderLayout({}, handlers)
     fireEvent.click(screen.getByText("In meiner Nähe suchen"))
     fireEvent.click(screen.getByText("Cafés & Eis"))
-    await waitFor(() => expect(screen.getByText("Cafés & Eis in Ihrer Nähe")).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText("Cafés & Eis in Deiner Nähe")).toBeInTheDocument())
     return utils
   }
 
@@ -584,7 +584,7 @@ describe("SimpleLayout — results screen", () => {
     fireEvent.click(screen.getByRole("button", { name: /Café Sonnenschein/ }))
     expect(screen.getByRole("heading", { name: "Café Sonnenschein" })).toBeInTheDocument()
     fireEvent.click(screen.getByText("Zurück"))
-    expect(screen.getByText("Cafés & Eis in Ihrer Nähe")).toBeInTheDocument()
+    expect(screen.getByText("Cafés & Eis in Deiner Nähe")).toBeInTheDocument()
   })
 
   it("opening a place from the map's 'show in results' popup opens its detail", async () => {
@@ -883,12 +883,12 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
     const { handlers } = renderLayout()
     fireEvent.click(screen.getByText("In meiner Nähe suchen"))
     fireEvent.click(screen.getByText("Parken"))
-    expect(screen.getByText("Ihr Standort wird ermittelt …")).toBeInTheDocument()
+    expect(screen.getByText("Dein Standort wird ermittelt …")).toBeInTheDocument()
 
     await waitFor(() => {
       expect(handlers.onAmenitySearch).toHaveBeenCalledWith("parking", { lat: 50.9, lon: 6.9 })
     })
-    expect(screen.getByText("Parken in Ihrer Nähe")).toBeInTheDocument()
+    expect(screen.getByText("Parken in Deiner Nähe")).toBeInTheDocument()
     // The venue search callback must NOT have fired for an amenity tile.
     expect(handlers.onSimpleNearbySearch).not.toHaveBeenCalled()
   })
@@ -907,7 +907,7 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
     const utils = renderLayout({}, handlers)
     fireEvent.click(screen.getByText("In meiner Nähe suchen"))
     fireEvent.click(screen.getByText("Parken"))
-    await waitFor(() => expect(screen.getByText("Parken in Ihrer Nähe")).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText("Parken in Deiner Nähe")).toBeInTheDocument())
     return utils
   }
 
@@ -1124,10 +1124,10 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
     renderLayout()
     fireEvent.click(screen.getByText("In meiner Nähe suchen"))
     fireEvent.click(screen.getByText("Cafés & Eis"))
-    await waitFor(() => expect(screen.getByText("Cafés & Eis in Ihrer Nähe")).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText("Cafés & Eis in Deiner Nähe")).toBeInTheDocument())
     fireEvent.click(screen.getByText("Zurück"))
     fireEvent.click(screen.getByText("Parken"))
-    await waitFor(() => expect(screen.getByText("Parken in Ihrer Nähe")).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText("Parken in Deiner Nähe")).toBeInTheDocument())
   })
 })
 
@@ -1142,7 +1142,7 @@ describe("SimpleLayout — venue flow", () => {
   it("navigates to the venue screen and shows a hint before typing", () => {
     renderLayout()
     fireEvent.click(screen.getByText("Einen konkreten Ort bzw. Lokalität suchen"))
-    expect(screen.getByText("Tippen Sie einen Namen ein, um zu suchen.")).toBeInTheDocument()
+    expect(screen.getByText("Tippe einen Namen ein, um zu suchen.")).toBeInTheDocument()
   })
 
   it("filters suggestions to venue-kind results only", async () => {
