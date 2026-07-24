@@ -478,6 +478,34 @@ describe("HomeClient — Simple View's expand-radius button", () => {
       })
     }
   })
+
+  // Requested explicitly: "Alles anzeigen" (no category filter) buries the
+  // user in results at the normal 5 km start, so it gets its own smaller
+  // start radius — but reuses the exact same step table on expand, so it
+  // just joins the existing 5→10→20→30→40→50 sequence one rung earlier.
+  it("'Alles anzeigen' starts at 2 km, then joins the normal step table: 2 → 5 → 10 → 20 → 30 → 40 → 50", async () => {
+    localStorage.setItem("ap_settings", JSON.stringify({ ...DEFAULT_APP_SETTINGS, simpleView: true }))
+    mockGetBestPosition.mockResolvedValue({ lat: 52.5, lon: 13.4 })
+    const fetchMock = mockSearchFetch()
+    vi.stubGlobal("fetch", fetchMock)
+
+    render(<HomeClient />)
+    fireEvent.click(await screen.findByText("In meiner Nähe suchen"))
+    fireEvent.click(screen.getByText("Alles anzeigen"))
+    await waitFor(() => {
+      const body = lastSearchRequestBody(fetchMock) as unknown as { radiusKm?: number }
+      expect(body.radiusKm).toBe(2)
+    })
+    await waitFor(() => expect(screen.getByText("Suchradius vergrößern?")).toBeInTheDocument())
+
+    for (const expected of [5, 10, 20, 30, 40, 50, 50]) {
+      fireEvent.click(screen.getByText("Suchradius vergrößern?"))
+      await waitFor(() => {
+        const body = lastSearchRequestBody(fetchMock) as unknown as { radiusKm?: number }
+        expect(body.radiusKm).toBe(expected)
+      })
+    }
+  })
 })
 
 // Requested explicitly: the Parken/WC radius in Simple View must behave like

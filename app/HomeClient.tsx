@@ -33,7 +33,7 @@ import { consumePendingNativeAction } from "@/lib/native/actions"
 import { Capacitor } from "@capacitor/core"
 import { cn } from "@/lib/utils"
 import type { AppSettings } from "@/lib/settings"
-import type { Place, ParkingSpot, AmenityFeature, AmenityType, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug } from "@/lib/types"
+import type { Place, ParkingSpot, AmenityFeature, AmenityType, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug, Category } from "@/lib/types"
 
 // Leaflet must not run on server
 const MapView = dynamic(() => import("@/components/map/MapView"), { ssr: false })
@@ -78,6 +78,12 @@ const SIMPLE_FILTERS_OVERRIDE: Partial<SearchFilters> = {
   acceptUnknown: false,
 }
 const SIMPLE_RADIUS_KM = 5
+// "Alles anzeigen" (no category filter — all 27+ categories at once) buries
+// the user in results at the normal 5 km start, so it gets a smaller one.
+// nextSimpleRadiusStep below finds the next-greater table entry regardless
+// of starting point, so expanding from here naturally proceeds
+// 2 → 5 → 10 → 20 → 30 → 40 → 50 without any change to the step table itself.
+const SIMPLE_ALL_RADIUS_KM = 2
 // Explicit step table (not plain doubling) so a 30 km rung sits between 20
 // and 40 — requested as a gentler jump than straight-doubling's 20→40 would
 // give. Ends at RADIUS_MAX_KM (not a hardcoded 50) so it can't silently drift
@@ -828,12 +834,13 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   }, [searchCenter, t, handleSearch, settings.internationalMode])
 
   // Simple View (Variante B) nearby search: a plain wrapper around handleSearch
-  // that always supplies the fixed SIMPLE_FILTERS_OVERRIDE/SIMPLE_RADIUS_KM —
-  // see the comment on those constants for why this bypasses `filters`/`radiusKm`
-  // entirely instead of setting them.
-  const handleSimpleNearbySearch = useCallback((query: string, coords: { lat: number; lon: number }) => {
-    setSimpleRadiusKm(SIMPLE_RADIUS_KM)
-    handleSearch(query, SIMPLE_RADIUS_KM, coords, undefined, SIMPLE_FILTERS_OVERRIDE)
+  // that always supplies the fixed SIMPLE_FILTERS_OVERRIDE and a start radius
+  // — see the comment on those constants for why this bypasses
+  // `filters`/`radiusKm` entirely instead of setting them.
+  const handleSimpleNearbySearch = useCallback((query: string, coords: { lat: number; lon: number }, cat: Category | null) => {
+    const startRadius = cat === null ? SIMPLE_ALL_RADIUS_KM : SIMPLE_RADIUS_KM
+    setSimpleRadiusKm(startRadius)
+    handleSearch(query, startRadius, coords, undefined, SIMPLE_FILTERS_OVERRIDE)
   }, [handleSearch])
 
   // "Suchradius vergrößern" for Simple View's own empty state — mirrors

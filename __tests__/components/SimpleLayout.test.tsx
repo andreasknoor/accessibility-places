@@ -5,7 +5,7 @@ import { LocaleProvider } from "@/lib/i18n"
 import SimpleLayout from "@/components/simple/SimpleLayout"
 import { buildAttribute, emptyAttribute } from "@/lib/matching/merge"
 import { DEFAULT_APP_SETTINGS } from "@/lib/settings"
-import type { Place, AmenityType, AmenityFeature } from "@/lib/types"
+import type { Place, AmenityType, AmenityFeature, Category } from "@/lib/types"
 import type { AppSettings } from "@/lib/settings"
 
 vi.mock("@/lib/native/navigation", () => ({
@@ -54,7 +54,7 @@ function makePlace(overrides: Partial<Place> = {}): Place {
 
 interface Handlers {
   onSelect: ReturnType<typeof vi.fn<(place: Place) => void>>
-  onSimpleNearbySearch: ReturnType<typeof vi.fn<(query: string, coords: { lat: number; lon: number }) => void>>
+  onSimpleNearbySearch: ReturnType<typeof vi.fn<(query: string, coords: { lat: number; lon: number }, cat: Category | null) => void>>
   onPlaceSearch: ReturnType<typeof vi.fn<(nameHint: string, coords?: { lat: number; lon: number }) => void>>
   onAmenitySearch: ReturnType<typeof vi.fn<(type: AmenityType, coords: { lat: number; lon: number }) => void>>
   onSearchHere: ReturnType<typeof vi.fn<(coords: { lat: number; lon: number }, viewportRadiusKm: number) => void>>
@@ -76,7 +76,7 @@ function renderLayout(props: {
 } = {}, handlers: Partial<Handlers> = {}) {
   const h: Handlers = {
     onSelect: vi.fn<(place: Place) => void>(),
-    onSimpleNearbySearch: vi.fn<(query: string, coords: { lat: number; lon: number }) => void>(),
+    onSimpleNearbySearch: vi.fn<(query: string, coords: { lat: number; lon: number }, cat: Category | null) => void>(),
     onPlaceSearch: vi.fn<(nameHint: string, coords?: { lat: number; lon: number }) => void>(),
     onAmenitySearch: vi.fn<(type: AmenityType, coords: { lat: number; lon: number }) => void>(),
     onSearchHere: vi.fn<(coords: { lat: number; lon: number }, viewportRadiusKm: number) => void>(),
@@ -227,7 +227,7 @@ describe("SimpleLayout — nearby flow", () => {
     expect(screen.getByText("Ihr Standort wird ermittelt …")).toBeInTheDocument()
 
     await waitFor(() => {
-      expect(handlers.onSimpleNearbySearch).toHaveBeenCalledWith("Cafés & Eis", { lat: 50.9, lon: 6.9 })
+      expect(handlers.onSimpleNearbySearch).toHaveBeenCalledWith("Cafés & Eis", { lat: 50.9, lon: 6.9 }, "cafe")
     })
     expect(screen.getByText("Cafés & Eis in Ihrer Nähe")).toBeInTheDocument()
   })
@@ -252,7 +252,7 @@ describe("SimpleLayout — nearby flow", () => {
     fireEvent.click(screen.getByText("In meiner Nähe suchen"))
     fireEvent.click(screen.getByText("Alles anzeigen"))
     await waitFor(() => expect(handlers.onSimpleNearbySearch).toHaveBeenCalled())
-    expect(handlers.onSimpleNearbySearch).toHaveBeenCalledWith("Orte", { lat: 50.9, lon: 6.9 })
+    expect(handlers.onSimpleNearbySearch).toHaveBeenCalledWith("Orte", { lat: 50.9, lon: 6.9 }, null)
   })
 
   it("shows a locate error and returns to tiles when geolocation fails", async () => {
@@ -343,14 +343,14 @@ describe("SimpleLayout — background location prefetch", () => {
 
       fireEvent.click(screen.getByText("In meiner Nähe suchen"))
       fireEvent.click(screen.getByText("Cafés & Eis"))
-      await waitFor(() => expect(handlers.onSimpleNearbySearch).toHaveBeenCalledWith("Cafés & Eis", { lat: 50.9, lon: 6.9 }))
+      await waitFor(() => expect(handlers.onSimpleNearbySearch).toHaveBeenCalledWith("Cafés & Eis", { lat: 50.9, lon: 6.9 }, "cafe"))
       expect(mockGetBestPosition).toHaveBeenCalledTimes(1)
 
       // Back to tiles, 10 s later, pick a different category.
       fireEvent.click(screen.getByText("Zurück"))
       now += 10_000
       fireEvent.click(screen.getByText("Restaurants"))
-      await waitFor(() => expect(handlers.onSimpleNearbySearch).toHaveBeenCalledWith("Restaurants", { lat: 50.9, lon: 6.9 }))
+      await waitFor(() => expect(handlers.onSimpleNearbySearch).toHaveBeenCalledWith("Restaurants", { lat: 50.9, lon: 6.9 }, "restaurant"))
 
       // Still exactly one real acquisition — the second selection reused the
       // 10-second-old cached fix instead of calling getBestPosition again.
@@ -364,13 +364,13 @@ describe("SimpleLayout — background location prefetch", () => {
 
       fireEvent.click(screen.getByText("In meiner Nähe suchen"))
       fireEvent.click(screen.getByText("Cafés & Eis"))
-      await waitFor(() => expect(handlers.onSimpleNearbySearch).toHaveBeenCalledWith("Cafés & Eis", { lat: 50.9, lon: 6.9 }))
+      await waitFor(() => expect(handlers.onSimpleNearbySearch).toHaveBeenCalledWith("Cafés & Eis", { lat: 50.9, lon: 6.9 }, "cafe"))
       expect(mockGetBestPosition).toHaveBeenCalledTimes(1)
 
       fireEvent.click(screen.getByText("Zurück"))
       now += 130_000 // just over 2 minutes
       fireEvent.click(screen.getByText("Restaurants"))
-      await waitFor(() => expect(handlers.onSimpleNearbySearch).toHaveBeenCalledWith("Restaurants", { lat: 50.9, lon: 6.9 }))
+      await waitFor(() => expect(handlers.onSimpleNearbySearch).toHaveBeenCalledWith("Restaurants", { lat: 50.9, lon: 6.9 }, "restaurant"))
 
       expect(mockGetBestPosition).toHaveBeenCalledTimes(2)
     })

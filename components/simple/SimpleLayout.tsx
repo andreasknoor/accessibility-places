@@ -69,10 +69,14 @@ interface Props {
   // the user's own location (reported live).
   onGpsResolved: (coords: { lat: number; lon: number }) => void
   // Fires a nearby search with a fixed accessibility-first filter preset and a
-  // 5 km radius, bypassing HomeClient's shared `filters`/`radiusKm` state
+  // 5 km radius (2 km when cat is null, i.e. "Alles anzeigen" — every
+  // category at once needs a smaller starting radius or it buries the user
+  // in results), bypassing HomeClient's shared `filters`/`radiusKm` state
   // entirely (see the comment on AppSettings.simpleView in lib/settings.ts) —
   // so nothing here can ever clobber the user's real, persisted full-UI prefs.
-  onSimpleNearbySearch: (query: string, coords: { lat: number; lon: number }) => void
+  // `cat` is passed through only so HomeClient can pick the start radius;
+  // SimpleLayout itself stays unaware of what that radius actually is.
+  onSimpleNearbySearch: (query: string, coords: { lat: number; lon: number }, cat: Category | null) => void
   onPlaceSearch: (nameHint: string, coords?: { lat: number; lon: number }) => void
   // Parking/WC as a first-class search, exactly like the two amenity chips in
   // the full UI (docs: lib/amenities architecture) — reuses HomeClient's own
@@ -358,7 +362,7 @@ export default function SimpleLayout({
       track("simple_nearby_search", { category: cat ?? "all" })
       setHasSearchedNearby(true)
       onGpsResolved(coords)
-      onSimpleNearbySearch(categoryLabel(cat), coords)
+      onSimpleNearbySearch(categoryLabel(cat), coords, cat)
       setScreen("results")
     } catch {
       if (locateCancelledRef.current) return
