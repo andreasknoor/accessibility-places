@@ -116,6 +116,14 @@
   --input: 214.3 31.8% 91.4%;
   --ring: 221.2 83.2% 53.3%;
   --radius: 0.5rem;
+
+  /* Simple View start-screen tile colour-coding only ("Variante 2" — city/
+     venue tiles get their own accent so the three search entry points are
+     distinguishable by colour as well as icon shape, not just a shared
+     primary blue). Not a general-purpose brand colour — scope any future use
+     to that one screen. */
+  --simple-city:  162 63% 38%;
+  --simple-venue: 27 96% 48%;
 }
 
 @theme inline {
@@ -139,6 +147,8 @@
   --color-card-border: hsl(var(--card-border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
+  --color-simple-city: hsl(var(--simple-city));
+  --color-simple-venue: hsl(var(--simple-venue));
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --radius: var(--radius);

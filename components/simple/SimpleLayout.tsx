@@ -613,43 +613,50 @@ export default function SimpleLayout({
 
             {/* Three equally-weighted entry points (research showed users want
                 both "a category in some city" and "check a named venue", not
-                just "near me" — see docs/plans, Vorschlag 1). Vertical
-                icon-on-top cards (not the old icon-left row) for maximum
-                glanceability — large, evenly sized targets, one deliberate
-                accent colour (primary blue) throughout rather than a distinct
-                hue per tile, matching the app's existing single-accent
-                palette instead of introducing new colours for this screen. */}
+                just "near me" — see docs/plans, Vorschlag 1). Colour-coded
+                ("Variante 2"): each tile gets its own accent — a left border
+                stripe plus a matching icon tint — as a second, redundant
+                differentiator on top of the icon shape itself, not just size.
+                --simple-city/--simple-venue (app/globals.css) are scoped to
+                this one screen; "nearby" reuses the app's existing primary
+                blue rather than adding a third new hue. */}
             <button
               onClick={() => { setLocateError(null); setPickedCity(null); setScreen("tiles") }}
-              className="flex flex-col items-center text-center gap-2 rounded-2xl bg-primary text-primary-foreground px-4 py-5 shadow-sm hover:bg-primary/90 transition-colors"
+              className="flex items-center gap-3 rounded-xl border border-card-border border-l-4 border-l-primary bg-card pl-3 pr-4 py-4 hover:bg-muted transition-colors text-left"
             >
-              <span className="w-14 h-14 rounded-full bg-primary-foreground/15 flex items-center justify-center shrink-0">
-                <LocateFixed className="w-7 h-7" aria-hidden />
+              <span className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <LocateFixed className="w-6 h-6 text-primary" aria-hidden />
               </span>
-              <span className="block text-sm font-semibold">{t.simple.startNearby}</span>
-              <span className="block text-xs opacity-90">{t.simple.startNearbyHint}</span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-semibold">{t.simple.startNearby}</span>
+                <span className="block text-xs text-muted-foreground mt-0.5">{t.simple.startNearbyHint}</span>
+              </span>
             </button>
 
             <button
               onClick={() => { setCityQuery(""); setScreen("city") }}
-              className="flex flex-col items-center text-center gap-2 rounded-2xl border border-card-border bg-card px-4 py-5 hover:bg-muted transition-colors"
+              className="flex items-center gap-3 rounded-xl border border-card-border border-l-4 border-l-simple-city bg-card pl-3 pr-4 py-4 hover:bg-muted transition-colors text-left"
             >
-              <span className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Building2 className="w-7 h-7 text-primary" aria-hidden />
+              <span className="w-12 h-12 rounded-full bg-simple-city/15 flex items-center justify-center shrink-0">
+                <Building2 className="w-6 h-6 text-simple-city" aria-hidden />
               </span>
-              <span className="block text-sm font-semibold">{t.simple.startCity}</span>
-              <span className="block text-xs text-muted-foreground">{t.simple.startCityHint}</span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-semibold">{t.simple.startCity}</span>
+                <span className="block text-xs text-muted-foreground mt-0.5">{t.simple.startCityHint}</span>
+              </span>
             </button>
 
             <button
               onClick={() => { setVenueNotFound(false); setVenueQuery(""); setScreen("venue") }}
-              className="flex flex-col items-center text-center gap-2 rounded-2xl border border-card-border bg-card px-4 py-5 hover:bg-muted transition-colors"
+              className="flex items-center gap-3 rounded-xl border border-card-border border-l-4 border-l-simple-venue bg-card pl-3 pr-4 py-4 hover:bg-muted transition-colors text-left"
             >
-              <span className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <SearchIcon className="w-7 h-7 text-primary" aria-hidden />
+              <span className="w-12 h-12 rounded-full bg-simple-venue/15 flex items-center justify-center shrink-0">
+                <SearchIcon className="w-6 h-6 text-simple-venue" aria-hidden />
               </span>
-              <span className="block text-sm font-semibold">{t.simple.startVenue}</span>
-              <span className="block text-xs text-muted-foreground">{t.simple.startVenueHint}</span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-semibold">{t.simple.startVenue}</span>
+                <span className="block text-xs text-muted-foreground mt-0.5">{t.simple.startVenueHint}</span>
+              </span>
             </button>
 
             <button
