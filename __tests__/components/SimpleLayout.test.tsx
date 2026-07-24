@@ -319,6 +319,62 @@ describe("SimpleLayout — background location prefetch", () => {
     fireEvent.click(screen.getByText("Cafés & Eis"))
     await waitFor(() => expect(mockGetBestPosition).toHaveBeenCalledTimes(1))
   })
+
+  // Reported live: picking a category, viewing results, going back and
+  // picking a different one ~10s later still re-acquired GPS from scratch —
+  // pointlessly, since a fix that fresh is still perfectly usable. Now the
+  // last acquired fix is cached for POSITION_CACHE_MS (2 minutes).
+  describe("2-minute position cache", () => {
+    let now: number
+
+    beforeEach(() => {
+      now = 1_000_000
+      vi.spyOn(Date, "now").mockImplementation(() => now)
+    })
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it("reuses the last fix for a second selection made shortly after, without calling getBestPosition again", async () => {
+      mockHasLocationPermission.mockResolvedValue(false)
+      mockGetBestPosition.mockResolvedValue({ lat: 50.9, lon: 6.9 })
+      const { handlers } = renderLayout()
+
+      fireEvent.click(screen.getByText("In meiner Nähe suchen"))
+      fireEvent.click(screen.getByText("Cafés & Eis"))
+      await waitFor(() => expect(handlers.onSimpleNearbySearch).toHaveBeenCalledWith("Cafés & Eis", { lat: 50.9, lon: 6.9 }))
+      expect(mockGetBestPosition).toHaveBeenCalledTimes(1)
+
+      // Back to tiles, 10 s later, pick a different category.
+      fireEvent.click(screen.getByText("Zurück"))
+      now += 10_000
+      fireEvent.click(screen.getByText("Restaurants"))
+      await waitFor(() => expect(handlers.onSimpleNearbySearch).toHaveBeenCalledWith("Restaurants", { lat: 50.9, lon: 6.9 }))
+
+      // Still exactly one real acquisition — the second selection reused the
+      // 10-second-old cached fix instead of calling getBestPosition again.
+      expect(mockGetBestPosition).toHaveBeenCalledTimes(1)
+    })
+
+    it("re-acquires once the cached fix is older than 2 minutes", async () => {
+      mockHasLocationPermission.mockResolvedValue(false)
+      mockGetBestPosition.mockResolvedValue({ lat: 50.9, lon: 6.9 })
+      const { handlers } = renderLayout()
+
+      fireEvent.click(screen.getByText("In meiner Nähe suchen"))
+      fireEvent.click(screen.getByText("Cafés & Eis"))
+      await waitFor(() => expect(handlers.onSimpleNearbySearch).toHaveBeenCalledWith("Cafés & Eis", { lat: 50.9, lon: 6.9 }))
+      expect(mockGetBestPosition).toHaveBeenCalledTimes(1)
+
+      fireEvent.click(screen.getByText("Zurück"))
+      now += 130_000 // just over 2 minutes
+      fireEvent.click(screen.getByText("Restaurants"))
+      await waitFor(() => expect(handlers.onSimpleNearbySearch).toHaveBeenCalledWith("Restaurants", { lat: 50.9, lon: 6.9 }))
+
+      expect(mockGetBestPosition).toHaveBeenCalledTimes(2)
+    })
+  })
 })
 
 describe("SimpleLayout — results screen", () => {

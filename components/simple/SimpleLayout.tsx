@@ -22,6 +22,14 @@ import type { AppSettings } from "@/lib/settings"
 
 const MapView = dynamic(() => import("@/components/map/MapView"), { ssr: false })
 
+// How long a resolved GPS fix stays valid for re-use without a fresh
+// getBestPosition() call — e.g. picking a category, viewing results, going
+// back and picking another within this window reuses the same fix instead of
+// re-acquiring GPS from scratch. 2 minutes: generous enough that a normal
+// browse-then-pick-again flow never re-triggers acquisition, short enough
+// that walking/driving a real distance still gets a fresh fix soon after.
+const POSITION_CACHE_MS = 2 * 60_000
+
 type Screen = "start" | "tiles" | "locating" | "results" | "venue" | "detail"
 
 // One suggestion from /api/geocode/unified-suggest — mirrors ChatPanel's own
@@ -279,6 +287,12 @@ export default function SimpleLayout({
   // granted location get the head start; everyone else keeps today's
   // behaviour (permission/fetch happens on the actual tap).
   const pendingLocationRef = useRef<Promise<GeoPosition> | null>(null)
+  // Last successfully-resolved fix + when it was acquired — reused by
+  // resolvePosition() within POSITION_CACHE_MS instead of re-acquiring GPS.
+  // Only set from an actual acquisition (prefetch or fresh fetch), never
+  // refreshed just because a cached value was reused, so its age always
+  // reflects how old the underlying fix really is.
+  const lastPositionRef = useRef<{ coords: GeoPosition; at: number } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -295,13 +309,30 @@ export default function SimpleLayout({
     return () => { cancelled = true }
   }, [])
 
-  // Consumes the prefetched fix if one is in flight/done; otherwise falls back
-  // to a fresh request (permission wasn't granted yet at mount time, or a
-  // previous selection already consumed the prefetch).
+  // Consumes the prefetched fix if one is in flight/done; otherwise reuses the
+  // last acquired fix if it's still within POSITION_CACHE_MS (e.g. picking a
+  // category, viewing results, going back and picking another one shortly
+  // after shouldn't re-acquire GPS from scratch); otherwise falls back to a
+  // fresh request.
   function resolvePosition(): Promise<GeoPosition> {
     const pending = pendingLocationRef.current
     pendingLocationRef.current = null
-    return pending ?? getBestPosition({ timeout: 20_000, windowMs: 4_000, desiredAccuracyM: 50 })
+    if (pending) {
+      return pending.then((coords) => {
+        lastPositionRef.current = { coords, at: Date.now() }
+        return coords
+      })
+    }
+
+    const cached = lastPositionRef.current
+    if (cached && Date.now() - cached.at < POSITION_CACHE_MS) {
+      return Promise.resolve(cached.coords)
+    }
+
+    return getBestPosition({ timeout: 20_000, windowMs: 4_000, desiredAccuracyM: 50 }).then((coords) => {
+      lastPositionRef.current = { coords, at: Date.now() }
+      return coords
+    })
   }
 
   const categoryLabel = (cat: Category | null): string =>
