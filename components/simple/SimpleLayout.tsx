@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import dynamic from "next/dynamic"
-import { ChevronLeft, LocateFixed, Search as SearchIcon, Building2, X as XIcon, Loader2, Settings as SettingsIcon } from "lucide-react"
+import { ChevronLeft, LocateFixed, Search as SearchIcon, Building2, X as XIcon, Zap, Loader2, Settings as SettingsIcon } from "lucide-react"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { getBestPosition, hasLocationPermission, type GeoPosition } from "@/lib/native/geolocation"
 import { haversineMetres } from "@/lib/matching/match"
@@ -659,10 +659,12 @@ export default function SimpleLayout({
               </span>
             </button>
 
+            <p className="text-xs text-muted-foreground text-center mt-3">{t.simple.showFullAppAlt}</p>
             <button
               onClick={() => setSettingsOpen(true)}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2 mt-3 mx-auto"
+              className="flex items-center justify-center gap-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold px-3.5 py-2 mt-1 mx-auto hover:bg-primary/15 transition-colors"
             >
+              <Zap className="w-3.5 h-3.5 shrink-0" aria-hidden />
               {t.simple.showFullApp}
             </button>
             </div>

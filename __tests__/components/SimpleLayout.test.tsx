@@ -199,12 +199,13 @@ describe("SimpleLayout — start screen", () => {
 
   it("the return-to-full-UI link is present", () => {
     renderLayout()
-    expect(screen.getByText("Alle Funktionen anzeigen")).toBeInTheDocument()
+    expect(screen.getByText("oder alternativ")).toBeInTheDocument()
+    expect(screen.getByText("Turbo-Modus an: Alle Features aktivieren.")).toBeInTheDocument()
   })
 
   it("opens the settings panel (with the Simple View toggle) from the start screen", () => {
     renderLayout()
-    fireEvent.click(screen.getByText("Alle Funktionen anzeigen"))
+    fireEvent.click(screen.getByText("Turbo-Modus an: Alle Features aktivieren."))
     expect(screen.getByText("Einfache Ansicht (Beta)")).toBeInTheDocument()
   })
 })
@@ -1373,7 +1374,7 @@ describe("SimpleLayout — settings always reachable", () => {
 
   it("toggling it off calls onUpdateSettings({ simpleView: false })", () => {
     const { handlers } = renderLayout({ settings: { ...DEFAULT_APP_SETTINGS, simpleView: true } })
-    fireEvent.click(screen.getByText("Alle Funktionen anzeigen"))
+    fireEvent.click(screen.getByText("Turbo-Modus an: Alle Features aktivieren."))
     fireEvent.click(screen.getByRole("switch", { name: /Einfache Ansicht/ }))
     expect(handlers.onUpdateSettings).toHaveBeenCalledWith({ simpleView: false })
   })

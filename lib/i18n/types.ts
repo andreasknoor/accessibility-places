@@ -487,6 +487,7 @@ export interface Translations {
     startVenueHint:  string
     startCity:       string
     startCityHint:   string
+    showFullAppAlt:  string
     showFullApp:     string
     back:            string
     tilesTitle:      string
