@@ -475,7 +475,7 @@ const de: Translations = {
     simpleViewHint:        "Reduzierte Oberfläche für einen schnellen Einstieg: zwei Wege, sechs Kategorien, keine Filter.",
   },
   simple: {
-    startTitle:      "Was möchten Sie?",
+    startTitle:      "Was willst Du tun?",
     startNearby:     "In meiner Nähe suchen",
     startNearbyHint: "Zeigt barrierefreie Orte um Sie herum",
     startVenue:      "Einen konkreten Ort prüfen",
