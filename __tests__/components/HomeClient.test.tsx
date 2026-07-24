@@ -452,3 +452,40 @@ describe("HomeClient — Simple View's expand-radius button", () => {
     })
   })
 })
+
+// ─── Cost regression: a place deep-link (SEO "open in app", shared copy-link,
+// native App Link) must NOT force the paid Google Places source on. It used to
+// hardcode google_places:true in runPlaceDeepLink's sourcesOverride, billing
+// Google for every deep-link open regardless of the receiver's setting — the
+// path most exposed to non-UI traffic (shared/indexed URLs, JS-rendering
+// crawlers, link-preview bots). It must respect the off-by-default like an
+// ordinary search; the DACH sources stay forced on. ────────────────────────
+describe("HomeClient — place deep-link does not force Google Places on", () => {
+  it("sends google_places:false but keeps the DACH sources forced on", async () => {
+    const fetchMock = mockSearchFetch()
+    vi.stubGlobal("fetch", fetchMock)
+
+    // initialCity unset + initialSelectLat/Lon set → the deep-link auto-search
+    // effect fires on mount (coordinates provided, so no geocode/GPS needed).
+    render(
+      <HomeClient
+        initialSelectLat={52.5}
+        initialSelectLon={13.4}
+        initialSelectName="Café Beispiel"
+        initialCategory="cafe"
+      />,
+    )
+
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(([u]) => typeof u === "string" && u.startsWith("/api/search"))).toBe(true)
+    })
+
+    const body = lastSearchRequestBody(fetchMock) as unknown as { sources?: Record<string, boolean> }
+    expect(body.sources?.google_places).toBe(false)
+    // Broad DACH query is still forced on regardless of receiver toggles.
+    expect(body.sources?.osm).toBe(true)
+    expect(body.sources?.accessibility_cloud).toBe(true)
+    expect(body.sources?.reisen_fuer_alle).toBe(true)
+    expect(body.sources?.ginto).toBe(true)
+  })
+})

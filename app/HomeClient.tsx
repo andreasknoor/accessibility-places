@@ -946,13 +946,24 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     // effect's notifyParent=false contract. Harmless on web (no auto-locate in flight).
     setExitNearbyTriggerKey((k) => k + 1)
     const query = cat ? cat.replace(/_/g, " ") : (name ?? "orte")
+    // Force the DACH sources on so a deep-link to a specific place always
+    // queries broadly, regardless of which sources the receiver had toggled
+    // off. `google_places` is deliberately OMITTED (not forced true): it is a
+    // paid, off-by-default supplementary source, and forcing it on here made
+    // every place deep-link — SEO "open in app" links, shared copy-links,
+    // native App Links — bill Google independent of the user's setting. That
+    // path is the one most exposed to non-UI traffic (shared/indexed URLs,
+    // JS-rendering crawlers, link-preview bots), so it must respect the same
+    // default (off) as an ordinary search. Omitting the key lets the merge in
+    // handleSearch fall back to the ambient `sources.google_places` (default
+    // false; only true when the user or international mode enabled it).
     handleSearch(
       query,
       undefined,
       { lat, lon },
       name,
       undefined,
-      { osm: true, accessibility_cloud: true, reisen_fuer_alle: true, ginto: true, acceslibre: true, google_places: true },
+      { osm: true, accessibility_cloud: true, reisen_fuer_alle: true, ginto: true, acceslibre: true },
     )
   }, [handleSearch])
 
