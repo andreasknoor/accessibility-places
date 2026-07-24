@@ -57,6 +57,9 @@ interface Handlers {
   onAmenitySearch: ReturnType<typeof vi.fn<(type: AmenityType, coords: { lat: number; lon: number }) => void>>
   onSearchHere: ReturnType<typeof vi.fn<(coords: { lat: number; lon: number }, viewportRadiusKm: number) => void>>
   onFocusSearchHere: ReturnType<typeof vi.fn<(coords: { lat: number; lon: number }, viewportRadiusKm: number) => void>>
+  onGpsResolved: ReturnType<typeof vi.fn<(coords: { lat: number; lon: number }) => void>>
+  onExpandRadius: ReturnType<typeof vi.fn<() => void>>
+  onAmenityExpandRadius: ReturnType<typeof vi.fn<() => void>>
   onUpdateSettings: ReturnType<typeof vi.fn<(patch: Partial<AppSettings>) => void>>
 }
 
@@ -76,6 +79,9 @@ function renderLayout(props: {
     onAmenitySearch: vi.fn<(type: AmenityType, coords: { lat: number; lon: number }) => void>(),
     onSearchHere: vi.fn<(coords: { lat: number; lon: number }, viewportRadiusKm: number) => void>(),
     onFocusSearchHere: vi.fn<(coords: { lat: number; lon: number }, viewportRadiusKm: number) => void>(),
+    onGpsResolved: vi.fn<(coords: { lat: number; lon: number }) => void>(),
+    onExpandRadius: vi.fn<() => void>(),
+    onAmenityExpandRadius: vi.fn<() => void>(),
     onUpdateSettings: vi.fn<(patch: Partial<AppSettings>) => void>(),
     ...handlers,
   }
@@ -94,6 +100,9 @@ function renderLayout(props: {
         onAmenitySearch={h.onAmenitySearch}
         onSearchHere={h.onSearchHere}
         onFocusSearchHere={h.onFocusSearchHere}
+        onGpsResolved={h.onGpsResolved}
+        onExpandRadius={h.onExpandRadius}
+        onAmenityExpandRadius={h.onAmenityExpandRadius}
         settings={props.settings ?? DEFAULT_APP_SETTINGS}
         onUpdateSettings={h.onUpdateSettings}
       />
@@ -148,6 +157,9 @@ function VenueHarness({ settings = DEFAULT_APP_SETTINGS }: { settings?: AppSetti
       onAmenitySearch={vi.fn<(type: AmenityType, coords: { lat: number; lon: number }) => void>()}
       onSearchHere={vi.fn()}
       onFocusSearchHere={vi.fn()}
+      onGpsResolved={vi.fn()}
+      onExpandRadius={vi.fn()}
+      onAmenityExpandRadius={vi.fn()}
       settings={settings}
       onUpdateSettings={vi.fn<(patch: Partial<AppSettings>) => void>()}
     />
@@ -211,6 +223,20 @@ describe("SimpleLayout — nearby flow", () => {
       expect(handlers.onSimpleNearbySearch).toHaveBeenCalledWith("Cafés & Eis", { lat: 50.9, lon: 6.9 })
     })
     expect(screen.getByText("Cafés & Eis in Ihrer Nähe")).toBeInTheDocument()
+  })
+
+  // Regression (reported live): the results map never showed the user's own
+  // location dot in Simple View. Root cause: selectCategory/selectAmenity
+  // resolve GPS coords locally via getBestPosition() for the search itself,
+  // but never reported that fix back to HomeClient — the only thing that
+  // feeds MapView's `userLocation` prop (the blue dot) is HomeClient's own
+  // gpsCoords state, which stayed null/stale without this callback.
+  it("reports the resolved GPS fix via onGpsResolved", async () => {
+    mockGetBestPosition.mockResolvedValue({ lat: 50.9, lon: 6.9 })
+    const { handlers } = renderLayout()
+    fireEvent.click(screen.getByText("In meiner Nähe suchen"))
+    fireEvent.click(screen.getByText("Cafés & Eis"))
+    await waitFor(() => expect(handlers.onGpsResolved).toHaveBeenCalledWith({ lat: 50.9, lon: 6.9 }))
   })
 
   it("'show everything' sends the neutral non-category query word, not a real category label", async () => {
@@ -289,6 +315,9 @@ describe("SimpleLayout — results screen", () => {
           onAmenitySearch={handlers.onAmenitySearch}
           onSearchHere={vi.fn()}
           onFocusSearchHere={vi.fn()}
+          onGpsResolved={vi.fn()}
+          onExpandRadius={vi.fn()}
+          onAmenityExpandRadius={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -313,6 +342,9 @@ describe("SimpleLayout — results screen", () => {
           onAmenitySearch={handlers.onAmenitySearch}
           onSearchHere={vi.fn()}
           onFocusSearchHere={vi.fn()}
+          onGpsResolved={vi.fn()}
+          onExpandRadius={vi.fn()}
+          onAmenityExpandRadius={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -335,6 +367,9 @@ describe("SimpleLayout — results screen", () => {
           onAmenitySearch={vi.fn()}
           onSearchHere={vi.fn()}
           onFocusSearchHere={vi.fn()}
+          onGpsResolved={vi.fn()}
+          onExpandRadius={vi.fn()}
+          onAmenityExpandRadius={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={vi.fn<(patch: Partial<AppSettings>) => void>()}
         />
@@ -358,12 +393,43 @@ describe("SimpleLayout — results screen", () => {
           onAmenitySearch={vi.fn()}
           onSearchHere={vi.fn()}
           onFocusSearchHere={vi.fn()}
+          onGpsResolved={vi.fn()}
+          onExpandRadius={vi.fn()}
+          onAmenityExpandRadius={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={vi.fn<(patch: Partial<AppSettings>) => void>()}
         />
       </LocaleProvider>,
     )
     expect(screen.getByText("Keine barrierefreien Orte in der Nähe gefunden")).toBeInTheDocument()
+  })
+
+  // "Suchradius vergrößern" — mirrors the full UI's own expand-radius button
+  // (ResultsList), same wording, shown alongside the empty-state message.
+  it("shows a 'Suchradius vergrößern' button on the empty state that calls onExpandRadius", async () => {
+    const { rerender, handlers } = await goToResults()
+    rerender(
+      <LocaleProvider initialLocale="de">
+        <SimpleLayout
+          places={[]}
+          isLoading={false}
+          searchCenter={{ lat: 50.9, lon: 6.9 }}
+          onSelect={handlers.onSelect}
+          onSimpleNearbySearch={handlers.onSimpleNearbySearch}
+          onPlaceSearch={handlers.onPlaceSearch}
+          onAmenitySearch={handlers.onAmenitySearch}
+          onSearchHere={handlers.onSearchHere}
+          onFocusSearchHere={handlers.onFocusSearchHere}
+          onGpsResolved={handlers.onGpsResolved}
+          onExpandRadius={handlers.onExpandRadius}
+          onAmenityExpandRadius={handlers.onAmenityExpandRadius}
+          settings={DEFAULT_APP_SETTINGS}
+          onUpdateSettings={handlers.onUpdateSettings}
+        />
+      </LocaleProvider>,
+    )
+    fireEvent.click(screen.getByText("Suchradius vergrößern?"))
+    expect(handlers.onExpandRadius).toHaveBeenCalledTimes(1)
   })
 
   it("suppresses the misleading empty-state message when an error is showing instead", async () => {
@@ -381,6 +447,9 @@ describe("SimpleLayout — results screen", () => {
           onAmenitySearch={vi.fn()}
           onSearchHere={vi.fn()}
           onFocusSearchHere={vi.fn()}
+          onGpsResolved={vi.fn()}
+          onExpandRadius={vi.fn()}
+          onAmenityExpandRadius={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={vi.fn<(patch: Partial<AppSettings>) => void>()}
         />
@@ -404,6 +473,9 @@ describe("SimpleLayout — results screen", () => {
           onAmenitySearch={vi.fn()}
           onSearchHere={vi.fn()}
           onFocusSearchHere={vi.fn()}
+          onGpsResolved={vi.fn()}
+          onExpandRadius={vi.fn()}
+          onAmenityExpandRadius={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={vi.fn<(patch: Partial<AppSettings>) => void>()}
         />
@@ -452,6 +524,9 @@ describe("SimpleLayout — results screen", () => {
           onAmenitySearch={handlers.onAmenitySearch}
           onSearchHere={vi.fn()}
           onFocusSearchHere={vi.fn()}
+          onGpsResolved={vi.fn()}
+          onExpandRadius={vi.fn()}
+          onAmenityExpandRadius={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -486,6 +561,9 @@ describe("SimpleLayout — results screen", () => {
           onAmenitySearch={handlers.onAmenitySearch}
           onSearchHere={vi.fn()}
           onFocusSearchHere={vi.fn()}
+          onGpsResolved={vi.fn()}
+          onExpandRadius={vi.fn()}
+          onAmenityExpandRadius={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -519,6 +597,9 @@ describe("SimpleLayout — results screen", () => {
           onAmenitySearch={handlers.onAmenitySearch}
           onSearchHere={vi.fn()}
           onFocusSearchHere={vi.fn()}
+          onGpsResolved={vi.fn()}
+          onExpandRadius={vi.fn()}
+          onAmenityExpandRadius={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -656,6 +737,15 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
     expect(handlers.onSimpleNearbySearch).not.toHaveBeenCalled()
   })
 
+  // Same regression as the venue-search test above, for the amenity path.
+  it("reports the resolved GPS fix via onGpsResolved", async () => {
+    mockGetBestPosition.mockResolvedValue({ lat: 50.9, lon: 6.9 })
+    const { handlers } = renderLayout()
+    fireEvent.click(screen.getByText("In meiner Nähe suchen"))
+    fireEvent.click(screen.getByText("Parken"))
+    await waitFor(() => expect(handlers.onGpsResolved).toHaveBeenCalledWith({ lat: 50.9, lon: 6.9 }))
+  })
+
   async function goToParkingResults(handlers?: Partial<Handlers>) {
     mockGetBestPosition.mockResolvedValue({ lat: 50.9, lon: 6.9 })
     const utils = renderLayout({}, handlers)
@@ -686,6 +776,9 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
           amenityResults={[makeSpot()]}
           onSearchHere={vi.fn()}
           onFocusSearchHere={vi.fn()}
+          onGpsResolved={vi.fn()}
+          onExpandRadius={vi.fn()}
+          onAmenityExpandRadius={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -711,12 +804,42 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
           amenityHint="Keine Behindertenparkplätze in der Nähe gefunden."
           onSearchHere={vi.fn()}
           onFocusSearchHere={vi.fn()}
+          onGpsResolved={vi.fn()}
+          onExpandRadius={vi.fn()}
+          onAmenityExpandRadius={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
       </LocaleProvider>,
     )
     expect(screen.getByText("Keine Behindertenparkplätze in der Nähe gefunden.")).toBeInTheDocument()
+  })
+
+  it("shows a 'Suchradius vergrößern' button on the amenity empty state that calls onAmenityExpandRadius", async () => {
+    const { rerender, handlers } = await goToParkingResults()
+    rerender(
+      <LocaleProvider initialLocale="de">
+        <SimpleLayout
+          places={[]}
+          isLoading={false}
+          searchCenter={{ lat: 50.9, lon: 6.9 }}
+          onSelect={handlers.onSelect}
+          onSimpleNearbySearch={handlers.onSimpleNearbySearch}
+          onPlaceSearch={handlers.onPlaceSearch}
+          onAmenitySearch={handlers.onAmenitySearch}
+          amenityResults={[]}
+          onSearchHere={handlers.onSearchHere}
+          onFocusSearchHere={handlers.onFocusSearchHere}
+          onGpsResolved={handlers.onGpsResolved}
+          onExpandRadius={handlers.onExpandRadius}
+          onAmenityExpandRadius={handlers.onAmenityExpandRadius}
+          settings={DEFAULT_APP_SETTINGS}
+          onUpdateSettings={handlers.onUpdateSettings}
+        />
+      </LocaleProvider>,
+    )
+    fireEvent.click(screen.getByText("Suchradius vergrößern?"))
+    expect(handlers.onAmenityExpandRadius).toHaveBeenCalledTimes(1)
   })
 
   it("passes parkingSpots/toiletSpots and the active amenity type straight through to MapView", async () => {
@@ -736,6 +859,9 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
           parkingSpots={spots}
           onSearchHere={vi.fn()}
           onFocusSearchHere={vi.fn()}
+          onGpsResolved={vi.fn()}
+          onExpandRadius={vi.fn()}
+          onAmenityExpandRadius={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -763,6 +889,9 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
           amenityResults={[makeSpot()]}
           onSearchHere={vi.fn()}
           onFocusSearchHere={vi.fn()}
+          onGpsResolved={vi.fn()}
+          onExpandRadius={vi.fn()}
+          onAmenityExpandRadius={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -793,6 +922,9 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
           amenityResults={[makeSpot()]}
           onSearchHere={vi.fn()}
           onFocusSearchHere={vi.fn()}
+          onGpsResolved={vi.fn()}
+          onExpandRadius={vi.fn()}
+          onAmenityExpandRadius={vi.fn()}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />

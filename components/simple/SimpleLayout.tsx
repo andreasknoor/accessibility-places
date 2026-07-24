@@ -45,6 +45,14 @@ interface Props {
   gpsCoords?:  { lat: number; lon: number } | null
   selectedId?: string
   onSelect:    (place: Place) => void
+  // Reports a freshly-resolved GPS fix back to HomeClient so it can update
+  // its own gpsCoords state — the ONLY thing that feeds MapView's
+  // `userLocation` prop (the blue dot). SimpleLayout's own selectCategory/
+  // selectAmenity resolve coords locally via getBestPosition() for the
+  // search itself, but without this callback HomeClient never learns about
+  // that fix, so gpsCoords stays null/stale and the results map never shows
+  // the user's own location (reported live).
+  onGpsResolved: (coords: { lat: number; lon: number }) => void
   // Fires a nearby search with a fixed accessibility-first filter preset and a
   // 5 km radius, bypassing HomeClient's shared `filters`/`radiusKm` state
   // entirely (see the comment on AppSettings.simpleView in lib/settings.ts) —
@@ -70,6 +78,14 @@ interface Props {
   // straight through with no Simple-View-specific wrapper needed.
   onSearchHere: (coords: { lat: number; lon: number }, viewportRadiusKm: number) => void
   onFocusSearchHere: (coords: { lat: number; lon: number }, viewportRadiusKm: number) => void
+  // "Suchradius vergrößern" on the empty-state message — mirrors the full
+  // UI's own expand-radius buttons (ResultsList). onExpandRadius doubles
+  // Simple View's own tracked radius and re-runs the last category/all-
+  // places query; onAmenityExpandRadius is HomeClient's existing
+  // handleAmenityExpandRadius, already filter-agnostic, passed straight
+  // through with no wrapper (same pattern as onFocusSearchHere above).
+  onExpandRadius: () => void
+  onAmenityExpandRadius: () => void
   settings:        AppSettings
   onUpdateSettings: (patch: Partial<AppSettings>) => void
 }
@@ -117,7 +133,8 @@ function Header({ title, backLabel, settingsLabel, onBack, onOpenSettings }: { t
 export default function SimpleLayout({
   places, isLoading, error, searchCenter, gpsCoords, selectedId, onSelect,
   onSimpleNearbySearch, onPlaceSearch, onAmenitySearch, amenityResults, amenityHint,
-  parkingSpots, toiletSpots, onSearchHere, onFocusSearchHere, settings, onUpdateSettings,
+  parkingSpots, toiletSpots, onSearchHere, onFocusSearchHere, onGpsResolved,
+  onExpandRadius, onAmenityExpandRadius, settings, onUpdateSettings,
 }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
@@ -269,6 +286,7 @@ export default function SimpleLayout({
       if (locateCancelledRef.current) return
       track("simple_nearby_search", { category: cat ?? "all" })
       setHasSearchedNearby(true)
+      onGpsResolved(coords)
       onSimpleNearbySearch(categoryLabel(cat), coords)
       setScreen("results")
     } catch {
@@ -292,6 +310,7 @@ export default function SimpleLayout({
       if (locateCancelledRef.current) return
       track("simple_amenity_search", { type })
       setHasSearchedNearby(true)
+      onGpsResolved(coords)
       onAmenitySearch(type, coords)
       setScreen("results")
     } catch {
@@ -641,9 +660,17 @@ export default function SimpleLayout({
                   </div>
                 )}
                 {!isLoading && !error && selectedAmenityType == null && places.length === 0 && hasSearchedNearby && (
-                  <div className="flex-1 flex flex-col items-center justify-center gap-1.5 py-10 text-center px-4">
-                    <p className="text-sm font-medium">{t.simple.noResultsTitle}</p>
-                    <p className="text-xs text-muted-foreground">{t.simple.noResultsHint}</p>
+                  <div className="flex-1 flex flex-col items-center justify-center gap-3 py-10 text-center px-4">
+                    <div className="flex flex-col items-center gap-1.5">
+                      <p className="text-sm font-medium">{t.simple.noResultsTitle}</p>
+                      <p className="text-xs text-muted-foreground">{t.simple.noResultsHint}</p>
+                    </div>
+                    <button
+                      onClick={onExpandRadius}
+                      className="px-3 py-1.5 rounded-md border border-border bg-card text-sm font-medium hover:bg-muted transition-colors"
+                    >
+                      {t.results.expandRadius}
+                    </button>
                   </div>
                 )}
                 {!isLoading && selectedAmenityType == null && places.length > 0 && (
@@ -663,9 +690,17 @@ export default function SimpleLayout({
                   </>
                 )}
                 {!isLoading && selectedAmenityType != null && sortedAmenities.length === 0 && hasSearchedNearby && (
-                  <div className="flex-1 flex flex-col items-center justify-center gap-1.5 py-10 text-center px-4">
-                    <p className="text-sm font-medium">{t.simple.noResultsTitle}</p>
-                    <p className="text-xs text-muted-foreground">{amenityHint ?? t.simple.noResultsHint}</p>
+                  <div className="flex-1 flex flex-col items-center justify-center gap-3 py-10 text-center px-4">
+                    <div className="flex flex-col items-center gap-1.5">
+                      <p className="text-sm font-medium">{t.simple.noResultsTitle}</p>
+                      <p className="text-xs text-muted-foreground">{amenityHint ?? t.simple.noResultsHint}</p>
+                    </div>
+                    <button
+                      onClick={onAmenityExpandRadius}
+                      className="px-3 py-1.5 rounded-md border border-border bg-card text-sm font-medium hover:bg-muted transition-colors"
+                    >
+                      {t.results.expandRadius}
+                    </button>
                   </div>
                 )}
                 {!isLoading && selectedAmenityType != null && sortedAmenities.length > 0 && (

@@ -425,3 +425,30 @@ describe("HomeClient — Simple View's extra toilet requirement for cafés/resta
     expect(screen.getByText("Place pharmacy-unknown-toilet")).toBeInTheDocument()
   })
 })
+
+// ─── Simple View's own "Suchradius vergrößern" — mirrors the full UI's
+// handleExpandRadius, but doubles a dedicated simpleRadiusKm (not the shared
+// radiusKm state) and keeps SIMPLE_FILTERS_OVERRIDE on the re-run. ─────────
+describe("HomeClient — Simple View's expand-radius button", () => {
+  it("doubles the 5 km default to 10 km and re-searches at the same coords", async () => {
+    localStorage.setItem("ap_settings", JSON.stringify({ ...DEFAULT_APP_SETTINGS, simpleView: true }))
+    mockGetBestPosition.mockResolvedValue({ lat: 52.5, lon: 13.4 })
+    const fetchMock = mockSearchFetch()
+    vi.stubGlobal("fetch", fetchMock)
+
+    render(<HomeClient />)
+    fireEvent.click(await screen.findByText("In meiner Nähe suchen"))
+    fireEvent.click(screen.getByText("Cafés & Eis"))
+    await waitFor(() => expect(screen.getByText("Cafés & Eis in Ihrer Nähe")).toBeInTheDocument())
+
+    // The stub search response returns zero places, so the empty state (and
+    // its expand-radius button) should already be showing.
+    await waitFor(() => expect(screen.getByText("Suchradius vergrößern?")).toBeInTheDocument())
+    fireEvent.click(screen.getByText("Suchradius vergrößern?"))
+
+    await waitFor(() => {
+      const body = lastSearchRequestBody(fetchMock) as unknown as { radiusKm?: number }
+      expect(body.radiusKm).toBe(10)
+    })
+  })
+})

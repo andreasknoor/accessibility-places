@@ -151,6 +151,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const [filters,       setFilters]      = useState<SearchFilters>(DEFAULT_FILTERS)
   const [sources,       setSources]      = useState<ActiveSources>(DEFAULT_SOURCES)
   const [radiusKm,      setRadiusKm]     = useState<number>(DEFAULT_RADIUS_KM)
+  // Simple View's own radius, tracked separately from `radiusKm` (which the
+  // full UI's rerun/expand-radius machinery owns) — see SIMPLE_FILTERS_OVERRIDE/
+  // SIMPLE_RADIUS_KM below for why Simple View bypasses that shared state
+  // entirely. Reset to SIMPLE_RADIUS_KM on every fresh category/amenity pick;
+  // doubled (capped at RADIUS_MAX_KM) by handleSimpleExpandRadius.
+  const [simpleRadiusKm, setSimpleRadiusKm] = useState<number>(SIMPLE_RADIUS_KM)
   const [places,        setPlaces]       = useState<Place[]>([])
   const [parkingSpots,  setParkingSpots]  = useState<ParkingSpot[]>([])
   const [toiletSpots,   setToiletSpots]   = useState<AmenityFeature[]>([])
@@ -803,8 +809,21 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // see the comment on those constants for why this bypasses `filters`/`radiusKm`
   // entirely instead of setting them.
   const handleSimpleNearbySearch = useCallback((query: string, coords: { lat: number; lon: number }) => {
+    setSimpleRadiusKm(SIMPLE_RADIUS_KM)
     handleSearch(query, SIMPLE_RADIUS_KM, coords, undefined, SIMPLE_FILTERS_OVERRIDE)
   }, [handleSearch])
+
+  // "Suchradius vergrößern" for Simple View's own empty state — mirrors
+  // handleExpandRadius below, but doubles simpleRadiusKm (not the full UI's
+  // radiusKm) and keeps SIMPLE_FILTERS_OVERRIDE, same reasoning as
+  // handleSimpleSearchHere just below.
+  const handleSimpleExpandRadius = useCallback(() => {
+    if (!lastQuery || !lastCoords) return
+    const newRadius = Math.min(simpleRadiusKm * 2, RADIUS_MAX_KM)
+    track("expand_radius", { from_km: simpleRadiusKm, to_km: newRadius })
+    setSimpleRadiusKm(newRadius)
+    handleSearch(lastQuery, newRadius, lastCoords, undefined, SIMPLE_FILTERS_OVERRIDE)
+  }, [lastQuery, lastCoords, simpleRadiusKm, handleSearch])
 
   // Simple View's own "search here" (map pan → re-search at the new centre):
   // deliberately NOT the same handleSearchHere the full UI uses just below —
@@ -817,6 +836,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const handleSimpleSearchHere = useCallback((coords: { lat: number; lon: number }, viewportRadiusKm: number) => {
     if (!lastQuery) return
     const clampedRadius = clampVenueRadiusKm(viewportRadiusKm)
+    setSimpleRadiusKm(clampedRadius)
     handleSearch(lastQuery, clampedRadius, coords, undefined, SIMPLE_FILTERS_OVERRIDE)
   }, [lastQuery, handleSearch])
 
@@ -1645,6 +1665,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           toiletSpots={simpleToiletSpots}
           onSearchHere={handleSimpleSearchHere}
           onFocusSearchHere={handleAmenitySearchHere}
+          onGpsResolved={handleGpsResolved}
+          onExpandRadius={handleSimpleExpandRadius}
+          onAmenityExpandRadius={handleAmenityExpandRadius}
           settings={settings}
           onUpdateSettings={handleUpdateSettings}
         />
