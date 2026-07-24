@@ -16,6 +16,9 @@ vi.mock("@upstash/ratelimit", () => {
 const mockGetRedis = vi.fn()
 vi.mock("@/lib/stats", () => ({ getRedis: mockGetRedis }))
 
+const mockCaptureMessage = vi.fn()
+vi.mock("@sentry/nextjs", () => ({ captureMessage: mockCaptureMessage }))
+
 // The module computes its Ratelimit instances once at import time from
 // getRedis()'s return value, so each scenario needs a fresh import after
 // setting the mock — reusing one import across "Redis configured" vs.
@@ -39,6 +42,15 @@ describe("search-rate-limit — Redis unconfigured (getRedis() → null)", () =>
   it("isGooglePlacesRateLimited fails CLOSED when Redis is unavailable and Google was requested", async () => {
     const { isGooglePlacesRateLimited } = await loadModule()
     expect(await isGooglePlacesRateLimited("1.2.3.4", true)).toBe(true)
+  })
+
+  it("reports the no-Redis case to GlitchTip at info level", async () => {
+    const { isGooglePlacesRateLimited } = await loadModule()
+    await isGooglePlacesRateLimited("1.2.3.4", true)
+    expect(mockCaptureMessage).toHaveBeenCalledWith(
+      expect.stringContaining("no Redis"),
+      expect.objectContaining({ level: "info", tags: expect.objectContaining({ scope: "google-no-redis", ip: "1.2.3.4" }) }),
+    )
   })
 
   it("isGooglePlacesRateLimited returns false immediately when Google wasn't requested, even with no Redis", async () => {
@@ -78,23 +90,31 @@ describe("search-rate-limit — Redis configured", () => {
     expect(mockLimit).toHaveBeenCalledTimes(3)
   })
 
-  it("blocks on the per-IP limit without touching either global counter", async () => {
+  it("blocks on the per-IP limit without touching either global counter, and reports it", async () => {
     mockLimit.mockResolvedValueOnce({ success: false }) // per-IP fails
     const { isGooglePlacesRateLimited } = await loadModule()
     expect(await isGooglePlacesRateLimited("1.2.3.4", true)).toBe(true)
     expect(mockLimit).toHaveBeenCalledTimes(1)
+    expect(mockCaptureMessage).toHaveBeenCalledWith(
+      expect.stringContaining("google-ip"),
+      expect.objectContaining({ level: "warning", tags: expect.objectContaining({ scope: "google-ip", ip: "1.2.3.4" }) }),
+    )
   })
 
-  it("blocks on the global hourly cap without consuming a daily-counter slot", async () => {
+  it("blocks on the global hourly cap without consuming a daily-counter slot, and reports it", async () => {
     mockLimit
       .mockResolvedValueOnce({ success: true })  // per-IP ok
       .mockResolvedValueOnce({ success: false }) // hourly fails
     const { isGooglePlacesRateLimited } = await loadModule()
     expect(await isGooglePlacesRateLimited("1.2.3.4", true)).toBe(true)
     expect(mockLimit).toHaveBeenCalledTimes(2)
+    expect(mockCaptureMessage).toHaveBeenCalledWith(
+      expect.stringContaining("google-global-hourly"),
+      expect.objectContaining({ level: "warning", tags: expect.objectContaining({ scope: "google-global-hourly" }) }),
+    )
   })
 
-  it("blocks on the global daily cap", async () => {
+  it("blocks on the global daily cap, and reports it", async () => {
     mockLimit
       .mockResolvedValueOnce({ success: true })  // per-IP ok
       .mockResolvedValueOnce({ success: true })  // hourly ok
@@ -102,12 +122,24 @@ describe("search-rate-limit — Redis configured", () => {
     const { isGooglePlacesRateLimited } = await loadModule()
     expect(await isGooglePlacesRateLimited("1.2.3.4", true)).toBe(true)
     expect(mockLimit).toHaveBeenCalledTimes(3)
+    expect(mockCaptureMessage).toHaveBeenCalledWith(
+      expect.stringContaining("google-global-daily"),
+      expect.objectContaining({ level: "warning", tags: expect.objectContaining({ scope: "google-global-daily" }) }),
+    )
   })
 
-  it("isGooglePlacesRateLimited fails CLOSED on a transient Redis error", async () => {
+  it("isGooglePlacesRateLimited fails CLOSED on a transient Redis error, without reporting to GlitchTip", async () => {
     mockLimit.mockRejectedValue(new Error("upstash unreachable"))
     const { isGooglePlacesRateLimited } = await loadModule()
     expect(await isGooglePlacesRateLimited("1.2.3.4", true)).toBe(true)
+    expect(mockCaptureMessage).not.toHaveBeenCalled()
+  })
+
+  it("does not report anything to GlitchTip when all checks pass", async () => {
+    mockLimit.mockResolvedValue({ success: true })
+    const { isGooglePlacesRateLimited } = await loadModule()
+    expect(await isGooglePlacesRateLimited("1.2.3.4", true)).toBe(false)
+    expect(mockCaptureMessage).not.toHaveBeenCalled()
   })
 
   it("isGooglePlacesRateLimited returns false immediately when not requested, without calling limit at all", async () => {

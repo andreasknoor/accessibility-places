@@ -1,5 +1,6 @@
 import { Ratelimit } from "@upstash/ratelimit"
 import { getRedis } from "./stats"
+import * as Sentry from "@sentry/nextjs"
 
 // Redis-backed replacement for the old in-memory per-IP Maps that used to
 // live in app/api/search/route.ts. Those reset on every serverless cold
@@ -41,6 +42,12 @@ import { getRedis } from "./stats"
 //  - the Google limiters fail CLOSED (treat as rate-limited) when Redis is
 //    unreachable/unconfigured — no durable counter means no cost control, so
 //    the safer default is to just skip the paid source for that request.
+//
+// Every Google-specific trip (per-IP, global hourly, global daily) and the
+// no-Redis fail-closed case is reported to GlitchTip (Sentry.captureMessage,
+// "warning"/"info" — these are expected, by-design events, not bugs) so the
+// actual pressure against the Google budget is visible/alertable, not just
+// inferred after the fact from a cost spike.
 
 const redis = getRedis()
 
@@ -70,20 +77,58 @@ export async function isRateLimited(ip: string): Promise<boolean> {
   }
 }
 
+// GlitchTip reporting for tripped Google-Places limits — these are the
+// self-measured thresholds this module enforces (as opposed to Google Cloud's
+// own, separately-configured quota, which fails at the HTTP level inside the
+// adapter and is already captured there). Reported as "warning", not "error":
+// a trip is the mechanism working as designed, not a bug — but the user wants
+// visibility into how often/hard it's being hit, since that's a proxy for
+// abuse pressure against a metered upstream API.
+function reportGoogleLimitHit(scope: "google-ip" | "google-global-hourly" | "google-global-daily", ip: string) {
+  Sentry.captureMessage(`Google Places rate limit hit: ${scope}`, {
+    level: "warning",
+    tags:  { area: "rate-limit", scope, ip },
+  })
+}
+
+// A durable counter is unavailable (Redis unset/unreachable) — fail-closed
+// means Google gets skipped for this request anyway, but this is an infra
+// signal distinct from an actual limit trip, so it's tagged and leveled
+// separately (worth knowing about, but not "abuse pressure").
+function reportGoogleRedisUnavailable(ip: string) {
+  Sentry.captureMessage("Google Places skipped: rate limiter unavailable (no Redis)", {
+    level: "info",
+    tags:  { area: "rate-limit", scope: "google-no-redis", ip },
+  })
+}
+
 export async function isGooglePlacesRateLimited(ip: string, requested: boolean): Promise<boolean> {
   if (!requested) return false
-  if (!googleIpLimiter || !googleGlobalHourlyLimiter || !googleGlobalDailyLimiter) return true
+  if (!googleIpLimiter || !googleGlobalHourlyLimiter || !googleGlobalDailyLimiter) {
+    reportGoogleRedisUnavailable(ip)
+    return true
+  }
   try {
     const perIp = await googleIpLimiter.limit(ip)
-    if (!perIp.success) return true
+    if (!perIp.success) {
+      reportGoogleLimitHit("google-ip", ip)
+      return true
+    }
     // Checked sequentially (not Promise.all) so a request already blocked by
     // the hourly window never consumes a daily-window slot — the daily
     // counter should track only requests that actually had a chance to hit
     // Google, keeping it an accurate reflection of real usage.
     const hourly = await googleGlobalHourlyLimiter.limit("global")
-    if (!hourly.success) return true
+    if (!hourly.success) {
+      reportGoogleLimitHit("google-global-hourly", ip)
+      return true
+    }
     const daily = await googleGlobalDailyLimiter.limit("global")
-    return !daily.success
+    if (!daily.success) {
+      reportGoogleLimitHit("google-global-daily", ip)
+      return true
+    }
+    return false
   } catch {
     return true
   }
