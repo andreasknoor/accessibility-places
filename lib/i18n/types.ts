@@ -489,15 +489,16 @@ export interface Translations {
     startCityHint:   string
     showFullAppAlt:  string
     showFullApp:     string
+    showFullAppSub:  string
     back:            string
     tilesTitle:      string
     tileAll:         string
     locating:        string
     locateError:     string
     resultsTitle:    (label: string, place?: string) => string
-    resultsCount:    (n: number) => string
+    resultsCount:    (n: number, radius: string) => string
     resizeHandle:    string
-    noResultsTitle:  string
+    noResultsTitle:  (radius: string, place?: string) => string
     noResultsHint:   string
     lowResultsHint:  string
     venuePlaceholder: string

@@ -480,6 +480,52 @@ describe("HomeClient — Simple View's expand-radius button", () => {
     })
   })
 
+  // Requested explicitly: show the current search radius so the user can
+  // tell at a glance how far a search reached, without a dedicated picker.
+  it("shows the current radius in the empty-state title, and updates it after expanding", async () => {
+    localStorage.setItem("ap_settings", JSON.stringify({ ...DEFAULT_APP_SETTINGS, simpleView: true }))
+    mockGetBestPosition.mockResolvedValue({ lat: 52.5, lon: 13.4 })
+    vi.stubGlobal("fetch", mockSearchFetch())
+
+    render(<HomeClient />)
+    fireEvent.click(await screen.findByText("In meiner Nähe suchen"))
+    fireEvent.click(screen.getByText("Cafés & Eis"))
+    await waitFor(() => expect(screen.getByText("Keine barrierefreien Orte in der Nähe gefunden (5 km von Deinem Standort)")).toBeInTheDocument())
+
+    fireEvent.click(screen.getByText("Suchradius vergrößern?"))
+    await waitFor(() => expect(screen.getByText("Keine barrierefreien Orte in der Nähe gefunden (10 km von Deinem Standort)")).toBeInTheDocument())
+  })
+
+  it("shows the current radius in the results count once places arrive", async () => {
+    localStorage.setItem("ap_settings", JSON.stringify({ ...DEFAULT_APP_SETTINGS, simpleView: true }))
+    mockGetBestPosition.mockResolvedValue({ lat: 52.5, lon: 13.4 })
+    vi.stubGlobal("fetch", vi.fn((url: string) => {
+      if (typeof url === "string" && url.startsWith("/api/search")) {
+        return Promise.resolve(ndjsonResponse([resultEvent({
+          places: [{
+            id: "p1", name: "Café Eins", category: "cafe",
+            address: { street: "Teststr.", houseNumber: "1", postalCode: "10115", city: "Berlin", country: "DE" },
+            coordinates: { lat: 52.5, lon: 13.4 },
+            accessibility: {
+              entrance: { value: "yes", confidence: 1, conflict: false, sources: [], details: {} },
+              toilet:   { value: "yes", confidence: 1, conflict: false, sources: [], details: {} },
+              parking:  { value: "unknown", confidence: 1, conflict: false, sources: [], details: {} },
+            },
+            overallConfidence: 0.8,
+            primarySource: "osm",
+            sourceRecords: [{ sourceId: "osm", externalId: "p1", fetchedAt: "", raw: {} }],
+          }],
+        })]))
+      }
+      return Promise.resolve(new Response(null, { status: 204 }))
+    }))
+
+    render(<HomeClient />)
+    fireEvent.click(await screen.findByText("In meiner Nähe suchen"))
+    fireEvent.click(screen.getByText("Cafés & Eis"))
+    await waitFor(() => expect(screen.getByText("1 Ort gefunden (5 km Suchradius)")).toBeInTheDocument())
+  })
+
   // Requested explicitly: a plain-doubling 20→40 jump felt too coarse, so the
   // venue radius steps through a fixed table with a 30 km rung between them,
   // ending at RADIUS_MAX_KM (50) rather than growing forever.

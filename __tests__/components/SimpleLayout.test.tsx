@@ -73,6 +73,8 @@ function renderLayout(props: {
   gpsCoords?: { lat: number; lon: number } | null
   selectedId?: string
   settings?: AppSettings
+  radiusKm?: number
+  amenityRadiusKm?: number
 } = {}, handlers: Partial<Handlers> = {}) {
   const h: Handlers = {
     onSelect: vi.fn<(place: Place) => void>(),
@@ -105,6 +107,8 @@ function renderLayout(props: {
         onGpsResolved={h.onGpsResolved}
         onExpandRadius={h.onExpandRadius}
         onAmenityExpandRadius={h.onAmenityExpandRadius}
+        radiusKm={props.radiusKm ?? 5}
+        amenityRadiusKm={props.amenityRadiusKm ?? 4}
         settings={props.settings ?? DEFAULT_APP_SETTINGS}
         onUpdateSettings={h.onUpdateSettings}
       />
@@ -162,6 +166,8 @@ function VenueHarness({ settings = DEFAULT_APP_SETTINGS }: { settings?: AppSetti
       onGpsResolved={vi.fn()}
       onExpandRadius={vi.fn()}
       onAmenityExpandRadius={vi.fn()}
+      radiusKm={5}
+      amenityRadiusKm={4}
       settings={settings}
       onUpdateSettings={vi.fn<(patch: Partial<AppSettings>) => void>()}
     />
@@ -458,6 +464,8 @@ describe("SimpleLayout — results screen", () => {
           onGpsResolved={vi.fn()}
           onExpandRadius={vi.fn()}
           onAmenityExpandRadius={vi.fn()}
+          radiusKm={5}
+          amenityRadiusKm={4}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -485,6 +493,8 @@ describe("SimpleLayout — results screen", () => {
           onGpsResolved={vi.fn()}
           onExpandRadius={vi.fn()}
           onAmenityExpandRadius={vi.fn()}
+          radiusKm={5}
+          amenityRadiusKm={4}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -510,13 +520,15 @@ describe("SimpleLayout — results screen", () => {
           onGpsResolved={vi.fn()}
           onExpandRadius={vi.fn()}
           onAmenityExpandRadius={vi.fn()}
+          radiusKm={5}
+          amenityRadiusKm={4}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={vi.fn<(patch: Partial<AppSettings>) => void>()}
         />
       </LocaleProvider>,
     )
     expect(screen.getByText("Café Sonnenschein")).toBeInTheDocument()
-    expect(screen.getByText("1 Ort gefunden")).toBeInTheDocument()
+    expect(screen.getByText("1 Ort gefunden (5 km Suchradius)")).toBeInTheDocument()
   })
 
   it("shows the empty state only once a search has actually run and returned nothing", async () => {
@@ -536,12 +548,14 @@ describe("SimpleLayout — results screen", () => {
           onGpsResolved={vi.fn()}
           onExpandRadius={vi.fn()}
           onAmenityExpandRadius={vi.fn()}
+          radiusKm={5}
+          amenityRadiusKm={4}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={vi.fn<(patch: Partial<AppSettings>) => void>()}
         />
       </LocaleProvider>,
     )
-    expect(screen.getByText("Keine barrierefreien Orte in der Nähe gefunden")).toBeInTheDocument()
+    expect(screen.getByText("Keine barrierefreien Orte in der Nähe gefunden (5 km von Deinem Standort)")).toBeInTheDocument()
   })
 
   // "Suchradius vergrößern" — mirrors the full UI's own expand-radius button
@@ -563,6 +577,8 @@ describe("SimpleLayout — results screen", () => {
           onGpsResolved={handlers.onGpsResolved}
           onExpandRadius={handlers.onExpandRadius}
           onAmenityExpandRadius={handlers.onAmenityExpandRadius}
+          radiusKm={5}
+          amenityRadiusKm={4}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -590,6 +606,8 @@ describe("SimpleLayout — results screen", () => {
           onGpsResolved={vi.fn()}
           onExpandRadius={vi.fn()}
           onAmenityExpandRadius={vi.fn()}
+          radiusKm={5}
+          amenityRadiusKm={4}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={vi.fn<(patch: Partial<AppSettings>) => void>()}
         />
@@ -616,6 +634,8 @@ describe("SimpleLayout — results screen", () => {
           onGpsResolved={vi.fn()}
           onExpandRadius={vi.fn()}
           onAmenityExpandRadius={vi.fn()}
+          radiusKm={5}
+          amenityRadiusKm={4}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={vi.fn<(patch: Partial<AppSettings>) => void>()}
         />
@@ -667,6 +687,8 @@ describe("SimpleLayout — results screen", () => {
           onGpsResolved={vi.fn()}
           onExpandRadius={vi.fn()}
           onAmenityExpandRadius={vi.fn()}
+          radiusKm={5}
+          amenityRadiusKm={4}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -704,6 +726,8 @@ describe("SimpleLayout — results screen", () => {
           onGpsResolved={vi.fn()}
           onExpandRadius={vi.fn()}
           onAmenityExpandRadius={vi.fn()}
+          radiusKm={5}
+          amenityRadiusKm={4}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -740,6 +764,8 @@ describe("SimpleLayout — results screen", () => {
           onGpsResolved={vi.fn()}
           onExpandRadius={vi.fn()}
           onAmenityExpandRadius={vi.fn()}
+          radiusKm={5}
+          amenityRadiusKm={4}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -857,6 +883,8 @@ describe("SimpleLayout — results screen", () => {
           onGpsResolved={handlers.onGpsResolved}
           onExpandRadius={handlers.onExpandRadius}
           onAmenityExpandRadius={handlers.onAmenityExpandRadius}
+          radiusKm={5}
+          amenityRadiusKm={4}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -884,6 +912,8 @@ describe("SimpleLayout — results screen", () => {
           onGpsResolved={handlers.onGpsResolved}
           onExpandRadius={handlers.onExpandRadius}
           onAmenityExpandRadius={handlers.onAmenityExpandRadius}
+          radiusKm={5}
+          amenityRadiusKm={4}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -976,6 +1006,8 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
           onGpsResolved={vi.fn()}
           onExpandRadius={vi.fn()}
           onAmenityExpandRadius={vi.fn()}
+          radiusKm={5}
+          amenityRadiusKm={4}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -1004,6 +1036,8 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
           onGpsResolved={vi.fn()}
           onExpandRadius={vi.fn()}
           onAmenityExpandRadius={vi.fn()}
+          radiusKm={5}
+          amenityRadiusKm={4}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -1030,6 +1064,8 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
           onGpsResolved={handlers.onGpsResolved}
           onExpandRadius={handlers.onExpandRadius}
           onAmenityExpandRadius={handlers.onAmenityExpandRadius}
+          radiusKm={5}
+          amenityRadiusKm={4}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -1057,6 +1093,8 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
           onGpsResolved={handlers.onGpsResolved}
           onExpandRadius={handlers.onExpandRadius}
           onAmenityExpandRadius={handlers.onAmenityExpandRadius}
+          radiusKm={5}
+          amenityRadiusKm={4}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -1087,6 +1125,8 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
           onGpsResolved={vi.fn()}
           onExpandRadius={vi.fn()}
           onAmenityExpandRadius={vi.fn()}
+          radiusKm={5}
+          amenityRadiusKm={4}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -1117,6 +1157,8 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
           onGpsResolved={vi.fn()}
           onExpandRadius={vi.fn()}
           onAmenityExpandRadius={vi.fn()}
+          radiusKm={5}
+          amenityRadiusKm={4}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />
@@ -1150,6 +1192,8 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
           onGpsResolved={vi.fn()}
           onExpandRadius={vi.fn()}
           onAmenityExpandRadius={vi.fn()}
+          radiusKm={5}
+          amenityRadiusKm={4}
           settings={DEFAULT_APP_SETTINGS}
           onUpdateSettings={handlers.onUpdateSettings}
         />

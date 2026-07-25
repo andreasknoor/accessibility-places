@@ -178,6 +178,8 @@ describe("a11y baseline — SimpleLayout", () => {
         onGpsResolved={() => {}}
         onExpandRadius={() => {}}
         onAmenityExpandRadius={() => {}}
+        radiusKm={5}
+        amenityRadiusKm={4}
         settings={DEFAULT_APP_SETTINGS}
         onUpdateSettings={() => {}}
       />,
@@ -199,6 +201,8 @@ describe("a11y baseline — SimpleLayout", () => {
         onGpsResolved={() => {}}
         onExpandRadius={() => {}}
         onAmenityExpandRadius={() => {}}
+        radiusKm={5}
+        amenityRadiusKm={4}
         settings={DEFAULT_APP_SETTINGS}
         onUpdateSettings={() => {}}
       />,
@@ -221,6 +225,8 @@ describe("a11y baseline — SimpleLayout", () => {
         onGpsResolved={() => {}}
         onExpandRadius={() => {}}
         onAmenityExpandRadius={() => {}}
+        radiusKm={5}
+        amenityRadiusKm={4}
         settings={DEFAULT_APP_SETTINGS}
         onUpdateSettings={() => {}}
       />,
@@ -243,6 +249,8 @@ describe("a11y baseline — SimpleLayout", () => {
         onGpsResolved={() => {}}
         onExpandRadius={() => {}}
         onAmenityExpandRadius={() => {}}
+        radiusKm={5}
+        amenityRadiusKm={4}
         settings={DEFAULT_APP_SETTINGS}
         onUpdateSettings={() => {}}
       />,

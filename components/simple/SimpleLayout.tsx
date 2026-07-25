@@ -11,7 +11,7 @@ import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { SIMPLE_CATEGORIES } from "@/lib/settings"
 import { hapticLight } from "@/lib/native/haptics"
 import { track } from "@/lib/analytics"
-import { amenitySpotKey } from "@/lib/search-ui"
+import { amenitySpotKey, formatRadiusKm } from "@/lib/search-ui"
 import { SettingsPanel } from "@/components/settings/SettingsSheet"
 import LanguageSwitcher from "@/components/LanguageSwitcher"
 import SimplePlaceCard from "@/components/simple/SimplePlaceCard"
@@ -74,9 +74,14 @@ interface Props {
   // in results), bypassing HomeClient's shared `filters`/`radiusKm` state
   // entirely (see the comment on AppSettings.simpleView in lib/settings.ts) —
   // so nothing here can ever clobber the user's real, persisted full-UI prefs.
-  // `cat` is passed through only so HomeClient can pick the start radius;
-  // SimpleLayout itself stays unaware of what that radius actually is.
+  // `cat` is passed through only so HomeClient can pick the start radius.
   onSimpleNearbySearch: (query: string, coords: { lat: number; lon: number }, cat: Category | null) => void
+  // The two radii HomeClient actually searched with (simpleRadiusKm /
+  // simpleAmenityRadiusKm) — shown in the results count and empty-state
+  // copy so the user can tell at a glance how far the search reached,
+  // without needing a dedicated radius picker UI.
+  radiusKm:        number
+  amenityRadiusKm: number
   onPlaceSearch: (nameHint: string, coords?: { lat: number; lon: number }) => void
   // Parking/WC as a first-class search, exactly like the two amenity chips in
   // the full UI (docs: lib/amenities architecture) — reuses HomeClient's own
@@ -153,7 +158,7 @@ export default function SimpleLayout({
   places, isLoading, error, searchCenter, gpsCoords, selectedId, onSelect,
   onSimpleNearbySearch, onPlaceSearch, onAmenitySearch, amenityResults, amenityHint,
   parkingSpots, toiletSpots, onSearchHere, onFocusSearchHere, onGpsResolved,
-  onExpandRadius, onAmenityExpandRadius, settings, onUpdateSettings,
+  onExpandRadius, onAmenityExpandRadius, radiusKm, amenityRadiusKm, settings, onUpdateSettings,
 }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
@@ -595,6 +600,12 @@ export default function SimpleLayout({
   const distanceFor = (place: Place): number | undefined =>
     searchCenter ? haversineMetres(searchCenter, place.coordinates) : undefined
 
+  // Formatted once per render, reused by the results count and both
+  // empty-state titles — same formatter the full UI's radius pills use
+  // (sub-km amenity radii show as metres, e.g. "700 m").
+  const radiusLabel        = formatRadiusKm(radiusKm)
+  const amenityRadiusLabel = formatRadiusKm(amenityRadiusKm, true)
+
   // Memoized — NOT just a plain re-sort on every render. MapView's own
   // marker-building effect depends on this array by reference ([places,
   // mapReady, focusMode]); an unmemoized [...places].sort(...) creates a new
@@ -703,10 +714,13 @@ export default function SimpleLayout({
               // and understand on their own; this button already IS the
               // explicit "switch to full app" action, so it should just do it).
               onClick={() => onUpdateSettings({ simpleView: false })}
-              className="flex items-center justify-center gap-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold px-3.5 py-2 mt-1 mx-auto hover:bg-primary/15 transition-colors"
+              className="flex flex-col items-center gap-0.5 rounded-2xl bg-primary/10 text-primary px-3.5 py-2 mt-1 mx-auto hover:bg-primary/15 transition-colors"
             >
-              <Zap className="w-3.5 h-3.5 shrink-0" aria-hidden />
-              {t.simple.showFullApp}
+              <span className="flex items-center gap-1.5 text-xs font-semibold">
+                <Zap className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                {t.simple.showFullApp}
+              </span>
+              <span className="text-[11px] font-normal text-primary/70">{t.simple.showFullAppSub}</span>
             </button>
             </div>
           </div>
@@ -884,7 +898,7 @@ export default function SimpleLayout({
                 {!isLoading && !error && selectedAmenityType == null && places.length === 0 && hasSearchedNearby && (
                   <div className="flex-1 flex flex-col items-center justify-center gap-3 py-10 text-center px-4">
                     <div className="flex flex-col items-center gap-1.5">
-                      <p className="text-sm font-medium">{t.simple.noResultsTitle}</p>
+                      <p className="text-sm font-medium">{t.simple.noResultsTitle(radiusLabel, pickedCity?.label)}</p>
                       <p className="text-xs text-muted-foreground">{t.simple.noResultsHint}</p>
                     </div>
                     <button
@@ -897,7 +911,7 @@ export default function SimpleLayout({
                 )}
                 {!isLoading && selectedAmenityType == null && places.length > 0 && (
                   <>
-                    <p className="text-xs text-muted-foreground px-0.5">{t.simple.resultsCount(places.length)}</p>
+                    <p className="text-xs text-muted-foreground px-0.5">{t.simple.resultsCount(places.length, radiusLabel)}</p>
                     {sortedPlaces.map((p) => (
                       <div key={p.id} ref={(el) => { if (el) itemRefs.current.set(p.id, el); else itemRefs.current.delete(p.id) }}>
                         <SimplePlaceCard
@@ -925,7 +939,7 @@ export default function SimpleLayout({
                 {!isLoading && selectedAmenityType != null && sortedAmenities.length === 0 && hasSearchedNearby && (
                   <div className="flex-1 flex flex-col items-center justify-center gap-3 py-10 text-center px-4">
                     <div className="flex flex-col items-center gap-1.5">
-                      <p className="text-sm font-medium">{t.simple.noResultsTitle}</p>
+                      <p className="text-sm font-medium">{t.simple.noResultsTitle(amenityRadiusLabel, pickedCity?.label)}</p>
                       <p className="text-xs text-muted-foreground">{amenityHint ?? t.simple.noResultsHint}</p>
                     </div>
                     <button

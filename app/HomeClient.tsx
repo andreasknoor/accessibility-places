@@ -1750,6 +1750,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           onGpsResolved={handleGpsResolved}
           onExpandRadius={handleSimpleExpandRadius}
           onAmenityExpandRadius={handleSimpleAmenityExpandRadius}
+          radiusKm={simpleRadiusKm}
+          amenityRadiusKm={simpleAmenityRadiusKm}
           settings={settings}
           onUpdateSettings={handleUpdateSettings}
         />
