@@ -36,16 +36,26 @@ export interface AppSettings {
   // counter in Redis; no IP, no queries, no coordinates). Turning this off deletes
   // the local ID and stops sending — see docs/plans/top-users-stats.md.
   usageStats:         boolean
-  // Simple View ("Variante B — Zwei Wege"): a reduced mobile layout for a fast,
-  // low-friction first search (no tabs, no filter UI, 6 fixed category tiles).
-  // A pure presentation switch — no separate search logic, no persisted filter
-  // override (see SimpleLayout's handleSimpleNearbySearch in HomeClient, which
-  // passes a fixed filter/radius preset directly to the existing search call
-  // instead of mutating the shared `filters`/`radiusKm` state). This toggle is
-  // the ONLY way back to the full UI once Simple View is active — it must
-  // always be reachable from within SimpleLayout (its "Alle Funktionen
-  // anzeigen" link opens the same SettingsSheet used by the full UI).
-  simpleView:         boolean
+  // Quickstart Mode ("Variante B — Zwei Wege"): a reduced mobile layout for a
+  // fast, low-friction first search (no tabs, no filter UI, 6 fixed category
+  // tiles). A pure presentation switch — no separate search logic, no
+  // persisted filter override (see SimpleLayout's handleSimpleNearbySearch in
+  // HomeClient, which passes a fixed filter/radius preset directly to the
+  // existing search call instead of mutating the shared `filters`/`radiusKm`
+  // state). Reachable from every screen with a header via the mode switcher
+  // (MobileLayout / SimpleLayout's shared Header / the desktop header), plus
+  // the "Turbo-Modus an" pill on Quickstart's own start screen.
+  //
+  // Tri-state, not boolean: `null` means "never explicitly chosen" and is
+  // resolved at the single read site (HomeClient) against the device's
+  // pointer/width — mobile/touch defaults to Quickstart, desktop to Turbo.
+  // This is deliberately NOT collapsed into a persisted boolean default: a
+  // one-time migration that WRITES a guessed value to localStorage risks
+  // permanently mis-moding an existing user if the read that informed the
+  // guess was unreliable (localStorage is not always readable yet at
+  // cold-start layout-effect time on iOS — see HomeClient's own comment on
+  // this). A null read is always safe to re-derive on the next render.
+  simpleView:         boolean | null
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -60,7 +70,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   parkingRadiusKm:    4.0,
   internationalMode:  false,
   usageStats:         true,
-  simpleView:         false,
+  simpleView:         null,
 }
 
 // The 6 fixed category favourites shown as tiles in Simple View (Variante B).

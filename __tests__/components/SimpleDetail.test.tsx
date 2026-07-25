@@ -39,25 +39,25 @@ function makePlace(overrides: Partial<Place> = {}): Place {
 
 describe("SimpleDetail", () => {
   it("renders name, address, and distance", () => {
-    renderWithProvider(<SimpleDetail place={makePlace()} distanceM={410} onBack={vi.fn()} onOpenSettings={vi.fn()} />)
+    renderWithProvider(<SimpleDetail place={makePlace()} distanceM={410} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />)
     expect(screen.getByText("Restaurant Zur Post")).toBeInTheDocument()
     expect(screen.getByText(/Hohenzollernring 8 Köln/)).toBeInTheDocument()
     expect(screen.getByText("410 m entfernt")).toBeInTheDocument()
   })
 
   it("renders all three criteria as plain sentences matching their values", () => {
-    renderWithProvider(<SimpleDetail place={makePlace()} onBack={vi.fn()} onOpenSettings={vi.fn()} />)
+    renderWithProvider(<SimpleDetail place={makePlace()} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />)
     expect(screen.getByText("Eingang stufenlos erreichbar")).toBeInTheDocument()
     expect(screen.getByText("WC eingeschränkt nutzbar")).toBeInTheDocument()
     expect(screen.getByText("Kein barrierefreier Parkplatz")).toBeInTheDocument()
   })
 
   it("shows a call link only when a phone number is present", () => {
-    const { rerender } = renderWithProvider(<SimpleDetail place={makePlace()} onBack={vi.fn()} onOpenSettings={vi.fn()} />)
+    const { rerender } = renderWithProvider(<SimpleDetail place={makePlace()} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />)
     expect(screen.queryByText("Anrufen")).not.toBeInTheDocument()
     rerender(
       <LocaleProvider initialLocale="de">
-        <SimpleDetail place={makePlace({ phone: "+49123456789" })} onBack={vi.fn()} onOpenSettings={vi.fn()} />
+        <SimpleDetail place={makePlace({ phone: "+49123456789" })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />
       </LocaleProvider>,
     )
     const callLink = screen.getByText("Anrufen").closest("a")
@@ -65,21 +65,21 @@ describe("SimpleDetail", () => {
   })
 
   it("shows a website link only when a website is present", () => {
-    renderWithProvider(<SimpleDetail place={makePlace({ website: "https://example.com" })} onBack={vi.fn()} onOpenSettings={vi.fn()} />)
+    renderWithProvider(<SimpleDetail place={makePlace({ website: "https://example.com" })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />)
     const websiteLink = screen.getByText("Website besuchen").closest("a")
     expect(websiteLink).toHaveAttribute("href", "https://example.com")
   })
 
   it("calls onBack when the back button is clicked", () => {
     const onBack = vi.fn()
-    renderWithProvider(<SimpleDetail place={makePlace()} onBack={onBack} onOpenSettings={vi.fn()} />)
+    renderWithProvider(<SimpleDetail place={makePlace()} onBack={onBack} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />)
     fireEvent.click(screen.getByText("Zurück"))
     expect(onBack).toHaveBeenCalledTimes(1)
   })
 
   it("calls onOpenSettings when the settings icon is clicked — the full-UI return path must stay reachable from the detail screen too", () => {
     const onOpenSettings = vi.fn()
-    renderWithProvider(<SimpleDetail place={makePlace()} onBack={vi.fn()} onOpenSettings={onOpenSettings} />)
+    renderWithProvider(<SimpleDetail place={makePlace()} onBack={vi.fn()} onOpenSettings={onOpenSettings} onSwitchToTurbo={vi.fn()} />)
     fireEvent.click(screen.getByRole("button", { name: "Einstellungen" }))
     expect(onOpenSettings).toHaveBeenCalledTimes(1)
   })
@@ -90,12 +90,12 @@ describe("SimpleDetail", () => {
   // interactive score-formula breakdown (out of scope here, like the rest of
   // this reduced screen).
   it("shows the confidence score badge with its percentage and label", () => {
-    renderWithProvider(<SimpleDetail place={makePlace({ overallConfidence: 0.75 })} onBack={vi.fn()} onOpenSettings={vi.fn()} />)
+    renderWithProvider(<SimpleDetail place={makePlace({ overallConfidence: 0.75 })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />)
     expect(screen.getByText("Daten: 75% · Verlässlich")).toBeInTheDocument()
   })
 
   it("reflects a low confidence score with its own label", () => {
-    renderWithProvider(<SimpleDetail place={makePlace({ overallConfidence: 0.2 })} onBack={vi.fn()} onOpenSettings={vi.fn()} />)
+    renderWithProvider(<SimpleDetail place={makePlace({ overallConfidence: 0.2 })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />)
     expect(screen.getByText("Daten: 20% · Unsicher")).toBeInTheDocument()
   })
 
@@ -104,7 +104,7 @@ describe("SimpleDetail", () => {
   // Simple View's reduced detail screen must not silently drop this warning.
   describe("possibly-not-accessible warning", () => {
     it("is hidden when neither entrance nor toilet is flagged (default fixture: yes/limited)", () => {
-      renderWithProvider(<SimpleDetail place={makePlace()} onBack={vi.fn()} onOpenSettings={vi.fn()} />)
+      renderWithProvider(<SimpleDetail place={makePlace()} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />)
       expect(screen.queryByRole("alert")).not.toBeInTheDocument()
     })
 
@@ -113,7 +113,7 @@ describe("SimpleDetail", () => {
         <SimpleDetail
           place={makePlace({ accessibility: { ...makePlace().accessibility, entrance: buildAttribute("osm", "no", "no", {}) } })}
           onBack={vi.fn()}
-          onOpenSettings={vi.fn()}
+          onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()}
         />,
       )
       expect(screen.getByRole("alert")).toHaveTextContent("Achtung: Evtl. nicht barrierefrei.")
@@ -124,7 +124,7 @@ describe("SimpleDetail", () => {
         <SimpleDetail
           place={makePlace({ accessibility: { ...makePlace().accessibility, toilet: buildAttribute("osm", "unknown", "unknown", {}) } })}
           onBack={vi.fn()}
-          onOpenSettings={vi.fn()}
+          onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()}
         />,
       )
       expect(screen.getByRole("alert")).toBeInTheDocument()
@@ -137,7 +137,7 @@ describe("SimpleDetail", () => {
         <SimpleDetail
           place={makePlace({ accessibility: { ...makePlace().accessibility, parking: buildAttribute("osm", "unknown", "unknown", {}) } })}
           onBack={vi.fn()}
-          onOpenSettings={vi.fn()}
+          onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()}
         />,
       )
       expect(screen.queryByRole("alert")).not.toBeInTheDocument()

@@ -13,7 +13,7 @@ import { hapticLight } from "@/lib/native/haptics"
 import { track } from "@/lib/analytics"
 import { amenitySpotKey, formatRadiusKm } from "@/lib/search-ui"
 import { SettingsPanel } from "@/components/settings/SettingsSheet"
-import LanguageSwitcher from "@/components/LanguageSwitcher"
+import ModeSwitcher from "@/components/ModeSwitcher"
 import SimplePlaceCard from "@/components/simple/SimplePlaceCard"
 import SimpleDetail from "@/components/simple/SimpleDetail"
 import AmenityCard from "@/components/results/AmenityCard"
@@ -112,6 +112,27 @@ interface Props {
   onAmenityExpandRadius: () => void
   settings:        AppSettings
   onUpdateSettings: (patch: Partial<AppSettings>) => void
+  // Deep-link target (docs/plans/quickstart-mode-default.md Phase 4a): a
+  // specific place, arriving via an app-generated link (SEO "Mehr Details",
+  // a copied place link, a native App/Universal Link). Already resolved by
+  // HomeClient (against its own RAW, unfiltered `places` state — see its
+  // quickstartResolvedPlace comment for why) — this only opens the same
+  // detail screen a normal venue-search hit would reach.
+  initialPlaceTarget?: Place | null
+  // Fired once the target above has actually been opened, so HomeClient can
+  // drop it. Without this the resolved place would linger for the whole
+  // session and re-open its detail screen on any LATER mount of this
+  // component (a mode switch back into Quickstart, a reset-triggered
+  // remount), hijacking whatever the user was doing by then.
+  onPlaceTargetConsumed?: () => void
+  // Deep-link target (Phase 4b): a whole category in a city, from an SEO
+  // landing-page link. Only ever passed for a category this layout actually
+  // has a tile for (HomeClient filters against SIMPLE_CATEGORIES), and only
+  // once its coordinates are known, so it can be dropped straight into the
+  // same results screen the city-search flow reaches — including the picked
+  // city, so a follow-up tile pick keeps searching that city rather than
+  // silently falling back to GPS.
+  initialCityTarget?: { label: string; category: Category; coords: { lat: number; lon: number } } | null
 }
 
 // Module-level (not defined inside SimpleLayout's body) so its identity is
@@ -120,12 +141,15 @@ interface Props {
 // on every keystroke.
 //
 // `onOpenSettings` is a quiet gear icon reachable from every screen that uses
-// this Header — the return path to the full UI (the settings toggle) must be
-// reachable from wherever the user currently is, not just from the start
-// screen a few back-taps away. LanguageSwitcher sits next to it for the same
-// reason — Simple View had no DE/EN control at all before, forcing a detour
-// through the full UI just to change language.
-function Header({ title, backLabel, settingsLabel, onBack, onOpenSettings }: { title?: string; backLabel: string; settingsLabel: string; onBack?: () => void; onOpenSettings: () => void }) {
+// this Header. `onSwitchToTurbo` sits next to it for the same "reachable from
+// wherever the user currently is" reason — it's Quickstart's one-tap way back
+// to the full UI on these screens (tiles/results/venue/city), in the slot the
+// language switcher used to occupy (moved into the settings sheet, see
+// docs/plans/quickstart-mode-default.md Phase 1). The start screen has no back
+// target and no header bar, so it renders its own top row instead — with the
+// gear in the same rightmost position, but deliberately no mode-switch icon:
+// its own full "Turbo-Modus an" pill already is that action.
+function Header({ title, backLabel, settingsLabel, onBack, onOpenSettings, onSwitchToTurbo }: { title?: string; backLabel: string; settingsLabel: string; onBack?: () => void; onOpenSettings: () => void; onSwitchToTurbo: () => void }) {
   return (
     // pt-safe-3, not pt-3: this row sits flush at the very top of the h-svh
     // root (no browser chrome/native title bar above it, unlike MobileLayout's
@@ -142,7 +166,7 @@ function Header({ title, backLabel, settingsLabel, onBack, onOpenSettings }: { t
       ) : <span className="w-4" />}
       {title && <p className="flex-1 text-center text-sm font-semibold px-1 truncate">{title}</p>}
       {!title && <span className="flex-1" />}
-      <LanguageSwitcher />
+      <ModeSwitcher mode="quickstart" onSwitch={onSwitchToTurbo} />
       <button
         onClick={onOpenSettings}
         aria-label={settingsLabel}
@@ -159,6 +183,7 @@ export default function SimpleLayout({
   onSimpleNearbySearch, onPlaceSearch, onAmenitySearch, amenityResults, amenityHint,
   parkingSpots, toiletSpots, onSearchHere, onFocusSearchHere, onGpsResolved,
   onExpandRadius, onAmenityExpandRadius, radiusKm, amenityRadiusKm, settings, onUpdateSettings,
+  initialPlaceTarget, onPlaceTargetConsumed, initialCityTarget,
 }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
@@ -283,7 +308,7 @@ export default function SimpleLayout({
   // below) as well as in the onBack handler — a ref's `.current` must never be
   // read during render (its value isn't guaranteed stable across render
   // attempts under all rendering modes).
-  const [detailReturnTo, setDetailReturnTo] = useState<"results" | "venue">("results")
+  const [detailReturnTo, setDetailReturnTo] = useState<"results" | "venue" | "start">("results")
   const venueDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const venueAbortRef    = useRef<AbortController | undefined>(undefined)
 
@@ -468,12 +493,47 @@ export default function SimpleLayout({
     setAmenityPanTrigger((n) => n + 1)
   }
 
-  function openDetail(place: Place, returnTo: "results" | "venue") {
+  function openDetail(place: Place, returnTo: "results" | "venue" | "start") {
     setSelectedPlace(place)
     onSelect(place)
     setDetailReturnTo(returnTo)
     setScreen("detail")
   }
+
+  // Deep-link target (Phase 4a): jump straight to a specific place's detail
+  // screen once HomeClient resolves initialPlaceTarget. Keyed by place id
+  // (not a boolean) so a DIFFERENT resolved place — e.g. a warm relaunch
+  // with a second, different deep link — still opens correctly, while the
+  // SAME one doesn't reopen every time `places`/this prop happens to update
+  // for an unrelated reason later in the session.
+  const placeTargetConsumedIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!initialPlaceTarget || placeTargetConsumedIdRef.current === initialPlaceTarget.id) return
+    placeTargetConsumedIdRef.current = initialPlaceTarget.id
+    openDetail(initialPlaceTarget, "start")
+    onPlaceTargetConsumed?.()
+  // openDetail is a plain function (new identity every render, not memoized)
+  // whose behaviour never actually varies between renders — omitted
+  // deliberately, same pattern as the venue-search-settle effect below.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPlaceTarget])
+
+  // Deep-link target (Phase 4b): drop straight into the results screen for a
+  // whole category in a city. Fires at most once — a later prop change (the
+  // same link re-resolving as the search settles) must not yank a user who
+  // has since navigated elsewhere back onto the results screen.
+  const cityTargetConsumedRef = useRef(false)
+  useEffect(() => {
+    if (!initialCityTarget || cityTargetConsumedRef.current) return
+    cityTargetConsumedRef.current = true
+    setPickedCity({ label: initialCityTarget.label, coords: initialCityTarget.coords })
+    setSelectedCategory(initialCityTarget.category)
+    setSelectedAmenityType(null)
+    // Marks "a search has run" — without it the results screen would treat an
+    // empty result as "nothing searched yet" and show no empty state at all.
+    setHasSearchedNearby(true)
+    setScreen("results")
+  }, [initialCityTarget])
 
   // Venue autocomplete — mirrors ChatPanel's own unified-suggest debounce
   // (300 ms, abort-on-supersede), filtered to venue-kind results only.
@@ -646,16 +706,36 @@ export default function SimpleLayout({
         {/* ── Start: the two core jobs ── */}
         {screen === "start" && (
           // pt-safe-3, not the top half of py-3 — this screen has no shared
-          // <Header>, so its own top row (the language switcher) needs the
-          // same safe-area treatment directly; see Header's own comment.
+          // <Header> (no back target, and its title is the centred headline
+          // below rather than a header bar), so its own top row needs the same
+          // safe-area treatment directly; see Header's own comment.
           <div className="flex-1 flex flex-col px-5 pt-safe-3 pb-3">
-            <div className="flex justify-end">
-              <LanguageSwitcher />
+            {/* Gear only, in the same rightmost position the shared Header
+                puts it — so settings (and, inside them, the language switcher)
+                are reachable from EVERY screen, this one included. It
+                deliberately gets no ModeSwitcher next to it, unlike the shared
+                Header: the full "Turbo-Modus an" pill further down this very
+                screen is already that action, with a label and a subline, and
+                a second bare icon a few hundred pixels away would just be the
+                same switch twice. */}
+            <div className="flex justify-end -mr-1.5">
+              <button
+                onClick={() => setSettingsOpen(true)}
+                aria-label={t.settings.title}
+                className="p-1.5 text-muted-foreground hover:text-foreground transition-colors rounded-md"
+              >
+                <SettingsIcon className="w-4 h-4" />
+              </button>
             </div>
             <div className="flex-1 flex flex-col justify-center gap-3">
-            <div className="flex items-center gap-2.5 justify-center mb-4">
-              <img src="/icons/icon-preview.svg" className="w-8 h-8 rounded-lg" alt="" aria-hidden />
-              <span className="font-bold text-base">{t.app.title}</span>
+            {/* Same title + subtitle pairing the full UI's header uses, so the
+                app introduces itself identically in both modes. */}
+            <div className="flex flex-col items-center gap-1 mb-4">
+              <div className="flex items-center gap-2.5">
+                <img src="/icons/icon-preview.svg" className="w-8 h-8 rounded-lg" alt="" aria-hidden />
+                <span className="font-bold text-base">{t.app.title}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">{t.app.subtitle}</p>
             </div>
             <p className="text-center font-semibold text-lg mb-2">{t.simple.startTitle}</p>
 
@@ -729,7 +809,7 @@ export default function SimpleLayout({
         {/* ── Category tiles ── */}
         {screen === "tiles" && (
           <div className="flex-1 min-h-0 flex flex-col">
-            <Header title={t.simple.tilesTitle} backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen("start")} onOpenSettings={() => setSettingsOpen(true)} />
+            <Header title={t.simple.tilesTitle} backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen("start")} onOpenSettings={() => setSettingsOpen(true)} onSwitchToTurbo={() => onUpdateSettings({ simpleView: false })} />
             {locateError && (
               <p role="alert" className="mx-4 mt-1 mb-0 text-xs text-destructive">{locateError}</p>
             )}
@@ -797,7 +877,7 @@ export default function SimpleLayout({
         {/* ── Results (map strip + single scroll) ── */}
         {screen === "results" && (
           <div className="flex-1 min-h-0 flex flex-col">
-            <Header title={t.simple.resultsTitle(selectedAmenityType ? amenityLabel(selectedAmenityType) : categoryLabel(selectedCategory), pickedCity?.label)} backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen("tiles")} onOpenSettings={() => setSettingsOpen(true)} />
+            <Header title={t.simple.resultsTitle(selectedAmenityType ? amenityLabel(selectedAmenityType) : categoryLabel(selectedCategory), pickedCity?.label)} backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen("tiles")} onOpenSettings={() => setSettingsOpen(true)} onSwitchToTurbo={() => onUpdateSettings({ simpleView: false })} />
             {error && <p role="alert" className="mx-4 mb-1 text-xs text-destructive">{error}</p>}
 
             {/* Search-in-progress indicator, directly above the map — same
@@ -898,7 +978,7 @@ export default function SimpleLayout({
                 {!isLoading && !error && selectedAmenityType == null && places.length === 0 && hasSearchedNearby && (
                   <div className="flex-1 flex flex-col items-center justify-center gap-3 py-10 text-center px-4">
                     <div className="flex flex-col items-center gap-1.5">
-                      <p className="text-sm font-medium">{t.simple.noResultsTitle(radiusLabel, pickedCity?.label)}</p>
+                      <p className="text-sm font-medium whitespace-pre-line">{t.simple.noResultsTitle(radiusLabel, pickedCity?.label)}</p>
                       <p className="text-xs text-muted-foreground">{t.simple.noResultsHint}</p>
                     </div>
                     <button
@@ -939,7 +1019,7 @@ export default function SimpleLayout({
                 {!isLoading && selectedAmenityType != null && sortedAmenities.length === 0 && hasSearchedNearby && (
                   <div className="flex-1 flex flex-col items-center justify-center gap-3 py-10 text-center px-4">
                     <div className="flex flex-col items-center gap-1.5">
-                      <p className="text-sm font-medium">{t.simple.noResultsTitle(amenityRadiusLabel, pickedCity?.label)}</p>
+                      <p className="text-sm font-medium whitespace-pre-line">{t.simple.noResultsTitle(amenityRadiusLabel, pickedCity?.label)}</p>
                       <p className="text-xs text-muted-foreground">{amenityHint ?? t.simple.noResultsHint}</p>
                     </div>
                     <button
@@ -988,7 +1068,7 @@ export default function SimpleLayout({
         {/* ── Venue search ── */}
         {screen === "venue" && (
           <div className="flex-1 min-h-0 flex flex-col">
-            <Header backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen("start")} onOpenSettings={() => setSettingsOpen(true)} />
+            <Header backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen("start")} onOpenSettings={() => setSettingsOpen(true)} onSwitchToTurbo={() => onUpdateSettings({ simpleView: false })} />
             <div className="px-4 pb-2">
               <div className="flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2.5">
                 <SearchIcon className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden />
@@ -1039,7 +1119,7 @@ export default function SimpleLayout({
         {/* ── City search ("In einer anderen Stadt suchen") ── */}
         {screen === "city" && (
           <div className="flex-1 min-h-0 flex flex-col">
-            <Header backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen("start")} onOpenSettings={() => setSettingsOpen(true)} />
+            <Header backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen("start")} onOpenSettings={() => setSettingsOpen(true)} onSwitchToTurbo={() => onUpdateSettings({ simpleView: false })} />
             <div className="px-4 pb-2">
               <div className="flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2.5">
                 <Building2 className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden />
@@ -1084,9 +1164,14 @@ export default function SimpleLayout({
             // itself (mirrors the full app's own place-search behaviour) — a
             // "0 m entfernt" distance to itself is meaningless, so only show
             // distance when this detail came from the nearby-search results.
-            distanceM={detailReturnTo === "venue" ? undefined : distanceFor(selectedPlace)}
+            // A "start" origin (Phase 4a deep link) has the same problem: the
+            // pure-coordinates link shape passes the target coords straight
+            // through as the search centre (HomeClient's runPlaceDeepLink),
+            // so it would compute the same meaningless ~0 m.
+            distanceM={detailReturnTo === "venue" || detailReturnTo === "start" ? undefined : distanceFor(selectedPlace)}
             onBack={() => setScreen(detailReturnTo)}
             onOpenSettings={() => setSettingsOpen(true)}
+            onSwitchToTurbo={() => onUpdateSettings({ simpleView: false })}
           />
         )}
 

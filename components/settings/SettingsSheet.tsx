@@ -8,6 +8,7 @@ import { useTranslations, useLocale } from "@/lib/i18n"
 import { SETTING_CHIPS, DEFAULT_APP_SETTINGS } from "@/lib/settings"
 import { cn } from "@/lib/utils"
 import { track } from "@/lib/analytics"
+import LanguageSwitcher from "@/components/LanguageSwitcher"
 import type { AppSettings } from "@/lib/settings"
 import type { Category } from "@/lib/types"
 
@@ -151,15 +152,16 @@ export function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose, 
             {ts.sectionGeneral}
           </SectionTitle>
           <div className="divide-y divide-border/60">
-            {/* This toggle is the ONLY way back to the full UI once Simple View
-                is active — SimpleLayout's "Alle Funktionen anzeigen" link opens
-                this exact sheet, scrolled to the top, so the row is always the
-                first thing reachable regardless of which layout is showing. */}
-            <Row label={ts.simpleView} hint={ts.simpleViewHint}>
-              <Toggle
-                value={settings.simpleView}
-                onChange={(v) => onUpdate({ simpleView: v })}
-              />
+            {/* First row, deliberately: a first-time visitor who landed in the
+                wrong language must find this immediately, not after scrolling.
+                Closes the sheet before navigating — LanguageSwitcher's route
+                change remounts HomeClient, which would otherwise orphan this
+                open sheet mid-interaction. (Quickstart/Turbo mode switching
+                used to live here — it now has its own one-tap header control,
+                see components/ModeSwitcher.tsx, reachable from every screen
+                that has a header in both modes.) */}
+            <Row label={ts.language} hint={ts.languageHint}>
+              <LanguageSwitcher onBeforeNavigate={onClose} />
             </Row>
             {!simple && (
               <Row label={ts.searchMode}>

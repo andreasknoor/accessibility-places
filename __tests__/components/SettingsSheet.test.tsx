@@ -13,6 +13,9 @@ vi.mock("@/lib/i18n", async (importOriginal) => {
     useLocale: () => ({ locale: "de", setLocale: vi.fn() }),
   }
 })
+// Requires a Next.js App Router context (useRouter/usePathname) that isn't
+// mounted in these unit tests — same mock SimpleDetail.test.tsx already uses.
+vi.mock("@/components/LanguageSwitcher", () => ({ default: () => null }))
 
 function renderSheet(
   settings: AppSettings = DEFAULT_APP_SETTINGS,
@@ -118,9 +121,9 @@ describe("SettingsPanel — simple mode (opened from within Simple View)", () =>
     expect(screen.queryByText("Sortierung")).not.toBeInTheDocument()
   })
 
-  it("keeps settings that do apply: Simple View toggle itself, international mode, usage stats", () => {
+  it("keeps settings that do apply: language, international mode, usage stats", () => {
     render(<SettingsPanel settings={DEFAULT_APP_SETTINGS} onUpdate={vi.fn()} onClose={vi.fn()} simple />)
-    expect(screen.getByText("Einfache Ansicht (Beta)")).toBeInTheDocument()
+    expect(screen.getByText("Sprache")).toBeInTheDocument()
     expect(screen.getByText("Internationale Suche (Beta)")).toBeInTheDocument()
     expect(screen.getByText("Anonyme Nutzungsstatistik")).toBeInTheDocument()
     expect(screen.getByText("Auf Standard zurücksetzen")).toBeInTheDocument()

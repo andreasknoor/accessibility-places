@@ -2,7 +2,7 @@
 
 import { ChevronLeft, Globe, Phone, Settings as SettingsIcon } from "lucide-react"
 import { NativeLink } from "@/components/ui/native-link"
-import LanguageSwitcher from "@/components/LanguageSwitcher"
+import ModeSwitcher from "@/components/ModeSwitcher"
 import NavigateButton from "@/components/ui/navigate-button"
 import { NotAccessibleWarningBox } from "@/components/results/NotAccessibleWarning"
 import ConfidenceBadge from "@/components/results/ConfidenceBadge"
@@ -19,6 +19,10 @@ interface Props {
   // The return path to the full UI (the settings toggle) must be reachable
   // from every screen, not just the start screen — see SimpleLayout's Header.
   onOpenSettings: () => void
+  // Same one-tap mode switcher as SimpleLayout's shared Header — this screen
+  // has its own separate top row (not that shared component), so it needs
+  // its own wiring rather than inheriting it for free.
+  onSwitchToTurbo: () => void
 }
 
 function CriterionRow({ label, dot }: { label: string; dot: string }) {
@@ -36,7 +40,7 @@ function CriterionRow({ label, dot }: { label: string; dot: string }) {
 // verified/dog/veggie badges — see the Rein/Raus table in the plan. Kept:
 // name, distance, address, the 3 core criteria as plain sentences, call,
 // website, "Hinbringen".
-export default function SimpleDetail({ place, distanceM, onBack, onOpenSettings }: Props) {
+export default function SimpleDetail({ place, distanceM, onBack, onOpenSettings, onSwitchToTurbo }: Props) {
   const t = useTranslations()
   const addr = [place.address.street, place.address.houseNumber, place.address.city]
     .filter(Boolean).join(" ")
@@ -55,7 +59,7 @@ export default function SimpleDetail({ place, distanceM, onBack, onOpenSettings 
           {t.simple.back}
         </button>
         <span className="flex-1" />
-        <LanguageSwitcher />
+        <ModeSwitcher mode="quickstart" onSwitch={onSwitchToTurbo} />
         <button
           onClick={onOpenSettings}
           aria-label={t.settings.title}

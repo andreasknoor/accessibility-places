@@ -471,8 +471,12 @@ const en: Translations = {
     internationalModeHint: "Search beyond Germany, Austria and Switzerland (France, United Kingdom, Netherlands, Spain, Italy, USA). Data coverage varies by country and is often sparse outside major cities.",
     usageStats:            "Anonymous usage statistics",
     usageStatsHint:        "Counts your app starts and searches under a random ID — no IP address, search terms, or location. Turning this off deletes the ID immediately. Details in the privacy policy.",
-    simpleView:            "Simple View (Beta)",
-    simpleViewHint:        "A reduced layout for a fast start: two paths, six categories, no filters.",
+    language:              "Language",
+    languageHint:          "Switches immediately — the page reloads.",
+  },
+  modeSwitcher: {
+    switchToQuickstart: "Switch to Quickstart Mode",
+    switchToTurbo:      "Switch to Turbo Mode",
   },
   simple: {
     startTitle:      "How would you like to search?",
@@ -493,9 +497,11 @@ const en: Translations = {
     resultsTitle:    (label: string, place?: string) => place ? `${label} in ${place}` : `${label} near you`,
     resultsCount:    (n: number, radius: string) => n === 1 ? `1 place found (${radius} search radius)` : `${n} places found (${radius} search radius)`,
     resizeHandle:    "Resize map and list",
+    // See the DE counterpart: the "\n" puts the bracketed search-scope on its
+    // own centred line, rendered via `whitespace-pre-line` in SimpleLayout.
     noResultsTitle:  (radius: string, place?: string) => place
-      ? `No accessible places found (${radius} around ${place})`
-      : `No accessible places found nearby (${radius} from your location)`,
+      ? `No accessible places found\n(${radius} around ${place})`
+      : `No accessible places found nearby\n(${radius} from your location)`,
     noResultsHint:   "Try \"Show everything\", a different category, or a wider search radius.",
     lowResultsHint:  "Not enough places found?",
     venuePlaceholder: "Name of the venue (e.g. Adlon Hotel Berlin)",

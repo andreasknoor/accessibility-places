@@ -695,3 +695,186 @@ describe("HomeClient — place deep-link does not force Google Places on", () =>
     expect(body.sources?.ginto).toBe(true)
   })
 })
+
+// ─── Quickstart-vs-Turbo mode resolution ──────────────────────────────────
+// The mode is resolved from three sources in strict precedence:
+//   1. the persisted explicit choice (settings.simpleView, tri-state)
+//   2. the device fallback, but ONLY for a device that hasn't used the app
+//      before (so an existing user is never moved without choosing to)
+//   3. a one-shot override that forces Turbo for deep links Quickstart
+//      cannot represent — deliberately never persisted.
+// jsdom's matchMedia mock reports desktop by default (vitest.setup.ts), so
+// the mobile cases override it explicitly — without that they would silently
+// only ever exercise the desktop branch and pass for the wrong reason.
+function setMobileViewport(isMobile: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: (query: string) => ({
+      matches: isMobile, media: query, onchange: null,
+      addListener: () => {}, removeListener: () => {},
+      addEventListener: () => {}, removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  })
+}
+
+// Quickstart's start screen is unmistakable: the full UI never renders it.
+const quickstartMarker = "Wie willst Du suchen?"
+
+describe("HomeClient — Quickstart/Turbo mode resolution", () => {
+  afterEach(() => setMobileViewport(false))
+
+  it("a fresh install on a mobile device starts in Quickstart", async () => {
+    setMobileViewport(true)
+    vi.stubGlobal("fetch", mockSearchFetch())
+    render(<HomeClient />)
+    expect(await screen.findByText(quickstartMarker)).toBeInTheDocument()
+  })
+
+  it("a fresh install on desktop starts in Turbo — the reduced layout is opt-in there", async () => {
+    setMobileViewport(false)
+    vi.stubGlobal("fetch", mockSearchFetch())
+    render(<HomeClient />)
+    await waitFor(() => expect(screen.queryByText(quickstartMarker)).not.toBeInTheDocument())
+  })
+
+  it("an existing mobile user who never chose a mode keeps Turbo, rather than being moved", async () => {
+    setMobileViewport(true)
+    localStorage.setItem("ap_visited", "1")
+    vi.stubGlobal("fetch", mockSearchFetch())
+    render(<HomeClient />)
+    await waitFor(() => expect(screen.queryByText(quickstartMarker)).not.toBeInTheDocument())
+  })
+
+  it("an explicit Turbo choice wins over the mobile fallback", async () => {
+    setMobileViewport(true)
+    localStorage.setItem("ap_settings", JSON.stringify({ ...DEFAULT_APP_SETTINGS, simpleView: false }))
+    vi.stubGlobal("fetch", mockSearchFetch())
+    render(<HomeClient />)
+    await waitFor(() => expect(screen.queryByText(quickstartMarker)).not.toBeInTheDocument())
+  })
+
+  it("an explicit Quickstart choice wins on desktop, where the fallback would say Turbo", async () => {
+    setMobileViewport(false)
+    localStorage.setItem("ap_settings", JSON.stringify({ ...DEFAULT_APP_SETTINGS, simpleView: true }))
+    vi.stubGlobal("fetch", mockSearchFetch())
+    render(<HomeClient />)
+    expect(await screen.findByText(quickstartMarker)).toBeInTheDocument()
+  })
+
+  // A category Quickstart has no tile for cannot be shown on its results
+  // screen without either inventing a tile or silently searching something
+  // else, so it falls back to the full UI. "theater" is an SEO category but
+  // not one of Quickstart's eight tiles.
+  it("a city/category deep link outside Quickstart's tiles forces Turbo, even for a fresh mobile install", async () => {
+    setMobileViewport(true)
+    vi.stubGlobal("fetch", mockSearchFetch())
+    render(<HomeClient initialCity="Berlin" initialCategory="theater" />)
+    await waitFor(() => expect(screen.queryByText(quickstartMarker)).not.toBeInTheDocument())
+    expect(screen.queryByText(/in Berlin$/)).not.toBeInTheDocument()
+  })
+
+  // ...but that override must never be written to disk: the next ordinary
+  // launch has to be back in Quickstart.
+  it("the deep-link Turbo override is not persisted", async () => {
+    setMobileViewport(true)
+    vi.stubGlobal("fetch", mockSearchFetch())
+    render(<HomeClient initialCity="Berlin" initialCategory="theater" />)
+    await waitFor(() => expect(screen.queryByText(quickstartMarker)).not.toBeInTheDocument())
+    const stored = localStorage.getItem("ap_settings")
+    expect(stored == null || JSON.parse(stored).simpleView !== false).toBe(true)
+  })
+
+  // A category that IS one of Quickstart's tiles maps cleanly onto its
+  // results screen, so the link must stay in Quickstart rather than ejecting
+  // a first-time user into the full UI — the exact audience the reduced
+  // layout exists for.
+  it("a city/category deep link within Quickstart's tiles opens its results screen", async () => {
+    setMobileViewport(true)
+    vi.stubGlobal("fetch", mockSearchFetch())
+    render(<HomeClient initialCity="Berlin" initialCategory="cafe" />)
+    // Quickstart's own results header, naming both the category and the city.
+    expect(await screen.findByText("Cafés & Eis in Berlin")).toBeInTheDocument()
+  })
+
+  // Quickstart hides places with unknown entrance data on purpose — its plain
+  // yes/limited/no sentences cannot express "unknown". An SEO arrival must
+  // therefore search with that same preset, not the full UI's live filters.
+  it("a Quickstart city/category arrival searches with Quickstart's fixed filter preset", async () => {
+    setMobileViewport(true)
+    const fetchMock = mockSearchFetch()
+    vi.stubGlobal("fetch", fetchMock)
+    render(<HomeClient initialCity="Berlin" initialCategory="cafe" />)
+    await screen.findByText("Cafés & Eis in Berlin")
+
+    const body = lastSearchRequestBody(fetchMock) as unknown as {
+      filters?: { entrance?: boolean; acceptUnknown?: boolean }
+    }
+    expect(body.filters?.entrance).toBe(true)
+    expect(body.filters?.acceptUnknown).toBe(false)
+  })
+
+  // A link to one specific place IS representable in Quickstart (its detail
+  // screen), so it must not eject a Quickstart user into the full UI.
+  it("a place deep link stays in Quickstart for a fresh mobile install", async () => {
+    setMobileViewport(true)
+    vi.stubGlobal("fetch", mockSearchFetch())
+    render(<HomeClient initialSelectLat={52.5} initialSelectLon={13.4} initialSelectName="Café Beispiel" />)
+    expect(await screen.findByText(quickstartMarker)).toBeInTheDocument()
+  })
+})
+
+// ─── Regressions around the mode resolution's two stateful inputs ─────────
+describe("HomeClient — mode resolution stays stable across a session", () => {
+  afterEach(() => setMobileViewport(false))
+
+  // The "has used the app before" signal is snapshotted once per tab session,
+  // NOT re-read per mount. HomeClient remounts on an in-app navigation (FAQ →
+  // "Zurück"), and by then this session's own first search has already set
+  // ap_visited — re-deriving the signal there would silently throw an active
+  // Quickstart user into the full UI mid-browsing.
+  it("a remount after this session's own first search stays in Quickstart", async () => {
+    setMobileViewport(true)
+    vi.stubGlobal("fetch", mockSearchFetch())
+
+    const first = render(<HomeClient />)
+    expect(await screen.findByText(quickstartMarker)).toBeInTheDocument()
+    // Whatever the user does next marks the app as visited.
+    localStorage.setItem("ap_visited", "1")
+    first.unmount()
+
+    render(<HomeClient />)
+    expect(await screen.findByText(quickstartMarker)).toBeInTheDocument()
+  })
+
+  // A device that genuinely used the app in an EARLIER session is a different
+  // case and must still keep the full UI it is used to.
+  it("a brand-new tab for a device that used the app earlier starts in Turbo", async () => {
+    setMobileViewport(true)
+    localStorage.setItem("ap_visited", "1")
+    sessionStorage.clear()  // a new tab has no snapshot yet
+    vi.stubGlobal("fetch", mockSearchFetch())
+
+    render(<HomeClient />)
+    await waitFor(() => expect(screen.queryByText(quickstartMarker)).not.toBeInTheDocument())
+  })
+
+  // A link whose place never showed up (search returned nothing) must not sit
+  // around and later hijack an unrelated search that happens to return a
+  // result near the same coordinates.
+  it("starting a new Quickstart search abandons an unresolved deep-link target", async () => {
+    setMobileViewport(true)
+    mockGetBestPosition.mockResolvedValue({ lat: 52.5, lon: 13.4 })
+    vi.stubGlobal("fetch", mockSearchFetch())  // every search resolves with zero places
+
+    render(<HomeClient initialSelectLat={52.5} initialSelectLon={13.4} initialSelectName="Café Beispiel" />)
+    // The deep-link search found nothing, so the user is left on the start screen.
+    expect(await screen.findByText(quickstartMarker)).toBeInTheDocument()
+
+    // They now start something of their own; the stale target must be gone, so
+    // this lands on the results screen rather than a hijacked detail screen.
+    fireEvent.click(screen.getByText("In meiner Nähe suchen"))
+    fireEvent.click(await screen.findByText("Cafés & Eis"))
+    await waitFor(() => expect(screen.getByText("Cafés & Eis in Deiner Nähe")).toBeInTheDocument())
+  })
+})

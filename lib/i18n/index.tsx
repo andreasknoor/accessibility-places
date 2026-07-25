@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useState,
   type ReactNode,
 } from "react"
@@ -38,7 +39,16 @@ export function LocaleProvider({ children, initialLocale }: { children: ReactNod
   // Start with initialLocale (for route-controlled pages like /en) or "de" (SSR default).
   const [locale, setLocaleState] = useState<Locale>(initialLocale ?? "de")
 
-  useEffect(() => {
+  // useLayoutEffect, not useEffect: the server can only render one language
+  // (the root layout's "de"), so the real locale is always a client-side
+  // correction. A passive effect applies it AFTER paint, which showed every
+  // non-German visitor a German first frame before it flipped. A layout
+  // effect runs synchronously before the browser paints, so the correction is
+  // never visible — the same pattern useIsMobile and HomeClient's own
+  // localStorage-derived state already use. Resolving during render instead
+  // is not an option: it would be a genuine hydration mismatch (React #418).
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional: hydration-safe sync of browser/storage-derived state, mirrors useIsMobile */
+  useLayoutEffect(() => {
     // Skip browser/storage detection when the route itself controls the locale.
     if (initialLocale) return
     const fromQuery = localeFromQuery()
@@ -51,6 +61,23 @@ export function LocaleProvider({ children, initialLocale }: { children: ReactNod
     if (stored === "de" || stored === "en") setLocaleState(stored)
     else setLocaleState(detectLocale())
   }, [initialLocale])
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Keep <html lang> honest. The root layout hardcodes lang="de" because it is
+  // a Server Component that cannot know the visitor's language, so without
+  // this an English visitor on "/" got English text inside a document
+  // declared as German — a WCAG 2.2 SC 3.1.1 failure, and a concrete one:
+  // screen readers pick their pronunciation from this attribute, so they
+  // would read English with German phonetics.
+  //
+  // The /en/* routes nest their own LocaleProvider (initialLocale="en"); that
+  // inner one is the authority there, so the outer auto-detecting instance
+  // must keep its hands off. Gated on the path rather than on effect ordering,
+  // which runs child-before-parent and would let the outer one win.
+  useLayoutEffect(() => {
+    if (!initialLocale && window.location.pathname.startsWith("/en")) return
+    document.documentElement.lang = locale
+  }, [locale, initialLocale])
 
   function setLocale(l: Locale) {
     setLocaleState(l)

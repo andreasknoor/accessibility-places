@@ -471,8 +471,12 @@ const de: Translations = {
     internationalModeHint: "Suche auch außerhalb von Deutschland, Österreich und der Schweiz (Frankreich, Großbritannien, Niederlande, Spanien, Italien, USA). Datenlage variiert je nach Land und ist außerhalb großer Städte oft dünn.",
     usageStats:            "Anonyme Nutzungsstatistik",
     usageStatsHint:        "Zählt deine App-Starts und Suchen unter einer zufälligen ID — ohne IP-Adresse, Suchbegriffe oder Standort. Beim Ausschalten wird die ID sofort gelöscht. Details in der Datenschutzerklärung.",
-    simpleView:            "Einfache Ansicht (Beta)",
-    simpleViewHint:        "Reduzierte Oberfläche für einen schnellen Einstieg: zwei Wege, sechs Kategorien, keine Filter.",
+    language:              "Sprache",
+    languageHint:          "Wechselt sofort — die Seite lädt neu.",
+  },
+  modeSwitcher: {
+    switchToQuickstart: "Zu Quickstart-Modus wechseln",
+    switchToTurbo:      "Zu Turbo-Modus wechseln",
   },
   simple: {
     startTitle:      "Wie willst Du suchen?",
@@ -493,9 +497,12 @@ const de: Translations = {
     resultsTitle:    (label: string, place?: string) => place ? `${label} in ${place}` : `${label} in Deiner Nähe`,
     resultsCount:    (n: number, radius: string) => n === 1 ? `1 Ort gefunden (${radius} Suchradius)` : `${n} Orte gefunden (${radius} Suchradius)`,
     resizeHandle:    "Größe von Karte und Liste anpassen",
+    // The "\n" is deliberate: the bracketed search-scope belongs on its own
+    // centred line rather than wrapping mid-sentence. Rendered with
+    // `whitespace-pre-line` in SimpleLayout — the only two call sites.
     noResultsTitle:  (radius: string, place?: string) => place
-      ? `Keine barrierefreien Orte gefunden (${radius} um ${place})`
-      : `Keine barrierefreien Orte in der Nähe gefunden (${radius} von Deinem Standort)`,
+      ? `Keine barrierefreien Orte gefunden\n(${radius} um ${place})`
+      : `Keine barrierefreien Orte in der Nähe gefunden\n(${radius} von Deinem Standort)`,
     noResultsHint:   "Versuche es mit „Alles anzeigen“, einer anderen Kategorie oder einem größeren Suchradius.",
     lowResultsHint:  "Nicht genug Orte gefunden?",
     venuePlaceholder: "Name der Lokalität (z. B. Adlon Hotel Berlin)",

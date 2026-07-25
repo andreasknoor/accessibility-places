@@ -196,6 +196,14 @@ beforeEach(() => {
 })
 
 describe("SimpleLayout — start screen", () => {
+  // Same title + subtitle pairing the full UI's header uses, so the app
+  // introduces itself identically in both modes.
+  it("names the app and what it is for", () => {
+    renderLayout()
+    expect(screen.getByText("Accessible Places")).toBeInTheDocument()
+    expect(screen.getByText("Barrierefreie Orte finden")).toBeInTheDocument()
+  })
+
   it("shows all three entry points", () => {
     renderLayout()
     expect(screen.getByText("In meiner Nähe suchen")).toBeInTheDocument()
@@ -217,7 +225,11 @@ describe("SimpleLayout — start screen", () => {
     const { handlers } = renderLayout()
     fireEvent.click(screen.getByText("Turbo-Modus an: Alle Features aktivieren."))
     expect(handlers.onUpdateSettings).toHaveBeenCalledWith({ simpleView: false })
-    expect(screen.queryByText("Einfache Ansicht (Beta)")).not.toBeInTheDocument()
+    // "Sprache" is the settings sheet's first row — its absence is what shows
+    // the sheet never opened. (This used to look for the old "Einfache Ansicht"
+    // toggle row, a string that no longer exists anywhere, so the assertion
+    // had quietly become vacuous.)
+    expect(screen.queryByText("Sprache")).not.toBeInTheDocument()
   })
 })
 
@@ -555,7 +567,13 @@ describe("SimpleLayout — results screen", () => {
         />
       </LocaleProvider>,
     )
-    expect(screen.getByText("Keine barrierefreien Orte in der Nähe gefunden (5 km von Deinem Standort)")).toBeInTheDocument()
+    const heading = screen.getByText("Keine barrierefreien Orte in der Nähe gefunden (5 km von Deinem Standort)")
+    expect(heading).toBeInTheDocument()
+    // The bracketed search scope sits on its own centred line rather than
+    // wrapping mid-sentence. getByText above normalises whitespace, so it
+    // would happily pass without the break — assert the raw text too.
+    expect(heading.textContent).toBe("Keine barrierefreien Orte in der Nähe gefunden\n(5 km von Deinem Standort)")
+    expect(heading).toHaveClass("whitespace-pre-line")
   })
 
   // "Suchradius vergrößern" — mirrors the full UI's own expand-radius button
@@ -1461,25 +1479,48 @@ describe("SimpleLayout — city flow", () => {
 })
 
 describe("SimpleLayout — settings always reachable", () => {
+  // The start screen has no shared <Header>, so its gear is wired separately
+  // and was for a long time simply missing — leaving the one screen every
+  // first-time user lands on as the only one with no way into settings, and
+  // (since the language switcher moved in there) no way to fix a wrong
+  // language either.
+  it("is reachable from the start screen", () => {
+    renderLayout()
+    fireEvent.click(screen.getByRole("button", { name: "Einstellungen" }))
+    expect(screen.getByText("Sprache")).toBeInTheDocument()
+  })
+
   it("is reachable from the category tiles screen", () => {
     renderLayout()
     fireEvent.click(screen.getByText("In meiner Nähe suchen"))
     fireEvent.click(screen.getByRole("button", { name: "Einstellungen" }))
-    expect(screen.getByText("Einfache Ansicht (Beta)")).toBeInTheDocument()
+    expect(screen.getByText("Sprache")).toBeInTheDocument()
   })
 
   it("is reachable from the venue search screen", () => {
     renderLayout()
     fireEvent.click(screen.getByText("Einen konkreten Ort bzw. Lokalität suchen"))
     fireEvent.click(screen.getByRole("button", { name: "Einstellungen" }))
-    expect(screen.getByText("Einfache Ansicht (Beta)")).toBeInTheDocument()
+    expect(screen.getByText("Sprache")).toBeInTheDocument()
+  })
+})
+
+// The gear icon → Settings sheet no longer carries a Quickstart/Turbo toggle
+// row (removed as redundant once every screen with a header got its own
+// one-tap mode switcher, see components/ModeSwitcher.tsx) — these cover that
+// switcher instead, on every screen that has a header.
+describe("SimpleLayout — mode switcher always reachable", () => {
+  it("is reachable from the category tiles screen and switches to Turbo Mode", () => {
+    const { handlers } = renderLayout()
+    fireEvent.click(screen.getByText("In meiner Nähe suchen"))
+    fireEvent.click(screen.getByRole("button", { name: "Zu Turbo-Modus wechseln" }))
+    expect(handlers.onUpdateSettings).toHaveBeenCalledWith({ simpleView: false })
   })
 
-  it("toggling it off (via the gear icon → Settings sheet) calls onUpdateSettings({ simpleView: false })", () => {
-    const { handlers } = renderLayout({ settings: { ...DEFAULT_APP_SETTINGS, simpleView: true } })
-    fireEvent.click(screen.getByText("In meiner Nähe suchen"))
-    fireEvent.click(screen.getByRole("button", { name: "Einstellungen" }))
-    fireEvent.click(screen.getByRole("switch", { name: /Einfache Ansicht/ }))
+  it("is reachable from the venue search screen and switches to Turbo Mode", () => {
+    const { handlers } = renderLayout()
+    fireEvent.click(screen.getByText("Einen konkreten Ort bzw. Lokalität suchen"))
+    fireEvent.click(screen.getByRole("button", { name: "Zu Turbo-Modus wechseln" }))
     expect(handlers.onUpdateSettings).toHaveBeenCalledWith({ simpleView: false })
   })
 })

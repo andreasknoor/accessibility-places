@@ -12,7 +12,11 @@ const PATH_MAP: Record<string, Record<Locale, string>> = {
   "/en/impressum":  { de: "/impressum",  en: "/en/impressum" },
 }
 
-export default function LanguageSwitcher() {
+// onBeforeNavigate: called right before router.push, for callers that render
+// this inside a modal/sheet whose own state (e.g. SettingsPanel) would
+// otherwise be orphaned by the navigation-triggered remount — e.g. the
+// settings sheet closes itself so it doesn't appear to just vanish.
+export default function LanguageSwitcher({ onBeforeNavigate }: { onBeforeNavigate?: () => void } = {}) {
   const { locale, setLocale } = useLocale()
   const pathname  = usePathname()
   const router    = useRouter()
@@ -20,7 +24,10 @@ export default function LanguageSwitcher() {
   function handleChange(newLocale: Locale) {
     setLocale(newLocale)
     const mapped = PATH_MAP[pathname]?.[newLocale]
-    if (mapped) router.push(mapped)
+    if (mapped) {
+      onBeforeNavigate?.()
+      router.push(mapped)
+    }
   }
 
   return (

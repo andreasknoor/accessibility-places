@@ -473,8 +473,17 @@ export interface Translations {
     internationalModeHint: string
     usageStats:            string
     usageStatsHint:        string
-    simpleView:            string
-    simpleViewHint:        string
+    language:              string
+    languageHint:          string
+  }
+  // Header control that switches between Quickstart Mode and Turbo Mode —
+  // see docs/plans/quickstart-mode-default.md. Two aria-label/title strings
+  // rather than one generic "switch mode" label: each always names the mode
+  // a tap would switch TO, since the control shows the target mode's own
+  // icon/colour, not the current mode's.
+  modeSwitcher: {
+    switchToQuickstart: string
+    switchToTurbo:      string
   }
   // Simple View ("Variante B — Zwei Wege"): reduced mobile layout, see
   // components/simple/SimpleLayout.tsx. Plain-language sentences per

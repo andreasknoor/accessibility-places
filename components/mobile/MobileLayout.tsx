@@ -14,7 +14,7 @@ import ChatPanel       from "@/components/chat/ChatPanel"
 import FilterPanel     from "@/components/filters/FilterPanel"
 import RadiusPresetPopover from "@/components/filters/RadiusPresetPopover"
 import ResultsList     from "@/components/results/ResultsList"
-import LanguageSwitcher from "@/components/LanguageSwitcher"
+import ModeSwitcher     from "@/components/ModeSwitcher"
 import SettingsSheet   from "@/components/settings/SettingsSheet"
 import type { Place, SearchFilters, ActiveSources, SourceId, SourceState, FilterDebug, ParkingSpot, AmenityFeature, AmenityType, Category } from "@/lib/types"
 import type { AppSettings } from "@/lib/settings"
@@ -299,9 +299,13 @@ export default function MobileLayout({
             ariaLabel={t.results.radiusPickerLabel(formatRadiusKm(radiusKm, amenityActiveBool))}
             triggerClassName="flex items-center gap-0.5 text-xs font-semibold text-primary bg-primary/10 border border-primary/20 rounded-full px-2.5 py-1 hover:bg-primary/15 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
-          {/* Language before gear (gear rightmost) — matches Simple View's
-              own Header, which already orders them this way. */}
-          <LanguageSwitcher />
+          {/* Mode switcher before gear (gear rightmost) — matches Quickstart's
+              own Header, which orders them this way. Takes the header slot
+              the language switcher used to occupy; language now lives as the
+              first row in the settings sheet (docs/plans/quickstart-mode-default.md
+              Phase 1) — a one-tap mode toggle is used far more often than a
+              once-per-session language change. */}
+          <ModeSwitcher mode="turbo" onSwitch={() => onUpdateSettings({ simpleView: true })} />
           <SettingsSheet settings={settings} onUpdate={onUpdateSettings} onResetOnboarding={onResetOnboarding} />
         </div>
         <h1 className="sr-only">{t.app.srHeading}</h1>
