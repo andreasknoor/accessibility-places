@@ -34,6 +34,36 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
         a: "Restaurants, Cafés & Eisdielen, Bars, Kneipen, Biergärten, Imbisse, Hotels, Hostels, Ferienwohnungen, Campingplätze, Museen, Theater, Kinos, Bibliotheken, Galerien, Sehenswürdigkeiten und Zoos — Alltagsorte wie Apotheken, Arztpraxen, Zahnärzte, Tierärzte, Krankenhäuser, Drogerien, Supermärkte, Bäckereien, Friseure, Banken und Postfilialen — sowie Schwimmbäder, Fitnessstudios, Spielplätze, Parks, Physiotherapiepraxen, Sanitätshäuser, Hörakustiker, Optiker, Rathäuser, Gotteshäuser und Bahnhöfe.",
       },
       {
+        id: "quickstart-vs-turbo",
+        q: "Was ist der Quickstart-Modus, und wie unterscheidet er sich vom Turbo-Modus?",
+        a: (
+          <>
+            <p>
+              Accessible Places hat zwei Ansichten. Der <strong className="font-semibold text-foreground">Quickstart-Modus</strong> ist
+              eine reduzierte Oberfläche für einen schnellen Einstieg: drei große Wege
+              (&bdquo;In der Nähe suchen&ldquo;, &bdquo;Einen Ort suchen&ldquo;, &bdquo;In einer anderen
+              Stadt suchen&ldquo;), acht feste Kategorien und keine Filtereinstellungen. Auf dem
+              Smartphone ist er die Standardansicht bei einer Neuinstallation. Der{" "}
+              <strong className="font-semibold text-foreground">Turbo-Modus</strong> ist die volle
+              App mit allen Filtern, allen Quellen und allen 51 Kategorien — die Standardansicht am
+              Desktop.
+            </p>
+            <p className="mt-2">
+              Beide Modi greifen auf dieselben Barrierefreiheitsdaten zu — der Quickstart-Modus zeigt
+              nur eine engere, bereits gefilterte Auswahl. Zwischen beiden wechselst du jederzeit mit
+              einem Tipp auf das Umschalt-Symbol oben im Kopfbereich; deine Wahl wird gespeichert.
+            </p>
+            <p className="mt-2 text-muted-foreground">
+              Hinweis: Die übrigen Antworten in dieser FAQ beschreiben, sofern nicht anders angegeben,
+              den Turbo-Modus. Im Quickstart-Modus laufen dieselben Suchen über die drei Kacheln auf
+              dem Startbildschirm statt über Sucheingabe und Kategorie-Chips.
+            </p>
+          </>
+        ),
+        schemaText:
+          "Accessible Places hat zwei Ansichten. Der Quickstart-Modus ist eine reduzierte Oberfläche für einen schnellen Einstieg: drei große Wege (In der Nähe suchen, Einen Ort suchen, In einer anderen Stadt suchen), acht feste Kategorien und keine Filtereinstellungen. Auf dem Smartphone ist er die Standardansicht bei einer Neuinstallation. Der Turbo-Modus ist die volle App mit allen Filtern, allen Quellen und allen 51 Kategorien — die Standardansicht am Desktop. Beide Modi greifen auf dieselben Barrierefreiheitsdaten zu — der Quickstart-Modus zeigt nur eine engere, bereits gefilterte Auswahl. Zwischen beiden wechselst du jederzeit mit einem Tipp auf das Umschalt-Symbol oben im Kopfbereich; deine Wahl wird gespeichert. Die übrigen Antworten in dieser FAQ beschreiben, sofern nicht anders angegeben, den Turbo-Modus. Im Quickstart-Modus laufen dieselben Suchen über die drei Kacheln auf dem Startbildschirm statt über Sucheingabe und Kategorie-Chips.",
+      },
+      {
         id: "free",
         q: "Ist die Suche nach barrierefreien Orten kostenlos?",
         a: "Ja, vollständig kostenlos und ohne Registrierung nutzbar.",
@@ -201,7 +231,36 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
       {
         id: "mobile-app",
         q: "Kann ich barrierefreie Orte auch auf dem Smartphone suchen?",
-        a: 'Ja — Accessible Places kann als App auf dem Smartphone installiert werden, ohne App Store oder Play Store. Auf iPhone/iPad: Safari öffnen → Teilen-Symbol antippen → "Zum Home-Bildschirm" wählen. Auf Android: Chrome öffnen → Menü (drei Punkte) → "App installieren" oder "Zum Startbildschirm hinzufügen". Die App funktioniert danach wie eine native App — mit eigenem Icon, Vollbild und ohne Browser-Leiste.',
+        a: (
+          <>
+            Ja — Accessible Places gibt es als kostenlose App für{" "}
+            <a
+              href="https://apps.apple.com/de/app/accessible-places-app/id6781726948"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline hover:opacity-80"
+            >
+              iPhone/iPad im App Store
+            </a>{" "}
+            und für{" "}
+            <a
+              href="https://play.google.com/store/apps/details?id=org.accessibleplaces.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline hover:opacity-80"
+            >
+              Android im Play Store
+            </a>
+            . Nach der Installation startest du auf dem Smartphone automatisch im{" "}
+            <a href="#quickstart-vs-turbo" className="text-primary underline hover:opacity-80">
+              Quickstart-Modus
+            </a>{" "}
+            — mit einem Tipp auf das Umschalt-Symbol wechselst du jederzeit in den Turbo-Modus mit
+            allen Funktionen.
+          </>
+        ),
+        schemaText:
+          "Ja — Accessible Places gibt es als kostenlose App für iPhone/iPad im App Store und für Android im Play Store. Nach der Installation startest du auf dem Smartphone automatisch im Quickstart-Modus — mit einem Tipp auf das Umschalt-Symbol wechselst du jederzeit in den Turbo-Modus mit allen Funktionen.",
       },
       {
         id: "feedback",
