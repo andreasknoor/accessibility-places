@@ -759,14 +759,19 @@ export default function SimpleLayout({
               </button>
             </div>
             <div className="flex-1 flex flex-col justify-center gap-3">
-            {/* Same title + subtitle pairing the full UI's header uses, so the
-                app introduces itself identically in both modes. */}
-            <div className="flex flex-col items-center gap-1 mb-4">
-              <div className="flex items-center gap-2.5">
-                <img src="/icons/icon-preview.svg" className="w-8 h-8 rounded-lg" alt="" aria-hidden />
-                <span className="font-bold text-base">{t.app.title}</span>
+            {/* Same icon + stacked title/subtitle lockup the full UI's header
+                uses, so the app introduces itself identically in both modes.
+                The two text lines share one left edge — the subtitle starts
+                under the title's first letter, NOT under the icon — which is
+                why they sit in their own column beside the icon rather than
+                being centred individually. The lockup as a whole stays centred
+                on this screen. */}
+            <div className="flex items-center justify-center gap-2.5 mb-4">
+              <img src="/icons/icon-preview.svg" className="w-8 h-8 rounded-lg shrink-0" alt="" aria-hidden />
+              <div className="flex flex-col">
+                <span className="font-bold text-base leading-none">{t.app.title}</span>
+                <p className="text-xs text-muted-foreground mt-1">{t.app.subtitle}</p>
               </div>
-              <p className="text-xs text-muted-foreground">{t.app.subtitle}</p>
             </div>
             <p className="text-center font-semibold text-lg mb-2">{t.simple.startTitle}</p>
 
