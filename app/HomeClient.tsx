@@ -243,6 +243,13 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const dropQuickstartPlaceTarget = useCallback(() => {
     setQuickstartPlaceTargetCoords(null)
   }, [])
+  // A native home-screen quick action (parking/WC) that fired while Quickstart
+  // is the active mode. Unlike the two deep-link targets above this needs no
+  // resolution step — the amenity type IS the target — but it still has to be
+  // handed to SimpleLayout explicitly, or the search would run with the user
+  // left staring at the start screen, exactly the dead-end the deep-link
+  // targets exist to avoid.
+  const [quickstartAmenityTarget, setQuickstartAmenityTarget] = useState<AmenityType | null>(null)
 
   const [filters,       setFilters]      = useState<SearchFilters>(DEFAULT_FILTERS)
   const [sources,       setSources]      = useState<ActiveSources>(DEFAULT_SOURCES)
@@ -1517,14 +1524,11 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       setIsFirstVisit(false)
       setChatMode("nearby")
       setPendingFocusAction(action)
-      // Quick actions target the parking/WC amenity search (pendingFocusAction
-      // → handleAmenitySearch), which Quickstart Mode has no external trigger
-      // for yet — routing this into Quickstart's own amenity screens is a
-      // deliberate follow-up (Phase 4, scoped out here), not a silent gap.
-      // Forcing Turbo for this one session is a safe, non-regressive default:
-      // it's the same behaviour every quick-action tap already had before
-      // Quickstart became reachable at all.
-      setDeepLinkForcesTurbo(true)
+      // Deliberately does NOT force Turbo: a quick action is representable in
+      // both modes, so it follows whichever mode the user is actually in (see
+      // the effect that applies it, which routes into Quickstart's own amenity
+      // results screen). An explicit Turbo choice is honoured for free, since
+      // isQuickstart reads it first.
     }
 
     checkAction()
@@ -1655,6 +1659,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // auto-locate from the (just-changed) chatMode is unreliable, so we don't rely on
   // it. On iOS the OS permission dialog only appears once, so this is the single,
   // necessary prompt (finding nearby parking/WC requires a position).
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional: applying an
+     external navigation intent (an OS-level shortcut tap) once GPS resolves,
+     not state derivable from render. */
   useEffect(() => {
     if (!pendingFocusAction) return
     const coords = gpsCoordRef.current ?? gpsCoords
@@ -1674,10 +1681,22 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     // re-runs it (idempotent), so no already-active guard is needed.
     const action = pendingFocusAction
     setPendingFocusAction(null)
-    void handleAmenitySearch(action, coords).finally(() => {
+    // Quickstart runs amenity searches at its own fixed start radius rather
+    // than the full UI's persisted one (see SIMPLE_AMENITY_RADIUS_KM) — using
+    // the wrong one here would also mislabel the radius in Quickstart's
+    // results and empty-state copy, which reads it from simpleAmenityRadiusKm.
+    // The target below is what actually gets SimpleLayout onto its amenity
+    // results screen; without it the search would complete invisibly behind
+    // the start screen.
+    if (isQuickstart) {
+      setSimpleAmenityRadiusKm(SIMPLE_AMENITY_RADIUS_KM)
+      setQuickstartAmenityTarget(action)
+    }
+    void handleAmenitySearch(action, coords, isQuickstart ? SIMPLE_AMENITY_RADIUS_KM : undefined).finally(() => {
       quickActionActiveRef.current = false
     })
-  }, [pendingFocusAction, gpsCoords, handleLocate, handleAmenitySearch])
+  }, [pendingFocusAction, gpsCoords, handleLocate, handleAmenitySearch, isQuickstart])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const amenityActive = amenitySearch !== null
 
@@ -2006,6 +2025,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           initialPlaceTarget={quickstartResolvedPlace}
           onPlaceTargetConsumed={dropQuickstartPlaceTarget}
           initialCityTarget={quickstartCityTarget}
+          initialAmenityTarget={quickstartAmenityTarget}
+          onAmenityTargetConsumed={() => setQuickstartAmenityTarget(null)}
         />
       </div>
       </>

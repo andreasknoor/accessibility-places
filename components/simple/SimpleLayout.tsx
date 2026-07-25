@@ -133,6 +133,12 @@ interface Props {
   // city, so a follow-up tile pick keeps searching that city rather than
   // silently falling back to GPS.
   initialCityTarget?: { label: string; category: Category; coords: { lat: number; lon: number } } | null
+  // A native home-screen quick action (parking/WC) that fired while this mode
+  // is active. HomeClient has already started the search at the GPS fix; this
+  // only puts the layout on the matching results screen, the same state
+  // selectAmenity below reaches when the user taps the 🅿/🚻 tile themselves.
+  initialAmenityTarget?: AmenityType | null
+  onAmenityTargetConsumed?: () => void
 }
 
 // Module-level (not defined inside SimpleLayout's body) so its identity is
@@ -184,6 +190,7 @@ export default function SimpleLayout({
   parkingSpots, toiletSpots, onSearchHere, onFocusSearchHere, onGpsResolved,
   onExpandRadius, onAmenityExpandRadius, radiusKm, amenityRadiusKm, settings, onUpdateSettings,
   initialPlaceTarget, onPlaceTargetConsumed, initialCityTarget,
+  initialAmenityTarget, onAmenityTargetConsumed,
 }: Props) {
   const t = useTranslations()
   const { locale } = useLocale()
@@ -534,6 +541,30 @@ export default function SimpleLayout({
     setHasSearchedNearby(true)
     setScreen("results")
   }, [initialCityTarget])
+
+  // Native quick action (parking/WC) while this mode is active. Mirrors
+  // selectAmenity's own state exactly — minus the search call and the GPS
+  // wait, both of which HomeClient has already done. pickedCity is cleared
+  // because a quick action always searches the live GPS fix: leaving a
+  // previously picked city set would title the results after a city the
+  // search never touched. Fires at most once per target.
+  // Re-armed whenever the prop goes back to null (which the consume callback
+  // does immediately). A plain "already fired" flag would swallow every quick
+  // action after the first — tapping 🅿 and later 🚻 in one warm session is
+  // the normal case, not an edge case.
+  const amenityTargetConsumedRef = useRef(false)
+  useEffect(() => {
+    if (!initialAmenityTarget) { amenityTargetConsumedRef.current = false; return }
+    if (amenityTargetConsumedRef.current) return
+    amenityTargetConsumedRef.current = true
+    setPickedCity(null)
+    setSelectedCategory(null)
+    setSelectedAmenityType(initialAmenityTarget)
+    setHasSearchedNearby(true)
+    setScreen("results")
+    onAmenityTargetConsumed?.()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialAmenityTarget])
 
   // Venue autocomplete — mirrors ChatPanel's own unified-suggest debounce
   // (300 ms, abort-on-supersede), filtered to venue-kind results only.

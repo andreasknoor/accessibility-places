@@ -9,8 +9,9 @@ Deviations from the plan, decided during implementation:
   after all — without it every existing mobile user who never touched the
   setting would have been moved into Quickstart. It is snapshotted per tab
   session in `sessionStorage`, not read per mount.
-- The native quick-action path still takes the Turbo fallback (Phase 4's last
-  bullet); routing it into Quickstart's amenity screens remains open.
+- The native quick-action path initially took the Turbo fallback; since v11.1
+  it follows the active mode instead (Phase 4's last bullet), so no scoped-out
+  deep-link path remains.
 
 Revised after a critical review of the first draft. The original Phase 4 seeded
 a persisted value from inside `loadSettings()`; that carried a data-corruption
