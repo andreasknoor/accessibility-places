@@ -1,6 +1,6 @@
 "use client"
 
-import { CirclePlay, Gauge } from "lucide-react"
+import { Sparkles, Gauge } from "lucide-react"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
@@ -11,8 +11,13 @@ import { cn } from "@/lib/utils"
 // settings sheet instead.
 //
 // Always shows the glyph/colour of the mode a tap would switch TO, never the
-// current one: Turbo's headers show the blue Quickstart play-circle, and
-// Quickstart's headers show the orange Turbo gauge. Deliberately NOT rendered
+// current one: Turbo's headers show the blue Quickstart sparkles, and
+// Quickstart's headers show the orange Turbo gauge. Sparkles (not the
+// original CirclePlay) — a mobile Turbo header sits directly above the map,
+// where a circle-with-triangle read as a third zoom control rather than a
+// mode switch (found + prototyped in docs/wcag-quickstart-mode-audit.md's
+// icon-follow-up; a Compass alternative was also considered but rejected —
+// too close to "start navigation" in this app specifically). Deliberately NOT rendered
 // on Quickstart's own start screen (SimpleLayout.tsx) — that screen already
 // carries the full "Turbo-Modus an" pill, a labelled button with a subline
 // doing exactly this, so a second bare icon on the same screen would just be
@@ -21,7 +26,7 @@ import { cn } from "@/lib/utils"
 export default function ModeSwitcher({ mode, onSwitch }: { mode: "quickstart" | "turbo"; onSwitch: () => void }) {
   const t = useTranslations()
   const target = mode === "turbo" ? "quickstart" : "turbo"
-  const Icon = target === "quickstart" ? CirclePlay : Gauge
+  const Icon = target === "quickstart" ? Sparkles : Gauge
   const label = target === "quickstart" ? t.modeSwitcher.switchToQuickstart : t.modeSwitcher.switchToTurbo
 
   return (

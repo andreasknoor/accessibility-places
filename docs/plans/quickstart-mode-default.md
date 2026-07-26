@@ -12,6 +12,11 @@ Deviations from the plan, decided during implementation:
 - The native quick-action path initially took the Turbo fallback; since v11.1
   it follows the active mode instead (Phase 4's last bullet), so no scoped-out
   deep-link path remains.
+- The play-circle glyph mentioned below was replaced by a sparkles glyph in
+  v11.8 — on the mobile Turbo header it sits directly above the map's own
+  zoom control, and a circle-with-triangle read as a third zoom step rather
+  than a mode switch. See `docs/wcag-quickstart-mode-audit.md`'s icon
+  follow-up for the prototype/reasoning.
 
 Revised after a critical review of the first draft. The original Phase 4 seeded
 a persisted value from inside `loadSettings()`; that carried a data-corruption
