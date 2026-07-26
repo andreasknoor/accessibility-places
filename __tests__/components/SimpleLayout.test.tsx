@@ -196,6 +196,17 @@ beforeEach(() => {
 })
 
 describe("SimpleLayout — start screen", () => {
+  // A plain <main id="main-content"> isn't focusable — without tabIndex={-1}
+  // the skip link at the top of the DOM scrolls to it (a no-op here, this is
+  // already the first element) but never actually moves keyboard focus, so
+  // screen-reader users get no benefit from "Zum Inhalt springen" at all
+  // (WCAG 2.2 SC 2.4.1 Bypass Blocks).
+  it("makes #main-content an actual skip-link focus target", () => {
+    const { container } = renderLayout()
+    const main = container.querySelector("#main-content")
+    expect(main).toHaveAttribute("tabindex", "-1")
+  })
+
   // Same title + subtitle pairing the full UI's header uses, so the app
   // introduces itself identically in both modes.
   it("names the app and what it is for", () => {

@@ -2251,7 +2251,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       )}
 
       {/* ── Main: filter | results | divider | map ── */}
-      <main id="main-content" className="flex flex-1 min-h-0 overflow-hidden">
+      {/* tabIndex={-1}: makes this the skip link's actual focus target, not
+          just a scroll target — a plain <main> isn't focusable, so without
+          this "Zum Inhalt springen" moved nothing for screen-reader users
+          (WCAG 2.2 SC 2.4.1). Same fix applied to SimpleLayout and
+          MobileLayout's two main-content targets. */}
+      <main id="main-content" tabIndex={-1} className="flex flex-1 min-h-0 overflow-hidden focus:outline-none">
         {filterCollapsed ? (
             <button
               onClick={() => setFilterCollapsed(false)}

@@ -326,8 +326,13 @@ export default function MobileLayout({
       {/* ── Welcome screen (first-time nearby, no results yet) ──
            Rendered outside the overflow-hidden tab wrapper so iOS WebKit
            pointer events reach the buttons without a stacking-context dead zone. */}
+      {/* tabIndex={-1} below: makes this the skip link's actual focus target,
+          not just a scroll target — a plain <main> isn't focusable, so
+          without it "Zum Inhalt springen" moved nothing for screen-reader
+          users (WCAG 2.2 SC 2.4.1). Same fix applied to this file's other
+          main-content target below, SimpleLayout, and HomeClient desktop. */}
       {showWelcome && (
-        <main id="main-content" className="flex-1 min-h-0 overflow-y-auto px-5 py-4 flex flex-col items-center gap-3 text-center">
+        <main id="main-content" tabIndex={-1} className="flex-1 min-h-0 overflow-y-auto px-5 py-4 flex flex-col items-center gap-3 text-center focus:outline-none">
           <img src="/icons/icon-preview.svg" className="w-12 h-12 rounded-xl" alt="" aria-hidden />
           <div className="flex flex-col gap-1">
             <p className="font-semibold text-foreground">{t.chat.welcomeTitle}</p>
@@ -412,7 +417,9 @@ export default function MobileLayout({
       )}
 
       {/* ── Tab content ── */}
-      {!showWelcome && <main id="main-content" className="flex-1 min-h-0 overflow-hidden isolate">
+      {/* tabIndex={-1}: see the welcome screen's main above — same fix, same
+          reason (WCAG 2.2 SC 2.4.1). */}
+      {!showWelcome && <main id="main-content" tabIndex={-1} className="flex-1 min-h-0 overflow-hidden isolate focus:outline-none">
 
         {/* Results tab */}
         <div className={cn("h-full", activeTab !== "results" && "hidden")}>

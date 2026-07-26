@@ -129,6 +129,19 @@ describe("SettingsPanel — simple mode (opened from within Simple View)", () =>
     expect(screen.getByText("Auf Standard zurücksetzen")).toBeInTheDocument()
   })
 
+  // Quickstart has no persistent footer anywhere across its 7 screens (unlike
+  // the full UI's MobileLayout, which always shows one below the tab
+  // content) — this row, reachable via the gear from every one of those
+  // screens, is its only path to these three pages. Without it, an imprint
+  // that legally must stay "unmittelbar erreichbar" (§ 5 DDG) would be
+  // unreachable for anyone who never switches to Turbo Mode.
+  it("shows FAQ/Impressum/Über uns links, reachable from Quickstart's only settings entry point", () => {
+    render(<SettingsPanel settings={DEFAULT_APP_SETTINGS} onUpdate={vi.fn()} onClose={vi.fn()} simple />)
+    expect(screen.getByRole("link", { name: "FAQ" })).toHaveAttribute("href", "/faq")
+    expect(screen.getByRole("link", { name: "Impressum" })).toHaveAttribute("href", "/impressum")
+    expect(screen.getByRole("link", { name: "Über die App" })).toHaveAttribute("href", "/ueber-uns")
+  })
+
   it("shows everything when `simple` is omitted (the full-UI gear icon's own usage)", () => {
     render(<SettingsPanel settings={DEFAULT_APP_SETTINGS} onUpdate={vi.fn()} onClose={vi.fn()} />)
     expect(screen.getByText("Beim Start")).toBeInTheDocument()

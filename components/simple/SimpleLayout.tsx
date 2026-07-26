@@ -732,7 +732,16 @@ export default function SimpleLayout({
         {t.common.skipToContent}
       </a>
 
-      <main id="main-content" className="flex-1 min-h-0 flex flex-col">
+      {/* tabIndex={-1}: the skip link above targets this by id, but a plain
+          <main> isn't focusable — without this, "Zum Inhalt springen" scrolls
+          (a no-op here, since this is already the very first element) without
+          ever moving keyboard focus, so screen-reader users get no benefit at
+          all (WCAG 2.2 SC 2.4.1 Bypass Blocks). Same fix applied to the other
+          three main-content targets (MobileLayout ×2, HomeClient desktop).
+          focus:outline-none suppresses the default ring on this whole
+          container — it's a landing point for a skip action, not a tab stop a
+          sighted keyboard user would ever land on by surprise. */}
+      <main id="main-content" tabIndex={-1} className="flex-1 min-h-0 flex flex-col focus:outline-none">
 
         {/* ── Start: the two core jobs ── */}
         {screen === "start" && (
