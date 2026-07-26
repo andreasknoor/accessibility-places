@@ -170,7 +170,7 @@ function Header({ title, backLabel, settingsLabel, onBack, onOpenSettings, onSwi
           {backLabel}
         </button>
       ) : <span className="w-4" />}
-      {title && <p className="flex-1 text-center text-sm font-semibold px-1 truncate">{title}</p>}
+      {title && <h1 className="flex-1 text-center text-sm font-semibold px-1 truncate">{title}</h1>}
       {!title && <span className="flex-1" />}
       <ModeSwitcher mode="quickstart" onSwitch={onSwitchToTurbo} />
       <button
@@ -773,7 +773,7 @@ export default function SimpleLayout({
                 <p className="text-xs text-muted-foreground mt-1">{t.app.subtitle}</p>
               </div>
             </div>
-            <p className="text-center font-semibold text-lg mb-2">{t.simple.startTitle}</p>
+            <h1 className="text-center font-semibold text-lg mb-2">{t.simple.startTitle}</h1>
 
             {/* Three equally-weighted entry points (research showed users want
                 both "a category in some city" and "check a named venue", not
@@ -853,7 +853,7 @@ export default function SimpleLayout({
               <div className="mx-3 mt-1 mb-0 flex items-center gap-1.5 rounded-lg bg-primary/10 px-2.5 py-1.5 text-xs font-medium text-primary self-start">
                 <Building2 className="w-3.5 h-3.5 shrink-0" aria-hidden />
                 <span className="truncate">{t.simple.citySearchingIn(pickedCity.label)}</span>
-                <button onClick={clearPickedCity} aria-label={t.simple.cityClear} className="shrink-0 p-0.5 -mr-0.5 hover:opacity-70 transition-opacity">
+                <button onClick={clearPickedCity} aria-label={t.simple.cityClear} className="shrink-0 p-1.5 -mr-1.5 hover:opacity-70 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full">
                   <XIcon className="w-3.5 h-3.5" aria-hidden />
                 </button>
               </div>
@@ -898,9 +898,9 @@ export default function SimpleLayout({
 
         {/* ── Locating ── */}
         {screen === "locating" && (
-          <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6">
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6" role="status" aria-live="polite">
             <Loader2 className="w-6 h-6 animate-spin text-primary" aria-hidden />
-            <p className="text-sm text-muted-foreground">{t.simple.locating}</p>
+            <h1 className="text-sm font-normal text-muted-foreground">{t.simple.locating}</h1>
             <button
               onClick={cancelLocating}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2 mt-2"
@@ -914,6 +914,19 @@ export default function SimpleLayout({
         {screen === "results" && (
           <div className="flex-1 min-h-0 flex flex-col">
             <Header title={t.simple.resultsTitle(selectedAmenityType ? amenityLabel(selectedAmenityType) : categoryLabel(selectedCategory), pickedCity?.label)} backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen("tiles")} onOpenSettings={() => setSettingsOpen(true)} onSwitchToTurbo={() => onUpdateSettings({ simpleView: false })} />
+            {/* Screen-reader live region: announces search progress and outcome
+                (WCAG 4.1.3) — mirrors ResultsList's own identical pattern in
+                the full UI, which Quickstart Mode's results screen otherwise
+                had no equivalent of. */}
+            <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+              {isLoading
+                ? t.chat.thinking
+                : hasSearchedNearby
+                  ? ((selectedAmenityType != null ? sortedAmenities.length : places.length) > 0
+                      ? t.results.resultsAnnounce(selectedAmenityType != null ? sortedAmenities.length : places.length)
+                      : t.chat.noResults)
+                  : ""}
+            </div>
             {error && <p role="alert" className="mx-4 mb-1 text-xs text-destructive">{error}</p>}
 
             {/* Search-in-progress indicator, directly above the map — same
@@ -986,7 +999,7 @@ export default function SimpleLayout({
                 aria-valuemin={0}
                 aria-valuemax={100}
                 tabIndex={0}
-                className="shrink-0 flex items-center justify-center h-6 cursor-row-resize touch-none select-none focus-visible:outline-none"
+                className="shrink-0 flex items-center justify-center h-6 cursor-row-resize touch-none select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                 onPointerDown={(e) => {
                   e.currentTarget.setPointerCapture?.(e.pointerId)
                   beginSplitDrag(e.clientY)
@@ -1105,8 +1118,12 @@ export default function SimpleLayout({
         {screen === "venue" && (
           <div className="flex-1 min-h-0 flex flex-col">
             <Header backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen("start")} onOpenSettings={() => setSettingsOpen(true)} onSwitchToTurbo={() => onUpdateSettings({ simpleView: false })} />
+            {/* Header renders no visible title on this screen (the input IS
+                the screen's content) — a screen-reader-only h1 still gives
+                AT users a landmark heading to navigate by. */}
+            <h1 className="sr-only">{t.simple.startVenue}</h1>
             <div className="px-4 pb-2">
-              <div className="flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2.5">
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2.5 focus-within:ring-2 focus-within:ring-ring">
                 <SearchIcon className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden />
                 <input
                   autoFocus
@@ -1156,8 +1173,10 @@ export default function SimpleLayout({
         {screen === "city" && (
           <div className="flex-1 min-h-0 flex flex-col">
             <Header backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen("start")} onOpenSettings={() => setSettingsOpen(true)} onSwitchToTurbo={() => onUpdateSettings({ simpleView: false })} />
+            {/* See the venue screen's identical comment above. */}
+            <h1 className="sr-only">{t.simple.startCity}</h1>
             <div className="px-4 pb-2">
-              <div className="flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2.5">
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2.5 focus-within:ring-2 focus-within:ring-ring">
                 <Building2 className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden />
                 <input
                   autoFocus

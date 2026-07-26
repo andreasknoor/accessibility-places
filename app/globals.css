@@ -124,6 +124,13 @@
      to that one screen. */
   --simple-city:  162 63% 38%;
   --simple-venue: 27 96% 48%;
+  /* ModeSwitcher's "switch to Turbo Mode" glyph colour (~Tailwind amber-600).
+     A named token, not a hardcoded Tailwind class, specifically so it's
+     covered by scripts/check-contrast.mjs's gated pairs list — a hardcoded
+     class is invisible to that script, so a future shade change here would
+     otherwise ship with no CI signal (found in the 2026-07-25 Quickstart
+     Mode WCAG audit, docs/wcag-quickstart-mode-audit.md, finding P1). */
+  --simple-turbo: 32.1 94.6% 43.7%;
 }
 
 @theme inline {
@@ -149,6 +156,7 @@
   --color-ring: hsl(var(--ring));
   --color-simple-city: hsl(var(--simple-city));
   --color-simple-venue: hsl(var(--simple-venue));
+  --color-simple-turbo: hsl(var(--simple-turbo));
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --radius: var(--radius);

@@ -30,10 +30,12 @@ export default function ModeSwitcher({ mode, onSwitch }: { mode: "quickstart" | 
       aria-label={label}
       title={label}
       className={cn(
-        "p-1.5 rounded-md transition-colors",
+        "p-1.5 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         target === "quickstart"
           ? "text-primary hover:bg-primary/10"
-          : "text-amber-600 hover:bg-amber-50",
+          // A named design token, not a hardcoded Tailwind colour — see
+          // --simple-turbo's comment in app/globals.css.
+          : "text-simple-turbo hover:bg-simple-turbo/10",
       )}
     >
       <Icon className="w-4 h-4" />

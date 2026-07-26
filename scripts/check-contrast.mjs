@@ -64,6 +64,13 @@ const pairs = [
   ["destructive", "background", TEXT, "error text on page bg"],
   ["primary", "background", UI, "primary icons/links on bg"],
   ["ring", "background", UI, "focus ring on bg"],
+  // Quickstart Mode accent tokens (app/globals.css) — added after the
+  // 2026-07-25 audit (docs/wcag-quickstart-mode-audit.md, findings P1/P2)
+  // found these were hardcoded/ungated. All three are icon foreground
+  // colours on a plain page background.
+  ["simple-city", "background", UI, "city-tile icon on bg"],
+  ["simple-venue", "background", UI, "venue-tile icon on bg"],
+  ["simple-turbo", "background", UI, "turbo-mode switcher icon on bg"],
 ]
 
 // Informational only — NOT gating. The default border is a light divider used

@@ -72,7 +72,7 @@ export default function SimplePlaceCard({ place, distanceM, isSelected, onOpen, 
           <div className="min-w-0 flex-1">
             {/* Underlined like a link — an extra affordance beyond the boxed
                 background above, specifically on the name itself. */}
-            <p className="font-semibold text-sm leading-snug line-clamp-2 break-words underline underline-offset-2">{place.name}</p>
+            <h2 className="font-semibold text-sm leading-snug line-clamp-2 break-words underline underline-offset-2">{place.name}</h2>
           </div>
           {distanceM !== undefined && (
             <span className="text-xs text-muted-foreground shrink-0 mt-0.5">{t.results.distanceShort(Math.round(distanceM))}</span>

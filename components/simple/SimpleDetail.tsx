@@ -73,7 +73,7 @@ export default function SimpleDetail({ place, distanceM, onBack, onOpenSettings,
         <div className="flex items-start gap-2.5">
           <span className="text-2xl shrink-0" aria-hidden>{CATEGORY_ICONS[place.category] ?? "📍"}</span>
           <div className="min-w-0">
-            <h2 className="text-lg font-bold leading-snug break-words">{place.name}</h2>
+            <h1 className="text-lg font-bold leading-snug break-words">{place.name}</h1>
             {addr && <p className="text-sm text-muted-foreground mt-0.5">{addr}</p>}
             {distanceM !== undefined && (
               <p className="text-sm text-muted-foreground">{t.results.distanceFromHere(Math.round(distanceM))}</p>

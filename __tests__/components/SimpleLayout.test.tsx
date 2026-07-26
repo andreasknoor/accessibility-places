@@ -793,7 +793,10 @@ describe("SimpleLayout — results screen", () => {
     fireEvent.click(screen.getByRole("button", { name: "Zur Karte" }))
     expect(handlers.onSelect).toHaveBeenCalledWith(makePlace())
     expect(mapViewProps.current.panTrigger).toBeGreaterThan(panTriggerBefore)
-    expect(screen.queryByRole("heading", { name: "Café Sonnenschein" })).not.toBeInTheDocument()
+    // The result card itself now carries an h2 with the place name (WCAG
+    // heading-structure fix), so "detail didn't open" is asserted via
+    // SimpleDetail's own h1 level specifically, not name alone.
+    expect(screen.queryByRole("heading", { level: 1, name: "Café Sonnenschein" })).not.toBeInTheDocument()
   })
 
   // Regression: MapView's own popup "Details" chip ignores onShowInResults
