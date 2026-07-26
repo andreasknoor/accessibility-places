@@ -475,6 +475,8 @@ export interface Translations {
     usageStatsHint:        string
     language:              string
     languageHint:          string
+    mode:                  string
+    modeHint:              string
   }
   // Header control that switches between Quickstart Mode and Turbo Mode —
   // see docs/plans/quickstart-mode-default.md. Two aria-label/title strings

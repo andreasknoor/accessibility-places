@@ -473,6 +473,8 @@ const en: Translations = {
     usageStatsHint:        "Counts your app starts and searches under a random ID — no IP address, search terms, or location. Turning this off deletes the ID immediately. Details in the privacy policy.",
     language:              "Language",
     languageHint:          "Switches immediately — the page reloads.",
+    mode:                  "Quickstart Mode",
+    modeHint:              "Simplified view instead of all features (Turbo Mode).",
   },
   modeSwitcher: {
     switchToQuickstart: "Switch to Quickstart Mode",

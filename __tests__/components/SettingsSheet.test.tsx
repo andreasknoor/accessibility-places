@@ -151,3 +151,28 @@ describe("SettingsPanel — simple mode (opened from within Simple View)", () =>
     expect(screen.getByText("Sortierung")).toBeInTheDocument()
   })
 })
+
+// The header ModeSwitcher icon has no visible label — this row is the
+// self-explanatory, discoverable alternative in both modes, not just
+// Quickstart's.
+describe("SettingsPanel — mode switch row", () => {
+  it("is on when opened from Quickstart, and switches to Turbo Mode on toggle", () => {
+    const onUpdate = vi.fn()
+    render(<SettingsPanel settings={DEFAULT_APP_SETTINGS} onUpdate={onUpdate} onClose={vi.fn()} simple />)
+    const row = screen.getByText("Quickstart-Modus").parentElement!.parentElement!
+    const toggle = within(row).getByRole("switch")
+    expect(toggle).toHaveAttribute("aria-checked", "true")
+    fireEvent.click(toggle)
+    expect(onUpdate).toHaveBeenCalledWith({ simpleView: false })
+  })
+
+  it("is off when opened from Turbo Mode, and switches to Quickstart Mode on toggle", () => {
+    const onUpdate = vi.fn()
+    render(<SettingsPanel settings={DEFAULT_APP_SETTINGS} onUpdate={onUpdate} onClose={vi.fn()} />)
+    const row = screen.getByText("Quickstart-Modus").parentElement!.parentElement!
+    const toggle = within(row).getByRole("switch")
+    expect(toggle).toHaveAttribute("aria-checked", "false")
+    fireEvent.click(toggle)
+    expect(onUpdate).toHaveBeenCalledWith({ simpleView: true })
+  })
+})

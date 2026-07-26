@@ -157,12 +157,23 @@ export function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose, 
                 wrong language must find this immediately, not after scrolling.
                 Closes the sheet before navigating — LanguageSwitcher's route
                 change remounts HomeClient, which would otherwise orphan this
-                open sheet mid-interaction. (Quickstart/Turbo mode switching
-                used to live here — it now has its own one-tap header control,
-                see components/ModeSwitcher.tsx, reachable from every screen
-                that has a header in both modes.) */}
+                open sheet mid-interaction. */}
             <Row label={ts.language} hint={ts.languageHint}>
               <LanguageSwitcher onBeforeNavigate={onClose} />
+            </Row>
+            {/* Duplicates the header ModeSwitcher (components/ModeSwitcher.tsx,
+                reachable from every screen in both modes) — that icon-only
+                control has no visible label, so this row exists purely to be
+                self-explanatory, with the one-line hint doing the explaining.
+                `simple` already tracks which mode this panel was opened
+                from (SimpleLayout always passes it, MobileLayout/desktop
+                never do), so it doubles as the toggle's current value with
+                no separate state needed. */}
+            <Row label={ts.mode} hint={ts.modeHint}>
+              <Toggle
+                value={!!simple}
+                onChange={(v) => onUpdate({ simpleView: v })}
+              />
             </Row>
             {!simple && (
               <Row label={ts.searchMode}>

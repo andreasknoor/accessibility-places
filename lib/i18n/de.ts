@@ -473,6 +473,8 @@ const de: Translations = {
     usageStatsHint:        "Zählt deine App-Starts und Suchen unter einer zufälligen ID — ohne IP-Adresse, Suchbegriffe oder Standort. Beim Ausschalten wird die ID sofort gelöscht. Details in der Datenschutzerklärung.",
     language:              "Sprache",
     languageHint:          "Wechselt sofort — die Seite lädt neu.",
+    mode:                  "Quickstart-Modus",
+    modeHint:              "Vereinfachte Ansicht statt aller Funktionen (Turbo-Modus).",
   },
   modeSwitcher: {
     switchToQuickstart: "Zu Quickstart-Modus wechseln",
