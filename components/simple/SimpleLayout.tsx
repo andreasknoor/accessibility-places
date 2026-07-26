@@ -726,7 +726,13 @@ export default function SimpleLayout({
   return (
     <div className="flex flex-col h-svh overflow-hidden bg-background text-foreground">
       <a
-        href="#main-content"
+        // On the start screen, skip straight to the primary "In meiner Nähe
+        // suchen" action — the button a keyboard/screen-reader user actually
+        // wants, not just this screen's outer landmark (which would still
+        // force them through the settings-gear button first). Every other
+        // screen has no such single primary action, so it falls back to the
+        // generic #main-content jump there, same as the rest of the app.
+        href={screen === "start" ? "#quickstart-start-nearby" : "#main-content"}
         className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-2 focus-visible:left-2 focus-visible:z-50 focus-visible:px-4 focus-visible:py-2 focus-visible:rounded-md focus-visible:bg-primary focus-visible:text-primary-foreground focus-visible:shadow-lg"
       >
         {t.common.skipToContent}
@@ -794,8 +800,16 @@ export default function SimpleLayout({
                 this one screen; "nearby" reuses the app's existing primary
                 blue rather than adding a third new hue. */}
             <button
+              // Skip-link target (see the <a href="#quickstart-start-nearby">
+              // above) — the primary action on this screen, so a keyboard/
+              // screen-reader user who activates "Zum Inhalt springen" lands
+              // directly here instead of at the generic #main-content, which
+              // would otherwise still make them tab past the settings gear
+              // first. focus-visible:ring is required, not decorative, for
+              // that same reason — it's a genuine landing point now.
+              id="quickstart-start-nearby"
               onClick={() => { setLocateError(null); setPickedCity(null); setScreen("tiles") }}
-              className="flex items-center gap-3 rounded-xl border border-card-border border-l-4 border-l-primary bg-card pl-3 pr-4 py-4 hover:bg-muted transition-colors text-left"
+              className="flex items-center gap-3 rounded-xl border border-card-border border-l-4 border-l-primary bg-card pl-3 pr-4 py-4 hover:bg-muted transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                 <LocateFixed className="w-6 h-6 text-primary" aria-hidden />
@@ -808,7 +822,7 @@ export default function SimpleLayout({
 
             <button
               onClick={() => { setCityQuery(""); setScreen("city") }}
-              className="flex items-center gap-3 rounded-xl border border-card-border border-l-4 border-l-simple-city bg-card pl-3 pr-4 py-4 hover:bg-muted transition-colors text-left"
+              className="flex items-center gap-3 rounded-xl border border-card-border border-l-4 border-l-simple-city bg-card pl-3 pr-4 py-4 hover:bg-muted transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span className="w-12 h-12 rounded-full bg-simple-city/15 flex items-center justify-center shrink-0">
                 <Building2 className="w-6 h-6 text-simple-city" aria-hidden />
@@ -821,7 +835,7 @@ export default function SimpleLayout({
 
             <button
               onClick={() => { setVenueNotFound(false); setVenueQuery(""); setScreen("venue") }}
-              className="flex items-center gap-3 rounded-xl border border-card-border border-l-4 border-l-simple-venue bg-card pl-3 pr-4 py-4 hover:bg-muted transition-colors text-left"
+              className="flex items-center gap-3 rounded-xl border border-card-border border-l-4 border-l-simple-venue bg-card pl-3 pr-4 py-4 hover:bg-muted transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span className="w-12 h-12 rounded-full bg-simple-venue/15 flex items-center justify-center shrink-0">
                 <SearchIcon className="w-6 h-6 text-simple-venue" aria-hidden />

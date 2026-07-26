@@ -181,3 +181,13 @@ All seven findings were implemented together rather than staged, since none turn
 **Verification run after implementation:** `npm test` (1262 passed, 0 failed — one test updated, see D4's note), `npx tsc --noEmit` (clean), `npm run check:contrast` (16/16 gated pairs, up from 13, all passing), `npm run test:a11y` (12/12). Every fix was re-verified live in a running browser except D2, where the live-verification method itself hit a disclosed tooling limit (see D2's note) rather than the fix being unconfirmed by other means (class names verified present and correct).
 
 **Left for a genuinely separate pass** (outside this report's scope, §5 above): real keyboard Tab-order walkthrough, real 320px/400%-zoom reflow testing, and real screen-reader (VoiceOver/TalkBack/NVDA) verification — none of these can be done from this session's tooling, live browser or otherwise.
+
+---
+
+## 7. Addendum (v11.7) — skip link now targets the primary action, not just the landmark
+
+Follow-up request, not one of the original D1–D5/P1–P2 findings: on the `start` screen specifically, "Zum Inhalt springen" previously jumped to `#main-content` (the `<main>` landmark) — technically SC 2.4.1-compliant, but a keyboard/screen-reader user still had to tab past the settings-gear button to reach the screen's actual primary action.
+
+**Change:** the skip link's `href` is now conditional on `screen`: `#quickstart-start-nearby` (a new `id` on the "In meiner Nähe suchen" button) when `screen === "start"`, unchanged `#main-content` on every other screen (none of which has a single obvious "primary action" to jump to instead). Re-verified live: activating the skip link moves `document.activeElement` directly to that button; navigating away and back confirms the fallback still targets `#main-content` on other screens.
+
+**Also fixed while touching this area:** the three start-screen tiles ("In meiner Nähe suchen" / "In einer anderen Stadt suchen" / "Einen konkreten Ort bzw. Lokalität suchen") had no visible focus-indicator at all (same class of gap as D1/D2, just not caught in the original pass since the audit's target-size/heading/live-region sweep didn't re-inspect every button on every screen). Since the skip link now makes the first of these three a genuine, expected keyboard landing point, an invisible focus ring there would have undermined the whole point of the change — added `focus-visible:ring-2 focus-visible:ring-ring` to all three tiles for consistency (they're structurally identical siblings). `npm test` (1266 passed), `npx tsc --noEmit` clean.
