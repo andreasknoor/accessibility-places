@@ -6,6 +6,7 @@
 import type { Place, SearchParams, A11yValue, Category, EntranceDetails, ToiletDetails, ParkingDetails } from "../types"
 import { buildAttribute } from "../matching/merge"
 import { nanoid } from "../utils"
+import * as Sentry from "@sentry/nextjs"
 
 const BASE_URL = "https://accessibility-cloud-v2.freetls.fastly.net"
 
@@ -200,6 +201,7 @@ export const FROM_ACLOUD: Record<string, Category> = {
   dentist:           "dentist",
   zahnarzt:          "dentist",
   veterinary:        "veterinary",
+  vet:               "veterinary",
   tierarzt:          "veterinary",
   hospital:          "hospital",
   krankenhaus:       "hospital",
@@ -250,6 +252,7 @@ export const FROM_ACLOUD: Record<string, Category> = {
   // Everyday & services
   bank:              "bank",
   post_office:       "post_office",
+  "post office":     "post_office",
   postamt:           "post_office",
   barber:            "hairdresser",
   hairdresser:       "hairdresser",
@@ -297,27 +300,56 @@ export const ACLOUD_KNOWN_UNMAPPED = new Set<string>([
   "accommodation", "arts_center", "culture", "tourism", "leisure", "health",
 ])
 
+// Object.hasOwn guard — REQUIRED whenever a lookup table like FROM_ACLOUD is
+// indexed with an unsanitized external string. Plain-object bracket access
+// inherits the Object.prototype chain: `FROM_ACLOUD["constructor"]` resolves
+// to the Object constructor function, `FROM_ACLOUD["__proto__"]` to `{}` —
+// both truthy, both would be silently returned in place of a real Category if
+// a source ever emits one of those two literal strings. Verified live against
+// the exported table; a plain `if (table[key])` check does not catch this.
+function safeLookup<T>(table: Record<string, T>, key: string): T | undefined {
+  return Object.hasOwn(table, key) ? table[key] : undefined
+}
+
 // One-time-per-value reporting of vocabulary drift. Without this, a new source
 // category is indistinguishable from a deliberately-skipped one and silently
 // costs records — exactly how "bread" (a bakery) went unnoticed while being
 // dropped. Module-scoped so a busy search doesn't repeat the same warning.
+// Reported to GlitchTip (not just console.warn) at "info" level — matching the
+// existing lib/search-rate-limit.ts convention — since a Vercel function's
+// console output alone is not something anyone actively watches; without this,
+// "the table needs updating" only becomes visible to someone who happens to be
+// looking at logs, which is a materially weaker guarantee than the intent here.
 const reportedUnknownCategories = new Set<string>()
+function reportUnknownAcloudCategory(key: string) {
+  if (reportedUnknownCategories.has(key)) return
+  reportedUnknownCategories.add(key)
+  console.warn(`[accessibility.cloud] unknown category "${key}" — record dropped; add it to FROM_ACLOUD or ACLOUD_KNOWN_UNMAPPED`)
+  Sentry.captureMessage(`accessibility.cloud: unknown category "${key}"`, {
+    level: "info",
+    tags:  { area: "adapter-vocabulary", source: "accessibility_cloud", value: key },
+  })
+}
 
 function classifyAcloudCategory(raw: unknown): Category | undefined {
   // Documented as a plain string in every one of 6000 sampled records, but the
-  // array form is tolerated defensively: take the first value that resolves
-  // rather than joining, since joining is what makes substring collisions
-  // possible in the first place.
+  // array form is tolerated defensively: try every value rather than only the
+  // first, since joining them (the old approach) is what made substring
+  // collisions possible in the first place.
   const candidates = Array.isArray(raw) ? raw.map(String) : [String(raw ?? "")]
-  for (const c of candidates) {
-    const key = c.trim().toLowerCase()
-    if (!key) continue
-    const mapped = FROM_ACLOUD[key]
+  const keys = candidates.map((c) => c.trim().toLowerCase()).filter(Boolean)
+
+  for (const key of keys) {
+    const mapped = safeLookup(FROM_ACLOUD, key)
     if (mapped) return mapped
-    if (!ACLOUD_KNOWN_UNMAPPED.has(key) && !reportedUnknownCategories.has(key)) {
-      reportedUnknownCategories.add(key)
-      console.warn(`[accessibility.cloud] unknown category "${key}" — record dropped; add it to FROM_ACLOUD or ACLOUD_KNOWN_UNMAPPED`)
-    }
+  }
+
+  // Only report once EVERY candidate has failed to match — reporting inside
+  // the loop above would warn "record dropped" for an early candidate even
+  // when a later one in the same array goes on to classify the record
+  // successfully, which is simply an inaccurate message about what happened.
+  for (const key of keys) {
+    if (!ACLOUD_KNOWN_UNMAPPED.has(key)) reportUnknownAcloudCategory(key)
   }
   return undefined
 }

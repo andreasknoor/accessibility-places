@@ -17,6 +17,7 @@ import type {
 } from "../types"
 import { buildAttribute } from "../matching/merge"
 import { nanoid } from "../utils"
+import * as Sentry from "@sentry/nextjs"
 
 // ─── Certification criteria codes used by Reisen für Alle ─────────────────
 // These are illustrative — exact codes depend on the API contract.
@@ -145,38 +146,80 @@ const FROM_RFA: Record<string, Category> = {
   // Everyday & services
   friseur: "hairdresser", "frisör": "hairdresser", hairdresser: "hairdresser",
   bank: "bank", sparkasse: "bank",
-  postamt: "post_office", post: "post_office", post_office: "post_office",
+  postamt: "post_office", post: "post_office", post_office: "post_office", "post office": "post_office",
   waschsalon: "laundry", laundry: "laundry",
   tankstelle: "fuel", fuel: "fuel",
+  fast: "fast_food",
+}
+
+// Same guard as the A.Cloud adapter's counterpart (see there for the full
+// rationale): plain-object bracket access with an external string inherits
+// Object.prototype, so `FROM_RFA["constructor"]`/`["__proto__"]` would
+// otherwise resolve truthy instead of `undefined`.
+function safeLookup<T>(table: Record<string, T>, key: string): T | undefined {
+  return Object.hasOwn(table, key) ? table[key] : undefined
 }
 
 // Same rationale as the A.Cloud adapter's counterpart: make vocabulary drift
 // visible instead of letting it silently degrade categories. Doubly important
 // here because unmatched values fall back to "attraction" rather than being
 // dropped — a wrong-but-plausible category is harder to notice than a missing
-// record. Module-scoped so one value warns once, not once per result.
+// record. Module-scoped so one value warns once, not once per result. Also
+// reported to GlitchTip at "warning" (not "info" like A.Cloud's) — an RfA miss
+// silently mislabels a certified record as "attraction" rather than dropping
+// it, which is a worse outcome than A.Cloud's drop-and-report.
 const reportedUnknownRfaTypes = new Set<string>()
+function reportUnknownRfaType(raw: string) {
+  if (reportedUnknownRfaTypes.has(raw)) return
+  reportedUnknownRfaTypes.add(raw)
+  console.warn(`[reisen-fuer-alle] unclassified type "${raw}" — falling back to "attraction"; add it to FROM_RFA`)
+  Sentry.captureMessage(`reisen-fuer-alle: unclassified type "${raw}"`, {
+    level: "warning",
+    tags:  { area: "adapter-vocabulary", source: "reisen_fuer_alle", value: raw },
+  })
+}
+
+// Suffixes of common German shop compounds, stripped only when the remaining
+// root is itself an exact FROM_RFA key. Deliberately short and curated — NOT
+// a general substring-matching mechanism, which is exactly the class of bug
+// this whole file was rewritten to eliminate. "haus" is deliberately excluded:
+// far too many unrelated German words end in it to be a safe compound marker.
+const COMPOUND_SUFFIXES = ["laden", "geschaeft", "geschäft", "markt", "zentrum", "praxis", "verleih"]
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapCategory(item: any): Category {
   const raw = String(item.type ?? item.category ?? "").trim().toLowerCase()
   if (!raw) return "attraction"
 
-  const whole = FROM_RFA[raw]
+  const whole = safeLookup(FROM_RFA, raw)
   if (whole) return whole
 
   // Split on anything that isn't a letter/digit, keeping German umlauts and ß
-  // as word characters so "bäckerei" survives as one token.
-  for (const token of raw.split(/[^a-z0-9äöüß]+/)) {
-    if (!token) continue
-    const mapped = FROM_RFA[token]
-    if (mapped) return mapped
+  // as word characters so "bäckerei" survives as one token. Tokens are tried
+  // in FROM_RFA's own declared key order (not the order they appear in `raw`)
+  // so a compound like "Restaurant Bar" resolves deterministically to whichever
+  // category this table lists first, an author-controlled priority — not an
+  // incidental property of how the source happened to word the label.
+  const tokens = new Set(raw.split(/[^a-z0-9äöüß]+/).filter(Boolean))
+  for (const key of Object.keys(FROM_RFA)) {
+    if (tokens.has(key)) {
+      const mapped = safeLookup(FROM_RFA, key)
+      if (mapped) return mapped
+    }
   }
 
-  if (!reportedUnknownRfaTypes.has(raw)) {
-    reportedUnknownRfaTypes.add(raw)
-    console.warn(`[reisen-fuer-alle] unclassified type "${raw}" — falling back to "attraction"; add it to FROM_RFA`)
+  // Stage 3: undelimited German compounds ("Fahrradladen", "Blumengeschäft")
+  // stay as a single token after the split above and never hit stage 2. Try
+  // stripping a known shop suffix and matching the bare root exactly.
+  for (const suffix of COMPOUND_SUFFIXES) {
+    if (raw.length > suffix.length && raw.endsWith(suffix)) {
+      const root = raw.slice(0, raw.length - suffix.length)
+      const mapped = safeLookup(FROM_RFA, root)
+      if (mapped) return mapped
+    }
   }
+
+  reportUnknownRfaType(raw)
   return "attraction"
 }
 
