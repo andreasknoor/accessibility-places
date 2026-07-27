@@ -479,6 +479,8 @@ const de: Translations = {
   modeSwitcher: {
     switchToQuickstart: "Zu Quickstart-Modus wechseln",
     switchToTurbo:      "Zu Turbo-Modus wechseln",
+    quickstartLabel:    "Quickstart-Modus",
+    turboLabel:         "Turbo-Modus",
   },
   simple: {
     startTitle:      "Wie willst Du suchen?",

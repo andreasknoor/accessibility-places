@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } fr
 import { track, getPlatform } from "@/lib/analytics"
 import { getUserId, clearUserStats, incrementLocalSearchCount } from "@/lib/user-id"
 import * as Sentry from "@sentry/nextjs"
-import { SlidersHorizontal, ChevronRight, ChevronLeft } from "lucide-react"
+import { SlidersHorizontal, ChevronRight, ChevronLeft, Rocket } from "lucide-react"
 import dynamic from "next/dynamic"
 import Script from "next/script"
 import Link from "next/link"
@@ -2189,7 +2189,14 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             title="Reset"
           >
             <span className="font-bold text-xl leading-none block">{t.app.title}</span>
-            <p className="text-xs text-muted-foreground mt-1">{t.app.subtitle}</p>
+            {/* Identity label (v11.13) instead of the generic app subtitle —
+                see MobileLayout's own comment on this same change. This
+                header only renders for isQuickstart === false, so it's
+                unconditionally the Turbo identity. */}
+            <p className="flex items-center gap-1 text-xs font-semibold text-simple-turbo mt-1">
+              <Rocket className="w-3 h-3 shrink-0" aria-hidden />
+              {t.modeSwitcher.turboLabel}
+            </p>
           </button>
         </div>
         <div className="flex items-center gap-1">

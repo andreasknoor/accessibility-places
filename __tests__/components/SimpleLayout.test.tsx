@@ -207,12 +207,13 @@ describe("SimpleLayout — start screen", () => {
     expect(main).toHaveAttribute("tabindex", "-1")
   })
 
-  // Same title + subtitle pairing the full UI's header uses, so the app
-  // introduces itself identically in both modes.
-  it("names the app and what it is for", () => {
+  // Same title + identity-label pairing the full UI's header uses, so the
+  // app introduces itself identically in both modes (v11.13: the identity
+  // label replaced the generic subtitle to surface which mode is active).
+  it("names the app and which mode is active", () => {
     renderLayout()
     expect(screen.getByText("Accessible Places")).toBeInTheDocument()
-    expect(screen.getByText("Barrierefreie Orte finden")).toBeInTheDocument()
+    expect(screen.getByText("Quickstart-Modus")).toBeInTheDocument()
   })
 
   it("shows all three entry points", () => {

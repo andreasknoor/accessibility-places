@@ -486,6 +486,13 @@ export interface Translations {
   modeSwitcher: {
     switchToQuickstart: string
     switchToTurbo:      string
+    // Identity labels (not actions) — shown next to the mode's OWN icon in
+    // place of the generic app subtitle, so the header/start-screen names
+    // whichever mode is currently active rather than only the one a tap
+    // would switch to. See ModeSwitcher.tsx's own comment for the
+    // target-vs-current icon distinction this pairs with.
+    quickstartLabel: string
+    turboLabel:      string
   }
   // Simple View ("Variante B — Zwei Wege"): reduced mobile layout, see
   // components/simple/SimpleLayout.tsx. Plain-language sentences per

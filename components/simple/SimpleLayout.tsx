@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import dynamic from "next/dynamic"
-import { ChevronLeft, LocateFixed, Search as SearchIcon, Building2, X as XIcon, Rocket, Loader2, Settings as SettingsIcon } from "lucide-react"
+import { ChevronLeft, LocateFixed, Search as SearchIcon, Building2, X as XIcon, Rocket, Sparkles, Loader2, Settings as SettingsIcon } from "lucide-react"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { getBestPosition, hasLocationPermission, type GeoPosition } from "@/lib/native/geolocation"
 import { haversineMetres } from "@/lib/matching/match"
@@ -785,7 +785,17 @@ export default function SimpleLayout({
               <img src="/icons/icon-preview.svg" className="w-8 h-8 rounded-lg shrink-0" alt="" aria-hidden />
               <div className="flex flex-col">
                 <span className="font-bold text-base leading-none">{t.app.title}</span>
-                <p className="text-xs text-muted-foreground mt-1">{t.app.subtitle}</p>
+                {/* Identity label (v11.13) instead of the generic app
+                    subtitle — see MobileLayout's own comment on this same
+                    change. This screen only renders in Quickstart, so it's
+                    unconditionally the Quickstart identity; the shared
+                    Header() further down this file (tiles/results/detail)
+                    has no subtitle slot to begin with, so ModeSwitcher's own
+                    Rocket icon remains its only identity signal. */}
+                <p className="flex items-center gap-1 text-xs font-semibold text-primary mt-1">
+                  <Sparkles className="w-3 h-3 shrink-0" aria-hidden />
+                  {t.modeSwitcher.quickstartLabel}
+                </p>
               </div>
             </div>
             <h1 className="text-center font-semibold text-lg mb-2">{t.simple.startTitle}</h1>
