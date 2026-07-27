@@ -109,71 +109,222 @@ function parkingDetails(props: any): ParkingDetails {
   }
 }
 
-// A.Cloud aggregates ~170 datasets, many of which describe non-venues
-// (government offices, ATMs, bus stops, public toilets, …). We only adopt
-// records whose category maps to one of our known venue Categories — others
-// return `undefined` and the caller drops them entirely.
+// ─── Category classification ───────────────────────────────────────────────
+//
+// EXACT-MATCH ONLY. This deliberately replaced a chain of `.includes()`
+// substring tests, which silently mis-classified ~4.4% of all records because
+// one source value can contain another as a substring:
+//   "public_transport" → matched "pub"  → transit stops became pubs
+//   "barber"           → matched "bar"  → hairdressers became bars
+//   "public_art"       → matched "pub"  → public artworks became pubs
+// A further ~4.4% were dropped despite having a valid target ("bread" →
+// bakery, "icecream" → cafe, "sports_center" → the British-spelling-only
+// check). Verified live against 6000 records across 6 DACH cities; the source
+// vocabulary is closed and small (134 distinct plain-string values), so an
+// exact-match table is both feasible and exhaustive. Substring matching must
+// not be reintroduced here — see docs and the vocabulary fixture test.
+// The key set is the UNION of two sources, deliberately: every value observed
+// live (6000 records, 6 DACH cities) plus every key the previous substring
+// chain was written against. The live sample is large but provably not
+// exhaustive — it contained "coffee" but never "cafe", which the test fixtures
+// show is also a real value. With exact matching, extra keys are free: they
+// can only ever match themselves, so a superset costs nothing and guards
+// against exactly that kind of sampling gap.
+export const FROM_ACLOUD: Record<string, Category> = {
+  // Gastronomy
+  restaurant:        "restaurant",
+  cafe:              "cafe",
+  coffee:            "cafe",
+  kaffee:            "cafe",
+  icecream:          "cafe",        // ice cream is merged into cafe app-wide
+  ice_cream:         "cafe",
+  eisdiele:          "cafe",
+  gelato:            "cafe",
+  fastfood:          "fast_food",
+  fast_food:         "fast_food",
+  food_court:        "fast_food",
+  pub:               "pub",
+  kneipe:            "pub",
+  bar:               "bar",
+  biergarten:        "biergarten",
+  // Accommodation
+  hotel:             "hotel",
+  lodging:           "hotel",
+  motel:             "hotel",
+  guest_house:       "hotel",
+  hostel:            "hostel",
+  apartment:         "apartment",
+  ferienwohnung:     "apartment",
+  caravan_site:      "camp_site",
+  camp_site:         "camp_site",
+  campingplatz:      "camp_site",
+  camping:           "camp_site",
+  // Culture & leisure
+  museum:            "museum",
+  theater:           "theater",
+  theatre:           "theater",
+  oper:              "theater",
+  cinema:            "cinema",
+  kino:              "cinema",
+  library:           "library",
+  bibliothek:        "library",
+  art_gallery:       "gallery",
+  gallery:           "gallery",
+  galerie:           "gallery",
+  attraction:        "attraction",
+  theme_park:        "attraction",
+  zoo:               "zoo",
+  aquarium:          "zoo",
+  tierpark:          "zoo",
+  park:              "park",
+  playground:        "playground",
+  spielplatz:        "playground",
+  swimming:          "swimming_pool",
+  swimming_pool:     "swimming_pool",
+  schwimmbad:        "swimming_pool",
+  water_park:        "swimming_pool",
+  fitness_centre:    "fitness_centre",
+  fitness_center:    "fitness_centre",
+  fitnessstudio:     "fitness_centre",
+  sports_center:     "sports_centre",
+  sports_centre:     "sports_centre",
+  sports_complex:    "sports_centre",
+  sporthalle:        "sports_centre",
+  // Health
+  pharmacy:          "pharmacy",
+  apotheke:          "pharmacy",
+  doctor:            "doctors",
+  arztpraxis:        "doctors",
+  clinic:            "doctors",
+  praxis:            "doctors",
+  dentist:           "dentist",
+  zahnarzt:          "dentist",
+  veterinary:        "veterinary",
+  tierarzt:          "veterinary",
+  hospital:          "hospital",
+  krankenhaus:       "hospital",
+  klinikum:          "hospital",
+  rehabilitation:    "rehabilitation",
+  reha:              "rehabilitation",
+  physiotherapist:   "physiotherapist",
+  physiotherapie:    "physiotherapist",
+  hearing_aids:      "hearing_aids",
+  "hörakustiker":    "hearing_aids",
+  optician:          "optician",
+  optiker:           "optician",
+  medical_store:     "medical_supply",
+  medical_supply:    "medical_supply",
+  "sanitätshaus":    "medical_supply",
+  // Shopping
+  supermarket:       "supermarket",
+  supermarkt:        "supermarket",
+  bread:             "bakery",
+  bakery:            "bakery",
+  "bäckerei":        "bakery",
+  backerei:          "bakery",
+  butcher:           "butcher",
+  metzgerei:         "butcher",
+  fleischerei:       "butcher",
+  chemist:           "chemist",
+  drogerie:          "chemist",
+  clothes:           "clothes",
+  clothing_store:    "clothes",
+  bekleidung:        "clothes",
+  shoes:             "shoes",
+  shoe_store:        "shoes",
+  "schuhgeschäft":   "shoes",
+  books:             "books",
+  book_store:        "books",
+  buchhandlung:      "books",
+  furniture:         "furniture",
+  "möbel":           "furniture",
+  flowers:           "florist",
+  florist:           "florist",
+  blumen:            "florist",
+  convenience_store: "convenience",
+  convenience:       "convenience",
+  bicycle_store:     "bicycle",
+  bicycle_rental:    "bicycle",
+  bicycle:           "bicycle",
+  fahrrad:           "bicycle",
+  // Everyday & services
+  bank:              "bank",
+  post_office:       "post_office",
+  postamt:           "post_office",
+  barber:            "hairdresser",
+  hairdresser:       "hairdresser",
+  friseur:           "hairdresser",
+  "frisör":          "hairdresser",
+  laundry:           "laundry",
+  waschsalon:        "laundry",
+  // Public & transit
+  place_of_worship:  "place_of_worship",
+  kirche:            "place_of_worship",
+  church:            "place_of_worship",
+  townhall:          "townhall",
+  town_hall:         "townhall",
+  rathaus:           "townhall",
+  train_station:     "railway_station",
+  railway_station:   "railway_station",
+  bahnhof:           "railway_station",
+  fuel:              "fuel",
+  gas_station:       "fuel",
+  tankstelle:        "fuel",
+}
+
+// Source values we have SEEN and deliberately do not adopt. Kept explicit so
+// an unrecognised value can be told apart from a known-and-skipped one — the
+// former means the source added something new and the table needs a decision,
+// the latter is settled. Both are dropped; only the former is reported.
+export const ACLOUD_KNOWN_UNMAPPED = new Set<string>([
+  // Not a venue: transit infrastructure, street furniture, markers
+  "undefined", "other", "public_transport", "bus_stop", "bus_station", "tram_stop",
+  "subway_station", "platform", "train", "transport", "ferry", "parking", "atm",
+  "toilets", "elevator", "drinkingwater", "memorial", "public_art", "viewpoint",
+  "archaeological_site", "hiking", "house", "car_sharing", "car_rental",
+  // Institutions / offices — out of scope for a venue search
+  "government_office", "official", "police", "court", "embassy", "school",
+  "university", "college", "kindergarten", "driving_school", "social_facility",
+  "communitycentre", "association", "company", "insurance", "lawyer",
+  // Real venues, but no matching Category in this app (yet)
+  "jewelry", "department_store", "mall", "shopping", "electronics", "computers",
+  "mobile_phones", "toys", "gifts", "stationery", "photography", "textiles",
+  "art_shop", "instruments", "tools", "sports_shop", "pet_store", "garden_center",
+  "interior_decoration", "video_store", "copyshop", "travel_agency", "kiosk",
+  "currencyexchange", "2nd_hand", "alcohol", "beverages", "tea_shop", "deli",
+  "organic_food", "food", "confectionery", "nightclub", "stripclub", "massage",
+  "beautysalon", "ophthalmologist", "alternative_medicine", "bed_breakfast",
+  "accommodation", "arts_center", "culture", "tourism", "leisure", "health",
+])
+
+// One-time-per-value reporting of vocabulary drift. Without this, a new source
+// category is indistinguishable from a deliberately-skipped one and silently
+// costs records — exactly how "bread" (a bakery) went unnoticed while being
+// dropped. Module-scoped so a busy search doesn't repeat the same warning.
+const reportedUnknownCategories = new Set<string>()
+
+function classifyAcloudCategory(raw: unknown): Category | undefined {
+  // Documented as a plain string in every one of 6000 sampled records, but the
+  // array form is tolerated defensively: take the first value that resolves
+  // rather than joining, since joining is what makes substring collisions
+  // possible in the first place.
+  const candidates = Array.isArray(raw) ? raw.map(String) : [String(raw ?? "")]
+  for (const c of candidates) {
+    const key = c.trim().toLowerCase()
+    if (!key) continue
+    const mapped = FROM_ACLOUD[key]
+    if (mapped) return mapped
+    if (!ACLOUD_KNOWN_UNMAPPED.has(key) && !reportedUnknownCategories.has(key)) {
+      reportedUnknownCategories.add(key)
+      console.warn(`[accessibility.cloud] unknown category "${key}" — record dropped; add it to FROM_ACLOUD or ACLOUD_KNOWN_UNMAPPED`)
+    }
+  }
+  return undefined
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapCategory(props: any): Category | undefined {
-  const raw = props?.category
-  const cat = (Array.isArray(raw) ? raw.map(String).join(" ") : String(raw ?? "")).toLowerCase()
-  if (cat.includes("ice_cream") || cat.includes("eisdiele") || cat.includes("gelato")) return "cafe"  // merged into cafe
-  if (cat.includes("cafe") || cat.includes("coffee") || cat.includes("kaffee")) return "cafe"
-  if (cat.includes("restaurant"))                                                 return "restaurant"
-  if (cat.includes("biergarten"))                                                 return "biergarten"
-  if (cat.includes("pub") || cat.includes("kneipe"))                              return "pub"
-  if (cat.includes("bar"))                                                         return "bar"
-  if (cat.includes("fast_food") || cat.includes("fastfood") || cat.includes("food_court")) return "fast_food"
-  if (cat.includes("hostel"))                                                     return "hostel"
-  if (cat.includes("apartment") || cat.includes("ferienwohnung"))                 return "apartment"
-  if (cat.includes("hotel") || cat.includes("lodging") || cat.includes("motel") || cat.includes("guest_house")) return "hotel"
-  if (cat.includes("museum"))                                                     return "museum"
-  if (cat.includes("cinema") || cat.includes("kino"))                             return "cinema"
-  if (cat.includes("theatre") || cat.includes("theater") || cat.includes("oper")) return "theater"
-  if (cat.includes("library") || cat.includes("bibliothek"))                      return "library"
-  if (cat.includes("gallery") || cat.includes("galerie"))                         return "gallery"
-  if (cat.includes("attraction") || cat.includes("theme_park"))                       return "attraction"
-  if (cat.includes("pharmacy") || cat.includes("apotheke"))                           return "pharmacy"
-  if (cat.includes("rehabilitation") || cat.includes("reha"))                         return "rehabilitation"
-  if (cat.includes("doctor") || cat.includes("arztpraxis") || cat.includes("clinic") || cat.includes("praxis")) return "doctors"
-  if (cat.includes("dentist") || cat.includes("zahnarzt"))                            return "dentist"
-  if (cat.includes("veterinary") || cat.includes("tierarzt") || cat.includes("vet")) return "veterinary"
-  if (cat.includes("hospital") || cat.includes("krankenhaus") || cat.includes("klinikum")) return "hospital"
-  if (cat.includes("chemist") || cat.includes("drogerie"))                            return "chemist"
-  if (cat.includes("supermarket") || cat.includes("supermarkt"))                      return "supermarket"
-  if (cat.includes("bakery") || cat.includes("bäckerei") || cat.includes("backerei")) return "bakery"
-  if (cat.includes("hairdresser") || cat.includes("friseur") || cat.includes("frisör")) return "hairdresser"
-  if (cat.includes("bank"))                                                            return "bank"
-  if (cat.includes("post_office") || cat.includes("postamt") || cat.includes("post office")) return "post_office"
-  if (cat.includes("zoo") || cat.includes("aquarium") || cat.includes("tierpark"))   return "zoo"
-  if (cat.includes("camp_site") || cat.includes("caravan_site") || cat.includes("campingplatz")) return "camp_site"
-  if (cat.includes("swimming_pool") || cat.includes("schwimmbad") || cat.includes("water_park")) return "swimming_pool"
-  if (cat.includes("fitness_centre") || cat.includes("fitness_center") || cat.includes("fitnessstudio")) return "fitness_centre"
-  if (cat.includes("playground") || cat.includes("spielplatz"))                     return "playground"
-  // Word-boundary match (not .includes): a plain substring check would also
-  // catch "parkplatz" (German for parking lot) or "car_park" — both parking
-  // facilities, not the walkable "park" category. Neither contains "park" as
-  // a standalone word (letters/underscore are \w, so no \b forms mid-word).
-  if (/\bpark\b/i.test(cat))                                                         return "park"
-  if (cat.includes("physiotherapist") || cat.includes("physiotherapie"))            return "physiotherapist"
-  if (cat.includes("medical_supply") || cat.includes("sanitätshaus"))               return "medical_supply"
-  if (cat.includes("hearing_aids") || cat.includes("hörakustiker"))                 return "hearing_aids"
-  if (cat.includes("optician") || cat.includes("optiker"))                          return "optician"
-  if (cat.includes("townhall") || cat.includes("town_hall") || cat.includes("rathaus")) return "townhall"
-  if (cat.includes("place_of_worship") || cat.includes("kirche") || cat.includes("church")) return "place_of_worship"
-  if (cat.includes("railway_station") || cat.includes("train_station") || cat.includes("bahnhof")) return "railway_station"
-  if (cat.includes("fuel") || cat.includes("gas_station") || cat.includes("tankstelle")) return "fuel"
-  if (cat.includes("shoes") || cat.includes("shoe_store") || cat.includes("schuhgeschäft")) return "shoes"
-  if (cat.includes("clothes") || cat.includes("clothing_store") || cat.includes("bekleidung")) return "clothes"
-  if (cat.includes("convenience"))                                                   return "convenience"
-  if (cat.includes("bicycle") || cat.includes("fahrrad"))                             return "bicycle"
-  if (cat.includes("furniture") || cat.includes("möbel"))                             return "furniture"
-  if (cat.includes("butcher") || cat.includes("metzgerei") || cat.includes("fleischerei")) return "butcher"
-  if (cat.includes("florist") || cat.includes("blumen"))                              return "florist"
-  if (cat.includes("laundry") || cat.includes("waschsalon"))                          return "laundry"
-  if (cat.includes("books") || cat.includes("book_store") || cat.includes("buchhandlung")) return "books"
-  if (cat.includes("sports_centre") || cat.includes("sports_complex") || cat.includes("sporthalle")) return "sports_centre"
-  return undefined
+  return classifyAcloudCategory(props?.category)
 }
 
 // ─── Parse one place from API response ────────────────────────────────────

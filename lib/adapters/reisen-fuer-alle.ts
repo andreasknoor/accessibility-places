@@ -84,47 +84,99 @@ function buildParkingDetails(data: any): ParkingDetails {
   }
 }
 
+// ─── Category classification ───────────────────────────────────────────────
+//
+// EXACT MATCHING ONLY — never `.includes()`. The previous substring chain had
+// the same latent defect proven live in the accessibility.cloud adapter (see
+// FROM_ACLOUD's comment there: "public_transport" matched "pub", "barber"
+// matched "bar"). Here the danger is acute and German-specific: `"bar"` is a
+// substring of **"barrierefrei"** — the single most likely word to appear in
+// a German accessibility certifier's type labels. Any such value would have
+// been classified as a bar.
+//
+// Matching is two-stage, both stages exact:
+//   1. the whole normalised value
+//   2. any single token of it (split on non-letters)
+// Stage 2 exists because this API's vocabulary is NOT verified — unlike
+// A.Cloud, RfA's endpoint is not generally reachable, so a compound label
+// like "Gastronomie / Restaurant" is plausible and would fail a whole-string
+// match. Token matching handles that without ever matching inside a word:
+// "barrierefrei" is one token and therefore cannot match the "bar" key.
+const FROM_RFA: Record<string, Category> = {
+  // Gastronomy
+  cafe: "cafe", kaffee: "cafe", bistro: "cafe",
+  restaurant: "restaurant", gastronomie: "restaurant",
+  biergarten: "biergarten",
+  pub: "pub", kneipe: "pub",
+  bar: "bar",
+  imbiss: "fast_food", schnellrestaurant: "fast_food",
+  fastfood: "fast_food", fast_food: "fast_food",
+  // Accommodation
+  hostel: "hostel",
+  apartment: "apartment", ferienwohnung: "apartment",
+  hotel: "hotel", beherbergung: "hotel", unterkunft: "hotel", pension: "hotel",
+  // Culture & leisure
+  museum: "museum",
+  kino: "cinema", cinema: "cinema",
+  theater: "theater", oper: "theater",
+  bibliothek: "library", "bücherei": "library",
+  galerie: "gallery", gallery: "gallery",
+  zoo: "zoo", tierpark: "zoo", aquarium: "zoo",
+  sporthalle: "sports_centre", sports_centre: "sports_centre", sports_complex: "sports_centre",
+  // Health
+  apotheke: "pharmacy", pharmacy: "pharmacy",
+  reha: "rehabilitation", rehabilitation: "rehabilitation",
+  arzt: "doctors", arztpraxis: "doctors", praxis: "doctors", klinik: "doctors",
+  zahnarzt: "dentist", dental: "dentist",
+  tierarzt: "veterinary", veterinary: "veterinary",
+  krankenhaus: "hospital", klinikum: "hospital", hospital: "hospital",
+  // Shopping
+  drogerie: "chemist", chemist: "chemist",
+  supermarkt: "supermarket", supermarket: "supermarket", lebensmittel: "supermarket",
+  "bäckerei": "bakery", "bäcker": "bakery", bakery: "bakery",
+  metzgerei: "butcher", fleischerei: "butcher", butcher: "butcher",
+  blumen: "florist", florist: "florist",
+  buchhandlung: "books", books: "books",
+  "schuhgeschäft": "shoes", shoes: "shoes",
+  bekleidung: "clothes", clothes: "clothes",
+  kiosk: "convenience", convenience: "convenience",
+  fahrrad: "bicycle", bicycle: "bicycle",
+  "möbel": "furniture", furniture: "furniture",
+  // Everyday & services
+  friseur: "hairdresser", "frisör": "hairdresser", hairdresser: "hairdresser",
+  bank: "bank", sparkasse: "bank",
+  postamt: "post_office", post: "post_office", post_office: "post_office",
+  waschsalon: "laundry", laundry: "laundry",
+  tankstelle: "fuel", fuel: "fuel",
+}
+
+// Same rationale as the A.Cloud adapter's counterpart: make vocabulary drift
+// visible instead of letting it silently degrade categories. Doubly important
+// here because unmatched values fall back to "attraction" rather than being
+// dropped — a wrong-but-plausible category is harder to notice than a missing
+// record. Module-scoped so one value warns once, not once per result.
+const reportedUnknownRfaTypes = new Set<string>()
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapCategory(item: any): Category {
-  const type = (item.type ?? item.category ?? "").toLowerCase()
-  if (type.includes("cafe") || type.includes("kaffee") || type.includes("bistro"))            return "cafe"
-  if (type.includes("gastronomie") || type.includes("restaurant"))                             return "restaurant"
-  if (type.includes("biergarten"))                                                              return "biergarten"
-  if (type.includes("pub") || type.includes("kneipe"))                                          return "pub"
-  if (type.includes("bar"))                                                                      return "bar"
-  if (type.includes("imbiss") || type.includes("fast"))                                          return "fast_food"
-  if (type.includes("hostel"))                                                                   return "hostel"
-  if (type.includes("apartment") || type.includes("ferienwohnung"))                              return "apartment"
-  if (type.includes("hotel") || type.includes("beherbergung") || type.includes("unterkunft"))   return "hotel"
-  if (type.includes("museum"))                                                                   return "museum"
-  if (type.includes("kino") || type.includes("cinema"))                                          return "cinema"
-  if (type.includes("theater") || type.includes("oper"))                                         return "theater"
-  if (type.includes("bibliothek") || type.includes("bücherei"))                                  return "library"
-  if (type.includes("galerie") || type.includes("gallery"))                                      return "gallery"
-  if (type.includes("apotheke") || type.includes("pharmacy"))                                    return "pharmacy"
-  if (type.includes("reha") || type.includes("rehabilitation"))                                   return "rehabilitation"
-  if (type.includes("arztpraxis") || type.includes("arzt") || type.includes("praxis") || type.includes("klinik")) return "doctors"
-  if (type.includes("zahnarzt") || type.includes("dental"))                                      return "dentist"
-  if (type.includes("tierarzt") || type.includes("veterinary"))                                  return "veterinary"
-  if (type.includes("krankenhaus") || type.includes("klinikum") || type.includes("hospital"))    return "hospital"
-  if (type.includes("drogerie") || type.includes("chemist"))                                     return "chemist"
-  if (type.includes("supermarkt") || type.includes("supermarket") || type.includes("lebensmittel")) return "supermarket"
-  if (type.includes("bäckerei") || type.includes("bäcker") || type.includes("bakery"))          return "bakery"
-  if (type.includes("friseur") || type.includes("frisör") || type.includes("hairdresser"))      return "hairdresser"
-  if (type.includes("bank") || type.includes("sparkasse"))                                       return "bank"
-  if (type.includes("postamt") || type.includes("post_office") || type.includes("post office")) return "post_office"
-  if (type.includes("zoo") || type.includes("tierpark") || type.includes("aquarium"))           return "zoo"
-  if (type.includes("tankstelle") || type.includes("fuel"))                                      return "fuel"
-  if (type.includes("schuhgeschäft") || type.includes("shoes"))                                  return "shoes"
-  if (type.includes("bekleidung") || type.includes("clothes"))                                   return "clothes"
-  if (type.includes("kiosk") || type.includes("convenience"))                                    return "convenience"
-  if (type.includes("fahrrad") || type.includes("bicycle"))                                       return "bicycle"
-  if (type.includes("möbel") || type.includes("furniture"))                                      return "furniture"
-  if (type.includes("metzgerei") || type.includes("fleischerei") || type.includes("butcher"))    return "butcher"
-  if (type.includes("blumen") || type.includes("florist"))                                        return "florist"
-  if (type.includes("waschsalon") || type.includes("laundry"))                                    return "laundry"
-  if (type.includes("buchhandlung") || type.includes("books"))                                    return "books"
-  if (type.includes("sporthalle") || type.includes("sports_centre") || type.includes("sports_complex")) return "sports_centre"
+  const raw = String(item.type ?? item.category ?? "").trim().toLowerCase()
+  if (!raw) return "attraction"
+
+  const whole = FROM_RFA[raw]
+  if (whole) return whole
+
+  // Split on anything that isn't a letter/digit, keeping German umlauts and ß
+  // as word characters so "bäckerei" survives as one token.
+  for (const token of raw.split(/[^a-z0-9äöüß]+/)) {
+    if (!token) continue
+    const mapped = FROM_RFA[token]
+    if (mapped) return mapped
+  }
+
+  if (!reportedUnknownRfaTypes.has(raw)) {
+    reportedUnknownRfaTypes.add(raw)
+    console.warn(`[reisen-fuer-alle] unclassified type "${raw}" — falling back to "attraction"; add it to FROM_RFA`)
+  }
   return "attraction"
 }
 
