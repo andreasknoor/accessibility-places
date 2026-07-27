@@ -1,0 +1,536 @@
+[
+  {
+    "spec": {
+      "key": "berlin",
+      "label": "Berlin",
+      "country": "DE",
+      "kind": "city",
+      "lat": 52.52,
+      "lon": 13.405,
+      "radiusKm": 8
+    },
+    "acloudCount": 56,
+    "wheelmapCount": 45,
+    "otherCount": 11,
+    "sourceIdBreakdown": {
+      "LiBTS67TjmBcXdEmX": 49,
+      "ZyDaF8ZrJeGL3m4Cq": 6,
+      "LB5rYeCZ9PxthQ3Rg": 1
+    },
+    "wheelmap": {
+      "lookedUp": 45,
+      "nodeGone": 11,
+      "agree": 20,
+      "disagree": 3,
+      "checkDateAgeBuckets": {
+        "none": 21,
+        "<1y": 5,
+        "1-2y": 7,
+        "2-5y": 1,
+        "5y+": 0
+      },
+      "disagreementExamples": [
+        {
+          "name": "Happy Noodles",
+          "acloud": "limited",
+          "osm": "yes",
+          "checkDate": "2025-11-11"
+        },
+        {
+          "name": "Aquadom Sealife",
+          "acloud": "yes",
+          "osm": "no"
+        },
+        {
+          "name": "Allegretto A Tavola",
+          "acloud": "limited",
+          "osm": "yes",
+          "checkDate": "2025-06-30"
+        }
+      ]
+    },
+    "other": {
+      "fuzzyMatched": 0,
+      "agree": 0,
+      "disagree": 0
+    }
+  },
+  {
+    "spec": {
+      "key": "muenchen",
+      "label": "München",
+      "country": "DE",
+      "kind": "city",
+      "lat": 48.1372,
+      "lon": 11.5755,
+      "radiusKm": 8
+    },
+    "acloudCount": 49,
+    "wheelmapCount": 45,
+    "otherCount": 4,
+    "sourceIdBreakdown": {
+      "LiBTS67TjmBcXdEmX": 48,
+      "Q9jzJMxydegZYfFbK": 1
+    },
+    "wheelmap": {
+      "lookedUp": 45,
+      "nodeGone": 16,
+      "agree": 26,
+      "disagree": 1,
+      "checkDateAgeBuckets": {
+        "none": 20,
+        "<1y": 7,
+        "1-2y": 1,
+        "2-5y": 1,
+        "5y+": 0
+      },
+      "disagreementExamples": [
+        {
+          "name": "Rischart",
+          "acloud": "limited",
+          "osm": "yes"
+        }
+      ]
+    },
+    "other": {
+      "fuzzyMatched": 0,
+      "agree": 0,
+      "disagree": 0
+    }
+  },
+  {
+    "spec": {
+      "key": "wien",
+      "label": "Wien",
+      "country": "AT",
+      "kind": "city",
+      "lat": 48.2082,
+      "lon": 16.3738,
+      "radiusKm": 8
+    },
+    "acloudCount": 45,
+    "wheelmapCount": 42,
+    "otherCount": 3,
+    "sourceIdBreakdown": {
+      "LiBTS67TjmBcXdEmX": 45
+    },
+    "wheelmap": {
+      "lookedUp": 42,
+      "nodeGone": 4,
+      "agree": 29,
+      "disagree": 1,
+      "checkDateAgeBuckets": {
+        "none": 28,
+        "<1y": 3,
+        "1-2y": 6,
+        "2-5y": 1,
+        "5y+": 0
+      },
+      "disagreementExamples": [
+        {
+          "name": "Kyoto - Koreanisches Japanisches Restaurant",
+          "acloud": "no",
+          "osm": "limited"
+        }
+      ]
+    },
+    "other": {
+      "fuzzyMatched": 0,
+      "agree": 0,
+      "disagree": 0
+    }
+  },
+  {
+    "spec": {
+      "key": "graz",
+      "label": "Graz",
+      "country": "AT",
+      "kind": "city",
+      "lat": 47.07,
+      "lon": 15.44,
+      "radiusKm": 8
+    },
+    "acloudCount": 64,
+    "wheelmapCount": 63,
+    "otherCount": 1,
+    "sourceIdBreakdown": {
+      "LiBTS67TjmBcXdEmX": 64
+    },
+    "wheelmap": {
+      "lookedUp": 63,
+      "nodeGone": 11,
+      "agree": 42,
+      "disagree": 5,
+      "checkDateAgeBuckets": {
+        "none": 40,
+        "<1y": 12,
+        "1-2y": 0,
+        "2-5y": 0,
+        "5y+": 0
+      },
+      "disagreementExamples": [
+        {
+          "name": "Landeszeughaus",
+          "acloud": "no",
+          "osm": "yes"
+        },
+        {
+          "name": "Bank Austria",
+          "acloud": "yes",
+          "osm": "no",
+          "checkDate": "2026-02-07"
+        },
+        {
+          "name": "Jones",
+          "acloud": "limited",
+          "osm": "yes"
+        },
+        {
+          "name": "Pimkie",
+          "acloud": "limited",
+          "osm": "yes"
+        },
+        {
+          "name": "Pilatus",
+          "acloud": "no",
+          "osm": "limited"
+        }
+      ]
+    },
+    "other": {
+      "fuzzyMatched": 0,
+      "agree": 0,
+      "disagree": 0
+    }
+  },
+  {
+    "spec": {
+      "key": "zuerich",
+      "label": "Zürich",
+      "country": "CH",
+      "kind": "city",
+      "lat": 47.3769,
+      "lon": 8.5417,
+      "radiusKm": 8
+    },
+    "acloudCount": 62,
+    "wheelmapCount": 49,
+    "otherCount": 13,
+    "sourceIdBreakdown": {
+      "LiBTS67TjmBcXdEmX": 50,
+      "zFpoqetHjgGbmyHnR": 12
+    },
+    "wheelmap": {
+      "lookedUp": 49,
+      "nodeGone": 14,
+      "agree": 23,
+      "disagree": 2,
+      "checkDateAgeBuckets": {
+        "none": 20,
+        "<1y": 9,
+        "1-2y": 6,
+        "2-5y": 0,
+        "5y+": 0
+      },
+      "disagreementExamples": [
+        {
+          "name": "ViCafe Bahnhofstrasse",
+          "acloud": "yes",
+          "osm": "limited",
+          "checkDate": "2024-08-09"
+        },
+        {
+          "name": "Yendi",
+          "acloud": "no",
+          "osm": "limited",
+          "checkDate": "2025-05-28"
+        }
+      ]
+    },
+    "other": {
+      "fuzzyMatched": 1,
+      "agree": 0,
+      "disagree": 1
+    }
+  },
+  {
+    "spec": {
+      "key": "genf",
+      "label": "Genf",
+      "country": "CH",
+      "kind": "city",
+      "lat": 46.2044,
+      "lon": 6.1432,
+      "radiusKm": 8
+    },
+    "acloudCount": 36,
+    "wheelmapCount": 29,
+    "otherCount": 7,
+    "sourceIdBreakdown": {
+      "LiBTS67TjmBcXdEmX": 30,
+      "zFpoqetHjgGbmyHnR": 5,
+      "LB5rYeCZ9PxthQ3Rg": 1
+    },
+    "wheelmap": {
+      "lookedUp": 29,
+      "nodeGone": 7,
+      "agree": 19,
+      "disagree": 0,
+      "checkDateAgeBuckets": {
+        "none": 14,
+        "<1y": 1,
+        "1-2y": 4,
+        "2-5y": 3,
+        "5y+": 0
+      },
+      "disagreementExamples": []
+    },
+    "other": {
+      "fuzzyMatched": 3,
+      "agree": 3,
+      "disagree": 0
+    }
+  },
+  {
+    "spec": {
+      "key": "bad-berleburg",
+      "label": "Bad Berleburg",
+      "country": "DE",
+      "kind": "rural",
+      "lat": 51.0552,
+      "lon": 8.3844,
+      "radiusKm": 15
+    },
+    "acloudCount": 48,
+    "wheelmapCount": 45,
+    "otherCount": 3,
+    "sourceIdBreakdown": {
+      "LiBTS67TjmBcXdEmX": 45,
+      "ZyDaF8ZrJeGL3m4Cq": 2,
+      "LB5rYeCZ9PxthQ3Rg": 1
+    },
+    "wheelmap": {
+      "lookedUp": 45,
+      "nodeGone": 11,
+      "agree": 22,
+      "disagree": 1,
+      "checkDateAgeBuckets": {
+        "none": 34,
+        "<1y": 0,
+        "1-2y": 0,
+        "2-5y": 0,
+        "5y+": 0
+      },
+      "disagreementExamples": [
+        {
+          "name": "Buchhandlung Kühn",
+          "acloud": "no",
+          "osm": "limited"
+        }
+      ]
+    },
+    "other": {
+      "fuzzyMatched": 0,
+      "agree": 0,
+      "disagree": 0
+    }
+  },
+  {
+    "spec": {
+      "key": "prenzlau",
+      "label": "Prenzlau",
+      "country": "DE",
+      "kind": "rural",
+      "lat": 53.3167,
+      "lon": 13.8667,
+      "radiusKm": 15
+    },
+    "acloudCount": 65,
+    "wheelmapCount": 54,
+    "otherCount": 11,
+    "sourceIdBreakdown": {
+      "LiBTS67TjmBcXdEmX": 58,
+      "Q9jzJMxydegZYfFbK": 1,
+      "ZyDaF8ZrJeGL3m4Cq": 6
+    },
+    "wheelmap": {
+      "lookedUp": 54,
+      "nodeGone": 15,
+      "agree": 31,
+      "disagree": 0,
+      "checkDateAgeBuckets": {
+        "none": 37,
+        "<1y": 1,
+        "1-2y": 1,
+        "2-5y": 0,
+        "5y+": 0
+      },
+      "disagreementExamples": []
+    },
+    "other": {
+      "fuzzyMatched": 5,
+      "agree": 4,
+      "disagree": 0
+    }
+  },
+  {
+    "spec": {
+      "key": "lienz",
+      "label": "Lienz",
+      "country": "AT",
+      "kind": "rural",
+      "lat": 46.83,
+      "lon": 12.7683,
+      "radiusKm": 15
+    },
+    "acloudCount": 56,
+    "wheelmapCount": 47,
+    "otherCount": 9,
+    "sourceIdBreakdown": {
+      "LiBTS67TjmBcXdEmX": 55,
+      "LB5rYeCZ9PxthQ3Rg": 1
+    },
+    "wheelmap": {
+      "lookedUp": 47,
+      "nodeGone": 8,
+      "agree": 21,
+      "disagree": 2,
+      "checkDateAgeBuckets": {
+        "none": 36,
+        "<1y": 1,
+        "1-2y": 2,
+        "2-5y": 0,
+        "5y+": 0
+      },
+      "disagreementExamples": [
+        {
+          "name": "City-Cafe Glanzl",
+          "acloud": "yes",
+          "osm": "limited"
+        },
+        {
+          "name": "Lienz",
+          "acloud": "limited",
+          "osm": "yes"
+        }
+      ]
+    },
+    "other": {
+      "fuzzyMatched": 4,
+      "agree": 4,
+      "disagree": 0
+    }
+  },
+  {
+    "spec": {
+      "key": "zwettl",
+      "label": "Zwettl",
+      "country": "AT",
+      "kind": "rural",
+      "lat": 48.6072,
+      "lon": 15.1667,
+      "radiusKm": 15
+    },
+    "acloudCount": 55,
+    "wheelmapCount": 50,
+    "otherCount": 5,
+    "sourceIdBreakdown": {
+      "LiBTS67TjmBcXdEmX": 54,
+      "ZyDaF8ZrJeGL3m4Cq": 1
+    },
+    "wheelmap": {
+      "lookedUp": 50,
+      "nodeGone": 15,
+      "agree": 22,
+      "disagree": 0,
+      "checkDateAgeBuckets": {
+        "none": 26,
+        "<1y": 2,
+        "1-2y": 6,
+        "2-5y": 1,
+        "5y+": 0
+      },
+      "disagreementExamples": []
+    },
+    "other": {
+      "fuzzyMatched": 3,
+      "agree": 3,
+      "disagree": 0
+    }
+  },
+  {
+    "spec": {
+      "key": "appenzell",
+      "label": "Appenzell",
+      "country": "CH",
+      "kind": "rural",
+      "lat": 47.3333,
+      "lon": 9.4111,
+      "radiusKm": 15
+    },
+    "acloudCount": 37,
+    "wheelmapCount": 21,
+    "otherCount": 16,
+    "sourceIdBreakdown": {
+      "LiBTS67TjmBcXdEmX": 31,
+      "zFpoqetHjgGbmyHnR": 6
+    },
+    "wheelmap": {
+      "lookedUp": 21,
+      "nodeGone": 7,
+      "agree": 13,
+      "disagree": 0,
+      "checkDateAgeBuckets": {
+        "none": 10,
+        "<1y": 4,
+        "1-2y": 0,
+        "2-5y": 0,
+        "5y+": 0
+      },
+      "disagreementExamples": []
+    },
+    "other": {
+      "fuzzyMatched": 6,
+      "agree": 6,
+      "disagree": 0
+    }
+  },
+  {
+    "spec": {
+      "key": "scuol",
+      "label": "Scuol",
+      "country": "CH",
+      "kind": "rural",
+      "lat": 46.7975,
+      "lon": 10.2833,
+      "radiusKm": 15
+    },
+    "acloudCount": 56,
+    "wheelmapCount": 34,
+    "otherCount": 22,
+    "sourceIdBreakdown": {
+      "zFpoqetHjgGbmyHnR": 18,
+      "LiBTS67TjmBcXdEmX": 36,
+      "LB5rYeCZ9PxthQ3Rg": 2
+    },
+    "wheelmap": {
+      "lookedUp": 34,
+      "nodeGone": 11,
+      "agree": 17,
+      "disagree": 0,
+      "checkDateAgeBuckets": {
+        "none": 18,
+        "<1y": 1,
+        "1-2y": 0,
+        "2-5y": 4,
+        "5y+": 0
+      },
+      "disagreementExamples": []
+    },
+    "other": {
+      "fuzzyMatched": 3,
+      "agree": 1,
+      "disagree": 2
+    }
+  }
+]

@@ -181,7 +181,7 @@ describe("mergePlaces", () => {
   })
 
   it("detects conflict when sources disagree", () => {
-    // osm(0.675) vs accessibility_cloud(0.70): ratio = 0.675/0.70 = 0.96 > 0.5 → conflict
+    // osm(0.675) vs accessibility_cloud(0.50): ratio = 0.50/0.675 = 0.74 > 0.5 → conflict
     const a = makePlace({
       id: "a",
       accessibility: {
@@ -203,8 +203,8 @@ describe("mergePlaces", () => {
 
     const merged = mergePlaces(a, b)
     expect(merged.accessibility.entrance.conflict).toBe(true)
-    // accessibility_cloud (weight 0.70) wins over osm entrance (weight 0.675)
-    expect(merged.accessibility.entrance.value).toBe("yes")
+    // osm (weight 0.675) now wins over accessibility_cloud entrance (weight 0.50)
+    expect(merged.accessibility.entrance.value).toBe("no")
   })
 
   it("primarySource is most reliable source present", () => {
@@ -548,8 +548,8 @@ describe("finalisePlaceConfidence", () => {
     // Adapters emit overallConfidence: 0 — finalisePlaceConfidence must fix it
     expect(place.overallConfidence).toBe(0)
     const finalised = finalisePlaceConfidence(place)
-    // entrance(0.70) + toilet(0.70) / 2 known attrs = 0.70
-    expect(finalised.overallConfidence).toBeCloseTo(0.70)
+    // entrance + toilet, both accessibility_cloud / 2 known attrs = that weight
+    expect(finalised.overallConfidence).toBeCloseTo(RELIABILITY_WEIGHTS.accessibility_cloud)
   })
 
   it("ignores unknown attributes in the average", () => {
@@ -581,17 +581,19 @@ describe("computeFilteredConfidence", () => {
   it("always averages ALL known criteria regardless of active filters", () => {
     const place = makePlace({
       accessibility: {
-        entrance: buildAttribute("accessibility_cloud", "yes", "yes", {}), // 0.70
-        toilet:   buildAttribute("accessibility_cloud", "yes", "yes", {}), // 0.70
-        parking:  buildAttribute("osm", "no", "no", {}),                  // 0.75
+        entrance: buildAttribute("accessibility_cloud", "yes", "yes", {}),
+        toilet:   buildAttribute("accessibility_cloud", "yes", "yes", {}),
+        parking:  buildAttribute("osm", "no", "no", {}),
       },
     })
     // All three criteria are known → score is the same regardless of filter selection.
-    // (0.70 + 0.70 + 0.75) / 3 ≈ 0.717
     const scorePartial = computeFilteredConfidence(place, filtersEntranceToilet)
     const scoreAll     = computeFilteredConfidence(place, filtersAll)
     expect(scorePartial).toBeCloseTo(scoreAll)
-    expect(scorePartial).toBeCloseTo((0.70 + 0.70 + 0.75) / 3, 2)
+    expect(scorePartial).toBeCloseTo(
+      (RELIABILITY_WEIGHTS.accessibility_cloud + RELIABILITY_WEIGHTS.accessibility_cloud + RELIABILITY_WEIGHTS.osm) / 3,
+      2,
+    )
   })
 
   it("filter selection does not affect the score — confidence reflects data quality", () => {

@@ -344,13 +344,25 @@ function toPlace(feature: any): Place | null {
   const category = mapCategory(props)
   if (!category) return null   // unknown / off-topic A.Cloud category — drop the record
 
-  const addr = props.address ?? {}
-
-  // Use A.Cloud's authoritative back-link to Wheelmap when present. The same
-  // field can also point to other partner systems (Pfotenpiloten, etc.); we
-  // only adopt it when the host is wheelmap.org.
+  // Records mirrored from Wheelmap are dropped entirely — see
+  // docs/analysis/acloud-wheelmap-origin-2026-07.md. Wheelmap.org is itself
+  // just an editing UI on OpenStreetMap (infoPageUrl → wheelmap.org/nodes/
+  // {OSM node ID}), and the app's own OSM adapter already queries that exact
+  // node live. Measured across 12 DACH locations: 83% of A.Cloud's records
+  // here are this Wheelmap/OSM mirror, never richer than OSM (0% additional
+  // structured detail — same bare entrance/toilet/parking yes/no OSM already
+  // has), and 25% of the referenced OSM nodes had already been deleted
+  // (verified live against the OSM API: HTTP 410) — A.Cloud simply hadn't
+  // re-synced. Serving these would only ever duplicate or stale-shadow what
+  // fetchOsm() returns fresh. Genuinely A.Cloud-only records (~9% of DACH
+  // volume — small local accessibility surveys with no OSM/Ginto counterpart,
+  // concentrated in rural AT/CH) are unaffected: they have no infoPageUrl
+  // pointing at wheelmap.org. Other infoPageUrl hosts (e.g. Pfotenpiloten,
+  // still used for the dog-policy enrichment below) are untouched by this.
   const infoPage = typeof props.infoPageUrl === "string" ? props.infoPageUrl : undefined
-  const wheelmapUrl = infoPage && /(^|\.)wheelmap\.org$/i.test(safeHost(infoPage)) ? infoPage : undefined
+  if (infoPage && /(^|\.)wheelmap\.org$/i.test(safeHost(infoPage))) return null
+
+  const addr = props.address ?? {}
 
   // Pull animal-policy info from any A.Cloud source that exposes it
   // (Pfotenpiloten is the main one). Attached as enrichment to the merged
@@ -384,7 +396,8 @@ function toPlace(feature: any): Place | null {
     coordinates: { lat, lon },
     website: props.placeWebsiteUrl ?? undefined,
     phone:   props.phoneNumber     ?? undefined,
-    wheelmapUrl,
+    // No wheelmapUrl here — any record that would have one is a Wheelmap
+    // mirror and already returned null above.
     ...(allowsDogs    !== undefined ? { allowsDogs }    : {}),
     ...(dogPolicyOnly                ? { dogPolicyOnly } : {}),
     accessibility: {

@@ -1,0 +1,607 @@
+[
+  {
+    "spec": {
+      "key": "zuerich",
+      "label": "Zürich",
+      "kind": "city",
+      "lat": 47.3768,
+      "lon": 8.5417,
+      "radiusKm": 8
+    },
+    "acloudCount": 62,
+    "gintoAuditedCount": 13,
+    "gintoSelfDeclaredCount": 30,
+    "osmCandidateCount": 1744,
+    "auditedMatch": {
+      "matched": 1,
+      "agree": 0,
+      "disagree": 1
+    },
+    "selfDeclaredMatch": {
+      "matched": 0,
+      "agree": 0,
+      "disagree": 0
+    },
+    "osmMatch": {
+      "matched": 15,
+      "agree": 13,
+      "disagree": 2,
+      "checkDateAgeBuckets": {
+        "none": 5,
+        "<1y": 7,
+        "1-2y": 3,
+        "2-5y": 0,
+        "5y+": 0
+      }
+    },
+    "triangulation": {
+      "allAgree": 0,
+      "acloudOutlier": 0,
+      "osmOutlier": 0,
+      "gintoOutlier": 1,
+      "allDiffer": 0
+    },
+    "auditedDisagreementExamples": [
+      {
+        "name": "Central Plaza",
+        "acloud": "yes",
+        "ginto": "limited",
+        "updatedAt": "2025-09-09T06:18:13+02:00"
+      }
+    ]
+  },
+  {
+    "spec": {
+      "key": "basel",
+      "label": "Basel",
+      "kind": "city",
+      "lat": 47.5576,
+      "lon": 7.5923,
+      "radiusKm": 8
+    },
+    "acloudCount": 60,
+    "gintoAuditedCount": 58,
+    "gintoSelfDeclaredCount": 10,
+    "osmCandidateCount": 1445,
+    "auditedMatch": {
+      "matched": 8,
+      "agree": 4,
+      "disagree": 4
+    },
+    "selfDeclaredMatch": {
+      "matched": 0,
+      "agree": 0,
+      "disagree": 0
+    },
+    "osmMatch": {
+      "matched": 18,
+      "agree": 13,
+      "disagree": 5,
+      "checkDateAgeBuckets": {
+        "none": 9,
+        "<1y": 6,
+        "1-2y": 0,
+        "2-5y": 3,
+        "5y+": 0
+      }
+    },
+    "triangulation": {
+      "allAgree": 0,
+      "acloudOutlier": 0,
+      "osmOutlier": 0,
+      "gintoOutlier": 0,
+      "allDiffer": 0
+    },
+    "auditedDisagreementExamples": [
+      {
+        "name": "Basler Münster",
+        "acloud": "limited",
+        "ginto": "yes",
+        "updatedAt": "2025-09-08T22:04:29+02:00"
+      },
+      {
+        "name": "Rathaus",
+        "acloud": "yes",
+        "ginto": "limited",
+        "updatedAt": "2025-09-09T16:44:31+02:00"
+      },
+      {
+        "name": "Motel One Basel",
+        "acloud": "limited",
+        "ginto": "yes",
+        "updatedAt": "2025-09-09T16:11:19+02:00"
+      },
+      {
+        "name": "Historisches Museum Basel – Barfüsserkirche",
+        "acloud": "limited",
+        "ginto": "yes",
+        "updatedAt": "2025-09-10T14:18:22+02:00"
+      }
+    ]
+  },
+  {
+    "spec": {
+      "key": "bern",
+      "label": "Bern",
+      "kind": "city",
+      "lat": 46.948,
+      "lon": 7.4474,
+      "radiusKm": 8
+    },
+    "acloudCount": 58,
+    "gintoAuditedCount": 9,
+    "gintoSelfDeclaredCount": 19,
+    "osmCandidateCount": 1643,
+    "auditedMatch": {
+      "matched": 0,
+      "agree": 0,
+      "disagree": 0
+    },
+    "selfDeclaredMatch": {
+      "matched": 2,
+      "agree": 0,
+      "disagree": 2
+    },
+    "osmMatch": {
+      "matched": 24,
+      "agree": 18,
+      "disagree": 6,
+      "checkDateAgeBuckets": {
+        "none": 10,
+        "<1y": 5,
+        "1-2y": 7,
+        "2-5y": 2,
+        "5y+": 0
+      }
+    },
+    "triangulation": {
+      "allAgree": 0,
+      "acloudOutlier": 0,
+      "osmOutlier": 0,
+      "gintoOutlier": 0,
+      "allDiffer": 0
+    },
+    "auditedDisagreementExamples": []
+  },
+  {
+    "spec": {
+      "key": "genf",
+      "label": "Genf",
+      "kind": "city",
+      "lat": 46.2044,
+      "lon": 6.1432,
+      "radiusKm": 8
+    },
+    "acloudCount": 36,
+    "gintoAuditedCount": 85,
+    "gintoSelfDeclaredCount": 7,
+    "osmCandidateCount": 1375,
+    "auditedMatch": {
+      "matched": 3,
+      "agree": 1,
+      "disagree": 2
+    },
+    "selfDeclaredMatch": {
+      "matched": 1,
+      "agree": 1,
+      "disagree": 0
+    },
+    "osmMatch": {
+      "matched": 18,
+      "agree": 18,
+      "disagree": 0,
+      "checkDateAgeBuckets": {
+        "none": 8,
+        "<1y": 1,
+        "1-2y": 6,
+        "2-5y": 3,
+        "5y+": 0
+      }
+    },
+    "triangulation": {
+      "allAgree": 0,
+      "acloudOutlier": 0,
+      "osmOutlier": 0,
+      "gintoOutlier": 1,
+      "allDiffer": 0
+    },
+    "auditedDisagreementExamples": [
+      {
+        "name": "Grand Théâtre de Genève",
+        "acloud": "limited",
+        "ginto": "yes",
+        "updatedAt": "2025-09-09T09:34:24+02:00"
+      },
+      {
+        "name": "ibis Styles Genève Mont Blanc",
+        "acloud": "limited",
+        "ginto": "yes",
+        "updatedAt": "2025-09-09T08:47:28+02:00"
+      }
+    ]
+  },
+  {
+    "spec": {
+      "key": "lausanne",
+      "label": "Lausanne",
+      "kind": "city",
+      "lat": 46.5197,
+      "lon": 6.6323,
+      "radiusKm": 8
+    },
+    "acloudCount": 58,
+    "gintoAuditedCount": 87,
+    "gintoSelfDeclaredCount": 3,
+    "osmCandidateCount": 938,
+    "auditedMatch": {
+      "matched": 20,
+      "agree": 8,
+      "disagree": 12
+    },
+    "selfDeclaredMatch": {
+      "matched": 0,
+      "agree": 0,
+      "disagree": 0
+    },
+    "osmMatch": {
+      "matched": 30,
+      "agree": 28,
+      "disagree": 2,
+      "checkDateAgeBuckets": {
+        "none": 26,
+        "<1y": 3,
+        "1-2y": 1,
+        "2-5y": 0,
+        "5y+": 0
+      }
+    },
+    "triangulation": {
+      "allAgree": 3,
+      "acloudOutlier": 1,
+      "osmOutlier": 0,
+      "gintoOutlier": 5,
+      "allDiffer": 0
+    },
+    "auditedDisagreementExamples": [
+      {
+        "name": "La Table d'Edgard, Lausanne Palace",
+        "acloud": "limited",
+        "ginto": "yes",
+        "updatedAt": "2025-09-09T08:21:44+02:00"
+      },
+      {
+        "name": "Loxton",
+        "acloud": "no",
+        "ginto": "limited",
+        "updatedAt": "2025-09-09T01:52:49+02:00"
+      },
+      {
+        "name": "Pz pizza",
+        "acloud": "no",
+        "ginto": "limited",
+        "updatedAt": "2026-01-28T09:19:13+01:00"
+      },
+      {
+        "name": "Alpha-Palmiers by Fassbind",
+        "acloud": "limited",
+        "ginto": "yes",
+        "updatedAt": "2025-09-09T10:31:51+02:00"
+      },
+      {
+        "name": "Café du Grütli",
+        "acloud": "no",
+        "ginto": "limited",
+        "updatedAt": "2025-09-10T12:27:54+02:00"
+      }
+    ]
+  },
+  {
+    "spec": {
+      "key": "luzern",
+      "label": "Luzern",
+      "kind": "city",
+      "lat": 47.0502,
+      "lon": 8.3093,
+      "radiusKm": 8
+    },
+    "acloudCount": 59,
+    "gintoAuditedCount": 19,
+    "gintoSelfDeclaredCount": 37,
+    "osmCandidateCount": 767,
+    "auditedMatch": {
+      "matched": 1,
+      "agree": 0,
+      "disagree": 1
+    },
+    "selfDeclaredMatch": {
+      "matched": 2,
+      "agree": 1,
+      "disagree": 1
+    },
+    "osmMatch": {
+      "matched": 41,
+      "agree": 37,
+      "disagree": 4,
+      "checkDateAgeBuckets": {
+        "none": 26,
+        "<1y": 11,
+        "1-2y": 1,
+        "2-5y": 3,
+        "5y+": 0
+      }
+    },
+    "triangulation": {
+      "allAgree": 0,
+      "acloudOutlier": 0,
+      "osmOutlier": 0,
+      "gintoOutlier": 0,
+      "allDiffer": 0
+    },
+    "auditedDisagreementExamples": [
+      {
+        "name": "Waldstätterhof Swiss Quality Hotel",
+        "acloud": "limited",
+        "ginto": "yes",
+        "updatedAt": "2025-09-09T13:06:00+02:00"
+      }
+    ]
+  },
+  {
+    "spec": {
+      "key": "winterthur",
+      "label": "Winterthur",
+      "kind": "city",
+      "lat": 47.5001,
+      "lon": 8.7238,
+      "radiusKm": 8
+    },
+    "acloudCount": 73,
+    "gintoAuditedCount": 6,
+    "gintoSelfDeclaredCount": 11,
+    "osmCandidateCount": 828,
+    "auditedMatch": {
+      "matched": 0,
+      "agree": 0,
+      "disagree": 0
+    },
+    "selfDeclaredMatch": {
+      "matched": 0,
+      "agree": 0,
+      "disagree": 0
+    },
+    "osmMatch": {
+      "matched": 34,
+      "agree": 29,
+      "disagree": 5,
+      "checkDateAgeBuckets": {
+        "none": 17,
+        "<1y": 10,
+        "1-2y": 1,
+        "2-5y": 6,
+        "5y+": 0
+      }
+    },
+    "triangulation": {
+      "allAgree": 0,
+      "acloudOutlier": 0,
+      "osmOutlier": 0,
+      "gintoOutlier": 0,
+      "allDiffer": 0
+    },
+    "auditedDisagreementExamples": []
+  },
+  {
+    "spec": {
+      "key": "appenzell",
+      "label": "Appenzell",
+      "kind": "rural",
+      "lat": 47.3333,
+      "lon": 9.4111,
+      "radiusKm": 15
+    },
+    "acloudCount": 37,
+    "gintoAuditedCount": 53,
+    "gintoSelfDeclaredCount": 20,
+    "osmCandidateCount": 922,
+    "auditedMatch": {
+      "matched": 2,
+      "agree": 1,
+      "disagree": 1
+    },
+    "selfDeclaredMatch": {
+      "matched": 2,
+      "agree": 0,
+      "disagree": 2
+    },
+    "osmMatch": {
+      "matched": 18,
+      "agree": 18,
+      "disagree": 0,
+      "checkDateAgeBuckets": {
+        "none": 12,
+        "<1y": 6,
+        "1-2y": 0,
+        "2-5y": 0,
+        "5y+": 0
+      }
+    },
+    "triangulation": {
+      "allAgree": 1,
+      "acloudOutlier": 0,
+      "osmOutlier": 0,
+      "gintoOutlier": 0,
+      "allDiffer": 0
+    },
+    "auditedDisagreementExamples": [
+      {
+        "name": "Romantik Hotel Säntis",
+        "acloud": "limited",
+        "ginto": "yes",
+        "updatedAt": "2025-09-09T15:42:39+02:00"
+      }
+    ]
+  },
+  {
+    "spec": {
+      "key": "scuol",
+      "label": "Scuol",
+      "kind": "rural",
+      "lat": 46.7975,
+      "lon": 10.2833,
+      "radiusKm": 15
+    },
+    "acloudCount": 56,
+    "gintoAuditedCount": 14,
+    "gintoSelfDeclaredCount": 1,
+    "osmCandidateCount": 126,
+    "auditedMatch": {
+      "matched": 10,
+      "agree": 2,
+      "disagree": 8
+    },
+    "selfDeclaredMatch": {
+      "matched": 0,
+      "agree": 0,
+      "disagree": 0
+    },
+    "osmMatch": {
+      "matched": 5,
+      "agree": 3,
+      "disagree": 2,
+      "checkDateAgeBuckets": {
+        "none": 5,
+        "<1y": 0,
+        "1-2y": 0,
+        "2-5y": 0,
+        "5y+": 0
+      }
+    },
+    "triangulation": {
+      "allAgree": 0,
+      "acloudOutlier": 0,
+      "osmOutlier": 0,
+      "gintoOutlier": 0,
+      "allDiffer": 0
+    },
+    "auditedDisagreementExamples": [
+      {
+        "name": "Restaurant Trü",
+        "acloud": "limited",
+        "ginto": "yes",
+        "updatedAt": "2025-09-09T12:50:40+02:00"
+      },
+      {
+        "name": "Hotel Arnica",
+        "acloud": "no",
+        "ginto": "limited",
+        "updatedAt": "2025-09-10T11:58:49+02:00"
+      },
+      {
+        "name": "Pastizaria Cantieni",
+        "acloud": "limited",
+        "ginto": "yes",
+        "updatedAt": "2025-09-09T06:30:28+02:00"
+      },
+      {
+        "name": "Chasa Miramunt 2",
+        "acloud": "no",
+        "ginto": "limited",
+        "updatedAt": "2025-09-26T08:36:18+02:00"
+      },
+      {
+        "name": "Hotel Belvédère",
+        "acloud": "limited",
+        "ginto": "yes",
+        "updatedAt": "2025-09-09T12:25:40+02:00"
+      }
+    ]
+  },
+  {
+    "spec": {
+      "key": "poschiavo",
+      "label": "Poschiavo",
+      "kind": "rural",
+      "lat": 46.3167,
+      "lon": 10.0667,
+      "radiusKm": 15
+    },
+    "acloudCount": 62,
+    "gintoAuditedCount": 0,
+    "gintoSelfDeclaredCount": 15,
+    "osmCandidateCount": 53,
+    "auditedMatch": {
+      "matched": 0,
+      "agree": 0,
+      "disagree": 0
+    },
+    "selfDeclaredMatch": {
+      "matched": 0,
+      "agree": 0,
+      "disagree": 0
+    },
+    "osmMatch": {
+      "matched": 2,
+      "agree": 2,
+      "disagree": 0,
+      "checkDateAgeBuckets": {
+        "none": 2,
+        "<1y": 0,
+        "1-2y": 0,
+        "2-5y": 0,
+        "5y+": 0
+      }
+    },
+    "triangulation": {
+      "allAgree": 0,
+      "acloudOutlier": 0,
+      "osmOutlier": 0,
+      "gintoOutlier": 0,
+      "allDiffer": 0
+    },
+    "auditedDisagreementExamples": []
+  },
+  {
+    "spec": {
+      "key": "sarnen",
+      "label": "Sarnen",
+      "kind": "rural",
+      "lat": 46.8958,
+      "lon": 8.2472,
+      "radiusKm": 15
+    },
+    "acloudCount": 43,
+    "gintoAuditedCount": 13,
+    "gintoSelfDeclaredCount": 16,
+    "osmCandidateCount": 338,
+    "auditedMatch": {
+      "matched": 0,
+      "agree": 0,
+      "disagree": 0
+    },
+    "selfDeclaredMatch": {
+      "matched": 0,
+      "agree": 0,
+      "disagree": 0
+    },
+    "osmMatch": {
+      "matched": 21,
+      "agree": 21,
+      "disagree": 0,
+      "checkDateAgeBuckets": {
+        "none": 21,
+        "<1y": 0,
+        "1-2y": 0,
+        "2-5y": 0,
+        "5y+": 0
+      }
+    },
+    "triangulation": {
+      "allAgree": 0,
+      "acloudOutlier": 0,
+      "osmOutlier": 0,
+      "gintoOutlier": 0,
+      "allDiffer": 0
+    },
+    "auditedDisagreementExamples": []
+  }
+]

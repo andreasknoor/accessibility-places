@@ -147,7 +147,7 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
       {
         id: "reliability",
         q: "Wie verlässlich sind die Barrierefreiheitsinformationen?",
-        a: "Die App kombiniert Daten aus mehreren spezialisierten Quellen: OpenStreetMap (OSM), accessibility.cloud (einschließlich Wheelmap.org), Ginto (für die Schweiz) und Google Places. Jede Quelle wird mit einem Verlässlichkeitswert gewichtet — von manuell verifizierten Einträgen bis hin zu automatisch erhobenen Daten. Der farbige Kreis bei jedem Eintrag zeigt auf einen Blick, wie gut die Datenlage ist.",
+        a: "Die App kombiniert Daten aus mehreren spezialisierten Quellen: OpenStreetMap (einschließlich Wheelmap.org, da Wheelmap-Bearbeitungen direkt in OpenStreetMap einfließen), accessibility.cloud, Ginto (für die Schweiz) und Google Places. Jede Quelle wird mit einem Verlässlichkeitswert gewichtet — von manuell verifizierten Einträgen bis hin zu automatisch erhobenen Daten. Der farbige Kreis bei jedem Eintrag zeigt auf einen Blick, wie gut die Datenlage ist.",
       },
       {
         id: "coloured-circle",
@@ -173,7 +173,8 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
               Wheelmap.org und Accessible Places verfolgen ähnliche Ziele, setzen aber unterschiedliche
               Schwerpunkte — sie sind keine Konkurrenten, sondern ergänzen sich. Wheelmap ist eine der
               größten Crowdsourcing-Plattformen für Barrierefreiheit: Tausende Menschen tragen dort Orte
-              direkt ein. Diese wertvollen Daten fließen auch in Accessible Places ein.
+              direkt ein. Da Wheelmap-Bearbeitungen direkt in OpenStreetMap einfließen, stehen diese
+              wertvollen Daten auch in Accessible Places zur Verfügung.
             </p>
             <p className="mt-2">Accessible Places konzentriert sich auf vier Dinge:</p>
             <ul className="mt-2 flex list-disc flex-col gap-1.5 pl-5">
@@ -219,7 +220,7 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
           </>
         ),
         schemaText:
-          "Wheelmap.org und Accessible Places verfolgen ähnliche Ziele, setzen aber unterschiedliche Schwerpunkte — sie sind keine Konkurrenten, sondern ergänzen sich. Wheelmap ist eine der größten Crowdsourcing-Plattformen für Barrierefreiheit: Tausende Menschen tragen dort Orte direkt ein. Diese wertvollen Daten fließen auch in Accessible Places ein. Accessible Places konzentriert sich auf vier Dinge: Mehrere Quellen, transparent bewertet — Accessible Places führt Daten aus verschiedenen Quellen zu einer einheitlichen Ansicht zusammen, von professionell zertifizierten Vor-Ort-Erhebungen über ehrenamtlich gepflegte Karten wie Wheelmap und OpenStreetMap bis zu automatisch zusammengetragenen Angaben, etwa aus Google Places; jede Quelle hat ihre Stärken, und weil sie unterschiedlich umfassend und gesichert sind, zeigt ein farbiger Kreis bei jedem Eintrag, wie belastbar die Information ist. Beste Daten je Region — für jede Region binden wir die jeweils stärkste lokale Quelle ein; in der Schweiz etwa liefert Ginto besonders hochwertige Barrierefreiheitsdaten. Listenansicht statt Karte — Wheelmap.org zeigt Orte primär als Karte; Accessible Places liefert die Ergebnisse zuerst als sortierte Liste mit Verlässlichkeitsgrad und Detailinfos auf einen Blick — die Karte ist als Alternative jederzeit verfügbar. Rollstuhlparkplätze — Accessible Places zeigt rollstuhlgerechte Parkplätze direkt auf der Karte, und die Frage nach dem nächsten Rollstuhlparkplatz lässt sich mit einem Klick beantworten. Wenn du selbst Barrierefreiheitsdaten beitragen möchtest, ist Wheelmap.org der beste Ort dafür — neue Einträge erscheinen nach kurzer Zeit auch bei uns.",
+          "Wheelmap.org und Accessible Places verfolgen ähnliche Ziele, setzen aber unterschiedliche Schwerpunkte — sie sind keine Konkurrenten, sondern ergänzen sich. Wheelmap ist eine der größten Crowdsourcing-Plattformen für Barrierefreiheit: Tausende Menschen tragen dort Orte direkt ein. Da Wheelmap-Bearbeitungen direkt in OpenStreetMap einfließen, stehen diese wertvollen Daten auch in Accessible Places zur Verfügung. Accessible Places konzentriert sich auf vier Dinge: Mehrere Quellen, transparent bewertet — Accessible Places führt Daten aus verschiedenen Quellen zu einer einheitlichen Ansicht zusammen, von professionell zertifizierten Vor-Ort-Erhebungen über ehrenamtlich gepflegte Karten wie Wheelmap und OpenStreetMap bis zu automatisch zusammengetragenen Angaben, etwa aus Google Places; jede Quelle hat ihre Stärken, und weil sie unterschiedlich umfassend und gesichert sind, zeigt ein farbiger Kreis bei jedem Eintrag, wie belastbar die Information ist. Beste Daten je Region — für jede Region binden wir die jeweils stärkste lokale Quelle ein; in der Schweiz etwa liefert Ginto besonders hochwertige Barrierefreiheitsdaten. Listenansicht statt Karte — Wheelmap.org zeigt Orte primär als Karte; Accessible Places liefert die Ergebnisse zuerst als sortierte Liste mit Verlässlichkeitsgrad und Detailinfos auf einen Blick — die Karte ist als Alternative jederzeit verfügbar. Rollstuhlparkplätze — Accessible Places zeigt rollstuhlgerechte Parkplätze direkt auf der Karte, und die Frage nach dem nächsten Rollstuhlparkplatz lässt sich mit einem Klick beantworten. Wenn du selbst Barrierefreiheitsdaten beitragen möchtest, ist Wheelmap.org der beste Ort dafür — neue Einträge erscheinen nach kurzer Zeit auch bei uns.",
       },
     ],
   },
@@ -283,12 +284,13 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
             >
               Wheelmap-FAQ
             </a>
-            . Da Accessible Places die Wheelmap-Daten regelmäßig abruft, stehen neue oder korrigierte
-            Einträge in der Regel nach etwa 24 Stunden auch hier zur Verfügung.
+            . Da Wheelmap-Bearbeitungen direkt in OpenStreetMap einfließen und Accessible Places diese
+            Daten bei jeder Suche live abruft, sind neue oder korrigierte Einträge meist schon nach
+            kurzer Zeit hier sichtbar.
           </>
         ),
         schemaText:
-          "Der einfachste Weg: Rufe den gewünschten Ort auf Wheelmap.org auf und trage dort die Barrierefreiheitsinformationen direkt ein — kostenlos und ohne Vorkenntnisse. Wie das Schritt für Schritt funktioniert, erklärt das Wheelmap-FAQ unter https://news.wheelmap.org/faq/. Da Accessible Places die Wheelmap-Daten regelmäßig abruft, stehen neue oder korrigierte Einträge in der Regel nach etwa 24 Stunden auch hier zur Verfügung.",
+          "Der einfachste Weg: Rufe den gewünschten Ort auf Wheelmap.org auf und trage dort die Barrierefreiheitsinformationen direkt ein — kostenlos und ohne Vorkenntnisse. Wie das Schritt für Schritt funktioniert, erklärt das Wheelmap-FAQ unter https://news.wheelmap.org/faq/. Da Wheelmap-Bearbeitungen direkt in OpenStreetMap einfließen und Accessible Places diese Daten bei jeder Suche live abruft, sind neue oder korrigierte Einträge meist schon nach kurzer Zeit hier sichtbar.",
       },
     ],
   },

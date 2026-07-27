@@ -149,7 +149,14 @@ describe("fetchAccessibilityCloud", () => {
     expect(result).toHaveLength(0)
   })
 
-  it("captures wheelmapUrl when infoPageUrl points to wheelmap.org", async () => {
+  it("drops records whose infoPageUrl points to wheelmap.org (redundant OSM mirror)", async () => {
+    // Wheelmap.org is itself just a UI on OpenStreetMap — infoPageUrl encodes
+    // the OSM node ID directly (wheelmap.org/nodes/{id}), and the app's own
+    // OSM adapter already queries that node live. A 2026-07 data-quality
+    // audit (docs/analysis/acloud-wheelmap-origin-2026-07.md) found these
+    // records are 83% of A.Cloud's DACH volume, never richer than OSM, and
+    // 25% point at OSM nodes already deleted — so they're dropped entirely
+    // rather than served as a stale/duplicate mirror.
     const feature = {
       _id: "wm1",
       geometry: { type: "Point", coordinates: [13.0, 52.0] },
@@ -165,8 +172,51 @@ describe("fetchAccessibilityCloud", () => {
       ok: true,
       json: async () => ({ features: [feature] }),
     }))
+    const result = await fetchAccessibilityCloud(BASE_PARAMS)
+    expect(result).toEqual([])
+  })
+
+  it("drops wheelmap.org records regardless of subdomain (e.g. de.wheelmap.org)", async () => {
+    const feature = {
+      _id: "wm2",
+      geometry: { type: "Point", coordinates: [13.0, 52.0] },
+      properties: {
+        name: "Wheelmap Place DE",
+        category: "restaurant",
+        address: {},
+        infoPageUrl: "https://de.wheelmap.org/nodes/54321",
+        accessibility: { accessibleWith: { wheelchair: true } },
+      },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ features: [feature] }),
+    }))
+    const result = await fetchAccessibilityCloud(BASE_PARAMS)
+    expect(result).toEqual([])
+  })
+
+  it("keeps non-wheelmap records (genuine A.Cloud-only local survey data) unaffected", async () => {
+    const feature = {
+      _id: "local1",
+      geometry: { type: "Point", coordinates: [13.0, 52.0] },
+      properties: {
+        name: "Lokale Erhebung Cafe",
+        category: "restaurant",
+        address: {},
+        // No infoPageUrl at all — the common case for A.Cloud's own local
+        // survey datasets, which is exactly the genuinely-unique subset the
+        // Wheelmap filter above is designed to preserve.
+        accessibility: { accessibleWith: { wheelchair: true } },
+      },
+    }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ features: [feature] }),
+    }))
     const [p] = await fetchAccessibilityCloud(BASE_PARAMS)
-    expect(p.wheelmapUrl).toBe("https://wheelmap.org/nodes/12345")
+    expect(p.name).toBe("Lokale Erhebung Cafe")
+    expect(p.accessibility.entrance.value).toBe("yes")
   })
 
   it("captures allowsDogs and flags supplementary-only records", async () => {

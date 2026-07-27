@@ -2,7 +2,7 @@ import type { SourceId, Category } from "./types"
 
 // User-visible app version, shown in the header next to the subtitle.
 // Bump on every meaningful release.
-export const APP_VERSION = "11.9"
+export const APP_VERSION = "11.10"
 
 // Tally form IDs for the per-place "report data error" flow (PlaceDebugSheet).
 // Empty string = feature hidden. Fill in after creating the DE/EN forms in
@@ -17,7 +17,14 @@ export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
   reisen_fuer_alle:    1.00,
   ginto:               0.90,
   acceslibre:          0.90,
-  accessibility_cloud: 0.70,
+  // Lowered from 0.70 (2026-07-27): a 5-round data-quality audit (see
+  // docs/analysis/acloud-*-2026-07.md) found A.Cloud's remaining (post-
+  // Wheelmap-filter, see accessibility-cloud.ts) records still merit less
+  // trust than OSM — the audit's own accuracy checks (95% exact-match
+  // agreement) applied mainly to the now-removed Wheelmap mirror, not to
+  // what's left, and no equivalent accuracy check exists for the surviving
+  // local-survey records specifically.
+  accessibility_cloud: 0.50,
   osm:                 0.75,
   google_places:       0.35,
   osm_parking:         0,  // stats-only; never used as a place-attribution source

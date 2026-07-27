@@ -1,0 +1,915 @@
+[
+  {
+    "spec": {
+      "key": "berlin",
+      "label": "Berlin",
+      "country": "DE",
+      "kind": "city",
+      "lat": 52.52,
+      "lon": 13.405,
+      "radiusKm": 8
+    },
+    "acloudCount": 56,
+    "acloudCompleteness": {
+      "entranceKnown": 50,
+      "toiletKnown": 0,
+      "parkingKnown": 0
+    },
+    "osm": {
+      "candidateCount": 1763,
+      "matchedCount": 6,
+      "agreement": {
+        "entrance": 6,
+        "disagreement": 0
+      },
+      "checkDateAgeBuckets": {
+        "none": 3,
+        "<1y": 2,
+        "1-2y": 1,
+        "2-5y": 0,
+        "5y+": 0
+      },
+      "disagreementExamples": []
+    },
+    "googleA": {
+      "sampleSize": 10,
+      "foundCount": 10,
+      "businessStatus": {
+        "CLOSED_PERMANENTLY": 2,
+        "OPERATIONAL": 8
+      },
+      "agreement": {
+        "entrance": 3,
+        "disagreement": 3
+      },
+      "disagreementExamples": [
+        {
+          "name": "Spandauer Straße/Marienkirche",
+          "acloud": "no",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        },
+        {
+          "name": "Palm Beach",
+          "acloud": "limited",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        },
+        {
+          "name": "Happy Noodles",
+          "acloud": "limited",
+          "google": "no",
+          "businessStatus": "OPERATIONAL"
+        }
+      ]
+    },
+    "googleB": {
+      "sweepCategories": [
+        "restaurant",
+        "cafe",
+        "pub"
+      ],
+      "sweepCount": 166,
+      "matchedBackToAcloud": 3
+    }
+  },
+  {
+    "spec": {
+      "key": "muenchen",
+      "label": "München",
+      "country": "DE",
+      "kind": "city",
+      "lat": 48.1372,
+      "lon": 11.5755,
+      "radiusKm": 8
+    },
+    "acloudCount": 49,
+    "acloudCompleteness": {
+      "entranceKnown": 49,
+      "toiletKnown": 0,
+      "parkingKnown": 0
+    },
+    "osm": {
+      "candidateCount": 1723,
+      "matchedCount": 4,
+      "agreement": {
+        "entrance": 4,
+        "disagreement": 0
+      },
+      "checkDateAgeBuckets": {
+        "none": 2,
+        "<1y": 2,
+        "1-2y": 0,
+        "2-5y": 0,
+        "5y+": 0
+      },
+      "disagreementExamples": []
+    },
+    "googleA": {
+      "sampleSize": 10,
+      "foundCount": 10,
+      "businessStatus": {
+        "OPERATIONAL": 9,
+        "UNKNOWN": 1
+      },
+      "agreement": {
+        "entrance": 4,
+        "disagreement": 2
+      },
+      "disagreementExamples": [
+        {
+          "name": "Glockenspiel",
+          "acloud": "yes",
+          "google": "no",
+          "businessStatus": "OPERATIONAL"
+        },
+        {
+          "name": "Glockenspiel cafe",
+          "acloud": "limited",
+          "google": "no",
+          "businessStatus": "OPERATIONAL"
+        }
+      ]
+    },
+    "googleB": {
+      "sweepCategories": [
+        "restaurant",
+        "clothes",
+        "fast_food"
+      ],
+      "sweepCount": 130,
+      "matchedBackToAcloud": 1
+    }
+  },
+  {
+    "spec": {
+      "key": "wien",
+      "label": "Wien",
+      "country": "AT",
+      "kind": "city",
+      "lat": 48.2082,
+      "lon": 16.3738,
+      "radiusKm": 8
+    },
+    "acloudCount": 45,
+    "acloudCompleteness": {
+      "entranceKnown": 45,
+      "toiletKnown": 0,
+      "parkingKnown": 0
+    },
+    "osm": {
+      "candidateCount": 1898,
+      "matchedCount": 11,
+      "agreement": {
+        "entrance": 11,
+        "disagreement": 0
+      },
+      "checkDateAgeBuckets": {
+        "none": 7,
+        "<1y": 2,
+        "1-2y": 2,
+        "2-5y": 0,
+        "5y+": 0
+      },
+      "disagreementExamples": []
+    },
+    "googleA": {
+      "sampleSize": 10,
+      "foundCount": 10,
+      "businessStatus": {
+        "OPERATIONAL": 9,
+        "CLOSED_PERMANENTLY": 1
+      },
+      "agreement": {
+        "entrance": 6,
+        "disagreement": 2
+      },
+      "disagreementExamples": [
+        {
+          "name": "Haas & Haas",
+          "acloud": "yes",
+          "google": "no",
+          "businessStatus": "OPERATIONAL"
+        },
+        {
+          "name": "Stephansdom",
+          "acloud": "no",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        }
+      ]
+    },
+    "googleB": {
+      "sweepCategories": [
+        "restaurant",
+        "cafe",
+        "museum"
+      ],
+      "sweepCount": 172,
+      "matchedBackToAcloud": 0
+    }
+  },
+  {
+    "spec": {
+      "key": "graz",
+      "label": "Graz",
+      "country": "AT",
+      "kind": "city",
+      "lat": 47.07,
+      "lon": 15.44,
+      "radiusKm": 8
+    },
+    "acloudCount": 64,
+    "acloudCompleteness": {
+      "entranceKnown": 64,
+      "toiletKnown": 0,
+      "parkingKnown": 0
+    },
+    "osm": {
+      "candidateCount": 1412,
+      "matchedCount": 26,
+      "agreement": {
+        "entrance": 23,
+        "disagreement": 3
+      },
+      "checkDateAgeBuckets": {
+        "none": 18,
+        "<1y": 8,
+        "1-2y": 0,
+        "2-5y": 0,
+        "5y+": 0
+      },
+      "disagreementExamples": [
+        {
+          "name": "Landeszeughaus",
+          "acloud": "no",
+          "osm": "yes"
+        },
+        {
+          "name": "Bank Austria",
+          "acloud": "yes",
+          "osm": "no",
+          "checkDate": "2026-02-07"
+        },
+        {
+          "name": "Only",
+          "acloud": "limited",
+          "osm": "yes"
+        }
+      ]
+    },
+    "googleA": {
+      "sampleSize": 10,
+      "foundCount": 10,
+      "businessStatus": {
+        "OPERATIONAL": 10
+      },
+      "agreement": {
+        "entrance": 4,
+        "disagreement": 3
+      },
+      "disagreementExamples": [
+        {
+          "name": "Bärenapotheke",
+          "acloud": "limited",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        },
+        {
+          "name": "Landeszeughaus",
+          "acloud": "no",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        },
+        {
+          "name": "New Yorker",
+          "acloud": "limited",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        }
+      ]
+    },
+    "googleB": {
+      "sweepCategories": [
+        "clothes",
+        "restaurant",
+        "cafe"
+      ],
+      "sweepCount": 164,
+      "matchedBackToAcloud": 7
+    }
+  },
+  {
+    "spec": {
+      "key": "zuerich",
+      "label": "Zürich",
+      "country": "CH",
+      "kind": "city",
+      "lat": 47.3769,
+      "lon": 8.5417,
+      "radiusKm": 8
+    },
+    "acloudCount": 62,
+    "acloudCompleteness": {
+      "entranceKnown": 62,
+      "toiletKnown": 0,
+      "parkingKnown": 0
+    },
+    "osm": {
+      "candidateCount": 1744,
+      "matchedCount": 14,
+      "agreement": {
+        "entrance": 12,
+        "disagreement": 2
+      },
+      "checkDateAgeBuckets": {
+        "none": 4,
+        "<1y": 7,
+        "1-2y": 3,
+        "2-5y": 0,
+        "5y+": 0
+      },
+      "disagreementExamples": [
+        {
+          "name": "Palette",
+          "acloud": "limited",
+          "osm": "no",
+          "checkDate": "2025-09-03"
+        },
+        {
+          "name": "ViCafe Bahnhofstrasse",
+          "acloud": "yes",
+          "osm": "limited",
+          "checkDate": "2024-08-09"
+        }
+      ]
+    },
+    "googleA": {
+      "sampleSize": 10,
+      "foundCount": 10,
+      "businessStatus": {
+        "OPERATIONAL": 9,
+        "CLOSED_PERMANENTLY": 1
+      },
+      "agreement": {
+        "entrance": 2,
+        "disagreement": 2
+      },
+      "disagreementExamples": [
+        {
+          "name": "Au Gratin",
+          "acloud": "limited",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        },
+        {
+          "name": "Newsbar",
+          "acloud": "no",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        }
+      ]
+    },
+    "googleB": {
+      "sweepCategories": [
+        "restaurant",
+        "fast_food",
+        "convenience"
+      ],
+      "sweepCount": 89,
+      "matchedBackToAcloud": 3
+    }
+  },
+  {
+    "spec": {
+      "key": "genf",
+      "label": "Genf",
+      "country": "CH",
+      "kind": "city",
+      "lat": 46.2044,
+      "lon": 6.1432,
+      "radiusKm": 8
+    },
+    "acloudCount": 36,
+    "acloudCompleteness": {
+      "entranceKnown": 36,
+      "toiletKnown": 1,
+      "parkingKnown": 0
+    },
+    "osm": {
+      "candidateCount": 1375,
+      "matchedCount": 18,
+      "agreement": {
+        "entrance": 18,
+        "disagreement": 0
+      },
+      "checkDateAgeBuckets": {
+        "none": 8,
+        "<1y": 1,
+        "1-2y": 6,
+        "2-5y": 3,
+        "5y+": 0
+      },
+      "disagreementExamples": []
+    },
+    "googleA": {
+      "sampleSize": 10,
+      "foundCount": 10,
+      "businessStatus": {
+        "OPERATIONAL": 10
+      },
+      "agreement": {
+        "entrance": 3,
+        "disagreement": 6
+      },
+      "disagreementExamples": [
+        {
+          "name": "Arthur's",
+          "acloud": "limited",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        },
+        {
+          "name": "Mandarin Oriental",
+          "acloud": "limited",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        },
+        {
+          "name": "Boréal Coffee Shop",
+          "acloud": "no",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        },
+        {
+          "name": "McDonald's",
+          "acloud": "no",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        },
+        {
+          "name": "Grand Théâtre de Genève",
+          "acloud": "limited",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        }
+      ]
+    },
+    "googleB": {
+      "sweepCategories": [
+        "hotel",
+        "restaurant",
+        "theater"
+      ],
+      "sweepCount": 153,
+      "matchedBackToAcloud": 1
+    }
+  },
+  {
+    "spec": {
+      "key": "bad-berleburg",
+      "label": "Bad Berleburg",
+      "country": "DE",
+      "kind": "rural",
+      "lat": 51.0552,
+      "lon": 8.3844,
+      "radiusKm": 15
+    },
+    "acloudCount": 48,
+    "acloudCompleteness": {
+      "entranceKnown": 46,
+      "toiletKnown": 1,
+      "parkingKnown": 0
+    },
+    "osm": {
+      "candidateCount": 523,
+      "matchedCount": 25,
+      "agreement": {
+        "entrance": 23,
+        "disagreement": 2
+      },
+      "checkDateAgeBuckets": {
+        "none": 24,
+        "<1y": 1,
+        "1-2y": 0,
+        "2-5y": 0,
+        "5y+": 0
+      },
+      "disagreementExamples": [
+        {
+          "name": "Alte Schule",
+          "acloud": "no",
+          "osm": "limited"
+        },
+        {
+          "name": "St. Marien",
+          "acloud": "no",
+          "osm": "limited"
+        }
+      ]
+    },
+    "googleA": {
+      "sampleSize": 10,
+      "foundCount": 10,
+      "businessStatus": {
+        "OPERATIONAL": 8,
+        "CLOSED_PERMANENTLY": 2
+      },
+      "agreement": {
+        "entrance": 5,
+        "disagreement": 1
+      },
+      "disagreementExamples": [
+        {
+          "name": "Eiscafé San Remo",
+          "acloud": "limited",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        }
+      ]
+    },
+    "googleB": {
+      "sweepCategories": [
+        "restaurant",
+        "hotel",
+        "clothes"
+      ],
+      "sweepCount": 92,
+      "matchedBackToAcloud": 5
+    }
+  },
+  {
+    "spec": {
+      "key": "prenzlau",
+      "label": "Prenzlau",
+      "country": "DE",
+      "kind": "rural",
+      "lat": 53.3167,
+      "lon": 13.8667,
+      "radiusKm": 15
+    },
+    "acloudCount": 65,
+    "acloudCompleteness": {
+      "entranceKnown": 59,
+      "toiletKnown": 0,
+      "parkingKnown": 0
+    },
+    "osm": {
+      "candidateCount": 113,
+      "matchedCount": 39,
+      "agreement": {
+        "entrance": 36,
+        "disagreement": 2
+      },
+      "checkDateAgeBuckets": {
+        "none": 36,
+        "<1y": 2,
+        "1-2y": 1,
+        "2-5y": 0,
+        "5y+": 0
+      },
+      "disagreementExamples": [
+        {
+          "name": "Woolworth",
+          "acloud": "no",
+          "osm": "yes"
+        },
+        {
+          "name": "Rathaus Prenzlau",
+          "acloud": "no",
+          "osm": "yes"
+        }
+      ]
+    },
+    "googleA": {
+      "sampleSize": 10,
+      "foundCount": 10,
+      "businessStatus": {
+        "OPERATIONAL": 10
+      },
+      "agreement": {
+        "entrance": 7,
+        "disagreement": 2
+      },
+      "disagreementExamples": [
+        {
+          "name": "Fleischer Thiel",
+          "acloud": "limited",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        },
+        {
+          "name": "Deutsche Bank",
+          "acloud": "limited",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        }
+      ]
+    },
+    "googleB": {
+      "sweepCategories": [
+        "supermarket",
+        "restaurant",
+        "bank"
+      ],
+      "sweepCount": 78,
+      "matchedBackToAcloud": 8
+    }
+  },
+  {
+    "spec": {
+      "key": "lienz",
+      "label": "Lienz",
+      "country": "AT",
+      "kind": "rural",
+      "lat": 46.83,
+      "lon": 12.7683,
+      "radiusKm": 15
+    },
+    "acloudCount": 56,
+    "acloudCompleteness": {
+      "entranceKnown": 56,
+      "toiletKnown": 0,
+      "parkingKnown": 0
+    },
+    "osm": {
+      "candidateCount": 123,
+      "matchedCount": 26,
+      "agreement": {
+        "entrance": 23,
+        "disagreement": 3
+      },
+      "checkDateAgeBuckets": {
+        "none": 23,
+        "<1y": 0,
+        "1-2y": 1,
+        "2-5y": 2,
+        "5y+": 0
+      },
+      "disagreementExamples": [
+        {
+          "name": "City-Cafe Glanzl",
+          "acloud": "yes",
+          "osm": "limited"
+        },
+        {
+          "name": "Lienz",
+          "acloud": "limited",
+          "osm": "yes"
+        },
+        {
+          "name": "Sankt Andrae",
+          "acloud": "no",
+          "osm": "yes"
+        }
+      ]
+    },
+    "googleA": {
+      "sampleSize": 10,
+      "foundCount": 10,
+      "businessStatus": {
+        "OPERATIONAL": 9,
+        "UNKNOWN": 1
+      },
+      "agreement": {
+        "entrance": 6,
+        "disagreement": 0
+      },
+      "disagreementExamples": []
+    },
+    "googleB": {
+      "sweepCategories": [
+        "restaurant",
+        "supermarket",
+        "bar"
+      ],
+      "sweepCount": 124,
+      "matchedBackToAcloud": 2
+    }
+  },
+  {
+    "spec": {
+      "key": "zwettl",
+      "label": "Zwettl",
+      "country": "AT",
+      "kind": "rural",
+      "lat": 48.6072,
+      "lon": 15.1667,
+      "radiusKm": 15
+    },
+    "acloudCount": 55,
+    "acloudCompleteness": {
+      "entranceKnown": 54,
+      "toiletKnown": 0,
+      "parkingKnown": 0
+    },
+    "osm": {
+      "candidateCount": 61,
+      "matchedCount": 18,
+      "agreement": {
+        "entrance": 18,
+        "disagreement": 0
+      },
+      "checkDateAgeBuckets": {
+        "none": 15,
+        "<1y": 1,
+        "1-2y": 1,
+        "2-5y": 1,
+        "5y+": 0
+      },
+      "disagreementExamples": []
+    },
+    "googleA": {
+      "sampleSize": 10,
+      "foundCount": 10,
+      "businessStatus": {
+        "OPERATIONAL": 10
+      },
+      "agreement": {
+        "entrance": 7,
+        "disagreement": 1
+      },
+      "disagreementExamples": [
+        {
+          "name": "Café Süd",
+          "acloud": "no",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        }
+      ]
+    },
+    "googleB": {
+      "sweepCategories": [
+        "supermarket",
+        "restaurant",
+        "pub"
+      ],
+      "sweepCount": 76,
+      "matchedBackToAcloud": 4
+    }
+  },
+  {
+    "spec": {
+      "key": "appenzell",
+      "label": "Appenzell",
+      "country": "CH",
+      "kind": "rural",
+      "lat": 47.3333,
+      "lon": 9.4111,
+      "radiusKm": 15
+    },
+    "acloudCount": 37,
+    "acloudCompleteness": {
+      "entranceKnown": 37,
+      "toiletKnown": 0,
+      "parkingKnown": 0
+    },
+    "osm": {
+      "candidateCount": 922,
+      "matchedCount": 18,
+      "agreement": {
+        "entrance": 18,
+        "disagreement": 0
+      },
+      "checkDateAgeBuckets": {
+        "none": 12,
+        "<1y": 6,
+        "1-2y": 0,
+        "2-5y": 0,
+        "5y+": 0
+      },
+      "disagreementExamples": []
+    },
+    "googleA": {
+      "sampleSize": 10,
+      "foundCount": 9,
+      "businessStatus": {
+        "OPERATIONAL": 9
+      },
+      "agreement": {
+        "entrance": 5,
+        "disagreement": 2
+      },
+      "disagreementExamples": [
+        {
+          "name": "Sankt Mauritius",
+          "acloud": "no",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        },
+        {
+          "name": "Romantik Hotel Säntis",
+          "acloud": "limited",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        }
+      ]
+    },
+    "googleB": {
+      "sweepCategories": [
+        "restaurant",
+        "place_of_worship",
+        "supermarket"
+      ],
+      "sweepCount": 110,
+      "matchedBackToAcloud": 4
+    }
+  },
+  {
+    "spec": {
+      "key": "scuol",
+      "label": "Scuol",
+      "country": "CH",
+      "kind": "rural",
+      "lat": 46.7975,
+      "lon": 10.2833,
+      "radiusKm": 15
+    },
+    "acloudCount": 56,
+    "acloudCompleteness": {
+      "entranceKnown": 56,
+      "toiletKnown": 1,
+      "parkingKnown": 0
+    },
+    "osm": {
+      "candidateCount": 126,
+      "matchedCount": 5,
+      "agreement": {
+        "entrance": 3,
+        "disagreement": 2
+      },
+      "checkDateAgeBuckets": {
+        "none": 5,
+        "<1y": 0,
+        "1-2y": 0,
+        "2-5y": 0,
+        "5y+": 0
+      },
+      "disagreementExamples": [
+        {
+          "name": "Jugendherberge Scuol",
+          "acloud": "limited",
+          "osm": "yes"
+        },
+        {
+          "name": "Apoteca & Drogaria Engiadinaisa",
+          "acloud": "limited",
+          "osm": "yes"
+        }
+      ]
+    },
+    "googleA": {
+      "sampleSize": 10,
+      "foundCount": 9,
+      "businessStatus": {
+        "OPERATIONAL": 8,
+        "UNKNOWN": 1
+      },
+      "agreement": {
+        "entrance": 2,
+        "disagreement": 6
+      },
+      "disagreementExamples": [
+        {
+          "name": "Jugendherberge Scuol",
+          "acloud": "limited",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        },
+        {
+          "name": "Hotel Arnica",
+          "acloud": "no",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        },
+        {
+          "name": "Pastizaria Cantieni",
+          "acloud": "limited",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        },
+        {
+          "name": "Post Scuol",
+          "acloud": "limited",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        },
+        {
+          "name": "Hotel Belvédère",
+          "acloud": "limited",
+          "google": "yes",
+          "businessStatus": "OPERATIONAL"
+        }
+      ]
+    },
+    "googleB": {
+      "sweepCategories": [
+        "hotel",
+        "restaurant",
+        "cafe"
+      ],
+      "sweepCount": 79,
+      "matchedBackToAcloud": 2
+    }
+  }
+]

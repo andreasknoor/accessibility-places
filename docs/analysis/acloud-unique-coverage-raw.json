@@ -1,0 +1,650 @@
+[
+  {
+    "spec": {
+      "key": "berlin",
+      "label": "Berlin",
+      "country": "DE",
+      "kind": "city",
+      "lat": 52.52,
+      "lon": 13.405,
+      "radiusKm": 8
+    },
+    "acloudCount": 56,
+    "osmPoolCount": 1967,
+    "gintoPoolCount": 4,
+    "matchedInOthers": 6,
+    "unique": 50,
+    "uniqueBreakdown": {
+      "wheelmapDeadNode": 11,
+      "wheelmapNodeAliveButUnfetched": 28,
+      "wheelmapNodeUnknown": 0,
+      "otherDatasetGenuinelyUnique": 11
+    },
+    "uniqueExamples": [
+      {
+        "name": "Aquadom Sealife",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      },
+      {
+        "name": "Spandauer Straße/Marienkirche",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Stefanie Bumann & Team",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      },
+      {
+        "name": "Happy Noodles",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Zendo",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      },
+      {
+        "name": "dean & david",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      }
+    ]
+  },
+  {
+    "spec": {
+      "key": "muenchen",
+      "label": "München",
+      "country": "DE",
+      "kind": "city",
+      "lat": 48.1372,
+      "lon": 11.5755,
+      "radiusKm": 8
+    },
+    "acloudCount": 49,
+    "osmPoolCount": 1965,
+    "gintoPoolCount": 0,
+    "matchedInOthers": 6,
+    "unique": 43,
+    "uniqueBreakdown": {
+      "wheelmapDeadNode": 15,
+      "wheelmapNodeAliveButUnfetched": 24,
+      "wheelmapNodeUnknown": 0,
+      "otherDatasetGenuinelyUnique": 4
+    },
+    "uniqueExamples": [
+      {
+        "name": "Marienplatz",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Rischart",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      },
+      {
+        "name": "Rischart",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      },
+      {
+        "name": "Café Remer",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Hugendubel",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      },
+      {
+        "name": "Beyond by Geisel",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      }
+    ]
+  },
+  {
+    "spec": {
+      "key": "wien",
+      "label": "Wien",
+      "country": "AT",
+      "kind": "city",
+      "lat": 48.2082,
+      "lon": 16.3738,
+      "radiusKm": 8
+    },
+    "acloudCount": 45,
+    "osmPoolCount": 1980,
+    "gintoPoolCount": 7,
+    "matchedInOthers": 11,
+    "unique": 34,
+    "uniqueBreakdown": {
+      "wheelmapDeadNode": 4,
+      "wheelmapNodeAliveButUnfetched": 27,
+      "wheelmapNodeUnknown": 0,
+      "otherDatasetGenuinelyUnique": 3
+    },
+    "uniqueExamples": [
+      {
+        "name": "Haas & Haas",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Haas & Haas",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Stephansdom",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Stephansdom",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "OSSIG",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Stephansdom Krypta",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      }
+    ]
+  },
+  {
+    "spec": {
+      "key": "graz",
+      "label": "Graz",
+      "country": "AT",
+      "kind": "city",
+      "lat": 47.07,
+      "lon": 15.44,
+      "radiusKm": 8
+    },
+    "acloudCount": 64,
+    "osmPoolCount": 1940,
+    "gintoPoolCount": 2,
+    "matchedInOthers": 26,
+    "unique": 38,
+    "uniqueBreakdown": {
+      "wheelmapDeadNode": 11,
+      "wheelmapNodeAliveButUnfetched": 26,
+      "wheelmapNodeUnknown": 0,
+      "otherDatasetGenuinelyUnique": 1
+    },
+    "uniqueExamples": [
+      {
+        "name": "Hut & Mode",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Tamaris",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Huber",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Saray",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      },
+      {
+        "name": "Nordsee",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      },
+      {
+        "name": "Jones",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      }
+    ]
+  },
+  {
+    "spec": {
+      "key": "zuerich",
+      "label": "Zürich",
+      "country": "CH",
+      "kind": "city",
+      "lat": 47.3769,
+      "lon": 8.5417,
+      "radiusKm": 8
+    },
+    "acloudCount": 62,
+    "osmPoolCount": 1955,
+    "gintoPoolCount": 100,
+    "matchedInOthers": 26,
+    "unique": 36,
+    "uniqueBreakdown": {
+      "wheelmapDeadNode": 11,
+      "wheelmapNodeAliveButUnfetched": 20,
+      "wheelmapNodeUnknown": 1,
+      "otherDatasetGenuinelyUnique": 4
+    },
+    "uniqueExamples": [
+      {
+        "name": "Au Gratin",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Newsbar",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Arslonga",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Burger King",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      },
+      {
+        "name": "Movie",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "abc",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      }
+    ]
+  },
+  {
+    "spec": {
+      "key": "genf",
+      "label": "Genf",
+      "country": "CH",
+      "kind": "city",
+      "lat": 46.2044,
+      "lon": 6.1432,
+      "radiusKm": 8
+    },
+    "acloudCount": 36,
+    "osmPoolCount": 1608,
+    "gintoPoolCount": 100,
+    "matchedInOthers": 19,
+    "unique": 17,
+    "uniqueBreakdown": {
+      "wheelmapDeadNode": 7,
+      "wheelmapNodeAliveButUnfetched": 8,
+      "wheelmapNodeUnknown": 0,
+      "otherDatasetGenuinelyUnique": 2
+    },
+    "uniqueExamples": [
+      {
+        "name": "Crédit Suisse",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      },
+      {
+        "name": "Crédit Suisse",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "coop city",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Grand-Théatre",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      },
+      {
+        "name": "grand theatre",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      },
+      {
+        "name": "victoria hall",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      }
+    ]
+  },
+  {
+    "spec": {
+      "key": "bad-berleburg",
+      "label": "Bad Berleburg",
+      "country": "DE",
+      "kind": "rural",
+      "lat": 51.0552,
+      "lon": 8.3844,
+      "radiusKm": 15
+    },
+    "acloudCount": 48,
+    "osmPoolCount": 812,
+    "gintoPoolCount": 0,
+    "matchedInOthers": 26,
+    "unique": 22,
+    "uniqueBreakdown": {
+      "wheelmapDeadNode": 7,
+      "wheelmapNodeAliveButUnfetched": 13,
+      "wheelmapNodeUnknown": 0,
+      "otherDatasetGenuinelyUnique": 2
+    },
+    "uniqueExamples": [
+      {
+        "name": "Landhaus Elisabeth",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "SPZ",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Schloss-Schänke",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      },
+      {
+        "name": "Café-Restaurant Hof Mühlbach",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Odebornklinik",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      },
+      {
+        "name": "Rothaarklinik",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      }
+    ]
+  },
+  {
+    "spec": {
+      "key": "prenzlau",
+      "label": "Prenzlau",
+      "country": "DE",
+      "kind": "rural",
+      "lat": 53.3167,
+      "lon": 13.8667,
+      "radiusKm": 15
+    },
+    "acloudCount": 65,
+    "osmPoolCount": 264,
+    "gintoPoolCount": 0,
+    "matchedInOthers": 37,
+    "unique": 28,
+    "uniqueBreakdown": {
+      "wheelmapDeadNode": 14,
+      "wheelmapNodeAliveButUnfetched": 9,
+      "wheelmapNodeUnknown": 0,
+      "otherDatasetGenuinelyUnique": 5
+    },
+    "uniqueExamples": [
+      {
+        "name": "Medizinisches Versorgungszentrum (MVZ)",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Fleischer Thiel",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      },
+      {
+        "name": "Deutsche Bank",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      },
+      {
+        "name": "China Imbiss",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      },
+      {
+        "name": "St. Jacobi",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      },
+      {
+        "name": "Volksbank Uckermark",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      }
+    ]
+  },
+  {
+    "spec": {
+      "key": "lienz",
+      "label": "Lienz",
+      "country": "AT",
+      "kind": "rural",
+      "lat": 46.83,
+      "lon": 12.7683,
+      "radiusKm": 15
+    },
+    "acloudCount": 56,
+    "osmPoolCount": 629,
+    "gintoPoolCount": 1,
+    "matchedInOthers": 27,
+    "unique": 29,
+    "uniqueBreakdown": {
+      "wheelmapDeadNode": 6,
+      "wheelmapNodeAliveButUnfetched": 18,
+      "wheelmapNodeUnknown": 0,
+      "otherDatasetGenuinelyUnique": 5
+    },
+    "uniqueExamples": [
+      {
+        "name": "Weltladen Lienz",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "CineX - Haupteingang",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "CineX Kino",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Lienz",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Twilight Bar",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "9900 Lienz",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      }
+    ]
+  },
+  {
+    "spec": {
+      "key": "zwettl",
+      "label": "Zwettl",
+      "country": "AT",
+      "kind": "rural",
+      "lat": 48.6072,
+      "lon": 15.1667,
+      "radiusKm": 15
+    },
+    "acloudCount": 55,
+    "osmPoolCount": 477,
+    "gintoPoolCount": 0,
+    "matchedInOthers": 18,
+    "unique": 37,
+    "uniqueBreakdown": {
+      "wheelmapDeadNode": 14,
+      "wheelmapNodeAliveButUnfetched": 21,
+      "wheelmapNodeUnknown": 0,
+      "otherDatasetGenuinelyUnique": 2
+    },
+    "uniqueExamples": [
+      {
+        "name": "Gourmet-Spar",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Cinemaplexx",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Café Süd",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Zum Fliegenden Holländer",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Vögele",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Hypolzmühle",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      }
+    ]
+  },
+  {
+    "spec": {
+      "key": "appenzell",
+      "label": "Appenzell",
+      "country": "CH",
+      "kind": "rural",
+      "lat": 47.3333,
+      "lon": 9.4111,
+      "radiusKm": 15
+    },
+    "acloudCount": 37,
+    "osmPoolCount": 1837,
+    "gintoPoolCount": 100,
+    "matchedInOthers": 17,
+    "unique": 20,
+    "uniqueBreakdown": {
+      "wheelmapDeadNode": 5,
+      "wheelmapNodeAliveButUnfetched": 5,
+      "wheelmapNodeUnknown": 0,
+      "otherDatasetGenuinelyUnique": 10
+    },
+    "uniqueExamples": [
+      {
+        "name": "Aoler",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Raiffeisen",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      },
+      {
+        "name": "Weissbad",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Klink Teufen",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      },
+      {
+        "name": "Klinik Teufen",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      },
+      {
+        "name": "altes Feuerwehrhaus",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      }
+    ]
+  },
+  {
+    "spec": {
+      "key": "scuol",
+      "label": "Scuol",
+      "country": "CH",
+      "kind": "rural",
+      "lat": 46.7975,
+      "lon": 10.2833,
+      "radiusKm": 15
+    },
+    "acloudCount": 56,
+    "osmPoolCount": 241,
+    "gintoPoolCount": 19,
+    "matchedInOthers": 15,
+    "unique": 41,
+    "uniqueBreakdown": {
+      "wheelmapDeadNode": 9,
+      "wheelmapNodeAliveButUnfetched": 23,
+      "wheelmapNodeUnknown": 0,
+      "otherDatasetGenuinelyUnique": 9
+    },
+    "uniqueExamples": [
+      {
+        "name": "Volg",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "La Butia Schlerin Café creativ",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Mein Dörfl Bar-Bungalov",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Zernez",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      },
+      {
+        "name": "Zernez",
+        "kind": "wheelmap",
+        "note": "OSM-Node gelöscht (410) — kein echter Deckungsbeitrag"
+      },
+      {
+        "name": "Café Franco",
+        "kind": "wheelmap",
+        "note": "OSM-Node lebt, aber OSM-Adapter lieferte ihn nicht (Radius/Cap-Randfall)"
+      }
+    ]
+  }
+]
