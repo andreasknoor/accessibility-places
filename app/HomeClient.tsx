@@ -1109,7 +1109,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // populates them on Android/web) and the native appUrlOpen/getLaunchUrl bridge below
   // (iOS: the remote-URL WebView never navigates to the incoming link itself, so props
   // are never populated there — this is the only path, for both cold AND warm taps).
-  const runPlaceDeepLink = useCallback((lat: number, lon: number, name: string | undefined, cat: string | undefined) => {
+  // `_cat` kept for call-site symmetry (both callers still pass it, harmless if
+  // unused) but no longer feeds the search query itself — see the comment below.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const runPlaceDeepLink = useCallback((lat: number, lon: number, name: string | undefined, _cat: string | undefined) => {
     selectTarget.current    = { lat, lon }
     hasAutoSelected.current = false
     // Matches isPlaceDeepLink's initial chatMode ("text", never the nearby default) —
@@ -1134,7 +1137,18 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     // so the deep link wins. Same batch as setChatMode("text"), per the exitNearbyTrigger
     // effect's notifyParent=false contract. Harmless on web (no auto-locate in flight).
     setExitNearbyTriggerKey((k) => k + 1)
-    const query = cat ? cat.replace(/_/g, " ") : (name ?? "orte")
+    // Deliberately NOT `cat.replace(/_/g, " ")`: `cat` is the place's category
+    // classification at share time, and parseQuery() would turn that text back
+    // into a hard category filter server-side (route.ts's categoryFiltered
+    // step) — which also narrows what OSM/Ginto/AccèsLibre/Google fetch in the
+    // first place, not just a post-filter. If the live classification has since
+    // drifted (re-tagged, a source dropped, reclassified into a sibling
+    // category like doctors vs. physiotherapist), the linked place is silently
+    // excluded even though nameHint is designed to make it always open. Using
+    // the place name instead falls back to an all-categories search unless the
+    // name itself happens to contain a category hint word — the same trade-off
+    // ordinary quoted-name searches ("Vapiano" in Berlin) already accept.
+    const query = name ?? "orte"
     // Force the DACH sources on so a deep-link to a specific place always
     // queries broadly, regardless of which sources the receiver had toggled
     // off. `google_places` is deliberately OMITTED (not forced true): it is a
