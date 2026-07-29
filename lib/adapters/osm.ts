@@ -41,7 +41,18 @@ export function overpassHeaders(endpoint: string): Record<string, string> {
 // regex is portable and behaves identically across Overpass mirrors.
 // ASCII letters are case-paired; non-ASCII passes through (rare in OSM keys).
 function buildOverpassNameRegex(hint: string): string {
-  const escaped = hint.replace(/[\\^$.*+?()[\]{}|"]/g, "\\$&")
+  // Double backslash, not single: this string is embedded in an Overpass QL
+  // string literal (`["name"~"..."]`), and QL's own string parser consumes
+  // one backslash level before the remainder ever reaches the RE2 regex
+  // engine. A single-escaped "\(" survives JS but arrives at RE2 as a bare,
+  // unbalanced "(" — verified live against overpass-api.de, which returns
+  // HTTP 200 with an HTML "Invalid regular expression" body (not JSON) for
+  // any name containing a regex-special character. That non-JSON body then
+  // trips the content-type guard below, so EVERY mirror endpoint rejects the
+  // query and place-search silently returns zero results — reproduced with
+  // "MOT (Medizinisches Orthopädisches Therapiezentrum)". Two backslashes
+  // survive the QL string parser as one, which RE2 then reads as intended.
+  const escaped = hint.replace(/[\\^$.*+?()[\]{}|"]/g, "\\\\$&")
   return Array.from(escaped).map((ch) =>
     /[a-zA-Z]/.test(ch) ? `[${ch.toLowerCase()}${ch.toUpperCase()}]` : ch,
   ).join("")

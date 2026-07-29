@@ -179,6 +179,20 @@ describe("buildOverpassQuery — placeSearch branch", () => {
     const q = buildOverpassQuery(PLACE_PARAMS)
     expect(q).not.toContain("wheelchair~")
   })
+
+  // Regression: Overpass QL's own string-literal parser consumes one level of
+  // backslash escaping before the rest reaches the RE2 regex engine, so a
+  // name containing a regex-special char (parens, brackets, …) needs DOUBLE
+  // backslashes in the query text to survive as a single, valid RE2 escape.
+  // Verified live against overpass-api.de: single-escaping produced HTTP 200
+  // with an HTML "Invalid regular expression" body (not JSON) for a name
+  // like "MOT (Medizinisches Orthopädisches Therapiezentrum)", which then
+  // silently failed place-search for that venue via every mirror endpoint.
+  it("double-escapes regex-special characters so they survive Overpass QL's own string parsing", () => {
+    const q = buildOverpassQuery({ ...PLACE_PARAMS, nameHint: "MOT (Reha)" })
+    expect(q).toContain("\\\\(")
+    expect(q).toContain("\\\\)")
+  })
 })
 
 // ─── osmWheelchair ────────────────────────────────────────────────────────────
