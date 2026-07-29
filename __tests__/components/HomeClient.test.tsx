@@ -696,6 +696,127 @@ describe("HomeClient — place deep-link does not force Google Places on", () =>
   })
 })
 
+// ─── Consistency regression: a place that was visible enough to be shared
+// (e.g. via "report a data error", which deliberately surfaces places with
+// poor/missing accessibility data) must still open via its own deep-link on
+// a receiver with DEFAULT_FILTERS (entrance/toilet on, acceptUnknown off).
+// Without forcing every filter off, the OSM adapter's own wheelchair
+// pre-filter drops untagged nodes from the raw fetch before nameHint's
+// bypass ever runs — the linked place silently never appears. ────────────
+describe("HomeClient — place deep-link forces accessibility filters off", () => {
+  it("sends every accessibility filter disabled and acceptUnknown true, regardless of the receiver's own filters", async () => {
+    const fetchMock = mockSearchFetch()
+    vi.stubGlobal("fetch", fetchMock)
+
+    render(
+      <HomeClient
+        initialSelectLat={52.5}
+        initialSelectLon={13.4}
+        initialSelectName="MOT (Reha)"
+        initialCategory="doctors"
+      />,
+    )
+
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(([u]) => typeof u === "string" && u.startsWith("/api/search"))).toBe(true)
+    })
+
+    const body = lastSearchRequestBody(fetchMock) as unknown as {
+      filters?: { entrance?: boolean; toilet?: boolean; parking?: boolean; seating?: boolean; acceptUnknown?: boolean }
+    }
+    expect(body.filters?.entrance).toBe(false)
+    expect(body.filters?.toilet).toBe(false)
+    expect(body.filters?.parking).toBe(false)
+    expect(body.filters?.seating).toBe(false)
+    expect(body.filters?.acceptUnknown).toBe(true)
+  })
+})
+
+// ─── Consistency regression: opening a place deep-link whose target place
+// isn't in the returned results (removed, re-tagged beyond recognition, or
+// — before this fix — dropped by the receiver's own filter defaults) used
+// to fail completely silently: no selection, no message, just an unrelated
+// results list with no indication anything was supposed to open. Now the
+// receiver gets an explicit, honest message instead. ──────────────────────
+describe("HomeClient — place deep-link honesty when the target isn't found", () => {
+  it("shows an explicit message when no returned place is within 100 m of the linked coordinates", async () => {
+    vi.stubGlobal("fetch", vi.fn((url: string) => {
+      if (typeof url === "string" && url.startsWith("/api/search")) {
+        return Promise.resolve(ndjsonResponse([resultEvent({
+          places: [{
+            id: "far-away", name: "Anderer Ort", category: "doctors",
+            address: { street: "Teststr.", houseNumber: "1", postalCode: "10115", city: "Berlin", country: "DE" },
+            coordinates: { lat: 53.0, lon: 14.0 }, // far outside the 100 m cap
+            accessibility: {
+              entrance: { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
+              toilet:   { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
+              parking:  { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
+            },
+            overallConfidence: 0,
+            primarySource: "osm",
+            sourceRecords: [{ sourceId: "osm", externalId: "far-away", fetchedAt: "", raw: {} }],
+          }],
+        })]))
+      }
+      return Promise.resolve(new Response(null, { status: 204 }))
+    }))
+
+    render(
+      <HomeClient
+        initialSelectLat={52.5}
+        initialSelectLon={13.4}
+        initialSelectName="MOT (Reha)"
+        initialCategory="doctors"
+      />,
+    )
+
+    // "Anderer Ort" (the unrelated place actually returned) is a legitimate
+    // result and may still render in the list — the point being tested is
+    // that the honest not-found message for the LINKED place also appears,
+    // rather than the app staying silent about it.
+    expect(await screen.findByText(/lässt sich in den aktuellen Daten nicht mehr finden/)).toBeInTheDocument()
+  })
+
+  it("auto-selects the linked place instead when it IS within 100 m, without showing the not-found message", async () => {
+    vi.stubGlobal("fetch", vi.fn((url: string) => {
+      if (typeof url === "string" && url.startsWith("/api/search")) {
+        return Promise.resolve(ndjsonResponse([resultEvent({
+          places: [{
+            id: "p1", name: "MOT (Reha)", category: "doctors",
+            address: { street: "Teststr.", houseNumber: "1", postalCode: "10115", city: "Berlin", country: "DE" },
+            coordinates: { lat: 52.5, lon: 13.4 },
+            accessibility: {
+              entrance: { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
+              toilet:   { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
+              parking:  { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
+            },
+            overallConfidence: 0,
+            primarySource: "osm",
+            sourceRecords: [{ sourceId: "osm", externalId: "p1", fetchedAt: "", raw: {} }],
+          }],
+        })]))
+      }
+      return Promise.resolve(new Response(null, { status: 204 }))
+    }))
+
+    render(
+      <HomeClient
+        initialSelectLat={52.5}
+        initialSelectLon={13.4}
+        initialSelectName="MOT (Reha)"
+        initialCategory="doctors"
+      />,
+    )
+
+    // ResultsList itself is mocked (see the module mock at the top of this
+    // file) — it only renders radiusKm, not place cards — so assert on the
+    // captured `selectedId` prop HomeClient passes it, rather than on
+    // rendered place-name text.
+    await waitFor(() => expect(resultsListProps.current?.selectedId).toBe("p1"))
+    expect(screen.queryByText(/lässt sich in den aktuellen Daten nicht mehr finden/)).not.toBeInTheDocument()
+  })
+})
+
 // ─── Quickstart-vs-Turbo mode resolution ──────────────────────────────────
 // The mode is resolved from three sources in strict precedence:
 //   1. the persisted explicit choice (settings.simpleView, tri-state)

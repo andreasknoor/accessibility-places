@@ -65,6 +65,7 @@ const en: Translations = {
     focusExit:            "All places",
     placeNotFound:     "We couldn't find this place. Try a more specific name or add the city.",
     placeNoData:       (name: string) => `We found "${name}" but have no accessibility data for this place.`,
+    placeLinkNotFound: (name: string) => `The linked place${name ? ` "${name}"` : ""} can no longer be found in the current data — it may have been removed or heavily changed.`,
     welcomeTitle:     "Welcome to Accessible Places",
     welcomeSubtitle:  "Find accessible cafés, hotels, restaurants and more across Germany, Austria and Switzerland.",
     welcomeNearbyCard:     "Search nearby",

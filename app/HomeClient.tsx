@@ -77,6 +77,23 @@ const SIMPLE_FILTERS_OVERRIDE: Partial<SearchFilters> = {
   onlyVerified:  false,
   acceptUnknown: false,
 }
+
+// Force every accessibility filter off (and acceptUnknown on) when opening a
+// place deep-link, regardless of the receiver's own settings. Without this, a
+// place with no known accessibility values (or values that fail an active
+// filter) is dropped before nameHint's bypass ever runs: the OSM adapter's
+// own wheelchair pre-filter (osm.ts's `anyActive` check) excludes untagged
+// nodes from the raw fetch itself whenever any criterion is active +
+// acceptUnknown is off — DEFAULT_FILTERS ships with entrance/toilet on and
+// acceptUnknown off, so a fresh install already trips this. A place that was
+// visible enough to be shared (e.g. via "report a data error", which
+// deliberately surfaces places with poor/missing data) must still open for a
+// recipient with different filter settings — the whole point of a shared
+// link is that it isn't scoped to the sender's search state.
+const DEEP_LINK_FILTERS_OVERRIDE: Partial<SearchFilters> = {
+  entrance: false, toilet: false, parking: false, seating: false,
+  onlyVerified: false, acceptUnknown: true,
+}
 const SIMPLE_RADIUS_KM = 5
 // "Alles anzeigen" (no category filter — all 27+ categories at once) buries
 // the user in results at the normal 5 km start, so it gets a smaller one.
@@ -737,7 +754,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
               setScrollToId(data.places[0].id)
             }
 
-            // Auto-select place from SEO deep-link (closest within 100 m)
+            // Auto-select place from a place deep-link / SEO link (closest within 100 m)
             if (selectTarget.current && !hasAutoSelected.current) {
               let best: (typeof data.places)[0] | undefined
               let bestDist = Infinity
@@ -745,10 +762,24 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
                 const d = haversineMetres(selectTarget.current, p.coordinates)
                 if (d < bestDist) { bestDist = d; best = p }
               }
+              // Mark the deep-link resolution attempted (success or failure)
+              // regardless of outcome — selectTarget.current is never cleared
+              // after use, so leaving this false on a miss would re-run this
+              // same check (and, below, re-show the "not found" error) against
+              // every later, unrelated search for the rest of the session.
+              hasAutoSelected.current = true
               if (best && bestDist < 100) {
-                hasAutoSelected.current = true
                 setSelectedId(best.id)
                 setScrollToId(best.id)
+              } else {
+                // The linked place genuinely isn't in today's live data —
+                // not merely filtered out, since this search already ran
+                // with DEEP_LINK_FILTERS_OVERRIDE (all criteria off,
+                // acceptUnknown on) and every DACH source forced on. Say so
+                // explicitly instead of silently leaving the visitor on an
+                // unrelated results list with no indication anything was
+                // supposed to open.
+                setError(t.chat.placeLinkNotFound(nameHint ?? ""))
               }
             }
             // Per-source count = places that would still pass the filter if
@@ -1165,7 +1196,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       undefined,
       { lat, lon },
       name,
-      undefined,
+      DEEP_LINK_FILTERS_OVERRIDE,
       { osm: true, accessibility_cloud: true, reisen_fuer_alle: true, ginto: true, acceslibre: true },
     )
   }, [handleSearch])

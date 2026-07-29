@@ -73,6 +73,7 @@ export interface Translations {
     focusExit:            string
     placeNotFound:     string
     placeNoData:       (name: string) => string
+    placeLinkNotFound: (name: string) => string
     welcomeTitle:       string
     welcomeSubtitle:    string
     welcomeNearbyCard:     string

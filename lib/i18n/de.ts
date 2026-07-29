@@ -65,6 +65,7 @@ const de: Translations = {
     focusExit:            "Alle Orte",
     placeNotFound:     "Diesen Ort konnten wir nicht finden. Versuche einen präziseren Namen oder füge die Stadt hinzu.",
     placeNoData:       (name: string) => `Wir haben „${name}" gefunden, haben aber keine Barrierefreiheits-Daten für diesen Ort.`,
+    placeLinkNotFound: (name: string) => `Der verlinkte Ort${name ? ` „${name}"` : ""} lässt sich in den aktuellen Daten nicht mehr finden — er wurde möglicherweise entfernt oder stark verändert.`,
     welcomeTitle:     "Willkommen bei Accessible Places",
     welcomeSubtitle:  "Finde barrierefreie Cafés, Hotels, Restaurants und mehr in Deutschland, Österreich und der Schweiz.",
     welcomeNearbyCard:     "In der Nähe suchen",
