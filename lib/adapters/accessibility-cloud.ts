@@ -298,6 +298,9 @@ export const ACLOUD_KNOWN_UNMAPPED = new Set<string>([
   "organic_food", "food", "confectionery", "nightclub", "stripclub", "massage",
   "beautysalon", "ophthalmologist", "alternative_medicine", "bed_breakfast",
   "accommodation", "arts_center", "culture", "tourism", "leisure", "health",
+  "diy", "car_dealer",
+  // Sport as an activity/field, not a visitable venue category in this app
+  "soccer",
 ])
 
 // Object.hasOwn guard — REQUIRED whenever a lookup table like FROM_ACLOUD is
