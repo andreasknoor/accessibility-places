@@ -21,7 +21,7 @@ import SettingsSheet from "@/components/settings/SettingsSheet"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { DEFAULT_RADIUS_KM, RADIUS_MAX_KM, regionForCoordinates, accessTierForCountry } from "@/lib/config"
-import { clampVenueRadiusKm, clampAmenityRadiusKm, snapAmenityRadiusKm, snapVenueRadiusKm, rerunTarget, expandRadiusTarget, canShowResultsRadiusPicker, amenitySpotKey, type ViewportOrigin } from "@/lib/search-ui"
+import { clampVenueRadiusKm, clampAmenityRadiusKm, snapAmenityRadiusKm, snapVenueRadiusKm, rerunTarget, expandRadiusTarget, canShowResultsRadiusPicker, amenitySpotKey, passesParkingSubFilters, passesToiletSubFilters, type ViewportOrigin } from "@/lib/search-ui"
 import { SEO_CATEGORY_SLUGS, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
@@ -33,7 +33,7 @@ import { consumePendingNativeAction } from "@/lib/native/actions"
 import { Capacitor } from "@capacitor/core"
 import { cn } from "@/lib/utils"
 import type { AppSettings } from "@/lib/settings"
-import type { Place, ParkingSpot, AmenityFeature, AmenityType, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug, Category } from "@/lib/types"
+import type { Place, ParkingSpot, AmenityFeature, AmenityType, AmenityTier, SearchFilters, ActiveSources, SearchResult, SourceId, SourceState, FilterDebug, Category } from "@/lib/types"
 
 // Leaflet must not run on server
 const MapView = dynamic(() => import("@/components/map/MapView"), { ssr: false })
@@ -1759,10 +1759,15 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     ? amenitySpots.filter((s) => s.amenityType === "parking")
     : (!amenityActive && filters.alwaysShowParking ? parkingSpots : []),
     [amenitySearch, amenityActive, amenitySpots, filters.alwaysShowParking, parkingSpots])
-  const visibleParkingSpots = useMemo(() => settings.showWeakParking
-    ? parkingSource
-    : parkingSource.filter((s) => s.tier !== "weak"),
-    [settings.showWeakParking, parkingSource])
+  // Shared so the map layer and the list cards can never drift apart on what
+  // "weak parking is hidden" means (they are typed differently: ParkingSpot[]
+  // for the map's passive layer vs. AmenityFeature[] for amenity-search results).
+  const passesWeakParking = useCallback(
+    (s: { tier?: AmenityTier }) => passesParkingSubFilters(s, { showWeakParking: settings.showWeakParking }),
+    [settings.showWeakParking])
+  const visibleParkingSpots = useMemo(
+    () => parkingSource.filter(passesWeakParking),
+    [passesWeakParking, parkingSource])
 
   // WC markers. During a WC search: the fetched amenitySpots (toilets). Otherwise
   // the passive map layer, gated by alwaysShowToilets. publicToiletsOnly and
@@ -1772,10 +1777,30 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     ? amenitySpots.filter((s) => s.amenityType === "toilet")
     : (!amenityActive && filters.alwaysShowToilets ? toiletSpots : []),
     [amenitySearch, amenityActive, amenitySpots, filters.alwaysShowToilets, toiletSpots])
-  const visibleToiletSpots = useMemo(() => toiletSource
-    .filter((s) => !settings.publicToiletsOnly || s.host?.kind === "standalone")
-    .filter((s) => !settings.euroKeyOnly || s.euroKey === true),
+  const visibleToiletSpots = useMemo(() => toiletSource.filter((s) =>
+    passesToiletSubFilters(s, {
+      publicToiletsOnly: settings.publicToiletsOnly,
+      euroKeyOnly:       settings.euroKeyOnly,
+    })),
     [settings.publicToiletsOnly, settings.euroKeyOnly, toiletSource])
+
+  // The amenity results shown as LIST cards (and counted in the mobile tab
+  // badge). Must be the SAME filtered set the map markers use — passing raw
+  // `amenitySpots` here made every WC/parking sub-filter (showWeakParking,
+  // publicToiletsOnly, euroKeyOnly) visibly apply to the map while the list
+  // kept showing the excluded spots.
+  const visibleAmenityResults: AmenityFeature[] = useMemo(() =>
+    amenitySearch === "parking"
+      ? amenitySpots.filter((s) => s.amenityType === "parking").filter(passesWeakParking)
+      : amenitySearch === "toilet" ? visibleToiletSpots
+      : amenitySpots,
+    [amenitySearch, amenitySpots, passesWeakParking, visibleToiletSpots])
+
+  // "The area has spots, your filters hid them all" — distinct from "none
+  // nearby", because the useful remedy is the opposite one (relax the filter,
+  // not widen the radius: a wider radius refetches spots the same filter drops).
+  const amenityAllFilteredOut =
+    amenitySearch != null && amenitySpots.length > 0 && visibleAmenityResults.length === 0
 
   // Simple View's own parking/toilet markers — deliberately NOT
   // visibleParkingSpots/visibleToiletSpots directly. Those also carry the
@@ -1787,8 +1812,21 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // (reported live). Simple View only ever shows parking/WC markers for its
   // OWN active amenity search (the 🅿/🚻 tiles), never as a side effect of
   // that unrelated full-UI setting.
-  const simpleParkingSpots = amenitySearch === "parking" ? visibleParkingSpots : undefined
-  const simpleToiletSpots  = amenitySearch === "toilet"  ? visibleToiletSpots  : undefined
+  //
+  // For the same reason they also skip the amenity SUB-filters (showWeakParking,
+  // publicToiletsOnly, euroKeyOnly): Quickstart renders no FilterPanel and the
+  // SettingsSheet hides those rows in simple mode, so a value set once in Turbo
+  // would silently shrink Quickstart's results with no visible cause and no way
+  // to undo it there — exactly the failure the paragraph above describes. This
+  // matters most for euroKeyOnly: only ~1% of OSM toilets carry the tag, so
+  // inheriting it would empty Quickstart's WC search almost entirely. The list
+  // (`simpleAmenityResults`) uses the same unfiltered set so cards and markers
+  // can't disagree.
+  const simpleAmenityResults = useMemo(
+    () => amenitySearch == null ? amenitySpots : amenitySpots.filter((s) => s.amenityType === amenitySearch),
+    [amenitySearch, amenitySpots])
+  const simpleParkingSpots = amenitySearch === "parking" ? simpleAmenityResults : undefined
+  const simpleToiletSpots  = amenitySearch === "toilet"  ? simpleAmenityResults : undefined
 
   // Simple View's extra per-category rule: for cafés/restaurants/hotels, a
   // wheelchair toilet is a hard requirement (only "yes", not "limited") on
@@ -2055,7 +2093,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           onSimpleNearbySearch={handleSimpleNearbySearch}
           onPlaceSearch={handlePlaceSearch}
           onAmenitySearch={handleSimpleAmenitySearch}
-          amenityResults={amenitySpots}
+          amenityResults={simpleAmenityResults}
           amenityHint={amenityHint ?? undefined}
           parkingSpots={simpleParkingSpots}
           toiletSpots={simpleToiletSpots}
@@ -2124,7 +2162,10 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onExpandRadius={resolvedOnExpandRadius}
         onAmenityExpandRadius={resolvedOnAmenityExpandRadius}
         onRadiusChange={resolvedOnRadiusChange}
-        hasSearched={!!(lastQuery || lastNameHint)}
+        // Includes amenityActive to match the desktop ResultsList below: an
+        // amenity chip search with no prior venue query is still a search, and
+        // without it the mobile result-count badge never appeared.
+        hasSearched={!!(lastQuery || lastNameHint || amenityActive)}
         error={error}
         onReset={handleReset}
         onLogoTap={handleLogoTap}
@@ -2157,8 +2198,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         amenityActive={amenitySearch}
         onAmenitySearch={handleAmenitySearch}
         onExitAmenity={handleExitAmenity}
-        amenityResults={amenitySpots}
+        amenityResults={visibleAmenityResults}
         amenityHint={amenityHint ?? undefined}
+        amenityAllFilteredOut={amenityAllFilteredOut}
         amenitySearchCenter={amenityPanned}
         onAmenitySearchHere={handleAmenitySearchHere}
         onAmenityRadius={handleAmenityRadiusCommit}
@@ -2380,8 +2422,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             searchCenter={chatMode === "nearby" || amenityActive ? searchCenter : undefined}
             placeSearchName={placeSearchName}
             amenityType={amenitySearch}
-            amenityResults={amenitySpots}
+            amenityResults={visibleAmenityResults}
             amenityHint={amenityHint ?? undefined}
+            amenityAllFilteredOut={amenityAllFilteredOut}
             onAmenitySelect={handleAmenitySelect}
             selectedAmenityKey={selectedAmenityKey}
             parkingSpotCount={parkingSpots.length > 0 ? parkingSpots.length : undefined}

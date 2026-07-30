@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { hapticLight } from "@/lib/native/haptics"
 import { track } from "@/lib/analytics"
-import { amenitySpotKey, formatRadiusKm, headerRadiusControl, type ViewportOrigin } from "@/lib/search-ui"
+import { amenitySpotKey, formatRadiusKm, headerRadiusControl, activeAmenityFilterCount, type ViewportOrigin } from "@/lib/search-ui"
 import ChatPanel       from "@/components/chat/ChatPanel"
 import FilterPanel     from "@/components/filters/FilterPanel"
 import RadiusPresetPopover from "@/components/filters/RadiusPresetPopover"
@@ -73,6 +73,7 @@ interface Props {
   onAmenitySearch?:     (type: AmenityType, coords?: { lat: number; lon: number }, radiusKm?: number, panned?: { lat: number; lon: number }) => void
   onExitAmenity?:       () => void
   amenityResults?:      AmenityFeature[]
+  amenityAllFilteredOut?: boolean
   amenityHint?:         string
   amenitySearchCenter?: { lat: number; lon: number } | null
   onAmenitySearchHere?: (center: { lat: number; lon: number }, radiusKm: number) => void
@@ -115,7 +116,7 @@ export default function MobileLayout({
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
   onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, onStartNearby, locateTrigger, mapLocateFix, mapLocateFixKey, exitNearbyTrigger, onSwitchToText,
   chatMode, deferAutoLocate, onChatModeChange, biasCoords, onSearchHere, onLocate, locatePanTrigger, gpsCoords, onCategoryQueryChange, activeSearchCoords,
-  amenityActive, onAmenitySearch, onExitAmenity, amenityResults, amenityHint, amenitySearchCenter, onAmenitySearchHere, onAmenityRadius, amenityRadiusKm, intlNotice, placeSearchName,
+  amenityActive, onAmenitySearch, onExitAmenity, amenityResults, amenityAllFilteredOut, amenityHint, amenitySearchCenter, onAmenitySearchHere, onAmenityRadius, amenityRadiusKm, intlNotice, placeSearchName,
   onAmenitySelect, selectedAmenityKey, onAmenityMarkerClick, amenityPanTarget, amenityPanTrigger,
   getViewportOrigin, onViewportChange, panPending,
 }: Props) {
@@ -200,9 +201,19 @@ export default function MobileLayout({
 
   const showWelcome = !!isFirstVisit && chatMode === "nearby" && !hasSearched && places.length === 0 && !isLoading
 
-  const activeFilterCount = [filters.entrance, filters.toilet, filters.parking, filters.seating, filters.onlyVerified].filter(Boolean).length
+  // Both tab badges are domain-scoped: during an amenity search the FilterPanel
+  // swaps the venue criteria for the amenity sub-filters and the list shows
+  // amenity cards, so counting venue filters / venue places there reported a
+  // figure belonging to a search the user had already left.
+  //
+  // Counted the same way as the venue badge: how many toggles are actively
+  // NARROWING the result set. showWeakParking is inverted for that reason — it
+  // defaults on and only restricts once switched off.
+  const activeFilterCount = amenityActive != null
+    ? activeAmenityFilterCount(amenityActive, settings)
+    : [filters.entrance, filters.toilet, filters.parking, filters.seating, filters.onlyVerified].filter(Boolean).length
 
-  const resultCount = places.length
+  const resultCount = amenityActiveBool ? (amenityResults?.length ?? 0) : places.length
 
   // "Search here" runner reported by MapView when the user pans away from the
   // search centre (null = no pending pan). Rendered as a pill inline next to the
@@ -465,6 +476,7 @@ export default function MobileLayout({
             onStartNearby={onStartNearby}
             amenityType={amenityActive}
             amenityResults={amenityResults}
+            amenityAllFilteredOut={amenityAllFilteredOut}
             amenityHint={amenityHint}
             onAmenitySelect={handleAmenitySelect}
             selectedAmenityKey={selectedAmenityKey}

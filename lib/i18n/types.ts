@@ -121,6 +121,7 @@ export interface Translations {
     rerun:             string
     retry:             string
     expandRadius:      string
+    amenityAllFiltered: string
     expandRadiusYes:   string
     conflict:          string
     lowConfidenceHint: string

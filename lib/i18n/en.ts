@@ -113,6 +113,7 @@ const en: Translations = {
     rerun:           "Apply filters",
     retry:           "Try again",
     expandRadius:    "Expand search radius?",
+    amenityAllFiltered: "Results were found within the search radius, but your active filters hide all of them.",
     expandRadiusYes: "Yes",
     conflict: "Sources disagree",
     lowConfidenceHint: "Low reliability",

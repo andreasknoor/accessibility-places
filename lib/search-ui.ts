@@ -169,3 +169,41 @@ export function headerRadiusControl(args: {
     ? { presets: AMENITY_RADIUS_PRESETS_KM, onChange: args.onAmenityRadius, amenityMode: true }
     : { presets: RADIUS_PRESETS_KM,         onChange: args.onRadiusChange,  amenityMode: false }
 }
+
+// ── Amenity sub-filters (parking / WC) ────────────────────────────────────────
+// The client-side narrowing applied to fetched amenity spots. Extracted here
+// (rather than left inline in HomeClient) because the v11.19 Euro-key filter
+// shipped with three bugs of exactly the kind this module's header warns about:
+// the map markers applied these predicates while the LIST was handed the raw,
+// unfiltered array, and the mobile tab badges kept counting venue state during
+// an amenity search. One named, tested place per decision.
+
+// Weak parking = a wheelchair=yes lot without reserved bays. Showing it is the
+// permissive default; only switching it OFF narrows the result set.
+export function passesParkingSubFilters(
+  spot: { tier?: "strong" | "weak" },
+  opts: { showWeakParking: boolean },
+): boolean {
+  return opts.showWeakParking || spot.tier !== "weak"
+}
+
+// The two WC sub-filters are independent and AND-combine.
+export function passesToiletSubFilters(
+  spot: { host?: { kind: "standalone" | "venue" }; euroKey?: boolean },
+  opts: { publicToiletsOnly: boolean; euroKeyOnly: boolean },
+): boolean {
+  if (opts.publicToiletsOnly && spot.host?.kind !== "standalone") return false
+  if (opts.euroKeyOnly && spot.euroKey !== true) return false
+  return true
+}
+
+// How many sub-filters are actively NARROWING the current amenity domain —
+// the figure the mobile filter-tab badge shows. Mirrors the venue badge's
+// meaning, hence the inversion for showWeakParking (permissive by default).
+export function activeAmenityFilterCount(
+  type: AmenityType,
+  opts: { showWeakParking: boolean; publicToiletsOnly: boolean; euroKeyOnly: boolean },
+): number {
+  if (type === "parking") return opts.showWeakParking ? 0 : 1
+  return [opts.publicToiletsOnly, opts.euroKeyOnly].filter(Boolean).length
+}

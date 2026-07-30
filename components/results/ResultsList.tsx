@@ -52,6 +52,9 @@ interface Props {
   amenityType?:         AmenityType | null
   amenityResults?:      AmenityFeature[]
   amenityHint?:         string
+  // True when the fetch returned amenity spots but the active sub-filters
+  // removed every one of them — a different empty state from "none nearby".
+  amenityAllFilteredOut?: boolean
   // Dedicated expand-radius action for the amenity empty state — distinct from
   // onExpandRadius (which only ever re-runs the venue search) so an active
   // amenity search never resurfaces a stale venue query (finding F6a).
@@ -67,7 +70,7 @@ interface Props {
   selectedAmenityKey?: string
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, scrollTrigger, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToText, isFirstVisit, onDismissWelcome, onStartNearby, intlNotice, placeSearchName, amenityType, amenityResults, amenityHint, onAmenityExpandRadius, onAmenitySelect, selectedAmenityKey }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, scrollTrigger, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToText, isFirstVisit, onDismissWelcome, onStartNearby, intlNotice, placeSearchName, amenityType, amenityResults, amenityHint, amenityAllFilteredOut, onAmenityExpandRadius, onAmenitySelect, selectedAmenityKey }: Props) {
   const t = useTranslations()
   const amenityMode = amenityType != null
   const [mapHintSeen, setMapHintSeen] = useState(() =>
@@ -446,9 +449,28 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
           {!isLoading && amenityMode && displayedAmenities.length === 0 && (
             <div className="flex flex-col items-center gap-3 py-8 px-4">
               <p className="text-sm text-muted-foreground text-center">
-                {amenityHint ?? t.chat.noResults}
+                {amenityAllFilteredOut ? t.results.amenityAllFiltered : (amenityHint ?? t.chat.noResults)}
               </p>
-              {onAmenityExpandRadius && (
+              {/* When the sub-filters (e.g. Euro-key only, which matches ~1% of
+                  OSM toilets) emptied the list, a bigger radius fetches more
+                  spots that the same filter will discard again — point at the
+                  filter instead. */}
+              {amenityAllFilteredOut ? (
+                onAdjustFilters ? (
+                  <button
+                    onClick={onAdjustFilters}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary
+                               text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                  >
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                    {t.results.adjustFilters}
+                  </button>
+                ) : (
+                  <p className="w-full text-center text-xs text-muted-foreground">
+                    {t.results.adjustFiltersHint}
+                  </p>
+                )
+              ) : onAmenityExpandRadius && (
                 <button
                   onClick={onAmenityExpandRadius}
                   className="px-3 py-1.5 rounded-md border border-border bg-card text-sm font-medium hover:bg-muted transition-colors"

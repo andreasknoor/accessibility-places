@@ -113,6 +113,7 @@ const de: Translations = {
     rerun:           "Filter anwenden",
     retry:           "Erneut versuchen",
     expandRadius:    "Suchradius vergrößern?",
+    amenityAllFiltered: "Im Suchradius wurden Treffer gefunden, aber deine aktiven Filter blenden sie alle aus.",
     expandRadiusYes: "Ja",
     conflict: "Quellen widersprechen sich",
     lowConfidenceHint: "Geringe Verlässlichkeit",
