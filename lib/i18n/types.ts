@@ -294,6 +294,7 @@ export interface Translations {
     legendToilet:           string
     legendToiletStandalone: string
     legendToiletVenue:      string
+    legendToiletEuroKey:    string
     // Indented sub-row label under the Entfernung row, naming the nearest
     // place ("↳ bei Kulturhaus …") — kept on its own row so a long name can
     // never wrap the Entfernung row itself (see truncateName in MapView.tsx).
@@ -465,6 +466,8 @@ export interface Translations {
     showWeakParkingHint: string
     publicToiletsOnly:     string
     publicToiletsOnlyHint: string
+    euroKeyOnly:           string
+    euroKeyOnlyHint:       string
     mobileView:        string
     mobileViewList:    string
     mobileViewMap:     string

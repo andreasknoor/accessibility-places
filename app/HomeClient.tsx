@@ -1765,16 +1765,17 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     [settings.showWeakParking, parkingSource])
 
   // WC markers. During a WC search: the fetched amenitySpots (toilets). Otherwise
-  // the passive map layer, gated by alwaysShowToilets. The publicToiletsOnly setting
-  // is the single switch that restricts either view to standalone public WCs.
+  // the passive map layer, gated by alwaysShowToilets. publicToiletsOnly and
+  // euroKeyOnly are independent sub-filters on either view; both AND-combine
+  // when active.
   const toiletSource: AmenityFeature[] = useMemo(() => amenitySearch === "toilet"
     ? amenitySpots.filter((s) => s.amenityType === "toilet")
     : (!amenityActive && filters.alwaysShowToilets ? toiletSpots : []),
     [amenitySearch, amenityActive, amenitySpots, filters.alwaysShowToilets, toiletSpots])
-  const visibleToiletSpots = useMemo(() => settings.publicToiletsOnly
-    ? toiletSource.filter((s) => s.host?.kind === "standalone")
-    : toiletSource,
-    [settings.publicToiletsOnly, toiletSource])
+  const visibleToiletSpots = useMemo(() => toiletSource
+    .filter((s) => !settings.publicToiletsOnly || s.host?.kind === "standalone")
+    .filter((s) => !settings.euroKeyOnly || s.euroKey === true),
+    [settings.publicToiletsOnly, settings.euroKeyOnly, toiletSource])
 
   // Simple View's own parking/toilet markers — deliberately NOT
   // visibleParkingSpots/visibleToiletSpots directly. Those also carry the
@@ -2343,6 +2344,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
                 amenityType={amenitySearch}
                 showWeakParking={settings.showWeakParking}
                 publicToiletsOnly={settings.publicToiletsOnly}
+                euroKeyOnly={settings.euroKeyOnly}
                 onUpdateSettings={handleUpdateSettings}
               />
               <button

@@ -23,6 +23,14 @@ export interface AppSettings {
   // WC focus mode: when true, restricts the WC layer to standalone public toilets
   // (amenity=toilets) and hides WCs that are part of a venue. Default off (show all).
   publicToiletsOnly:  boolean
+  // WC focus mode: when true, restricts the WC layer to toilets tagged with a
+  // Euro-key lock (OSM centralkey=eurokey). Independent of publicToiletsOnly —
+  // both AND-combine when active. Default off (show all). Live OSM sample
+  // (2026-07, Berlin/Hamburg/Munich) found only 0.4–2.4% of toilets carry this
+  // tag, so this filter is expected to produce sparse/empty results in most
+  // areas — see the euroKey-only marker distinction (MapView) as the
+  // complementary, always-visible signal.
+  euroKeyOnly:        boolean
   // Amenity (parking/WC) search starting radius, 0.05–5.0. No direct Settings
   // UI — it round-trips automatically via persistParkingStartRadius whenever
   // the amenity radius changes (header pill, FilterPanel slider, "search this
@@ -67,6 +75,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   alwaysShowToilets:  false,
   showWeakParking:    true,
   publicToiletsOnly:  false,
+  euroKeyOnly:        false,
   parkingRadiusKm:    4.0,
   internationalMode:  false,
   usageStats:         true,

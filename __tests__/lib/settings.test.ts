@@ -64,6 +64,7 @@ describe("loadSettings", () => {
       alwaysShowToilets: false,
       showWeakParking:   true,
       publicToiletsOnly: false,
+      euroKeyOnly:       false,
       parkingRadiusKm:   1,
       internationalMode: true,
       usageStats:        false,

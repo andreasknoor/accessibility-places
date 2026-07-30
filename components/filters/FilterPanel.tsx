@@ -34,7 +34,8 @@ interface Props {
   onAmenityRadius?:   (r: number) => void
   showWeakParking?:   boolean
   publicToiletsOnly?: boolean
-  onUpdateSettings?:  (patch: { showWeakParking?: boolean; publicToiletsOnly?: boolean }) => void
+  euroKeyOnly?:       boolean
+  onUpdateSettings?:  (patch: { showWeakParking?: boolean; publicToiletsOnly?: boolean; euroKeyOnly?: boolean }) => void
 }
 
 function SourceIndicator({ state }: { state?: SourceState }) {
@@ -117,7 +118,7 @@ const SOURCE_REGION: Partial<Record<SourceId, string>> = {
 
 const SOURCE_DISABLED: Partial<Record<SourceId, true>> = {}
 
-export default function FilterPanel({ filters, sources, radiusKm, onFilters, onSources, onRadius, sourceStates, onRerun, isLoading, amenityType, amenityRadiusKm, onAmenityRadius, showWeakParking, publicToiletsOnly, onUpdateSettings }: Props) {
+export default function FilterPanel({ filters, sources, radiusKm, onFilters, onSources, onRadius, sourceStates, onRerun, isLoading, amenityType, amenityRadiusKm, onAmenityRadius, showWeakParking, publicToiletsOnly, euroKeyOnly, onUpdateSettings }: Props) {
   const t = useTranslations()
   const isMobile = useIsMobile()
   const amenityMode = amenityType != null
@@ -243,6 +244,20 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
                   <span className="text-sm text-muted-foreground leading-snug">
                     {t.settings.publicToiletsOnly}
                     <span className="block text-xs text-muted-foreground/70">{t.settings.publicToiletsOnlyHint}</span>
+                  </span>
+                </label>
+              )}
+              {amenityType === "toilet" && (
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <Checkbox
+                    checked={!!euroKeyOnly}
+                    onCheckedChange={() => onUpdateSettings?.({ euroKeyOnly: !euroKeyOnly })}
+                    id="amenity-euro-key"
+                    className="mt-0.5"
+                  />
+                  <span className="text-sm text-muted-foreground leading-snug">
+                    {t.settings.euroKeyOnly}
+                    <span className="block text-xs text-muted-foreground/70">{t.settings.euroKeyOnlyHint}</span>
                   </span>
                 </label>
               )}

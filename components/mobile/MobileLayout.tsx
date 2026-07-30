@@ -586,6 +586,7 @@ export default function MobileLayout({
             amenityType={amenityActive}
             showWeakParking={settings.showWeakParking}
             publicToiletsOnly={settings.publicToiletsOnly}
+            euroKeyOnly={settings.euroKeyOnly}
             onUpdateSettings={onUpdateSettings}
           />
         </div>

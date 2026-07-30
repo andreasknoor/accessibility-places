@@ -249,6 +249,12 @@ export function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose, 
                     onChange={(v) => onUpdate({ publicToiletsOnly: v })}
                   />
                 </Row>
+                <Row label={ts.euroKeyOnly} hint={ts.euroKeyOnlyHint}>
+                  <Toggle
+                    value={settings.euroKeyOnly}
+                    onChange={(v) => onUpdate({ euroKeyOnly: v })}
+                  />
+                </Row>
               </div>
             </>
           )}

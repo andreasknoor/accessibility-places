@@ -381,8 +381,20 @@ const TOILET_HOST_STYLE: Record<ToiletHost, { fill: string; stroke: string; stro
   venue:      { fill: "#fce7f3", stroke: "#be185d", strokeW: 2.5, accent: "#be185d" }, // pink-100 / pink-700 border
 }
 
-function svgToiletMarker(host: ToiletHost = "standalone") {
+// Euro-key WCs (OSM centralkey=eurokey) get a wider pill shape with a second
+// 🔑 glyph instead of the plain rounded-square badge — form + colour + symbol
+// encoding (WCAG 1.4.1), consistent with the parking tier's square-vs-pill
+// distinction below. Non-euroKey WCs are unaffected.
+function svgToiletMarker(host: ToiletHost = "standalone", euroKey = false) {
   const { fill, stroke, strokeW } = TOILET_HOST_STYLE[host]
+  if (euroKey) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="26" viewBox="0 0 40 30">
+      <rect x="1.5" y="1.5" width="37" height="27" rx="13" fill="${fill}" stroke="${stroke}" stroke-width="${strokeW}"/>
+      <text x="12.5" y="21" text-anchor="middle" font-size="14">🚻</text>
+      <line x1="21" y1="7" x2="21" y2="23" stroke="${stroke}" stroke-width="1" opacity="0.35"/>
+      <text x="29.5" y="21" text-anchor="middle" font-size="13">🔑</text>
+    </svg>`
+  }
   return `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 30 30">
     <rect x="1.5" y="1.5" width="27" height="27" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="${strokeW}"/>
     <text x="15" y="22" text-anchor="middle" font-size="16">🚻</text>
@@ -1027,11 +1039,12 @@ export default function MapView({
       const tier: AmenityTier = spot.tier === "weak" ? "weak" : "strong"
       const host: ToiletHost  = spot.host?.kind === "venue" ? "venue" : "standalone"
       const accent = TOILET_HOST_STYLE[host].accent
+      const isEuroKey = spot.euroKey === true
       const icon = L.divIcon({
-        html:        svgToiletMarker(host),
+        html:        svgToiletMarker(host, isEuroKey),
         className:   "",
-        iconSize:    [24, 21],
-        iconAnchor:  [12, 10],
+        iconSize:    isEuroKey ? [32, 21] : [24, 21],
+        iconAnchor:  isEuroKey ? [16, 10] : [12, 10],
         popupAnchor: [0, -11],
       })
 
@@ -1730,6 +1743,15 @@ export default function MapView({
               <div className="flex items-center gap-2 ml-6 pl-3 pb-1.5 border-l border-border text-[11px] text-muted-foreground">
                 <span dangerouslySetInnerHTML={{ __html: svgToiletMarker("standalone") }} />
                 <span>{t.map.legendToiletStandalone ?? "Eigenständiges WC"}</span>
+              </div>
+            )}
+            {(toiletSpots ?? []).some((s) => s.euroKey === true) && (
+              <div className="flex items-center gap-2 ml-6 pl-3 pb-1.5 border-l border-border text-[11px] text-muted-foreground">
+                <span dangerouslySetInnerHTML={{ __html: svgToiletMarker(
+                  (toiletSpots ?? []).some((s) => s.euroKey === true && s.host?.kind !== "venue") ? "standalone" : "venue",
+                  true,
+                ) }} />
+                <span>{t.map.legendToiletEuroKey}</span>
               </div>
             )}
           </div>
