@@ -206,9 +206,8 @@ export default function MobileLayout({
   // amenity cards, so counting venue filters / venue places there reported a
   // figure belonging to a search the user had already left.
   //
-  // Counted the same way as the venue badge: how many toggles are actively
-  // NARROWING the result set. showWeakParking is inverted for that reason — it
-  // defaults on and only restricts once switched off.
+  // Both branches count ticked checkboxes (see activeAmenityFilterCount), which
+  // is what the venue branch below has always done — its defaults make it read 2.
   const activeFilterCount = amenityActive != null
     ? activeAmenityFilterCount(amenityActive, settings)
     : [filters.entrance, filters.toilet, filters.parking, filters.seating, filters.onlyVerified].filter(Boolean).length

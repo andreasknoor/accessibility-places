@@ -60,8 +60,11 @@ describe("passesParkingSubFilters", () => {
 describe("activeAmenityFilterCount", () => {
   const none = { showWeakParking: true, publicToiletsOnly: false, euroKeyOnly: false }
 
-  it("reports 0 for the default settings in both domains", () => {
-    expect(activeAmenityFilterCount("parking", none)).toBe(0)
+  it("counts ticked boxes, so the parking default (showWeakParking on) reads 1", () => {
+    // Must track the checkbox, not restrictiveness: un-ticking the parking
+    // section's only box previously *raised* the badge to 1, which read as broken.
+    expect(activeAmenityFilterCount("parking", none)).toBe(1)
+    expect(activeAmenityFilterCount("parking", { ...none, showWeakParking: false })).toBe(0)
     expect(activeAmenityFilterCount("toilet",  none)).toBe(0)
   })
 
@@ -71,14 +74,10 @@ describe("activeAmenityFilterCount", () => {
     expect(activeAmenityFilterCount("toilet", { ...none, publicToiletsOnly: true, euroKeyOnly: true })).toBe(2)
   })
 
-  it("inverts showWeakParking: the permissive default is not an active filter", () => {
-    expect(activeAmenityFilterCount("parking", { ...none, showWeakParking: false })).toBe(1)
-  })
-
   it("ignores the other domain's toggles", () => {
     // A WC filter left on must not inflate the parking badge, and vice versa —
     // this cross-domain leak is what the mobile badge originally got wrong.
-    expect(activeAmenityFilterCount("parking", { ...none, publicToiletsOnly: true, euroKeyOnly: true })).toBe(0)
+    expect(activeAmenityFilterCount("parking", { ...none, publicToiletsOnly: true, euroKeyOnly: true })).toBe(1)
     expect(activeAmenityFilterCount("toilet",  { ...none, showWeakParking: false })).toBe(0)
   })
 })

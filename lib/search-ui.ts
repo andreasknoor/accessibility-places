@@ -197,13 +197,19 @@ export function passesToiletSubFilters(
   return true
 }
 
-// How many sub-filters are actively NARROWING the current amenity domain —
-// the figure the mobile filter-tab badge shows. Mirrors the venue badge's
-// meaning, hence the inversion for showWeakParking (permissive by default).
+// How many of the current amenity domain's toggles are switched ON — i.e. the
+// number of ticked checkboxes the user finds when opening the panel.
+//
+// Counts ticked boxes, NOT "filters that narrow the result set". The venue
+// badge does the same (its defaults entrance+toilet make it read 2 on a fresh
+// install), and the badge's job is to describe the panel, not to model
+// restrictiveness. An earlier version inverted showWeakParking on the grounds
+// that it only narrows when off — which made un-ticking the parking section's
+// single checkbox pop a "1" into the badge, and ticking it clear the badge.
 export function activeAmenityFilterCount(
   type: AmenityType,
   opts: { showWeakParking: boolean; publicToiletsOnly: boolean; euroKeyOnly: boolean },
 ): number {
-  if (type === "parking") return opts.showWeakParking ? 0 : 1
+  if (type === "parking") return opts.showWeakParking ? 1 : 0
   return [opts.publicToiletsOnly, opts.euroKeyOnly].filter(Boolean).length
 }
