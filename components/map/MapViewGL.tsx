@@ -70,13 +70,18 @@ function placeIconKey(place: Place, selected: boolean): string {
 // clipped — not on every open, which would add an unwanted pan/zoom
 // animation to markers already comfortably in view.
 //
-// When a recentre IS needed, the target does not land at the dead-centre of
-// the viewport — that only leaves half the container height above it, which
-// a normal-height popup can still exceed (the actual cause of popups poking
-// out the top during testing). Instead the marker is placed a fixed fraction
-// down the viewport (RECENTER_VERTICAL_BIAS), leaving most of the height
-// free above it for the popup.
-const RECENTER_VERTICAL_BIAS = 0.72 // marker lands ~72% down the viewport after recentring
+// When a recentre IS needed, the target is pushed as close to the BOTTOM of
+// the container as the margin allows — not just "the dead centre" (only half
+// the container height above it, provably not enough — the original bug)
+// and not a fixed fraction either (also provably not enough: a fixed 72%
+// bias still came up short in the Quickstart mini-map, ~265px tall, because
+// it didn't account for the popup constructor's own `offset` — the gap
+// between the marker and the popup's tip — on top of the popup's height).
+// Maximising headroom is the only version of this that's robust across wildly
+// different container sizes (desktop map vs. a ~265px, or even the
+// documented SPLIT_PANE_MIN_PX=90px, mini-map); the CSS maxHeight cap
+// (popupMaxHeight) is still the real safety net for the case where the
+// popup genuinely cannot fit even with maximum headroom.
 
 function openSmartPopup(
   map: maplibregl.Map,
@@ -117,12 +122,20 @@ function openSmartPopup(
 
   if (needsRecenter) {
     opts.lastProgrammaticMoveRef.current = Date.now()
-    // Empirically verified sign (live in browser): a POSITIVE offset.y moves
-    // the target's on-screen position UP, not down — so to push the marker
-    // toward the bottom of the viewport (more room above it, for the popup),
-    // the offset must be negative.
-    const offsetY = -(container.clientHeight * RECENTER_VERTICAL_BIAS - container.clientHeight / 2)
-    map.easeTo({ center: lngLat, offset: [0, offsetY], duration: 300 })
+    // Deliberately NOT `easeTo({ center: lngLat, offset: [...] })` — verified
+    // live that this is a no-op whenever the map's current center already
+    // equals lngLat (e.g. right after a cluster-expansion zoom that already
+    // centred on this exact point): MapLibre doesn't recompute the transform
+    // from `offset` alone when `center` itself doesn't change, so the target
+    // stayed exactly where it was despite a non-zero offset being passed.
+    // Instead compute the destination geographic centre directly via
+    // project()/unproject() pixel math, which has no such dependency on
+    // whether `center` happens to differ from the current one.
+    const desiredY = container.clientHeight - margin
+    const currentCenterPoint = map.project(map.getCenter())
+    const newCenterPoint = new maplibregl.Point(currentCenterPoint.x, currentCenterPoint.y + (point.y - desiredY))
+    const newCenter = map.unproject(newCenterPoint)
+    map.easeTo({ center: newCenter, duration: 300 })
     map.once("moveend", () => {
       opts.lastProgrammaticMoveRef.current = Date.now()
       popup.addTo(map)
@@ -186,6 +199,17 @@ export default function MapViewGL({
   const [mapReady, setMapReady] = useState(false)
   const registeredImages = useRef<Set<string>>(new Set())
   const currentPopupRef  = useRef<maplibregl.Popup | null>(null)
+  // Set right before a direct marker click opens its own popup (with smart
+  // positioning), so the separate selectedId-driven "pan to selected" effect
+  // below — which ALSO fires for this same click, since onSelect(place)
+  // changes the selectedId prop this component receives — can tell it was
+  // already fully handled and skip its own competing pan + popup-reopen.
+  // Without this, a direct click raced two independent easeTo calls against
+  // each other (mine with careful margin-aware positioning, the effect's own
+  // dumb dead-centre pan), and the LATER one silently won, discarding the
+  // smart positioning — a real bug, found by comparing exact map.project()
+  // coordinates before/after, not by eye.
+  const directClickPlaceIdRef = useRef<string | null>(null)
 
   const [layersCollapsed, setLayersCollapsed] = useState(() => {
     if (typeof window === "undefined") return true
@@ -445,6 +469,7 @@ export default function MapViewGL({
         if (!placeId) return
         const place = placesRef.current.find((p) => p.id === placeId)
         if (!place) return
+        directClickPlaceIdRef.current = placeId
         onSelect(place)
         openPlacePopup(place)
       })
@@ -695,6 +720,15 @@ export default function MapViewGL({
   useEffect(() => {
     const map = mapInst.current
     if (!map || !mapReady || !selectedId) return
+    // Already fully handled by the direct marker-click handler above (which
+    // opens its own smart-positioned popup) — running this effect's own pan
+    // too would race it. Only skip THIS ONE firing, not future ones: an
+    // external re-selection of the same id later (e.g. "Zur Karte") must
+    // still go through the normal path below.
+    if (directClickPlaceIdRef.current === selectedId) {
+      directClickPlaceIdRef.current = null
+      return
+    }
     const place = placesRef.current.find((p) => p.id === selectedId)
     if (!place) return
     const coords: [number, number] = [place.coordinates.lon, place.coordinates.lat]
