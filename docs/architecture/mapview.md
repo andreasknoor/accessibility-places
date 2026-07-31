@@ -1,6 +1,8 @@
-# MapView (`components/map/MapView.tsx`)
+# MapViewLeaflet (`components/map/MapViewLeaflet.tsx`)
 
-`MapView` uses Leaflet and is loaded via `dynamic(..., { ssr: false })` to prevent server-side rendering errors.
+> **MapLibre migration in progress** (issue #48). `components/map/MapView.tsx` is now a thin internal-flag switcher between this file (still the default, still what every user sees) and `MapViewGL.tsx` — see **[docs/architecture/mapview-gl.md](mapview-gl.md)** for the MapLibre implementation's own notes. This file's invariants below are unchanged and still load-bearing for production.
+
+`MapViewLeaflet` uses Leaflet and is loaded via `dynamic(..., { ssr: false })` to prevent server-side rendering errors.
 
 ## Place pin markers
 
