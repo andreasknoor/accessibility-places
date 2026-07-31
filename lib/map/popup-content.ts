@@ -139,16 +139,19 @@ export function buildParkingPopupHtml(spot: ParkingSpot | AmenityFeature, t: T, 
 export function buildToiletPopupHtml(spot: AmenityFeature, t: T, opts: { showResults: boolean; wheelmapUrl?: string }): string {
   const tier: AmenityTier = spot.tier === "weak" ? "weak" : "strong"
   const host = spot.host?.kind === "venue" ? "venue" : "standalone"
-  const barColor = host === "standalone" ? "#be185d" : "#be185d"
-  const title = tier === "strong" ? (t.map.toiletDesignated ?? "Rollstuhl-WC") : (t.map.toiletAccessible ?? "Barrierefreies WC")
+  // Same accent for both hosts (matches the pre-migration Leaflet marker's
+  // TOILET_HOST_STYLE comment: the venue fill is too light to serve as a
+  // popup bar accent on its own, so both intentionally share the magenta).
+  const barColor = "#be185d"
+  const title = tier === "strong" ? t.map.toiletDesignated : t.map.toiletAccessible
 
   const parts: string[] = []
-  parts.push(`<span style="color:#15803d;font-weight:700">${tier === "strong" ? (t.map.toiletDesignatedValue ?? "Designiert") : t.a11y.yes}</span>`)
-  if (spot.euroKey) parts.push(`<span style="color:${dim()}">🔑 ${t.map.toiletEuroKey ?? "Euroschlüssel"}</span>`)
-  if (spot.changingTable) parts.push(`<span style="color:${dim()}">👶 ${t.map.toiletChangingTable ?? "Wickeltisch"}</span>`)
+  parts.push(`<span style="color:#15803d;font-weight:700">${tier === "strong" ? t.map.toiletDesignatedValue : t.a11y.yes}</span>`)
+  if (spot.euroKey) parts.push(`<span style="color:${dim()}">🔑 ${t.map.toiletEuroKey}</span>`)
+  if (spot.changingTable) parts.push(`<span style="color:${dim()}">👶 ${t.map.toiletChangingTable}</span>`)
   const isCustomers = spot.host?.access === "customers" || spot.access === "customers"
-  if (isCustomers) parts.push(`<span style="color:#b45309">${t.map.toiletCustomers ?? "Nur für Gäste"}</span>`)
-  if (host === "venue") parts.push(`<span style="color:${dim()}">🏢 ${spot.host?.name ? esc(truncateName(spot.host.name)) : (t.map.toiletVenueGeneric ?? "Lokalität")}</span>`)
+  if (isCustomers) parts.push(`<span style="color:#b45309">${t.map.toiletCustomers}</span>`)
+  if (host === "venue") parts.push(`<span style="color:${dim()}">🏢 ${spot.host?.name ? esc(truncateName(spot.host.name)) : t.map.toiletVenueGeneric}</span>`)
   const subLine = parts.join(" · ")
 
   const ctas = ctaD(SVG_NAV, t.map.popupChipNavigate, true, "data-navigate")

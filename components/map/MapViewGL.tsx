@@ -16,7 +16,7 @@ import { confidenceLabel } from "@/lib/matching/merge"
 import { haversineMetres } from "@/lib/matching/match"
 import { popupMaxHeight, isWithinProgrammaticMoveWindow, viewportRadiusKm } from "@/lib/map/geometry"
 import { ensureMaplibreWorkerConfigured } from "@/lib/map/maplibre-worker"
-import { drawPlacePin, drawParkingBadge, drawToiletBadge, drawGpsDot } from "@/lib/map/marker-images"
+import { drawPlacePin, drawParkingBadge, drawToiletBadge, drawGpsDot, MARKER_PIXEL_RATIO } from "@/lib/map/marker-images"
 import { buildVenuePopupHtml, buildParkingPopupHtml, buildToiletPopupHtml } from "@/lib/map/popup-content"
 import type { MapViewProps } from "@/lib/map/types"
 import type { Place, AmenityFeature, AmenityTier } from "@/lib/types"
@@ -93,9 +93,18 @@ function openSmartPopup(
   // querying popup.getElement() right after this function returns raced that
   // timing and silently found nothing (no maxHeight cap applied, no button
   // click handlers wired) whenever a recentre was needed.
+  //
+  // maxHeight is applied HERE, not by a second .once("open", ...) at the call
+  // site (trackPopup) — Popup#addTo() fires "open" SYNCHRONOUSLY for the
+  // non-recentre path, so a listener registered after openSmartPopup()
+  // already returned (i.e. after addTo() already ran) would silently never
+  // fire. This was a real bug: the maxHeight cap was only ever applied on
+  // the recentre path, never on the (far more common) direct-open path.
   popup.once("open", () => {
     const el = popup.getElement()
-    if (el) opts.onReady(el)
+    if (!el) return
+    applyPopupMaxHeight(popup, map.getContainer().clientHeight)
+    opts.onReady(el)
   })
 
   const point = map.project(lngLat)
@@ -177,7 +186,6 @@ export default function MapViewGL({
   const [mapReady, setMapReady] = useState(false)
   const registeredImages = useRef<Set<string>>(new Set())
   const currentPopupRef  = useRef<maplibregl.Popup | null>(null)
-  const gpsMarkerRegistered = useRef(false)
 
   const [layersCollapsed, setLayersCollapsed] = useState(() => {
     if (typeof window === "undefined") return true
@@ -365,7 +373,7 @@ export default function MapViewGL({
     map.on("load", () => {
       // Base images that don't depend on search results.
       const gps = drawGpsDot()
-      map.addImage("gps-dot", { width: gps.width, height: gps.height, data: gps.data }, { pixelRatio: 2 })
+      map.addImage("gps-dot", { width: gps.width, height: gps.height, data: gps.data }, { pixelRatio: MARKER_PIXEL_RATIO })
 
       map.addSource(PLACE_SOURCE_ID, {
         type: "geojson",
@@ -423,6 +431,7 @@ export default function MapViewGL({
         const clusterId = feats[0]?.properties?.cluster_id
         const src = map.getSource(PLACE_SOURCE_ID) as maplibregl.GeoJSONSource
         if (clusterId === undefined) return
+        currentPopupRef.current?.remove()
         src.getClusterExpansionZoom(clusterId).then((zoom: number) => {
           const coords = (feats[0].geometry as GeoJSON.Point).coordinates as [number, number]
           lastProgrammaticMoveRef.current = Date.now()
@@ -477,17 +486,21 @@ export default function MapViewGL({
     const map = mapInst.current
     if (!map || registeredImages.current.has(key)) return
     const img = factory()
-    if (!map.hasImage(key)) map.addImage(key, { width: img.width, height: img.height, data: img.data }, { pixelRatio: 2 })
+    if (!map.hasImage(key)) map.addImage(key, { width: img.width, height: img.height, data: img.data }, { pixelRatio: MARKER_PIXEL_RATIO })
     registeredImages.current.add(key)
   }
 
   function trackPopup(popup: maplibregl.Popup): void {
+    // MapLibre popups don't auto-close each other the way Leaflet's did
+    // (Leaflet's Map tracks a single "open popup" and closes it before
+    // opening the next) — without this, clicking a second marker while a
+    // popup is already open left both stacked on screen.
+    if (currentPopupRef.current && currentPopupRef.current !== popup) {
+      currentPopupRef.current.remove()
+    }
     currentPopupRef.current = popup
     setPopupOpen(true)
     onPopupOpenChange?.(true)
-    popup.once("open", () => {
-      if (mapInst.current) applyPopupMaxHeight(popup, mapInst.current.getContainer().clientHeight)
-    })
     popup.on("close", () => {
       if (currentPopupRef.current === popup) currentPopupRef.current = null
       setPopupOpen(false)
