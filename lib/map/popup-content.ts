@@ -50,7 +50,7 @@ function dim(): string {
 }
 
 function shellD(headerColor: string, headerGlyph: string, title: string, subLineHtml: string, chipsHtml: string | null, ctasHtml: string): string {
-  return `<div style="font-family:sans-serif;width:278px">
+  return `<div style="font-family:sans-serif">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:3px">
       <span style="width:32px;height:32px;border-radius:9px;background:${headerColor};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px">${headerGlyph}</span>
       <span style="font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</span>

@@ -239,6 +239,33 @@ body {
   z-index: 2;
 }
 
+/* MapLibre popups (unified "D" template, class "ap-popup-gl" — issue #48
+   migration). MapLibre's own default close button is flush to the corner
+   (right:0; top:0) with no explicit size, so it renders tiny and edge-to-edge
+   with the rounded popup corner. Give it a real target size, inset it from
+   the corner, and centre the glyph inside it. */
+.ap-popup-gl .maplibregl-popup-content {
+  border-radius: 14px;
+  padding: 13px 32px 13px 14px; /* extra right padding clears the inset close button */
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
+}
+.ap-popup-gl .maplibregl-popup-close-button {
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  border-radius: 999px;
+  color: #6b7280;
+}
+.ap-popup-gl .maplibregl-popup-close-button:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
 /* Accessibility: keep the map attribution legible over any tile. Leaflet's default
    0.7-alpha background lets dark tiles bleed through and drop the link/text contrast
    below 3:1. A near-opaque background + a high-contrast, underlined link keeps it

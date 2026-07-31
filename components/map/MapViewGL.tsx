@@ -69,27 +69,47 @@ function placeIconKey(place: Place, selected: boolean): string {
 // marker is close enough to an edge that the popup would otherwise be
 // clipped — not on every open, which would add an unwanted pan/zoom
 // animation to markers already comfortably in view.
+//
+// When a recentre IS needed, the target does not land at the dead-centre of
+// the viewport — that only leaves half the container height above it, which
+// a normal-height popup can still exceed (the actual cause of popups poking
+// out the top during testing). Instead the marker is placed a fixed fraction
+// down the viewport (RECENTER_VERTICAL_BIAS), leaving most of the height
+// free above it for the popup.
+const RECENTER_VERTICAL_BIAS = 0.72 // marker lands ~72% down the viewport after recentring
+
 function openSmartPopup(
   map: maplibregl.Map,
   lngLat: [number, number],
   html: string,
-  opts: { maxWidthPx: number; estimatedHeightPx: number; offsetPx: number; lastProgrammaticMoveRef: { current: number } },
+  opts: { maxWidthPx: number; estimatedHeightPx: number; offsetPx: number; lastProgrammaticMoveRef: { current: number }; onReady: (el: HTMLElement) => void },
 ): maplibregl.Popup {
   const popup = new maplibregl.Popup({ anchor: "bottom", offset: opts.offsetPx, maxWidth: `${opts.maxWidthPx}px`, className: "ap-popup-gl", closeButton: true })
     .setLngLat(lngLat)
     .setHTML(html)
 
+  // Fires exactly once the popup's DOM exists and is attached, regardless of
+  // whether addTo() below runs synchronously or after a recentre animation —
+  // querying popup.getElement() right after this function returns raced that
+  // timing and silently found nothing (no maxHeight cap applied, no button
+  // click handlers wired) whenever a recentre was needed.
+  popup.once("open", () => {
+    const el = popup.getElement()
+    if (el) opts.onReady(el)
+  })
+
   const point = map.project(lngLat)
-  const el = map.getContainer()
+  const container = map.getContainer()
   const margin = 16
   const needsRecenter =
     point.y - opts.estimatedHeightPx - margin < 0 ||
     point.x - opts.maxWidthPx / 2 - margin < 0 ||
-    point.x + opts.maxWidthPx / 2 + margin > el.clientWidth
+    point.x + opts.maxWidthPx / 2 + margin > container.clientWidth
 
   if (needsRecenter) {
     opts.lastProgrammaticMoveRef.current = Date.now()
-    map.easeTo({ center: lngLat, duration: 300 })
+    const offsetY = container.clientHeight * RECENTER_VERTICAL_BIAS - container.clientHeight / 2
+    map.easeTo({ center: lngLat, offset: [0, offsetY], duration: 300 })
     map.once("moveend", () => {
       opts.lastProgrammaticMoveRef.current = Date.now()
       popup.addTo(map)
@@ -306,6 +326,16 @@ export default function MapViewGL({
     mapInst.current = map
     lastProgrammaticMoveRef.current = Date.now()
 
+    // MapLibre's default behaviour for an unhandled "error" event is to log
+    // it to the console itself — which Next.js's dev overlay then surfaces
+    // as a big red "Console Error" for what is usually just a single failed
+    // tile fetch against OpenFreeMap's public (no-SLA) mirror (R9). A tile
+    // source retries/recovers on its own; this only needs a soft warning,
+    // not an uncaught-looking error.
+    map.on("error", (e: maplibregl.ErrorEvent) => {
+      console.warn("[MapViewGL] map error (likely a transient tile-fetch failure):", e.error?.message ?? e.error)
+    })
+
     map.on("dragstart", () => { userPannedRef.current = true })
     map.on("moveend", () => {
       const wasUserPan = userPannedRef.current
@@ -451,7 +481,9 @@ export default function MapViewGL({
     currentPopupRef.current = popup
     setPopupOpen(true)
     onPopupOpenChange?.(true)
-    if (mapInst.current) applyPopupMaxHeight(popup, mapInst.current.getContainer().clientHeight)
+    popup.once("open", () => {
+      if (mapInst.current) applyPopupMaxHeight(popup, mapInst.current.getContainer().clientHeight)
+    })
     popup.on("close", () => {
       if (currentPopupRef.current === popup) currentPopupRef.current = null
       setPopupOpen(false)
@@ -484,10 +516,9 @@ export default function MapViewGL({
     const html = buildVenuePopupHtml(place, t, { showResults: !!onShowInResults })
     const popup = openSmartPopup(map, [place.coordinates.lon, place.coordinates.lat], html, {
       maxWidthPx: 296, estimatedHeightPx: 230, offsetPx: 44, lastProgrammaticMoveRef,
+      onReady: (el) => wireVenuePopupButtons(el, place),
     })
     trackPopup(popup)
-    const el = popup.getElement()
-    if (el) wireVenuePopupButtons(el, place)
   }
 
   function openParkingPopup(spot: NonNullable<typeof parkingSpots>[number], idx: number): void {
@@ -499,28 +530,30 @@ export default function MapViewGL({
     }, null)
     const showResults = !!onShowAmenityInResultsRef.current && amenityTypeRef.current === "parking"
     const html = buildParkingPopupHtml(spot, t, { nearestName: nearest?.name, nearestDistM: nearest?.dist, showResults })
-    const popup = openSmartPopup(map, [spot.lon, spot.lat], html, { maxWidthPx: 260, estimatedHeightPx: 180, offsetPx: 22, lastProgrammaticMoveRef })
+    const popup = openSmartPopup(map, [spot.lon, spot.lat], html, {
+      maxWidthPx: 260, estimatedHeightPx: 180, offsetPx: 22, lastProgrammaticMoveRef,
+      onReady: (el) => {
+        el.querySelector<HTMLElement>("[data-navigate]")?.addEventListener("click", (ev: Event) => { ev.stopPropagation(); startDefaultNavigation({ lat: spot.lat, lon: spot.lon }) })
+        el.querySelector<HTMLElement>("[data-show-results]")?.addEventListener("click", (ev: Event) => {
+          ev.stopPropagation()
+          onShowAmenityInResultsRef.current?.({ osmId: spot.osmId, lat: spot.lat, lon: spot.lon })
+        })
+        el.querySelector<HTMLElement>("[data-report]")?.addEventListener("click", (ev: Event) => {
+          ev.stopPropagation()
+          const btn = ev.currentTarget as HTMLElement
+          btn.style.opacity = "0.5"
+          btn.style.pointerEvents = "none"
+          fetch("/api/report-parking", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ lat: spot.lat, lon: spot.lon, osmId: spot.osmId, nearestPlaceName: nearest?.name }),
+          }).then((r) => {
+            btn.textContent = r.ok ? t.map.parkingReportDone : t.map.parkingReportError
+            btn.style.opacity = "1"
+          }).catch(() => { btn.textContent = t.map.parkingReportError; btn.style.opacity = "1" })
+        })
+      },
+    })
     trackPopup(popup)
-    const el = popup.getElement()
-    if (!el) return
-    el.querySelector<HTMLElement>("[data-navigate]")?.addEventListener("click", (ev: Event) => { ev.stopPropagation(); startDefaultNavigation({ lat: spot.lat, lon: spot.lon }) })
-    el.querySelector<HTMLElement>("[data-show-results]")?.addEventListener("click", (ev: Event) => {
-      ev.stopPropagation()
-      onShowAmenityInResultsRef.current?.({ osmId: spot.osmId, lat: spot.lat, lon: spot.lon })
-    })
-    el.querySelector<HTMLElement>("[data-report]")?.addEventListener("click", (ev: Event) => {
-      ev.stopPropagation()
-      const btn = ev.currentTarget as HTMLElement
-      btn.style.opacity = "0.5"
-      btn.style.pointerEvents = "none"
-      fetch("/api/report-parking", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lat: spot.lat, lon: spot.lon, osmId: spot.osmId, nearestPlaceName: nearest?.name }),
-      }).then((r) => {
-        btn.textContent = r.ok ? t.map.parkingReportDone : t.map.parkingReportError
-        btn.style.opacity = "1"
-      }).catch(() => { btn.textContent = t.map.parkingReportError; btn.style.opacity = "1" })
-    })
     void idx
   }
 
@@ -531,16 +564,18 @@ export default function MapViewGL({
     const osmNodeId = spot.osmId?.startsWith("node/") ? spot.osmId.slice(5) : undefined
     const wheelmapUrl = osmNodeId ? `https://wheelmap.org/nodes/${osmNodeId}` : undefined
     const html = buildToiletPopupHtml(spot, t, { showResults, wheelmapUrl })
-    const popup = openSmartPopup(map, [spot.lon, spot.lat], html, { maxWidthPx: 260, estimatedHeightPx: 180, offsetPx: 22, lastProgrammaticMoveRef })
-    trackPopup(popup)
-    const el = popup.getElement()
-    if (!el) return
-    el.querySelector<HTMLElement>("[data-navigate]")?.addEventListener("click", (ev: Event) => { ev.stopPropagation(); startDefaultNavigation({ lat: spot.lat, lon: spot.lon }) })
-    el.querySelector<HTMLElement>("[data-wheelmap]")?.addEventListener("click", (ev: Event) => { ev.stopPropagation(); if (wheelmapUrl) void openExternalUrl(wheelmapUrl) })
-    el.querySelector<HTMLElement>("[data-show-results]")?.addEventListener("click", (ev: Event) => {
-      ev.stopPropagation()
-      onShowAmenityInResultsRef.current?.({ osmId: spot.osmId, lat: spot.lat, lon: spot.lon })
+    const popup = openSmartPopup(map, [spot.lon, spot.lat], html, {
+      maxWidthPx: 260, estimatedHeightPx: 180, offsetPx: 22, lastProgrammaticMoveRef,
+      onReady: (el) => {
+        el.querySelector<HTMLElement>("[data-navigate]")?.addEventListener("click", (ev: Event) => { ev.stopPropagation(); startDefaultNavigation({ lat: spot.lat, lon: spot.lon }) })
+        el.querySelector<HTMLElement>("[data-wheelmap]")?.addEventListener("click", (ev: Event) => { ev.stopPropagation(); if (wheelmapUrl) void openExternalUrl(wheelmapUrl) })
+        el.querySelector<HTMLElement>("[data-show-results]")?.addEventListener("click", (ev: Event) => {
+          ev.stopPropagation()
+          onShowAmenityInResultsRef.current?.({ osmId: spot.osmId, lat: spot.lat, lon: spot.lon })
+        })
+      },
     })
+    trackPopup(popup)
     void idx
   }
 

@@ -53,6 +53,24 @@ function toRasterImage(canvas: OffscreenCanvas | HTMLCanvasElement, wCss: number
   return { data: imgData.data, width: w, height: h }
 }
 
+// Canvas `textAlign:"center"`/`textBaseline:"middle"` centres against the
+// FONT's em-box, not the emoji glyph's actual painted pixels — colour emoji
+// glyphs commonly sit high and to the left within that em-box, so naive
+// center/middle text reads as "anchored top-left" instead of centred (this
+// is a well-known cross-browser canvas quirk, not specific to one engine).
+// Measuring `actualBoundingBox*` and offsetting by the glyph's own visual
+// centre fixes it regardless of the font's internal metrics.
+function fillEmojiCentered(ctx: CanvasRenderingContext2D, emoji: string, cx: number, cy: number): void {
+  ctx.textAlign = "left"
+  ctx.textBaseline = "alphabetic"
+  const m = ctx.measureText(emoji)
+  const glyphW = (m.actualBoundingBoxLeft ?? 0) + (m.actualBoundingBoxRight ?? m.width)
+  const glyphH = (m.actualBoundingBoxAscent ?? 0) + (m.actualBoundingBoxDescent ?? 0)
+  const x = cx - glyphW / 2 - (m.actualBoundingBoxLeft ?? 0)
+  const y = cy + glyphH / 2 - (m.actualBoundingBoxDescent ?? 0)
+  ctx.fillText(emoji, x, y)
+}
+
 // Venue teardrop pin — fill = confidence colour, border = self-shade (25%
 // darker than fill), category emoji centred in the head. `selected` scales
 // up and swaps the border to a dark slate ring (matches the pre-migration
@@ -75,9 +93,7 @@ export function drawPlacePin(fillColor: string, emoji: string, selected: boolean
   ctx.stroke(PIN_PATH)
   ctx.restore()
   ctx.font = `${Math.round(w * 0.4)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`
-  ctx.textAlign = "center"
-  ctx.textBaseline = "middle"
-  ctx.fillText(emoji, w / 2, h * 0.28)
+  fillEmojiCentered(ctx, emoji, w / 2, h * 0.28)
   return toRasterImage(canvas, w, h)
 }
 
@@ -144,10 +160,8 @@ export function drawToiletBadge(host: "standalone" | "venue", euroKey: boolean):
   ctx.stroke()
   ctx.restore()
   ctx.font = `${euroKey ? 15 : 16}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`
-  ctx.textAlign = "center"
-  ctx.textBaseline = "middle"
   if (euroKey) {
-    ctx.fillText("🚻", w * 0.31, h / 2 + 1)
+    fillEmojiCentered(ctx, "🚻", w * 0.31, h / 2)
     ctx.strokeStyle = stroke
     ctx.globalAlpha = 0.35
     ctx.beginPath()
@@ -156,9 +170,9 @@ export function drawToiletBadge(host: "standalone" | "venue", euroKey: boolean):
     ctx.stroke()
     ctx.globalAlpha = 1
     ctx.font = "13px sans-serif"
-    ctx.fillText("🔑", w * 0.73, h / 2 + 1)
+    fillEmojiCentered(ctx, "🔑", w * 0.73, h / 2)
   } else {
-    ctx.fillText("🚻", w / 2, h / 2 + 1)
+    fillEmojiCentered(ctx, "🚻", w / 2, h / 2)
   }
   return toRasterImage(canvas, w, h)
 }
