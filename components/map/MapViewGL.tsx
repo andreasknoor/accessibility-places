@@ -362,6 +362,20 @@ export default function MapViewGL({
     mapInst.current = map
     lastProgrammaticMoveRef.current = Date.now()
 
+    // `compact: true` above still starts EXPANDED — MapLibre's own
+    // AttributionControl opens the <details> and adds
+    // "maplibregl-compact-show" synchronously in its onAdd() (verified in
+    // maplibre-gl-dev.mjs: _updateCompact() sets both `open` and
+    // "maplibregl-compact-show" on first run), only collapsing to the bare
+    // i-icon after the user drags the map (_updateCompactMinimize, bound to
+    // the "drag" event). Force it collapsed from the start instead — later
+    // internal re-runs of _updateCompact() (on resize / style load) only
+    // re-expand it when the "maplibregl-compact" class is ABSENT, which it
+    // never is here, so this stays collapsed until the user clicks the icon.
+    const attribEl = map.getContainer().querySelector<HTMLElement>(".maplibregl-ctrl-attrib")
+    attribEl?.classList.remove("maplibregl-compact-show")
+    attribEl?.removeAttribute("open")
+
     // MapLibre's default behaviour for an unhandled "error" event is to log
     // it to the console itself — which Next.js's dev overlay then surfaces
     // as a big red "Console Error" for what is usually just a single failed
