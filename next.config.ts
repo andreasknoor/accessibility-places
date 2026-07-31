@@ -28,7 +28,15 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://tally.so https://va.vercel-scripts.com https://cloud.umami.is",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https://*.tile.openstreetmap.org https://maps.gstatic.com https://upload.wikimedia.org https://commons.wikimedia.org https://lh3.googleusercontent.com",
-      "connect-src 'self' https://nominatim.openstreetmap.org https://places.googleapis.com https://api.accessibility.cloud https://www.reisefueralle.de https://tally.so https://api.ginto.guide https://overpass.accessible-places.org https://overpass-api.de https://photon.komoot.io https://www.wikidata.org https://lh3.googleusercontent.com https://logs.accessible-places.org https://acceslibre.beta.gouv.fr https://cloud.umami.is https://gateway.umami.is",
+      // tiles.openfreemap.org: MapLibre (issue #48 migration) fetches vector tiles,
+      // the style JSON, glyphs and the sprite all via fetch/XHR (from the main
+      // thread and the worker), never via <img> — CSP treats that as connect-src
+      // regardless of content type, so img-src does not need a matching entry.
+      "connect-src 'self' https://nominatim.openstreetmap.org https://places.googleapis.com https://api.accessibility.cloud https://www.reisefueralle.de https://tally.so https://api.ginto.guide https://overpass.accessible-places.org https://overpass-api.de https://photon.komoot.io https://www.wikidata.org https://lh3.googleusercontent.com https://logs.accessible-places.org https://acceslibre.beta.gouv.fr https://cloud.umami.is https://gateway.umami.is https://tiles.openfreemap.org",
+      // MapLibre's worker is self-hosted (public/maplibre-gl-worker.mjs, see
+      // lib/map/maplibre-worker.ts) specifically so this can stay 'self' — no
+      // blob: exception, which would be functionally close to unsafe-eval (R5).
+      "worker-src 'self'",
       "font-src 'self'",
       "frame-src https://tally.so",
       "object-src 'none'",
