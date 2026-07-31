@@ -108,7 +108,11 @@ function openSmartPopup(
 
   if (needsRecenter) {
     opts.lastProgrammaticMoveRef.current = Date.now()
-    const offsetY = container.clientHeight * RECENTER_VERTICAL_BIAS - container.clientHeight / 2
+    // Empirically verified sign (live in browser): a POSITIVE offset.y moves
+    // the target's on-screen position UP, not down — so to push the marker
+    // toward the bottom of the viewport (more room above it, for the popup),
+    // the offset must be negative.
+    const offsetY = -(container.clientHeight * RECENTER_VERTICAL_BIAS - container.clientHeight / 2)
     map.easeTo({ center: lngLat, offset: [0, offsetY], duration: 300 })
     map.once("moveend", () => {
       opts.lastProgrammaticMoveRef.current = Date.now()
