@@ -13,6 +13,7 @@ import { startDefaultNavigation } from "@/lib/native/navigation"
 import { hapticLight } from "@/lib/native/haptics"
 import { confidenceLabel, placeMayNotBeAccessible } from "@/lib/matching/merge"
 import { haversineMetres } from "@/lib/matching/match"
+import { popupMaxHeight, isWithinProgrammaticMoveWindow, viewportRadiusKm } from "@/lib/map/geometry"
 import type { Place, ParkingSpot, AmenityFeature, AmenityTier, AmenityType } from "@/lib/types"
 
 // Leaflet is ESM-only — loaded dynamically to avoid SSR issues
@@ -245,30 +246,9 @@ function popupShell(bar: string, inner: string): string {
   return `<div style="display:flex"><div style="width:5px;flex-shrink:0;background:${bar}"></div><div style="${POPUP_PAD}">${inner}</div></div>`
 }
 
-// ─── Popup overflow guard (issue #43) ─────────────────────────────────────
-// At high Android display/font scaling, popup content can grow tall enough
-// that Leaflet's own auto-pan can't keep both the top and bottom edges on
-// screen (Popup._adjustPan lets the bottom run off once popup height >
-// map height), and none of the four popup call sites capped maxHeight at
-// all. popupMaxHeight() derives a cap from the *current* map size instead of
-// a guessed constant, so it still leaves map context visible on small
-// devices and doesn't clip unnecessarily on large ones.
-//
-// The 160px floor below is deliberately clamped against the map's OWN height
-// too (verified live): Simple View's map/list split is freely resizable down
-// to SPLIT_PANE_MIN_PX=90px (components/simple/SimpleLayout.tsx), and both
-// `.leaflet-container` and its own wrapper clip anything taller than the
-// container — a popup allowed to grow past the container isn't merely
-// "needs scrolling" at that point, the overflow is clipped by an ANCESTOR,
-// not the popup's own scrollable region, so it becomes genuinely unreachable
-// (a shrunk WC popup showed only its title + one row, with the entire button
-// footer gone and no way to scroll it back). Reserving ~40px leaves room for
-// the popup's own tip/arrow and a sliver of visible map context underneath.
-function popupMaxHeight(mapHeightPx: number): number {
-  const cap = Math.max(160, Math.round(mapHeightPx * 0.55))
-  const containerLimit = Math.max(60, mapHeightPx - 40)
-  return Math.min(cap, containerLimit)
-}
+// popupMaxHeight() (issue #43 overflow guard) now lives in lib/map/geometry.ts,
+// extracted ahead of the MapLibre migration (issue #48) so both map
+// implementations share and are checked against the same tested behaviour.
 
 // Shared by the popupopen handler and by every invalidateSize() call site: a
 // popup opened programmatically (amenity "zur Karte", place "show on map") can
@@ -417,10 +397,9 @@ function svgToiletMarker(host: ToiletHost = "standalone", euroKey = false) {
   </svg>`
 }
 
-// A moveend firing within this window after a programmatic move is treated as
-// app-driven (animation tail, popup autoPan, etc.) rather than a user pan.
-// Comfortably covers Leaflet's ~250 ms pan/zoom animations plus popup autoPan.
-const PROGRAMMATIC_MOVE_WINDOW_MS = 700
+// PROGRAMMATIC_MOVE_WINDOW_MS / isWithinProgrammaticMoveWindow now live in
+// lib/map/geometry.ts (Leaflet's ~250ms pan/zoom animations plus popup
+// autoPan comfortably fit inside the 700ms window).
 
 function svgMarker(color: string, selected: boolean, emoji: string) {
   const w      = selected ? 41 : 30
@@ -569,7 +548,7 @@ export default function MapView({
           const map = mapInst.current
           if (!map) return
           const c = map.getCenter()
-          const radiusKm = c.distanceTo(map.getBounds().getNorthEast()) / 1000
+          const radiusKm = viewportRadiusKm({ lat: c.lat, lon: c.lng }, { lat: map.getBounds().getNorthEast().lat, lon: map.getBounds().getNorthEast().lng })
           onFocusSearchHereRef.current?.({ lat: c.lat, lon: c.lng }, radiusKm)
         })
       } else {
@@ -586,16 +565,16 @@ export default function MapView({
     const panPending = !!(searchHereCenter && onSearchHereRef.current)
     if (panPending && searchHereCenter) {
       const map = mapInst.current
-      const viewportRadiusKm = map
-        ? map.getCenter().distanceTo(map.getBounds().getNorthEast()) / 1000
+      const radiusKm = map
+        ? viewportRadiusKm({ lat: map.getCenter().lat, lon: map.getCenter().lng }, { lat: map.getBounds().getNorthEast().lat, lon: map.getBounds().getNorthEast().lng })
         : 5
       const panned = searchHereCenter
       const panOrigin = searchHereOriginRef.current
       notify?.(() => {
-        onSearchHereRef.current?.(panned, viewportRadiusKm, panOrigin)
+        onSearchHereRef.current?.(panned, radiusKm, panOrigin)
         setSearchHereCenter(null)
       })
-      report?.({ center: panned, radiusKm: viewportRadiusKm })
+      report?.({ center: panned, radiusKm })
     } else {
       notify?.(null)
       report?.(null)
@@ -772,7 +751,7 @@ export default function MapView({
         // guard; the time window below stays as a secondary defence (e.g. a drag
         // that interleaves with an in-flight programmatic move).
         if (!wasUserPan) return
-        if (Date.now() - lastProgrammaticMoveRef.current < PROGRAMMATIC_MOVE_WINDOW_MS) return
+        if (isWithinProgrammaticMoveWindow(lastProgrammaticMoveRef.current, Date.now())) return
         if (!onSearchHereRef.current || !searchCenterRef.current) return
         // Guard against the final moveend Leaflet fires while tearing the map down.
         // cancelled is set true *before* remove() runs in cleanup, so this bails
@@ -1611,10 +1590,10 @@ export default function MapView({
             onClick={() => {
               hapticLight()
               const map = mapInst.current
-              const viewportRadiusKm = map
-                ? map.getCenter().distanceTo(map.getBounds().getNorthEast()) / 1000
+              const radiusKm = map
+                ? viewportRadiusKm({ lat: map.getCenter().lat, lon: map.getCenter().lng }, { lat: map.getBounds().getNorthEast().lat, lon: map.getBounds().getNorthEast().lng })
                 : 5
-              onSearchHere(searchHereCenter, viewportRadiusKm, searchHereOriginRef.current)
+              onSearchHere(searchHereCenter, radiusKm, searchHereOriginRef.current)
               setSearchHereCenter(null)
             }}
             className="flex items-center gap-1.5 rounded-full border border-border bg-background/95 backdrop-blur-sm px-3 py-1.5 text-sm font-medium shadow-md hover:bg-muted transition-colors"
@@ -1641,7 +1620,7 @@ export default function MapView({
               // Radius = centre → viewport corner, so the search circle covers the
               // visible rectangle. The map is NOT recentred (see the focus fit
               // effect) — results refresh for exactly the current view.
-              const radiusKm = c.distanceTo(map.getBounds().getNorthEast()) / 1000
+              const radiusKm = viewportRadiusKm({ lat: c.lat, lon: c.lng }, { lat: map.getBounds().getNorthEast().lat, lon: map.getBounds().getNorthEast().lng })
               hapticLight()
               onFocusSearchHere({ lat: c.lat, lon: c.lng }, radiusKm)
             }}
