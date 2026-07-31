@@ -666,6 +666,22 @@ export default function MapViewGL({
     src.setData({ type: "FeatureCollection", features })
   }, [toiletSpots, mapReady])
 
+  // ── Close any open popup when the result set changes ───────────────────
+  // A popup is a plain DOM element MapLibre knows nothing about once opened
+  // — it has no link back to the GeoJSON source, so replacing the source
+  // data (a new search, a category-chip change, switching amenity type...)
+  // left a stale popup open showing a place/spot that may no longer even be
+  // in the current results. Leaflet's version got this "for free" in the
+  // common case: removing a marker whose popup is open auto-closes it there.
+  // Skipped on the very first mount (mapReady flip) — nothing is open yet.
+  const firstResultsRunRef = useRef(true)
+  useEffect(() => {
+    if (!mapReady) return
+    if (firstResultsRunRef.current) { firstResultsRunRef.current = false; return }
+    currentPopupRef.current?.remove()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [places, parkingSpots, toiletSpots, mapReady])
+
   // ── Place markers + clustering ────────────────────────────────────────
   useEffect(() => {
     const map = mapInst.current
