@@ -270,6 +270,22 @@ function popupMaxHeight(mapHeightPx: number): number {
   return Math.min(cap, containerLimit)
 }
 
+// Shared by the popupopen handler and by every invalidateSize() call site: a
+// popup opened programmatically (amenity "zur Karte", place "show on map") can
+// fire in the SAME render that reveals a hidden map tab, before Leaflet's
+// cached map.getSize() has been refreshed — map.getSize().y then reads 0/stale,
+// popupMaxHeight() floors to 60px, and the popup renders collapsed (title +
+// maybe one row, footer gone). Re-deriving maxHeight here, right after
+// invalidateSize actually runs, self-heals that regardless of which pan effect
+// opened the popup or in what order effects fired.
+function applyFreshPopupMaxHeight(map: import("leaflet").Map, popup: import("leaflet").Popup): void {
+  const freshMax = popupMaxHeight(map.getSize().y)
+  if (popup.options.maxHeight !== freshMax) {
+    popup.options.maxHeight = freshMax
+    popup.update()
+  }
+}
+
 // Above this fraction of the map's current height, the venue popup switches
 // to the reduced template (see buildPlacePopupContent) instead of relying on
 // the maxHeight cap + scroll alone.
@@ -594,6 +610,11 @@ export default function MapView({
   // popup via z-index alone. Instead we fade the buttons out while a popup is
   // open so the popup is unobstructed; they return on close.
   const [popupOpen,         setPopupOpen]         = useState(false)
+  // The currently-open popup instance (if any), tracked via popupopen/popupclose
+  // below. Lets invalidateSize() call sites re-derive maxHeight against the map's
+  // now-correct size for whatever popup happens to be open — see the fresh-reveal
+  // race comment on the visibility effect further down.
+  const openPopupRef = useRef<import("leaflet").Popup | null>(null)
   // Timestamp of the last programmatic move (setView/fitBounds/zoomToShowLayer).
   // A moveend within PROGRAMMATIC_MOVE_WINDOW_MS of this is treated as app-driven
   // and ignored; any later moveend must be a real user pan. This time-window
@@ -718,6 +739,7 @@ export default function MapView({
       map.on("popupopen",  (e) => {
         setPopupOpen(true)
         onPopupOpenChange?.(true)
+        openPopupRef.current = e.popup
         // Re-derive the height cap from the map's CURRENT size, not whatever it
         // was when this popup's marker was built (popupMaxHeight() is otherwise
         // only evaluated once, at bindPopup() time). Simple View's map/list split
@@ -726,14 +748,13 @@ export default function MapView({
         // OPENS — so a popup bound while the map was tall keeps that larger cap
         // even after the container has since been dragged much shorter, which is
         // exactly the sequence that reproduced clipped WC/parking popup buttons.
-        const popup = e.popup
-        const freshMax = popupMaxHeight(map.getSize().y)
-        if (popup.options.maxHeight !== freshMax) {
-          popup.options.maxHeight = freshMax
-          popup.update()
-        }
+        applyFreshPopupMaxHeight(map, e.popup)
       })
-      map.on("popupclose", () => { setPopupOpen(false); onPopupOpenChange?.(false) })
+      map.on("popupclose", () => {
+        setPopupOpen(false)
+        onPopupOpenChange?.(false)
+        openPopupRef.current = null
+      })
 
       // Mark the start of a real user drag-pan. Programmatic moves never fire this,
       // so it cleanly separates user pans from app-driven fitBounds/setView.
@@ -1427,6 +1448,12 @@ export default function MapView({
     if (!isVisible || !mapInst.current || !L) return
     const id = setTimeout(() => {
       mapInst.current?.invalidateSize()
+      // A pan effect (amenity "zur Karte", place selection) can open a popup
+      // synchronously in the SAME commit that flips this tab visible — before
+      // this invalidateSize() above has run. See applyFreshPopupMaxHeight.
+      if (mapInst.current && openPopupRef.current) {
+        applyFreshPopupMaxHeight(mapInst.current, openPopupRef.current)
+      }
       // Selection-driven reveal (e.g. "show on map" switched to this tab and set
       // selectedId in the same commit): don't fit to all results — that would
       // zoom back out and re-cluster the just-selected marker, closing its popup.
@@ -1487,6 +1514,13 @@ export default function MapView({
       rafId = requestAnimationFrame(() => {
         rafId = null
         mapInst.current?.invalidateSize()
+        // A popup already open when the split-pane drag shrinks the map (Simple
+        // View) would otherwise keep the maxHeight it had when it opened — the
+        // exact clipped-footer bug described at popupMaxHeight() above, just
+        // triggered by a resize instead of a stale reveal.
+        if (mapInst.current && openPopupRef.current) {
+          applyFreshPopupMaxHeight(mapInst.current, openPopupRef.current)
+        }
       })
     })
     ro.observe(mapRef.current)
