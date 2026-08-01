@@ -630,9 +630,9 @@ export default function MapViewGL({
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ lat: spot.lat, lon: spot.lon, osmId: spot.osmId, nearestPlaceName: nearest?.name }),
           }).then((r) => {
-            btn.textContent = r.ok ? t.map.parkingReportDone : t.map.parkingReportError
+            btn.textContent = r.ok ? tRef.current.map.parkingReportDone : tRef.current.map.parkingReportError
             btn.style.opacity = "1"
-          }).catch(() => { btn.textContent = t.map.parkingReportError; btn.style.opacity = "1" })
+          }).catch(() => { btn.textContent = tRef.current.map.parkingReportError; btn.style.opacity = "1" })
         })
       },
     })

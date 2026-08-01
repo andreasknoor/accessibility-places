@@ -105,7 +105,6 @@ const POPUP_CHIPS   = "display:flex;flex-wrap:wrap;gap:6px"
 const POPUP_CHIP    = "display:inline-flex;align-items:center;gap:5px;border:1px solid #e5e7eb;border-radius:999px;background:#f1f3f6;color:#1f2937;padding:6px 10px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap"
 // The one filled/primary chip — reserved for the venue popup's "Details anzeigen" (see header comment above).
 const POPUP_CHIP_PRIMARY = "display:inline-flex;align-items:center;gap:5px;border:1px solid #2563eb;border-radius:999px;background:#2563eb;color:#fff;padding:6px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap"
-const POPUP_CHIP_WARN    = "display:inline-flex;align-items:center;gap:5px;border:1px solid #f3dcb8;border-radius:999px;background:#fef3e2;color:#92400e;padding:6px 10px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap"
 // POPUP_TITLE: overflow control prevents long names pushing the pill/badge off-screen.
 const POPUP_TITLE   = "font-weight:700;font-size:14px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
 const POPUP_SUB     = "font-size:11px;color:#71717a;margin:2px 0 11px"
@@ -119,7 +118,6 @@ const POPUP_GMAPS_SVG    = `<svg xmlns="http://www.w3.org/2000/svg" width="13" h
 const POPUP_WHEELMAP_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="4" r="1"/><path d="m18 19 1-7-6 1"/><path d="m5 8 3-3 5.5 3-2.36 3.5"/><path d="M4.24 14.5a5 5 0 0 0 6.88 6"/><path d="M13.76 17.5a5 5 0 0 0-6.88-6"/></svg>` // lucide Accessibility — matches PlaceCard's Wheelmap link icon
 const POPUP_LIST_SVG     = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h.01"/><path d="M3 12h.01"/><path d="M3 19h.01"/><path d="M8 5h13"/><path d="M8 12h13"/><path d="M8 19h13"/></svg>` // lucide List
 const POPUP_INFO_SVG     = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>` // lucide Info
-const POPUP_FLAG_SVG     = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>` // lucide Flag
 const POPUP_WARN_SVG     = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>` // lucide AlertTriangle
 
 // "Achtung: evtl. nicht barrierefrei" — always-visible venue popup warning,
@@ -837,14 +835,18 @@ export default function MapViewLeaflet({
       const badgeTextC  = PARKING_TIER_STYLE[tier].text
       const showResults = onShowAmenityInResultsRef.current && amenityType === "parking"
 
-      // Reservation shown as a checkbox row (☑ Ja / ☐ Nein) — first in the grid.
-      const reservedValue = tier === "weak"
-        ? `☐ ${t.a11y.no}`
-        : `☑ ${t.a11y.yes}`
-      const reservedColor = tier === "weak" ? "#b45309" : "#15803d"
+      // Reservation shown as a checkbox row (☑ Ja), strong tier only — a
+      // weak-tier spot has nothing to check "no" against but the row's own
+      // presence, and a lone "☐ Nein" next to a title that already says
+      // "possibly accessible" read as contradicting it, not qualifying it.
+      // Dropped entirely for weak; the title alone already carries that
+      // nuance.
+      const reservedRow = tier === "strong"
+        ? popupRow(t.map.parkingReservedLabel, `☑ ${t.a11y.yes}`, { color: "#15803d" })
+        : ""
 
       const rows = [
-        popupRow(t.map.parkingReservedLabel, reservedValue, { color: reservedColor }),
+        reservedRow,
         distText    ? popupRow(t.map.parkingDistanceLabel, distText) : "",
         nearNameText ? popupSubRow(t.map.parkingNearLabel, nearNameText) : "",
         feeText     ? popupRow(t.map.parkingFeeLabel, esc(feeText), { color: spot.fee === "no" ? "#15803d" : undefined }) : "",
@@ -865,8 +867,8 @@ export default function MapViewLeaflet({
             <button data-navigate style="${POPUP_CHIP}">${POPUP_NAV_SVG}${t.map.popupChipNavigate}</button>
             <button data-gmaps style="${POPUP_CHIP}">${POPUP_GMAPS_SVG}${t.map.popupChipGoogleMaps}</button>
             ${showResults ? `<button data-show-results style="${POPUP_CHIP}">${POPUP_LIST_SVG}${t.map.popupChipResults}</button>` : ""}
-            ${tier === "weak" ? `<button data-report aria-live="polite" style="${POPUP_CHIP_WARN}">${POPUP_FLAG_SVG}${t.map.popupChipReport}</button>` : ""}
           </div>
+          ${tier === "weak" ? `<button data-report aria-live="polite" style="display:block;border:0;background:none;padding:0;margin-top:8px;font-size:11.5px;font-weight:600;text-decoration:underline;color:#b45309;cursor:pointer;font-family:sans-serif">${t.map.popupChipReport}</button>` : ""}
         </div>
       `)
       wireNavigateButton(div, { lat: spot.lat, lon: spot.lon })

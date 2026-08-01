@@ -90,6 +90,16 @@ function ctaD(svg: string, label: string, primary: boolean, dataAttr: string, ic
   return `<button ${dataAttr}${a11yAttrs} style="display:flex;align-items:center;gap:6px;border:0;border-radius:999px;padding:${pad};font-size:12.5px;font-weight:700;cursor:pointer;font-family:sans-serif;background:${bg};color:${ink};white-space:nowrap">${svg}${iconOnly ? "" : esc(label)}</button>`
 }
 
+// Plain text link, not a pill — for the parking popup's "report" action,
+// which isn't equally weighted with the real CTAs (Navigate/Ergebnisse) and
+// was crowding them at this popup's already-narrow max width. Also reads
+// less like a primary action than a same-styled button would, which matches
+// what it actually is: reporting a data problem, not something most viewers
+// of a weak-tier spot will ever tap.
+function linkD(label: string, dataAttr: string): string {
+  return `<button ${dataAttr} style="display:block;border:0;background:none;padding:0;margin-top:8px;font-size:11.5px;font-weight:600;text-decoration:underline;color:#b45309;cursor:pointer;font-family:sans-serif">${esc(label)}</button>`
+}
+
 function notAccessibleWarning(t: T): string {
   return `<div style="display:flex;align-items:flex-start;gap:5px;margin-top:8px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:6px 8px;font-size:10.5px;color:#b91c1c;line-height:1.45">${SVG_WARN}<span>${t.results.notAccessibleWarningPre}<b>${t.results.notAccessibleWarningBold}</b>${t.results.notAccessibleWarningPost}</span></div>`
 }
@@ -129,9 +139,13 @@ export function buildParkingPopupHtml(spot: ParkingSpot | AmenityFeature, t: T, 
     : spot.capacity != null ? t.map.parkingSpots(spot.capacity) : t.map.parkingSpot
 
   const parts: string[] = []
-  parts.push(tier === "weak"
-    ? `<span style="color:#b45309;font-weight:700">☐ ${t.a11y.no}</span>`
-    : `<span style="color:#15803d;font-weight:700">☑ ${t.a11y.yes}</span>`)
+  // The "reserved wheelchair space" checkbox only has a clear meaning for a
+  // strong-tier spot (☑ Ja — officially designated/marked). For a weak-tier
+  // spot there's nothing to check "no" against but the presence of this row
+  // itself — a lone "☐ Nein" next to a title that already says "possibly
+  // accessible" read as contradicting it, not qualifying it. Dropped
+  // entirely for weak; the title alone already carries that nuance.
+  if (tier === "strong") parts.push(`<span style="color:#15803d;font-weight:700">☑ ${t.a11y.yes}</span>`)
   if (opts.nearestDistM != null) parts.push(`<span style="color:${dim()}">${t.results.distanceShort(Math.round(opts.nearestDistM))}</span>`)
   const feeText = spot.fee === "no" ? t.map.parkingFree : spot.fee === "yes" ? t.map.parkingPaid : spot.fee
   if (feeText) parts.push(`<span style="color:${spot.fee === "no" ? "#15803d" : dim()}">${esc(feeText)}</span>`)
@@ -141,12 +155,12 @@ export function buildParkingPopupHtml(spot: ParkingSpot | AmenityFeature, t: T, 
   const nearSub = opts.nearestName
     ? `<div style="font-size:11px;color:${dim()};margin:2px 0 0">${t.map.parkingNearLabel} ${esc(truncateName(opts.nearestName))}</div>`
     : ""
+  const reportLink = tier === "weak" ? linkD(t.map.popupChipReport, "data-report") : ""
 
   const ctas = ctaD(SVG_NAV, t.map.popupChipNavigate, true, "data-navigate")
     + (opts.showResults ? ctaD(SVG_LIST, t.map.popupChipResults, false, "data-show-results", true) : "")
-    + (tier === "weak" ? ctaD(SVG_FLAG, t.map.popupChipReport, false, "data-report") : "")
 
-  return shellD(barColor, "P", title, subLine, null, ctas) + nearSub
+  return shellD(barColor, "P", title, subLine, null, ctas) + nearSub + reportLink
 }
 
 export function buildToiletPopupHtml(spot: AmenityFeature, t: T, opts: { showResults: boolean; wheelmapUrl?: string }): string {

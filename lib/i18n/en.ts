@@ -263,7 +263,7 @@ const en: Translations = {
     popupChipWheelmap: "Wheelmap",
     popupChipResults: "Results",
     popupChipDetails: "Details",
-    popupChipReport: "Report",
+    popupChipReport: "Report an issue",
     criteriaShortToilet: "Toilet",
     criteriaShortParking: "Parking",
     parkingSpot:    "Disabled parking",
