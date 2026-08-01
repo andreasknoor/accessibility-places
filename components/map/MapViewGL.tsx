@@ -115,10 +115,10 @@ function openSmartPopup(
   const point = map.project(lngLat)
   const container = map.getContainer()
   const margin = 16
+  const overflowsLeft = point.x - opts.maxWidthPx / 2 - margin < 0
+  const overflowsRight = point.x + opts.maxWidthPx / 2 + margin > container.clientWidth
   const needsRecenter =
-    point.y - opts.estimatedHeightPx - margin < 0 ||
-    point.x - opts.maxWidthPx / 2 - margin < 0 ||
-    point.x + opts.maxWidthPx / 2 + margin > container.clientWidth
+    point.y - opts.estimatedHeightPx - margin < 0 || overflowsLeft || overflowsRight
 
   if (needsRecenter) {
     opts.lastProgrammaticMoveRef.current = Date.now()
@@ -131,9 +131,26 @@ function openSmartPopup(
     // Instead compute the destination geographic centre directly via
     // project()/unproject() pixel math, which has no such dependency on
     // whether `center` happens to differ from the current one.
+    //
+    // X is shifted independently of Y (only when actually needed) — an
+    // earlier version of this function only ever adjusted Y, so a marker
+    // near the left/right edge (common once international mode adds
+    // non-DACH cities the initial viewport isn't centred on) had its
+    // overflow correctly DETECTED by needsRecenter above but never
+    // corrected: the popup still poked off the side of the map. Found live
+    // in Paris (internationalMode) — confirmed via getBoundingClientRect
+    // that the popup's right edge sat 76px past the map container's edge.
     const desiredY = container.clientHeight - margin
     const currentCenterPoint = map.project(map.getCenter())
-    const newCenterPoint = new maplibregl.Point(currentCenterPoint.x, currentCenterPoint.y + (point.y - desiredY))
+    let newX = currentCenterPoint.x
+    if (overflowsLeft) {
+      const desiredX = opts.maxWidthPx / 2 + margin
+      newX = currentCenterPoint.x + (point.x - desiredX)
+    } else if (overflowsRight) {
+      const desiredX = container.clientWidth - opts.maxWidthPx / 2 - margin
+      newX = currentCenterPoint.x + (point.x - desiredX)
+    }
+    const newCenterPoint = new maplibregl.Point(newX, currentCenterPoint.y + (point.y - desiredY))
     const newCenter = map.unproject(newCenterPoint)
     map.easeTo({ center: newCenter, duration: 300 })
     map.once("moveend", () => {
