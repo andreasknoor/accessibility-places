@@ -265,6 +265,12 @@ export interface Translations {
     popupChipResults:       string
     popupChipDetails:       string
     popupChipReport:        string
+    // Shortened criteria labels for the venue popup's entrance/toilet/parking
+    // pills (lib/map/popup-content.ts chipD) — the pills are packed inline
+    // (not one-third-width columns), so the sentence-style criteria.toilet
+    // ("Toilette") / criteria.parking ("Parkplatz") no longer fit three abreast.
+    criteriaShortToilet:    string
+    criteriaShortParking:   string
     parkingSpot:            string
     parkingSpots:           (n: number) => string
     parkingAccessible:      string

@@ -264,6 +264,8 @@ const de: Translations = {
     popupChipResults: "Ergebnisse",
     popupChipDetails: "Details",
     popupChipReport: "Melden",
+    criteriaShortToilet: "WC",
+    criteriaShortParking: "Parken",
     parkingSpot:    "Behindertenparkplatz",
     parkingSpots:   (n: number) => `Behindertenparkplatz · ${n} Plätze`,
     parkingAccessible:     "Barrierefreier Parkplatz",
