@@ -283,7 +283,7 @@ export default function SimpleLayout({
     splitDragRef.current = null
   }
 
-  // Seed the default 40/60 split once the results screen's split container
+  // Seed the default 70/30 split once the results screen's split container
   // can actually be measured (it renders with height 0 the instant "results"
   // becomes the active screen, before layout settles). useLayoutEffect, not
   // useEffect: this is a layout measurement (same reasoning as useIsMobile's
@@ -298,7 +298,7 @@ export default function SimpleLayout({
     if (!el) return
     const h = el.clientHeight
     if (h > 0) {
-      setMapHeightPx(clampSplitHeight(h * 0.4, h))
+      setMapHeightPx(clampSplitHeight(h * 0.7, h))
       setContainerHeightPx(h)
     }
   }, [screen, mapHeightPx])
