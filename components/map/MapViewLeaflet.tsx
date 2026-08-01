@@ -1374,16 +1374,22 @@ export default function MapViewLeaflet({
   // size continuously, not just on the discrete visible/isFullscreen changes
   // above — needed for a free-form drag-resizable split (Simple View's
   // map/list panes), where the container's height changes on every animation
-  // frame of the drag rather than in one jump. rAF-throttled since
-  // invalidateSize triggers a layout read; ResizeObserver can fire faster
-  // than the browser paints during a drag.
+  // frame of the drag rather than in one jump. Debounced (trailing), not just
+  // rAF-throttled: a bare rAF gate still calls invalidateSize() on every
+  // frame (~60/s) for the whole drag, and each call forces Leaflet to
+  // re-layout its tile grid/panes for the new size — visible as constant
+  // flicker while dragging (reported live on both mobile and desktop, same
+  // root cause as MapViewGL's identical fix). Deferring until motion pauses
+  // removes the mid-drag redraws entirely; the map still snaps to the exact
+  // final size as soon as the pointer stops moving or is released.
   useEffect(() => {
     if (!mapRef.current) return
-    let rafId: number | null = null
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+    const RESIZE_DEBOUNCE_MS = 120
     const ro = new ResizeObserver(() => {
-      if (rafId != null) return
-      rafId = requestAnimationFrame(() => {
-        rafId = null
+      if (timeoutId != null) clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        timeoutId = null
         mapInst.current?.invalidateSize()
         // A popup already open when the split-pane drag shrinks the map (Simple
         // View) would otherwise keep the maxHeight it had when it opened — the
@@ -1392,10 +1398,10 @@ export default function MapViewLeaflet({
         if (mapInst.current && openPopupRef.current) {
           applyFreshPopupMaxHeight(mapInst.current, openPopupRef.current)
         }
-      })
+      }, RESIZE_DEBOUNCE_MS)
     })
     ro.observe(mapRef.current)
-    return () => { ro.disconnect(); if (rafId != null) cancelAnimationFrame(rafId) }
+    return () => { ro.disconnect(); if (timeoutId != null) clearTimeout(timeoutId) }
   }, [])
 
   return (

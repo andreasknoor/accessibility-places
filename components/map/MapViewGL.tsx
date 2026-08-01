@@ -878,19 +878,29 @@ export default function MapViewGL({
   }, [visible, isFullscreen, mapReady])
 
   // ── Continuous container-size sync (free-form resizable split panes) ──
+  // Debounced (trailing), not just rAF-gated: a bare rAF gate still lets
+  // resize() fire on every animation frame (~60/s) for the whole duration of
+  // a pointer drag (Quickstart's map/list split handle) — each call forces
+  // MapLibre to redo symbol placement/collision for the new viewport size,
+  // which reads as constant marker/label flicker while dragging (reported
+  // live on both mobile and desktop). Deferring resize() until motion pauses
+  // eliminates the mid-drag redraws entirely; the map only visually snaps to
+  // the exact new size once the pointer stops moving or is released, which
+  // is well within the debounce window.
   useEffect(() => {
     if (!mapRef.current) return
-    let rafId: number | null = null
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+    const RESIZE_DEBOUNCE_MS = 120
     const ro = new ResizeObserver(() => {
-      if (rafId != null) return
-      rafId = requestAnimationFrame(() => {
-        rafId = null
+      if (timeoutId != null) clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        timeoutId = null
         mapInst.current?.resize()
         if (currentPopupRef.current && mapInst.current) applyPopupMaxHeight(currentPopupRef.current, mapInst.current.getContainer().clientHeight)
-      })
+      }, RESIZE_DEBOUNCE_MS)
     })
     ro.observe(mapRef.current)
-    return () => { ro.disconnect(); if (rafId != null) cancelAnimationFrame(rafId) }
+    return () => { ro.disconnect(); if (timeoutId != null) clearTimeout(timeoutId) }
   }, [])
 
   return (
