@@ -16,7 +16,7 @@ import { confidenceLabel } from "@/lib/matching/merge"
 import { haversineMetres } from "@/lib/matching/match"
 import { popupMaxHeight, isWithinProgrammaticMoveWindow, viewportRadiusKm } from "@/lib/map/geometry"
 import { ensureMaplibreWorkerConfigured } from "@/lib/map/maplibre-worker"
-import { drawPlacePin, drawParkingBadge, drawToiletBadge, drawGpsDot, MARKER_PIXEL_RATIO } from "@/lib/map/marker-images"
+import { drawPlacePin, drawParkingBadge, drawToiletBadge, drawGpsDot, getMarkerPixelRatio } from "@/lib/map/marker-images"
 import { buildVenuePopupHtml, buildParkingPopupHtml, buildToiletPopupHtml } from "@/lib/map/popup-content"
 import type { MapViewProps } from "@/lib/map/types"
 import type { Place, AmenityFeature, AmenityTier } from "@/lib/types"
@@ -87,8 +87,20 @@ function openSmartPopup(
   map: maplibregl.Map,
   lngLat: [number, number],
   html: string,
-  opts: { maxWidthPx: number; estimatedHeightPx: number; offsetPx: number; lastProgrammaticMoveRef: { current: number }; onReady: (el: HTMLElement) => void },
+  opts: {
+    maxWidthPx: number; estimatedHeightPx: number; offsetPx: number
+    lastProgrammaticMoveRef: { current: number }
+    // Bumped once per call, captured as this call's own token — see the
+    // `attach()` guard below for why.
+    popupTokenRef: { current: number }
+    // Runs at the exact moment this popup is actually added to the map
+    // (synchronously below, or from the deferred moveend callback) — the
+    // single place that should update "which popup is current" bookkeeping.
+    onAttach: (popup: maplibregl.Popup) => void
+    onReady: (el: HTMLElement) => void
+  },
 ): maplibregl.Popup {
+  const myToken = ++opts.popupTokenRef.current
   const popup = new maplibregl.Popup({ anchor: "bottom", offset: opts.offsetPx, maxWidth: `${opts.maxWidthPx}px`, className: "ap-popup-gl", closeButton: true })
     .setLngLat(lngLat)
     .setHTML(html)
@@ -111,6 +123,26 @@ function openSmartPopup(
     applyPopupMaxHeight(popup, map.getContainer().clientHeight)
     opts.onReady(el)
   })
+
+  // Attaching is centralised here (rather than the caller calling addTo()
+  // then separately tracking the popup right after) so a request that gets
+  // superseded before it ever reaches the map can be dropped cleanly instead
+  // of racing whichever popup opened after it. Concretely: click a marker
+  // near an edge (recentre needed, addTo deferred to moveend below) then
+  // immediately click a different marker (no recentre, attaches
+  // synchronously) — without this guard, the FIRST popup's deferred moveend
+  // fires later and unconditionally re-adds it on top of the second one,
+  // which is already tracked as "current": a stale popup silently reappears
+  // and `currentPopupRef` desyncs from what's actually on the map. Checking
+  // the token at the moment of attach means only the most recent request —
+  // whichever one is still current when its own attach point is reached —
+  // ever calls addTo()/onAttach(); an earlier, now-superseded request simply
+  // never attaches at all.
+  function attach(): void {
+    if (opts.popupTokenRef.current !== myToken) return
+    popup.addTo(map)
+    opts.onAttach(popup)
+  }
 
   const point = map.project(lngLat)
   const container = map.getContainer()
@@ -155,10 +187,10 @@ function openSmartPopup(
     map.easeTo({ center: newCenter, duration: 300 })
     map.once("moveend", () => {
       opts.lastProgrammaticMoveRef.current = Date.now()
-      popup.addTo(map)
+      attach()
     })
   } else {
-    popup.addTo(map)
+    attach()
   }
   return popup
 }
@@ -216,6 +248,10 @@ export default function MapViewGL({
   const [mapReady, setMapReady] = useState(false)
   const registeredImages = useRef<Set<string>>(new Set())
   const currentPopupRef  = useRef<maplibregl.Popup | null>(null)
+  // Bumped by every openSmartPopup() call — see that function's `attach()`
+  // guard for the race it closes (a stale, still-pending popup silently
+  // reappearing after a newer one is already tracked).
+  const popupTokenRef = useRef(0)
   // Set right before a direct marker click opens its own popup (with smart
   // positioning), so the separate selectedId-driven "pan to selected" effect
   // below — which ALSO fires for this same click, since onSelect(place)
@@ -243,9 +279,6 @@ export default function MapViewGL({
   }
 
   const [detailPlace, setDetailPlace] = useState<Place | null>(null)
-  function esc(s: string): string {
-    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
-  }
 
   const onShowInResultsRef  = useRef(onShowInResults)
   const onOpenDetailsRef    = useRef(onOpenDetails)
@@ -438,7 +471,7 @@ export default function MapViewGL({
     map.on("load", () => {
       // Base images that don't depend on search results.
       const gps = drawGpsDot()
-      map.addImage("gps-dot", { width: gps.width, height: gps.height, data: gps.data }, { pixelRatio: MARKER_PIXEL_RATIO })
+      map.addImage("gps-dot", { width: gps.width, height: gps.height, data: gps.data }, { pixelRatio: getMarkerPixelRatio() })
 
       map.addSource(PLACE_SOURCE_ID, {
         type: "geojson",
@@ -552,7 +585,7 @@ export default function MapViewGL({
     const map = mapInst.current
     if (!map || registeredImages.current.has(key)) return
     const img = factory()
-    if (!map.hasImage(key)) map.addImage(key, { width: img.width, height: img.height, data: img.data }, { pixelRatio: MARKER_PIXEL_RATIO })
+    if (!map.hasImage(key)) map.addImage(key, { width: img.width, height: img.height, data: img.data }, { pixelRatio: getMarkerPixelRatio() })
     registeredImages.current.add(key)
   }
 
@@ -597,11 +630,11 @@ export default function MapViewGL({
     const map = mapInst.current
     if (!map) return
     const html = buildVenuePopupHtml(place, tRef.current, { showResults: !!onShowInResults })
-    const popup = openSmartPopup(map, [place.coordinates.lon, place.coordinates.lat], html, {
-      maxWidthPx: 296, estimatedHeightPx: 230, offsetPx: 44, lastProgrammaticMoveRef,
+    openSmartPopup(map, [place.coordinates.lon, place.coordinates.lat], html, {
+      maxWidthPx: 296, estimatedHeightPx: 230, offsetPx: 44, lastProgrammaticMoveRef, popupTokenRef,
+      onAttach: trackPopup,
       onReady: (el) => wireVenuePopupButtons(el, place),
     })
-    trackPopup(popup)
   }
 
   function openParkingPopup(spot: NonNullable<typeof parkingSpots>[number], idx: number): void {
@@ -613,8 +646,9 @@ export default function MapViewGL({
     }, null)
     const showResults = !!onShowAmenityInResultsRef.current && amenityTypeRef.current === "parking"
     const html = buildParkingPopupHtml(spot, tRef.current, { nearestName: nearest?.name, nearestDistM: nearest?.dist, showResults })
-    const popup = openSmartPopup(map, [spot.lon, spot.lat], html, {
-      maxWidthPx: 260, estimatedHeightPx: 180, offsetPx: 22, lastProgrammaticMoveRef,
+    openSmartPopup(map, [spot.lon, spot.lat], html, {
+      maxWidthPx: 260, estimatedHeightPx: 180, offsetPx: 22, lastProgrammaticMoveRef, popupTokenRef,
+      onAttach: trackPopup,
       onReady: (el) => {
         el.querySelector<HTMLElement>("[data-navigate]")?.addEventListener("click", (ev: Event) => { ev.stopPropagation(); startDefaultNavigation({ lat: spot.lat, lon: spot.lon }) })
         el.querySelector<HTMLElement>("[data-show-results]")?.addEventListener("click", (ev: Event) => {
@@ -636,7 +670,6 @@ export default function MapViewGL({
         })
       },
     })
-    trackPopup(popup)
     void idx
   }
 
@@ -647,8 +680,9 @@ export default function MapViewGL({
     const osmNodeId = spot.osmId?.startsWith("node/") ? spot.osmId.slice(5) : undefined
     const wheelmapUrl = osmNodeId ? `https://wheelmap.org/nodes/${osmNodeId}` : undefined
     const html = buildToiletPopupHtml(spot, tRef.current, { showResults, wheelmapUrl })
-    const popup = openSmartPopup(map, [spot.lon, spot.lat], html, {
-      maxWidthPx: 260, estimatedHeightPx: 180, offsetPx: 22, lastProgrammaticMoveRef,
+    openSmartPopup(map, [spot.lon, spot.lat], html, {
+      maxWidthPx: 260, estimatedHeightPx: 180, offsetPx: 22, lastProgrammaticMoveRef, popupTokenRef,
+      onAttach: trackPopup,
       onReady: (el) => {
         el.querySelector<HTMLElement>("[data-navigate]")?.addEventListener("click", (ev: Event) => { ev.stopPropagation(); startDefaultNavigation({ lat: spot.lat, lon: spot.lon }) })
         el.querySelector<HTMLElement>("[data-wheelmap]")?.addEventListener("click", (ev: Event) => { ev.stopPropagation(); if (wheelmapUrl) void openExternalUrl(wheelmapUrl) })
@@ -658,7 +692,6 @@ export default function MapViewGL({
         })
       },
     })
-    trackPopup(popup)
     void idx
   }
 
@@ -822,13 +855,21 @@ export default function MapViewGL({
   useEffect(() => {
     const map = mapInst.current
     if (!map || !mapReady || !amenityPanTarget) return
-    const EPS = 1e-6
-    const pIdx = (parkingSpotsRef.current ?? []).findIndex((s) => Math.abs(s.lat - amenityPanTarget.lat) < EPS && Math.abs(s.lon - amenityPanTarget.lon) < EPS)
-    const tIdx = (toiletSpotsRef.current ?? []).findIndex((s) => Math.abs(s.lat - amenityPanTarget.lat) < EPS && Math.abs(s.lon - amenityPanTarget.lon) < EPS)
     lastProgrammaticMoveRef.current = Date.now()
     map.easeTo({ center: [amenityPanTarget.lon, amenityPanTarget.lat], zoom: Math.max(map.getZoom(), 17) })
     map.once("moveend", () => {
       lastProgrammaticMoveRef.current = Date.now()
+      // Resolved HERE, not before the easeTo — the ~300ms+ deferred callback
+      // window is long enough for a new search or amenity-chip switch to
+      // replace parkingSpots/toiletSpots. Capturing indices up front and
+      // dereferencing them via the ref later, once the array may already be
+      // shorter/different, threw a TypeError on the popup builders' first
+      // spot.lat/spot.lon access. Re-searching against the live ref at fire
+      // time means a since-vanished spot just finds nothing (no popup opens)
+      // instead of crashing.
+      const EPS = 1e-6
+      const pIdx = (parkingSpotsRef.current ?? []).findIndex((s) => Math.abs(s.lat - amenityPanTarget.lat) < EPS && Math.abs(s.lon - amenityPanTarget.lon) < EPS)
+      const tIdx = (toiletSpotsRef.current ?? []).findIndex((s) => Math.abs(s.lat - amenityPanTarget.lat) < EPS && Math.abs(s.lon - amenityPanTarget.lon) < EPS)
       if (pIdx >= 0) openParkingPopup(parkingSpotsRef.current![pIdx], pIdx)
       else if (tIdx >= 0) openToiletPopup(toiletSpotsRef.current![tIdx], tIdx)
     })

@@ -12,7 +12,15 @@
 // darkened tone of the marker's own fill, chosen live against 3 alternatives
 // during prototyping) — plus the "D" unified popup design (lib/map/popup-content.ts).
 
-const DPR = typeof window !== "undefined" ? Math.max(1, Math.min(3, window.devicePixelRatio || 1)) : 1
+// A function, not a module-level const captured once at import time — a
+// captured constant went stale for any icon key first registered after the
+// browser window moved to a display with a different devicePixelRatio
+// (multi-monitor drag mid-session), with no listener or cache-bust path to
+// recover short of a reload. Reading it fresh on every canvas creation call
+// means each newly-drawn marker picks up whatever DPR is current then.
+function getDPR(): number {
+  return typeof window !== "undefined" ? Math.max(1, Math.min(3, window.devicePixelRatio || 1)) : 1
+}
 
 function darken(hex: string, amount: number): string {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
@@ -26,8 +34,9 @@ function darken(hex: string, amount: number): string {
 const PIN_PATH = new Path2D("M13,1.5 C7.2,1.5 2.5,6.2 2.5,12 C2.5,19.5 13,32.5 13,32.5 C13,32.5 23.5,19.5 23.5,12 C23.5,6.2 18.8,1.5 13,1.5 Z")
 
 function makeCanvas(wCss: number, hCss: number): { canvas: OffscreenCanvas | HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
-  const w = Math.round(wCss * DPR)
-  const h = Math.round(hCss * DPR)
+  const dpr = getDPR()
+  const w = Math.round(wCss * dpr)
+  const h = Math.round(hCss * dpr)
   const canvas: OffscreenCanvas | HTMLCanvasElement =
     typeof OffscreenCanvas !== "undefined" ? new OffscreenCanvas(w, h) : Object.assign(document.createElement("canvas"), { width: w, height: h })
   if (!(canvas instanceof OffscreenCanvas)) {
@@ -35,7 +44,7 @@ function makeCanvas(wCss: number, hCss: number): { canvas: OffscreenCanvas | HTM
     canvas.height = h
   }
   const ctx = canvas.getContext("2d") as CanvasRenderingContext2D
-  ctx.scale(DPR, DPR)
+  ctx.scale(dpr, dpr)
   return { canvas, ctx }
 }
 
@@ -46,8 +55,9 @@ export interface RasterImage {
 }
 
 function toRasterImage(canvas: OffscreenCanvas | HTMLCanvasElement, wCss: number, hCss: number): RasterImage {
-  const w = Math.round(wCss * DPR)
-  const h = Math.round(hCss * DPR)
+  const dpr = getDPR()
+  const w = Math.round(wCss * dpr)
+  const h = Math.round(hCss * dpr)
   const ctx = canvas.getContext("2d") as CanvasRenderingContext2D
   const imgData = ctx.getImageData(0, 0, w, h)
   return { data: imgData.data, width: w, height: h }
@@ -207,4 +217,8 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath()
 }
 
-export { DPR as MARKER_PIXEL_RATIO }
+// Exported as a function too — the pixelRatio passed to map.addImage() must
+// match whatever DPR the just-drawn image was actually rasterised at
+// (getDPR(), called fresh inside makeCanvas/toRasterImage), not a value
+// snapshotted once at module load.
+export const getMarkerPixelRatio = getDPR

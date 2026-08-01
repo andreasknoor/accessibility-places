@@ -16,6 +16,23 @@ const withSerwist = withSerwistInit({
   disable: true,
 })
 
+// 'unsafe-eval' was carried for years as a suspected Leaflet requirement,
+// flagged in a 2026-05 security audit as "remove only after verification"
+// rather than dropped outright, since nothing had confirmed it was actually
+// needed vs. just never tested without it. Investigated after the v12.0
+// Leaflet removal: a production build with 'unsafe-eval' absent passed a
+// full manual pass (search, map interaction, popups, PlaceDebugSheet,
+// settings, amenity search) with no CSP violations — Leaflet was never the
+// real reason. React's OWN dev-mode tooling is: Fast Refresh / dev-only
+// stack-trace reconstruction calls eval() to re-run code in a different
+// stack context, but "React will never use eval() in production" (React's
+// own error message). So this only needs to be dev-only, not permanent —
+// confirmed live: `next dev` throws "eval() is not supported in this
+// environment" on this exact CSP the moment 'unsafe-eval' is dropped
+// unconditionally, while `next build && next start` (production mode) had
+// already been verified clean without it.
+const isDev = process.env.NODE_ENV === "development"
+
 const securityHeaders = [
   { key: "X-Frame-Options",           value: "DENY" },
   { key: "X-Content-Type-Options",    value: "nosniff" },
@@ -25,17 +42,7 @@ const securityHeaders = [
     key:   "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      // 'unsafe-eval' was carried for years as a suspected Leaflet requirement,
-      // flagged in a 2026-05 security audit as "remove only after verification"
-      // rather than dropped outright, since nothing had confirmed it was
-      // actually needed vs. just never tested without it. Removed here (v12.1)
-      // now that Leaflet itself is gone (v12.0 cutover): a full manual pass
-      // (search, map interaction, popups, PlaceDebugSheet, settings, amenity
-      // search) against a production build with 'unsafe-eval' absent showed no
-      // CSP violations and no broken functionality. Re-add only if a future
-      // dependency genuinely needs runtime code evaluation — prefer fixing
-      // that dependency's usage first.
-      "script-src 'self' 'unsafe-inline' https://tally.so https://va.vercel-scripts.com https://cloud.umami.is",
+      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://tally.so https://va.vercel-scripts.com https://cloud.umami.is`,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https://maps.gstatic.com https://upload.wikimedia.org https://commons.wikimedia.org https://lh3.googleusercontent.com",
       // tiles.openfreemap.org: MapLibre (issue #48 migration) fetches vector tiles,
