@@ -21,8 +21,8 @@ function darken(hex: string, amount: number): string {
   return `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`
 }
 
-// Teardrop path in a 26×34 box, tip at (13, 32.5) — matches svgMarker's
-// existing path in MapViewLeaflet.tsx so both engines draw the same shape.
+// Teardrop path in a 26×34 box, tip at (13, 32.5) — matches the pre-migration
+// Leaflet marker's svgMarker path (MapViewLeaflet.tsx, removed at cutover).
 const PIN_PATH = new Path2D("M13,1.5 C7.2,1.5 2.5,6.2 2.5,12 C2.5,19.5 13,32.5 13,32.5 C13,32.5 23.5,19.5 23.5,12 C23.5,6.2 18.8,1.5 13,1.5 Z")
 
 function makeCanvas(wCss: number, hCss: number): { canvas: OffscreenCanvas | HTMLCanvasElement; ctx: CanvasRenderingContext2D } {

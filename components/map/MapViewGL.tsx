@@ -21,20 +21,20 @@ import { buildVenuePopupHtml, buildParkingPopupHtml, buildToiletPopupHtml } from
 import type { MapViewProps } from "@/lib/map/types"
 import type { Place, AmenityFeature, AmenityTier } from "@/lib/types"
 
-// MapLibre + OpenFreeMap implementation (issue #48 migration). Kept alongside
-// MapViewLeaflet.tsx behind the internal engine flag in MapView.tsx until
-// Phase 4 verification is complete — see that file's header comment.
+// MapLibre + OpenFreeMap implementation (issue #48 migration). Sole map
+// engine since the v12.0 cutover (Phase 4) — see MapView.tsx's header
+// comment; the pre-migration Leaflet implementation was deleted at cutover.
 //
-// Architecture vs. the Leaflet version, per the R1 decision (native symbol
-// layers, chosen 2026-07-31): individual markers are NOT DOM elements. Every
-// unique (category, confidence, selected) combination is rasterised once to a
-// canvas image (lib/map/marker-images.ts) and registered via map.addImage();
-// places live in one GeoJSON source with native `cluster: true` clustering
-// (GPU-side, not leaflet.markercluster's DOM-tree clustering). Popups are
-// still plain HTML strings bound via maplibregl.Popup — MapLibre popups are
-// ordinary DOM outside the WebGL canvas, so plain addEventListener works
-// (unlike Leaflet, which needed L.DomEvent.on to survive its own touch
-// interception — R11, to be verified on real touch devices).
+// Architecture vs. the pre-migration Leaflet version, per the R1 decision
+// (native symbol layers, chosen 2026-07-31): individual markers are NOT DOM
+// elements. Every unique (category, confidence, selected) combination is
+// rasterised once to a canvas image (lib/map/marker-images.ts) and
+// registered via map.addImage(); places live in one GeoJSON source with
+// native `cluster: true` clustering (GPU-side, not leaflet.markercluster's
+// DOM-tree clustering). Popups are still plain HTML strings bound via
+// maplibregl.Popup — MapLibre popups are ordinary DOM outside the WebGL
+// canvas, so plain addEventListener works (unlike Leaflet, which needed
+// L.DomEvent.on to survive its own touch interception).
 
 const OPENFREEMAP_STYLE = "https://tiles.openfreemap.org/styles/liberty"
 // OpenFreeMap's own style already carries the OSM/OpenMapTiles attribution

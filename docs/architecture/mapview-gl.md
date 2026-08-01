@@ -1,8 +1,6 @@
 # MapViewGL (`components/map/MapViewGL.tsx`)
 
-The MapLibre GL JS + OpenFreeMap implementation of the map, built as part of the migration tracked in [issue #48](https://github.com/andreasknoor/accessibility-places/issues/48). Lives alongside `MapViewLeaflet.tsx` (the pre-migration Leaflet implementation, unchanged) behind an internal, non-user-facing engine flag in `components/map/MapView.tsx` (`NEXT_PUBLIC_MAP_ENGINE=maplibre`, default `leaflet`). Both implementations share one prop contract, `MapViewProps` in `lib/map/types.ts`.
-
-**This is not yet the default engine.** `MapViewLeaflet.tsx` stays live in production until Phase 4 verification (full manual matrix, including the native iOS/Android shells) passes. See the issue for the phase breakdown.
+The MapLibre GL JS + OpenFreeMap implementation of the map, built as part of the migration tracked in [issue #48](https://github.com/andreasknoor/accessibility-places/issues/48). **Sole map implementation since the v12.0 cutover** (Phase 4, step 17) — `MapView.tsx` renders it directly, with no engine flag. The pre-migration Leaflet implementation (`MapViewLeaflet.tsx`), the `NEXT_PUBLIC_MAP_ENGINE` switch, `leaflet`/`leaflet.markercluster`, and the Leaflet-specific architecture doc it lived in (`mapview.md`) are all deleted; this file is the only map doc going forward. `MapViewProps` (`lib/map/types.ts`) is now this component's own prop contract, not a shared dual-engine one.
 
 ## Self-hosted worker (CSP)
 
@@ -42,7 +40,7 @@ When a recentre does happen, the target is pushed as close to the **bottom** of 
 
 ## "Show on map" selection — a deliberate simplification of `zoomToShowLayer` (R3)
 
-MapLibre's native clustering has no direct equivalent of `leaflet.markercluster`'s `zoomToShowLayer(marker, callback)` (zoom to the *minimal* level at which a marker individually un-clusters, then run a callback). The async, correct equivalent (`getClusterLeaves()` to find which cluster contains the target, then `getClusterExpansionZoom()`) was judged too much added risk for a flow the Leaflet doc (`mapview.md`) already flags as the most timing-bug-prone code path in the app, with zero automated coverage to catch a regression.
+MapLibre's native clustering has no direct equivalent of `leaflet.markercluster`'s `zoomToShowLayer(marker, callback)` (zoom to the *minimal* level at which a marker individually un-clusters, then run a callback). The async, correct equivalent (`getClusterLeaves()` to find which cluster contains the target, then `getClusterExpansionZoom()`) was judged too much added risk for a flow the pre-migration Leaflet doc already flagged as the most timing-bug-prone code path in the app, with zero automated coverage to catch a regression.
 
 Implemented instead: a synchronous heuristic in the `[selectedId, panTrigger, mapReady]` effect —
 
@@ -50,6 +48,18 @@ Implemented instead: a synchronous heuristic in the `[selectedId, panTrigger, ma
 - Otherwise, jump straight to `PLACE_CLUSTER_DISABLE_AT_ZOOM` (17) — the zoom level clustering is disabled at — guaranteeing the marker un-clusters, then open its popup on `moveend`.
 
 **Known behavioural difference from Leaflet, not yet resolved:** this can over-zoom relative to the true minimal expansion zoom when the target was clustered (e.g. a cluster that would have separated at zoom 10 instead jumps straight to 17). Flagged for Phase 4 manual verification — worth a side-by-side comparison against the Leaflet engine before this is accepted as final, not just a stopgap.
+
+## "Search here" detection invariant (ported from the pre-migration Leaflet doc)
+
+The floating "Hier suchen" button (`onSearchHere`) re-runs the last venue search at the panned map centre. `MapViewGL` tells a user pan from an app-driven move purely by **time window**: every programmatic `easeTo`/`jumpTo`/`fitBounds` must set `lastProgrammaticMoveRef.current = Date.now()` immediately before the call, and the `moveend` handler ignores any move within the window `isWithinProgrammaticMoveWindow()` (`lib/map/geometry.ts`) covers of that stamp. A programmatic move that forgets to stamp surfaces a spurious button. The button is hidden in amenity focus mode (`focusModeRef` guard in `moveend` + `!focusMode` JSX gate), where re-running the venue search would silently drop the parking/WC layers. `onSearchHere` must be wired in **both** `HomeClient` (desktop) **and** `MobileLayout` — a missing prop makes the feature work locally but vanish when deployed.
+
+## Effect ordering invariant
+
+Two effects in `MapViewGL.tsx` must not race when a "show on map" button switches the mobile tab and sets `selectedId` in the same render: the *selection effect* (`deps: [selectedId, panTrigger, mapReady]`) pans/zooms and opens the popup, while the *visibility effect* (`deps: [visible, isFullscreen, mapReady]`) calls `map.resize()` then `fitBounds` on all results after a `setTimeout(50 ms)`. The visibility effect checks `selectedId` first and returns early (`if (selectedId) return`) so it never overwrites the selection zoom — do not remove or reorder that guard, or a "show on map" tap will flash the popup then zoom back out to show all results. `mapReady` must stay in the visibility effect's deps too: the map is lazily mounted on first map-tab activation on mobile, and without `mapReady` in the deps `map.resize()` never runs on first reveal, leaving the freshly-visible container at stale/zero dimensions for the selection effect's own pan/zoom math (this was the Leaflet-era `invalidateSize` bug; the MapLibre `map.resize()` call has the identical dependency).
+
+## CSS stacking context
+
+The desktop/mobile map container divs keep `isolation: isolate` (`app/HomeClient.tsx`, `components/mobile/MobileLayout.tsx`), inherited from the Leaflet era where Leaflet's own 200–700 pane z-indexes leaked into the page stacking context and painted over `ChatPanel`'s autocomplete dropdown. MapLibre's own DOM footprint (popups, controls) doesn't reproduce that specific bug, but `isolation: isolate` is otherwise harmless — kept defensively rather than removed and re-litigated without a concrete reason to.
 
 ## Rotation/pitch (R7)
 
@@ -59,8 +69,9 @@ Disabled at construction (`dragRotate: false`, `pitchWithRotate: false`, `touchP
 
 The migration plan flagged "no caching strategy for vector tiles/glyphs/sprite" as a risk. Checking `next.config.ts` found Serwist is fully **disabled** in production already (`disable: true`, with a hand-written self-destruct `public/sw.js` unregistering an old caching worker that shipped by accident once). There is no active service-worker caching layer for this risk to interact with.
 
-## Not yet ported / verified
+## Verification status (Phase 4, closed out at the v12.0 cutover)
 
-- Full manual test matrix (desktop × mobile web × Quickstart × iOS shell × Android shell) — see issue #48's Testing section. Only live-verified so far: desktop Chrome, core flow (search → markers → clustering → cluster-expansion-zoom → popup → "Zur Karte" pan+popup → results-list sync).
-- R11 (popup button touch handling on real mobile devices) — plain `addEventListener` is used (MapLibre popups are ordinary DOM outside the WebGL canvas, unlike Leaflet's touch-interception problem), but this needs verification on a real touchscreen, not just assumed.
-- E2E/visual regression automation — deferred by explicit choice (2026-07-31): the team is not adopting Playwright for this yet, given the added devDependency weight; live manual verification is the current safety net.
+Manual test matrix (desktop Turbo-Modus, mobile Turbo-Modus, Quickstart-Modus, international mode, native iOS/Android shells) signed off by manual testing ahead of the cutover — see the commit history from v11.24 through v12.0 for the individual bugs found and fixed along the way (popup positioning, clustering, attribution control, the Quickstart split ratio, etc.).
+
+- R11 (popup button touch handling on real mobile devices) — plain `addEventListener` is used (MapLibre popups are ordinary DOM outside the WebGL canvas, unlike Leaflet's touch-interception problem), which was the main touch-specific risk; covered by the manual pass above.
+- E2E/visual regression automation — deferred by explicit choice (2026-07-31): the team is not adopting Playwright for this yet, given the added devDependency weight; live manual verification was the safety net for this migration.

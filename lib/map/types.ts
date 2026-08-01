@@ -1,11 +1,8 @@
 import type { Place, ParkingSpot, AmenityFeature, AmenityType } from "@/lib/types"
 
-// Shared prop contract for both map implementations (MapViewLeaflet.tsx today,
-// MapViewGL.tsx during/after the MapLibre migration — issue #48). Extracted
-// so the two implementations and the MapView.tsx engine switcher can't drift
-// apart on what a "map" is expected to do. Any new map-level capability is
-// added here once, then implemented in both engines until Leaflet is deleted
-// (Phase 4, migration issue #48).
+// Prop contract for MapView.tsx / MapViewGL.tsx (the MapLibre engine adopted
+// in the issue #48 migration; the pre-migration Leaflet implementation and
+// this file's original dual-engine contract were retired at cutover, v12.0).
 export interface MapViewProps {
   places:        Place[]
   parkingSpots?: ParkingSpot[]

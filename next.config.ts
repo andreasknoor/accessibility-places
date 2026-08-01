@@ -27,7 +27,7 @@ const securityHeaders = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://tally.so https://va.vercel-scripts.com https://cloud.umami.is",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: https://*.tile.openstreetmap.org https://maps.gstatic.com https://upload.wikimedia.org https://commons.wikimedia.org https://lh3.googleusercontent.com",
+      "img-src 'self' data: https://maps.gstatic.com https://upload.wikimedia.org https://commons.wikimedia.org https://lh3.googleusercontent.com",
       // tiles.openfreemap.org: MapLibre (issue #48 migration) fetches vector tiles,
       // the style JSON, glyphs and the sprite all via fetch/XHR (from the main
       // thread and the worker), never via <img> — CSP treats that as connect-src
@@ -51,8 +51,10 @@ const nextConfig: NextConfig = {
   },
   // Next.js 16 defaults to Turbopack for build + dev. Keep it explicit: the
   // production build MUST use Turbopack. Switching to webpack (v3.84) broke the
-  // Leaflet map (dynamic CSS imports dropped / intermittent CSS race). This was
-  // the last known-good configuration.
+  // map (dynamic CSS imports dropped / intermittent CSS race) — true of the
+  // pre-migration Leaflet map then, and just as true of MapViewGL.tsx's own
+  // dynamic `maplibre-gl/dist/maplibre-gl.css` import now. This was the last
+  // known-good configuration.
   turbopack: {},
   async headers() {
     return [
