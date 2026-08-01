@@ -25,7 +25,17 @@ const securityHeaders = [
     key:   "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://tally.so https://va.vercel-scripts.com https://cloud.umami.is",
+      // 'unsafe-eval' was carried for years as a suspected Leaflet requirement,
+      // flagged in a 2026-05 security audit as "remove only after verification"
+      // rather than dropped outright, since nothing had confirmed it was
+      // actually needed vs. just never tested without it. Removed here (v12.1)
+      // now that Leaflet itself is gone (v12.0 cutover): a full manual pass
+      // (search, map interaction, popups, PlaceDebugSheet, settings, amenity
+      // search) against a production build with 'unsafe-eval' absent showed no
+      // CSP violations and no broken functionality. Re-add only if a future
+      // dependency genuinely needs runtime code evaluation — prefer fixing
+      // that dependency's usage first.
+      "script-src 'self' 'unsafe-inline' https://tally.so https://va.vercel-scripts.com https://cloud.umami.is",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https://maps.gstatic.com https://upload.wikimedia.org https://commons.wikimedia.org https://lh3.googleusercontent.com",
       // tiles.openfreemap.org: MapLibre (issue #48 migration) fetches vector tiles,
