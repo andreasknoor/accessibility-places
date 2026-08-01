@@ -1,10 +1,8 @@
 "use client"
 
 import { Fragment, type ReactNode } from "react"
-import { CheckCircle2, XCircle, HelpCircle, AlertCircle } from "lucide-react"
+import { CheckCircle2, XCircle, HelpCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { confidenceLabel } from "@/lib/matching/merge"
-import { useTranslations } from "@/lib/i18n"
 
 // The shared visual shell for an accessibility criterion: a colour-toned rounded
 // box with an icon + label + value header, optional indented detail rows, and an
@@ -24,15 +22,14 @@ interface Props {
   tone:         CriterionTone
   label:        string
   value?:       string
-  // When given AND the resulting level is "low", a small circle-exclamation
-  // icon renders after the value (results-list proposal, variant 3a) — flags
-  // a value resting on weak evidence (e.g. a single low-weight source) that
-  // would otherwise look as confident as a well-corroborated one. Deliberately
-  // NOT a triangle: AlertTriangle already means "sources disagree" elsewhere
-  // in this component tree (the conflict headerExtra below) — a different
-  // shape keeps the two warnings visually distinct. Only "low" is flagged,
-  // not "medium": the icon marks the exception, not the common case.
-  confidence?:  number
+  // Plain-language Nachsatz under the header row (v13, reliability tiers) —
+  // "von mehreren Quellen bestätigt" / "nur eine schwache Angabe" etc.,
+  // optionally folding in a verified-on-site date. Replaces the old
+  // confidence-based circle-exclamation icon: that icon flagged the same
+  // fact silently (aria-label only); this renders it as visible text instead,
+  // which is also where the reliability tier now lives — never a colour, and
+  // deliberately not the same shape as the conflict triangle (headerExtra).
+  reliabilityNote?: string
   // A `tone` on a row renders a leading ✓/✗ icon (and tints the value) so a
   // yes/no sub-fact reads as its own mini-criterion — e.g. "Dedicated wheelchair
   // spaces: No" gets a red ✗. Rows without a tone stay plain label/value.
@@ -53,11 +50,9 @@ interface Props {
   children?:    ReactNode
 }
 
-export default function CriterionBox({ tone, label, value, rows, note, rowsVariant = "detail", headerExtra, children, confidence }: Props) {
-  const t = useTranslations()
+export default function CriterionBox({ tone, label, value, rows, note, rowsVariant = "detail", headerExtra, children, reliabilityNote }: Props) {
   const style = CRITERION_STYLES[tone]
   const Icon  = style.icon
-  const showLowConfidence = tone !== "unknown" && confidence != null && confidenceLabel(confidence) === "low"
   return (
     <div className={cn("rounded-md px-2.5 py-1.5 flex flex-col gap-1", style.bg)}>
       {/* Header row */}
@@ -67,13 +62,14 @@ export default function CriterionBox({ tone, label, value, rows, note, rowsVaria
         {value && (
           <span className={cn("text-xs shrink-0 flex items-center gap-1", style.color)}>
             {value}
-            {showLowConfidence && (
-              <AlertCircle className="w-3 h-3 shrink-0 text-red-600" aria-label={t.results.lowConfidenceHint} />
-            )}
           </span>
         )}
         {headerExtra}
       </div>
+
+      {reliabilityNote && (
+        <p className="pl-5 text-[11px] text-muted-foreground -mt-0.5">{reliabilityNote}</p>
+      )}
 
       {children}
 

@@ -147,48 +147,53 @@ describe("PlaceDebugSheet accessibility section", () => {
     expect(screen.getByText("Ja")).toBeInTheDocument()
   })
 
-  it("shows confidence percentage in the section heading", () => {
+  // v13/docs/plans/reliability-tiers.md decision 1b: the section title no
+  // longer shows a percentage — it's a neutral "Verlässlichkeit" heading; the
+  // tier lives per-criterion (ReliabilityPill below) and the expandable
+  // breakdown shows evidence sums, not a percentage average.
+  it("shows a neutral section heading, no percentage", () => {
     renderSheet()
-    expect(screen.getByText(/75%/)).toBeInTheDocument()
+    expect(screen.getByText("Verlässlichkeit")).toBeInTheDocument()
+    expect(screen.queryByText(/75%/)).not.toBeInTheDocument()
   })
 
-  // ─── Variante B: the "Verlässlichkeit · X%" chip is the score-breakdown toggle ──
-  describe("confidence-score breakdown (chip toggle, Variante B)", () => {
+  // ─── Variante B: the "Verlässlichkeit" chip is the evidence-breakdown toggle ──
+  describe("reliability evidence breakdown (chip toggle, Variante B)", () => {
     it("does not show the calculation breakdown until the chip is toggled open", () => {
       renderSheet()
-      expect(screen.queryByText(/Score-Berechnung|Score calculation/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(/Nachweis je Kriterium|Evidence per criterion/i)).not.toBeInTheDocument()
     })
 
-    it("shows the formula breakdown after clicking the reliability chip", () => {
+    it("shows the evidence breakdown after clicking the reliability chip", () => {
       renderSheet()
-      fireEvent.click(screen.getByRole("button", { name: /75%/ }))
-      expect(screen.getByText(/Score-Berechnung|Score calculation/i)).toBeInTheDocument()
-      // ScoreContent's formula line: entrance @75% and parking @75% are known
-      // (value !== "unknown"); toilet is unknown and excluded from the average.
-      expect(screen.getByText(/\(75% \+ 75%\) ÷ 2 = 75%/)).toBeInTheDocument()
+      fireEvent.click(screen.getByRole("button", { name: "Verlässlichkeit" }))
+      expect(screen.getByText(/Nachweis je Kriterium|Evidence per criterion/i)).toBeInTheDocument()
+      // ScoreContent's evidence line: entrance and parking are both known
+      // (0.75 each, single OSM-family source); toilet is unknown → "—".
+      expect(screen.getAllByText(/OpenStreetMap 0\.75 = 0\.75/).length).toBeGreaterThan(0)
     })
 
     it("hides the breakdown again when the chip is toggled a second time", () => {
       renderSheet()
-      const chip = screen.getByRole("button", { name: /75%/ })
+      const chip = screen.getByRole("button", { name: "Verlässlichkeit" })
       fireEvent.click(chip)
-      expect(screen.getByText(/Score-Berechnung|Score calculation/i)).toBeInTheDocument()
+      expect(screen.getByText(/Nachweis je Kriterium|Evidence per criterion/i)).toBeInTheDocument()
       fireEvent.click(chip)
-      expect(screen.queryByText(/Score-Berechnung|Score calculation/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(/Nachweis je Kriterium|Evidence per criterion/i)).not.toBeInTheDocument()
     })
 
     it("sets aria-expanded on the chip to reflect open/closed state", () => {
       renderSheet()
-      const chip = screen.getByRole("button", { name: /75%/ })
+      const chip = screen.getByRole("button", { name: "Verlässlichkeit" })
       expect(chip).toHaveAttribute("aria-expanded", "false")
       fireEvent.click(chip)
       expect(chip).toHaveAttribute("aria-expanded", "true")
     })
   })
 
-  it("shows a per-criterion reliability pill for known values, not for unknown (proposal A2)", () => {
-    // Fixture: entrance yes @0.75 → "Verlässlich"; toilet unknown → no pill;
-    // a lone weak source (Google @0.35) on toilet → "Unsicher".
+  it("shows a per-criterion reliability pill for known values, not for unknown (v13: neutral 4-tier)", () => {
+    // Fixture: entrance yes @0.75 (OSM alone) → "gut"; toilet unknown → no
+    // pill; a lone weak source (Google @0.35) on toilet → "gering".
     renderSheet(makePlace({
       accessibility: {
         entrance: { value: "yes", confidence: 0.75, conflict: false, sources: [{ sourceId: "osm", value: "yes", rawValue: "yes", reliabilityWeight: 0.75 }], details: {} },
@@ -196,9 +201,9 @@ describe("PlaceDebugSheet accessibility section", () => {
         parking:  { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
       },
     }))
-    // entrance → Verlässlich, toilet → Unsicher; both pills present
-    expect(screen.getByText("Verlässlich")).toBeInTheDocument()
-    expect(screen.getByText("Unsicher")).toBeInTheDocument()
+    // entrance → gut, toilet → gering; both pills present
+    expect(screen.getByText("gut")).toBeInTheDocument()
+    expect(screen.getByText("gering")).toBeInTheDocument()
   })
 
   it("shows no reliability pill when every criterion is unknown", () => {
@@ -209,9 +214,9 @@ describe("PlaceDebugSheet accessibility section", () => {
         parking:  { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
       },
     }))
-    expect(screen.queryByText("Verlässlich")).toBeNull()
-    expect(screen.queryByText("Mittel")).toBeNull()
-    expect(screen.queryByText("Unsicher")).toBeNull()
+    expect(screen.queryByText("sehr hoch")).toBeNull()
+    expect(screen.queryByText("gut")).toBeNull()
+    expect(screen.queryByText("gering")).toBeNull()
   })
 
   it("shows seating row only when seating data is present", () => {

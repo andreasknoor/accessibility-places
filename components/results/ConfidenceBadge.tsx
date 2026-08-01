@@ -1,36 +1,31 @@
 "use client"
 
-import { useState } from "react"
-import { BadgeCheck } from "lucide-react"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { BottomSheet } from "@/components/ui/bottom-sheet"
+// v13 (docs/plans/reliability-tiers.md): the old place-wide percentage badge
+// and its ScoreContent tooltip breakdown, plus the separate VerifiedBadge
+// footer icon, are gone. What's left in this file is only the evidence-sum
+// breakdown table, now rendered exclusively inside PlaceDebugSheet's
+// expandable "Nachweis je Kriterium" section (never on the card itself, and
+// never behind a colour-coded pill) — kept as a named export from this file
+// (rather than renaming/moving it) to avoid rippling the import in
+// PlaceDebugSheet.tsx for a change that's purely internal to this component.
+
 import { useTranslations } from "@/lib/i18n"
-import { useIsMobile } from "@/hooks/useIsMobile"
-import { confidenceLabel } from "@/lib/matching/merge"
 import { SOURCE_LABELS } from "@/lib/config"
+import { CRITERION_STYLES } from "@/components/results/CriterionBox"
+import { criterionTier, attrVerifiedAt } from "@/lib/reliability"
 import { cn } from "@/lib/utils"
-import type { Place } from "@/lib/types"
+import type { Place, AccessibilityAttribute, SourceId } from "@/lib/types"
 
-interface Props {
-  confidence: number
-  place?:     Place
-  className?: string
+function evidenceLine(attr: AccessibilityAttribute): string {
+  const contributing = attr.sources.filter((s) => s.value === attr.value)
+  if (contributing.length === 0) return "—"
+  const parts = contributing
+    .slice()
+    .sort((a, b) => b.reliabilityWeight - a.reliabilityWeight)
+    .map((s) => `${SOURCE_LABELS[s.sourceId as SourceId] ?? s.sourceId} ${s.reliabilityWeight.toFixed(2)}`)
+  return `${parts.join(" + ")} = ${attr.confidence.toFixed(2)}`
 }
 
-const COLORS = {
-  high:   "bg-green-100 text-green-800 border-green-200",
-  medium: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  low:    "bg-red-100 text-red-800 border-red-200",
-}
-
-// Exported so PlaceDebugSheet can render the same breakdown inline (Variante B):
-// the mobile confidence badge no longer opens its own quick-view sheet — tapping
-// it now bubbles up to the card's own detail-sheet trigger like everything else
-// (decision D2c), so this content needs a home inside the full detail sheet.
 export function ScoreContent({ place }: { place: Place }) {
   const t = useTranslations()
   const valueLabel = (key: "entrance" | "toilet" | "parking" | "seating", v: string): string => {
@@ -53,168 +48,47 @@ export function ScoreContent({ place }: { place: Place }) {
       : []),
   ]
 
-  const included = criteria.filter((c) => c.attr.value !== "unknown")
-  const sum = included.reduce((s, c) => s + c.attr.confidence, 0)
-  const avg = included.length > 0 ? sum / included.length : 0
-
-  const formulaParts = included.map((c) => `${Math.round(c.attr.confidence * 100)}%`)
-  const formula =
-    included.length > 0
-      ? `(${formulaParts.join(" + ")}) ÷ ${included.length} = ${Math.round(avg * 100)}%`
-      : "—"
-
   return (
     <div className="space-y-2 text-xs">
-      <p className="text-muted-foreground italic leading-snug">
-        {t.results.scoreDataQualityNote}
-      </p>
       <table className="w-full border-collapse">
         <thead>
           <tr className="text-muted-foreground">
-            <th className="text-left font-normal pb-1">{t.results.scoreCriterion}</th>
-            <th className="text-right font-normal pb-1">{t.results.scoreValueWeight}</th>
+            <th className="text-left font-normal pb-1">{t.results.scoreCriterionCol}</th>
+            <th className="text-right font-normal pb-1">{t.results.scoreEvidenceCol}</th>
           </tr>
         </thead>
         <tbody>
           {criteria.map(({ key, label, attr }) => {
             const isKnown = attr.value !== "unknown"
+            const tier = criterionTier(attr)
+            const verifiedIso = attrVerifiedAt(attr)
+            const verifiedLabel = verifiedIso
+              ? (() => {
+                  const s = t.results.verifiedAt(verifiedIso, [])
+                  return s.charAt(0).toLowerCase() + s.slice(1)
+                })()
+              : undefined
             return (
               <tr key={key} className={isKnown ? "" : "opacity-40"}>
-                <td className="py-0.5">{isKnown ? "✓" : "–"} {label}</td>
-                <td className="py-0.5 text-right tabular-nums">
-                  {isKnown
-                    ? `${valueLabel(key, attr.value)} · ${Math.round(attr.confidence * 100)}%`
-                    : "—"}
+                <td className="py-0.5 align-top">
+                  <span className={cn(isKnown && CRITERION_STYLES[attr.value].color)}>
+                    {isKnown ? "✓" : "–"} {label}
+                  </span>
+                  {isKnown && <div className="text-muted-foreground">{valueLabel(key, attr.value)}</div>}
+                </td>
+                <td className="py-0.5 text-right tabular-nums align-top">
+                  {isKnown ? (
+                    <>
+                      <div className="font-medium">{t.results.reliabilityNote(tier, verifiedLabel)}</div>
+                      <div className="text-muted-foreground font-mono text-[10px]">{evidenceLine(attr)}</div>
+                    </>
+                  ) : "—"}
                 </td>
               </tr>
             )
           })}
         </tbody>
       </table>
-
-      <div className="border-t border-border pt-1.5 font-mono text-muted-foreground break-all">
-        {formula}
-      </div>
     </div>
-  )
-}
-
-export function collectVerifiedSources(place: Place) {
-  return [
-    place.accessibility.entrance,
-    place.accessibility.toilet,
-    place.accessibility.parking,
-    ...(place.accessibility.seating ? [place.accessibility.seating] : []),
-  ].flatMap((a) => a.sources.filter((s) => s.verifiedRecently))
-}
-
-function latestVerifiedAt(place: Place): string | undefined {
-  const dates = collectVerifiedSources(place)
-    .map((s) => s.verifiedAt)
-    .filter((d): d is string => Boolean(d))
-  if (dates.length === 0) return undefined
-  return dates.slice().sort().pop()
-}
-
-function uniqueSourceLabels(place: Place): string[] {
-  const seen = new Set<string>()
-  return collectVerifiedSources(place)
-    .map((s) => SOURCE_LABELS[s.sourceId] ?? s.sourceId)
-    .filter((label) => { if (seen.has(label)) return false; seen.add(label); return true })
-}
-
-export function VerifiedBadge({ place }: { place: Place }) {
-  const t        = useTranslations()
-  const isMobile = useIsMobile()
-  const [sheetOpen, setSheetOpen] = useState(false)
-
-  if (collectVerifiedSources(place).length === 0) return null
-
-  const verifiedDate  = latestVerifiedAt(place)
-  const ageLabel      = verifiedDate ? t.results.verifiedAge(verifiedDate) : ""
-  const sourceLabels  = uniqueSourceLabels(place)
-  const detailText    = verifiedDate
-    ? t.results.verifiedAt(verifiedDate, sourceLabels)
-    : t.results.verifiedRecently
-
-  const icon = (
-    <span role="img" aria-label={detailText} className="inline-flex items-center gap-0.5 text-emerald-600">
-      <BadgeCheck className="w-3.5 h-3.5" />
-      {ageLabel && (
-        <span className="text-[10px] font-medium tabular-nums">{ageLabel}</span>
-      )}
-    </span>
-  )
-
-  if (isMobile) {
-    return (
-      <>
-        <button
-          onClick={(e) => { e.stopPropagation(); setSheetOpen(true) }}
-          className="p-1 -m-1 leading-none"
-          aria-label={detailText}
-        >
-          {icon}
-        </button>
-        <BottomSheet
-          open={sheetOpen}
-          onClose={() => setSheetOpen(false)}
-          title={t.results.verifiedRecently}
-        >
-          <p className="text-sm">{detailText}</p>
-        </BottomSheet>
-      </>
-    )
-  }
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="cursor-default inline-flex">{icon}</span>
-      </TooltipTrigger>
-      <TooltipContent side="top" className="text-xs">
-        {detailText}
-      </TooltipContent>
-    </Tooltip>
-  )
-}
-
-export default function ConfidenceBadge({ confidence, place, className }: Props) {
-  const t        = useTranslations()
-  const isMobile = useIsMobile()
-  const level    = confidenceLabel(confidence)
-  const pct      = Math.round(confidence * 100)
-
-  const badge = (
-    <span className={cn(
-      "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
-      COLORS[level],
-      place ? "cursor-pointer" : "cursor-default",
-    )}>
-      {t.results.scorePrefix}{pct}% · {t.results.confidence[level]}
-    </span>
-  )
-
-  // Mobile: no own tap action — the badge sits inside PlaceCard's single
-  // detail-sheet tap target and deliberately does NOT stopPropagation (D2c),
-  // so a tap here opens the same detail sheet as the rest of the card, which
-  // now shows this breakdown inline (see ScoreContent in PlaceDebugSheet).
-  // Desktop keeps the hover tooltip — a different interaction channel than
-  // click, so it doesn't reintroduce the "unexpected exception" problem.
-  const badgeWithInteraction = place ? (
-    isMobile ? badge : (
-      <Tooltip>
-        <TooltipTrigger asChild>{badge}</TooltipTrigger>
-        <TooltipContent side="left" className="bg-white text-zinc-900 border border-zinc-200 shadow-lg p-3 w-[min(22rem,90vw)]">
-          <ScoreContent place={place} />
-        </TooltipContent>
-      </Tooltip>
-    )
-  ) : badge
-
-  return (
-    <span className={cn("inline-flex items-center", className)}>
-      {badgeWithInteraction}
-    </span>
   )
 }

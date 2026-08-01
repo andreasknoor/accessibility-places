@@ -1,12 +1,20 @@
 import { describe, it, expect } from "vitest"
 import { render, screen } from "@testing-library/react"
-import ConfidenceBadge, { VerifiedBadge } from "@/components/results/ConfidenceBadge"
-import { TooltipProvider } from "@/components/ui/tooltip"
+import { LocaleProvider } from "@/lib/i18n"
+import { ScoreContent } from "@/components/results/ConfidenceBadge"
 import { buildAttribute, emptyAttribute } from "@/lib/matching/merge"
 import type { Place } from "@/lib/types"
 
+// v13/docs/plans/reliability-tiers.md: the old place-wide percentage badge
+// (ConfidenceBadge) and its VerifiedBadge footer icon are gone — the
+// verified-on-site date now folds into the per-criterion Nachsatz (see
+// A11yAttribute.test / CriterionBox.test), and the judgement axis moved to
+// JudgmentLine.test. All that's left in this file is the evidence-sum
+// breakdown table, now rendered only inside PlaceDebugSheet's expandable
+// section.
+
 function renderWithProvider(ui: React.ReactElement) {
-  return render(<TooltipProvider>{ui}</TooltipProvider>)
+  return render(<LocaleProvider initialLocale="de">{ui}</LocaleProvider>)
 }
 
 function makePlace(overrides: Partial<Place> = {}): Place {
@@ -28,50 +36,56 @@ function makePlace(overrides: Partial<Place> = {}): Place {
   }
 }
 
-describe("ConfidenceBadge", () => {
-  it("shows percentage", () => {
-    render(<ConfidenceBadge confidence={0.85} />)
-    expect(screen.getByText(/85%/)).toBeInTheDocument()
-  })
-
-  it("shows high label for ≥ 0.70", () => {
-    render(<ConfidenceBadge confidence={0.75} />)
-    // Label text depends on locale (de default in tests)
-    const badge = screen.getByText(/75%/)
-    expect(badge).toBeInTheDocument()
-  })
-
-  it("renders with 0% confidence", () => {
-    render(<ConfidenceBadge confidence={0} />)
-    expect(screen.getByText(/0%/)).toBeInTheDocument()
-  })
-
-  it("renders with 100% confidence", () => {
-    render(<ConfidenceBadge confidence={1} />)
-    expect(screen.getByText(/100%/)).toBeInTheDocument()
-  })
-
-  it("does NOT show the verified icon when no source is verifiedRecently", () => {
+describe("ScoreContent (evidence-sum breakdown)", () => {
+  it("shows the sehr_hoch reliability phrase for a criterion confirmed by a single top-weight source", () => {
+    // Reisen für Alle alone (weight 1.0) reaches sehr_hoch on its own —
+    // the phrase must not claim plurality ("multiple sources") when there's
+    // only one (decision: a certified single survey can be "sehr_hoch" too).
     const place = makePlace({
       accessibility: {
-        entrance: buildAttribute("osm", "yes", "yes", {}),  // no boost
+        entrance: buildAttribute("reisen_fuer_alle", "yes", "yes", {}),
         toilet:   emptyAttribute(),
         parking:  emptyAttribute(),
       },
     })
-    renderWithProvider(<VerifiedBadge place={place} />)
-    expect(screen.queryByLabelText(/verifiziert|verified/i)).not.toBeInTheDocument()
+    renderWithProvider(<ScoreContent place={place} />)
+    expect(screen.getByText("Besonders verlässlich belegt")).toBeInTheDocument()
   })
 
-  it("shows the verified icon when a source carries verifiedRecently", () => {
+  it("shows the evidence line with source label and weight", () => {
     const place = makePlace({
       accessibility: {
-        entrance: buildAttribute("osm", "yes", "yes", {}, true, 1.2),  // boost → verifiedRecently=true
+        entrance: buildAttribute("osm", "yes", "yes", {}),
         toilet:   emptyAttribute(),
         parking:  emptyAttribute(),
       },
     })
-    renderWithProvider(<VerifiedBadge place={place} />)
-    expect(screen.getByLabelText(/verifiziert|verified/i)).toBeInTheDocument()
+    renderWithProvider(<ScoreContent place={place} />)
+    expect(screen.getByText(/OpenStreetMap 0\.75 = 0\.75/)).toBeInTheDocument()
+  })
+
+  it("marks an unknown criterion with an em dash, not a tier", () => {
+    const place = makePlace() // all unknown
+    renderWithProvider(<ScoreContent place={place} />)
+    expect(screen.queryByText(/sehr hoch|^gut$|gering/)).not.toBeInTheDocument()
+    expect(screen.getAllByText("—").length).toBeGreaterThan(0)
+  })
+
+  it("sums two distinct-family sources uncapped (osm + google → sehr_hoch)", () => {
+    const acloud = buildAttribute("osm", "yes", "yes", {})
+    const merged = {
+      ...acloud,
+      confidence: 1.10,
+      sources: [
+        { sourceId: "osm" as const, value: "yes" as const, rawValue: "yes", reliabilityWeight: 0.75, details: {} },
+        { sourceId: "google_places" as const, value: "yes" as const, rawValue: "true", reliabilityWeight: 0.35, details: {} },
+      ],
+    }
+    const place = makePlace({
+      accessibility: { entrance: merged, toilet: emptyAttribute(), parking: emptyAttribute() },
+    })
+    renderWithProvider(<ScoreContent place={place} />)
+    expect(screen.getByText("Besonders verlässlich belegt")).toBeInTheDocument()
+    expect(screen.getByText(/1\.10/)).toBeInTheDocument()
   })
 })

@@ -11,33 +11,19 @@ function renderBox(props: Partial<React.ComponentProps<typeof CriterionBox>> = {
   )
 }
 
-// Results-list proposal (variant 3a): a small warning icon flags a value
-// resting on weak evidence (low confidence) — only for "low", never for
-// "medium"/"high"/"unknown". Deliberately not a triangle (that shape already
-// means "sources disagree" elsewhere in this component tree).
-describe("CriterionBox — low-confidence warning icon", () => {
-  it("shows the warning icon when confidence is low", () => {
-    renderBox({ confidence: 0.35 })
-    expect(screen.getByLabelText("Geringe Verlässlichkeit")).toBeInTheDocument()
+// v13/docs/plans/reliability-tiers.md: the old confidence-based circle-
+// exclamation icon (aria-label only, no visible text) was replaced by a
+// visible plain-language Nachsatz — the reliability tier now renders as
+// text under the header row, computed by the caller (A11yAttribute) via
+// lib/reliability's criterionTier and passed in as `reliabilityNote`.
+describe("CriterionBox — reliability Nachsatz", () => {
+  it("renders the given reliability note as visible text under the header", () => {
+    renderBox({ reliabilityNote: "Nur eine schwache Angabe" })
+    expect(screen.getByText("Nur eine schwache Angabe")).toBeInTheDocument()
   })
 
-  it("does not show it for medium confidence", () => {
-    renderBox({ confidence: 0.5 })
-    expect(screen.queryByLabelText("Geringe Verlässlichkeit")).toBeNull()
-  })
-
-  it("does not show it for high confidence", () => {
-    renderBox({ confidence: 0.85 })
-    expect(screen.queryByLabelText("Geringe Verlässlichkeit")).toBeNull()
-  })
-
-  it("does not show it when confidence is omitted", () => {
-    renderBox()
-    expect(screen.queryByLabelText("Geringe Verlässlichkeit")).toBeNull()
-  })
-
-  it("does not show it for an unknown value even at low confidence", () => {
-    renderBox({ tone: "unknown", value: "Unbekannt", confidence: 0 })
-    expect(screen.queryByLabelText("Geringe Verlässlichkeit")).toBeNull()
+  it("renders nothing extra when no reliability note is given", () => {
+    const { container } = renderBox()
+    expect(container.querySelector(".text-\\[11px\\]")).not.toBeInTheDocument()
   })
 })

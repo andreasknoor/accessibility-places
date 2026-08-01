@@ -4,12 +4,8 @@ import type {
   A11yValue,
   SourceAttribution,
   SourceId,
-  EntranceDetails,
-  ToiletDetails,
-  ParkingDetails,
-  SeatingDetails,
 } from "../types"
-import { RELIABILITY_WEIGHTS, OSM_ENTRANCE_WEIGHT_FACTOR, CONFIDENCE_THRESHOLDS } from "../config"
+import { RELIABILITY_WEIGHTS, OSM_ENTRANCE_WEIGHT_FACTOR, CONFIDENCE_THRESHOLDS, SOURCE_FAMILY, type ConfidenceTier } from "../config"
 
 // ─── Merge two AccessibilityAttribute objects from different sources ────────
 
@@ -33,6 +29,24 @@ function mergeAttribute(
   return computeAttribute(sources, existing.details, incoming.details)
 }
 
+// ─── Family-aware evidence sum ─────────────────────────────────────────────
+// A "family" (SOURCE_FAMILY in lib/config.ts) is one underlying observation —
+// distinct API keys/approval-levels of the same dataset don't count twice.
+// Within a family, only the strongest agreeing source counts; across
+// families, evidence ADDS, uncapped (docs/plans/reliability-tiers.md).
+
+function evidenceSum(known: SourceAttribution[], value: A11yValue): number {
+  const byFamily = new Map<string, number>()
+  for (const s of known) {
+    if (s.value !== value) continue
+    const fam = SOURCE_FAMILY[s.sourceId] ?? s.sourceId
+    byFamily.set(fam, Math.max(byFamily.get(fam) ?? 0, s.reliabilityWeight))
+  }
+  let sum = 0
+  for (const w of byFamily.values()) sum += w
+  return sum
+}
+
 // ─── Weighted vote over all source attributions ────────────────────────────
 
 function computeAttribute(
@@ -47,21 +61,17 @@ function computeAttribute(
     return { value: "unknown", confidence: 0, conflict: false, sources, details }
   }
 
-  const scores: Record<A11yValue, number> = { yes: 0, limited: 0, no: 0, unknown: 0 }
-  for (const s of known) {
-    scores[s.value] += s.reliabilityWeight
+  const scores: Record<"yes" | "limited" | "no", number> = {
+    yes:     evidenceSum(known, "yes"),
+    limited: evidenceSum(known, "limited"),
+    no:      evidenceSum(known, "no"),
   }
-
-  const total   = scores.yes + scores.limited + scores.no
-  const winner  = (["yes", "limited", "no"] as const).reduce((a, b) =>
+  const winner = (["yes", "limited", "no"] as const).reduce((a, b) =>
     scores[a] >= scores[b] ? a : b,
   )
-  const baseConf   = Math.min(scores[winner], 1.0)
-  const confidence = winner === "yes" || winner === "limited"
-    ? toiletConfidence(details, baseConf, sources)
-    : baseConf
+  const confidence = scores[winner]
 
-  // Conflict: runner-up has more than half the winner's weight
+  // Conflict: runner-up has more than half the winner's (family-deduped) evidence.
   const runnerUp = (["yes", "limited", "no"] as const)
     .filter((v) => v !== winner)
     .reduce((a, b) => (scores[a] >= scores[b] ? a : b))
@@ -174,6 +184,12 @@ export function finalisePlaceConfidence(place: Place): Place {
 }
 
 // ─── Overall confidence (average of known criteria) ───────────────────────
+// Internal-only baseline for `Place.overallConfidence`, set once at merge
+// time. `/api/search` and `lib/seo-search.ts` both overwrite this with
+// `computeFilteredConfidence` (below) before a place is ever returned — this
+// function's output is never shown to a user, only briefly held as a
+// placeholder. Kept as-is (v13): purely a sort-key input now, never a
+// displayed percentage.
 
 function computeOverallConfidence(place: Place): number {
   const attrs = [
@@ -187,12 +203,16 @@ function computeOverallConfidence(place: Place): number {
   return attrs.reduce((sum, a) => sum + a.confidence, 0) / attrs.length
 }
 
-// ─── Overall data-quality confidence ─────────────────────────────────────
-// Active filter criteria always participate in the average — unknown values
-// contribute 0. This prevents a single high-confidence criterion from
-// inflating the score when other active criteria are unknown (which happens
-// when acceptUnknown lets through places with incomplete data).
-// Inactive criteria are included only when they have a known value.
+// ─── Overall data-quality confidence (internal sort key only, v13) ────────
+// No longer displayed anywhere (docs/plans/reliability-tiers.md) — used
+// exclusively as the search-result and SEO sort key. Active filter criteria
+// always participate in the average — unknown values contribute 0. This
+// prevents a single high-confidence criterion from inflating the score when
+// other active criteria are unknown (which happens when acceptUnknown lets
+// through places with incomplete data). Inactive criteria are included only
+// when they have a known value. Since v13 the underlying attr.confidence
+// values are uncapped family-evidence sums (can exceed 1.0 for multi-family
+// agreement), so this average can too — harmless for a pure sort key.
 
 export function computeFilteredConfidence(
   place: Place,
@@ -246,41 +266,14 @@ function findPrimarySource(place: Place): SourceId {
   return order.find((id) => sourceIds.has(id)) ?? place.sourceRecords[0]?.sourceId ?? "osm"
 }
 
-// ─── Detect toilet details by presence of toilet-specific keys ────────────
-// Used to apply toilet-specific confidence rules without passing an explicit type.
-
-const TOILET_KEYS = [
-  "isDesignated","hasGrabBars","grabBarsOnBothSides","grabBarsFoldable",
-  "turningRadiusCm","hasEmergencyPullstring","isInside",
-] as const
-
-function hasToiletShape(d: AccessibilityAttribute["details"] | undefined): boolean {
-  if (!d) return false
-  return Object.keys(d).some((k) => TOILET_KEYS.includes(k as typeof TOILET_KEYS[number]))
-}
-
-// Cap toilet confidence at 0.9 when only weak signals are present so that
-// merging several modest sources (e.g. OSM toilet=yes + Google's bare
-// wheelchairAccessibleRestroom flag) cannot accidentally claim 100 %. Only
-// `isDesignated` or `hasGrabBars` evidence promotes the score to 1.0.
-//
-// We also inspect each source's own details — `mergeDetails` drops keys whose
-// values are all `undefined`, so a sibling source with empty `{}` (Google
-// Places) can otherwise wipe out the toilet shape from the merged object.
-function toiletConfidence(
-  details: AccessibilityAttribute["details"],
-  base: number,
-  sources?: SourceAttribution[],
-): number {
-  const d = details as ToiletDetails
-  if (d.isDesignated === true || d.hasGrabBars === true) return 1.0
-
-  const isToilet = hasToiletShape(details) || (sources?.some((s) => hasToiletShape(s.details)) ?? false)
-  if (isToilet) return Math.min(base, 0.9)
-  return base
-}
-
 // ─── Build an AccessibilityAttribute from a single source ─────────────────
+//
+// (The old toilet-specific 0.9 confidence cap — `toiletConfidence` — was
+// removed in v13/reliability-tiers: it existed to stop a PERCENTAGE display
+// from claiming "100%" on thin toilet detail. That concern doesn't map onto
+// a tier system built around source CORROBORATION rather than data
+// completeness — a toilet can now reach "sehr_hoch" like any other
+// criterion. See docs/plans/reliability-tiers.md, decision 4.)
 
 export function buildAttribute(
   sourceId: SourceId,
@@ -311,7 +304,7 @@ export function buildAttribute(
     ...(verifiedAt ? { verifiedAt } : {}),
   }
 
-  const confidence = value === "unknown" ? 0 : toiletConfidence(details, weight, [src])
+  const confidence = value === "unknown" ? 0 : weight
   return {
     value,
     confidence,
@@ -321,23 +314,34 @@ export function buildAttribute(
   }
 }
 
-export function confidenceLabel(c: number): "high" | "medium" | "low" {
-  if (c >= CONFIDENCE_THRESHOLDS.high)   return "high"
-  if (c >= CONFIDENCE_THRESHOLDS.medium) return "medium"
-  return "low"
+// ─── Reliability tier (v13, docs/plans/reliability-tiers.md) ──────────────
+// Replaces the old 3-tier confidenceLabel (a 0-1 percentage read as a single
+// traffic light for the whole place). A tier is now PER CRITERION, derived
+// from the additive family-evidence sum, and rendered as plain-language
+// Nachsatz text under that criterion's own row — never as a colour and
+// never as a place-level score. A conflicting runner-up caps the tier at
+// "gut" (passed via the attribute's own `conflict` flag) — it can still read
+// "gering" if the evidence itself is thin, just never "sehr_hoch".
+export function confidenceTier(confidence: number, conflict = false): ConfidenceTier {
+  if (confidence <= 0) return "keine"
+  if (confidence >= CONFIDENCE_THRESHOLDS.sehrHoch) return conflict ? "gut" : "sehr_hoch"
+  if (confidence >= CONFIDENCE_THRESHOLDS.gut) return "gut"
+  return "gering"
 }
 
 // Trigger for the "Achtung: evtl. nicht barrierefrei" micro-copy
 // (docs/prototypes/unknown-value-microcopy.html) — entrance or toilet being
-// "no" or "unknown" is exactly the pattern users misread as "the app has a
-// data error" rather than "we simply don't know". Deliberately excludes
-// parking/seating: those are secondary criteria with much sparser data and
-// would fire the warning far too often to stay meaningful. Shared by
-// PlaceCard, PlaceDebugSheet, and MapView's venue popup so the three
-// surfaces can never disagree on when to show it.
+// "no" is the pattern users misread as "the app has a data error" rather
+// than "we simply don't know" — the "unknown" case was DROPPED from this
+// trigger in v13 (docs/plans/reliability-tiers.md, decision 10): the
+// judgement line now says "keine Angabe zu X" explicitly for that case, and
+// a second red box for the same fact competed with, rather than reinforced,
+// that message. Deliberately excludes parking/seating: those are secondary
+// criteria with much sparser data and would fire the warning far too often
+// to stay meaningful. Shared by PlaceCard, PlaceDebugSheet, and MapView's
+// venue popup so the three surfaces can never disagree on when to show it.
 export function placeMayNotBeAccessible(place: Place): boolean {
-  const flagged = (v: string) => v === "no" || v === "unknown"
-  return flagged(place.accessibility.entrance.value) || flagged(place.accessibility.toilet.value)
+  return place.accessibility.entrance.value === "no" || place.accessibility.toilet.value === "no"
 }
 
 // ─── Filter places by active criteria ─────────────────────────────────────

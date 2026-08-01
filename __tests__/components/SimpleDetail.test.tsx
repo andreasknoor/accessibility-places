@@ -84,24 +84,31 @@ describe("SimpleDetail", () => {
     expect(onOpenSettings).toHaveBeenCalledTimes(1)
   })
 
-  // Confidence score — the same ConfidenceBadge PlaceCard/PlaceDebugSheet use,
-  // between the criteria box and the possibly-not-accessible warning; no
-  // `place` prop passed to it, so it stays a plain badge without the
-  // interactive score-formula breakdown (out of scope here, like the rest of
-  // this reduced screen).
-  it("shows the confidence score badge with its percentage and label", () => {
-    renderWithProvider(<SimpleDetail place={makePlace({ overallConfidence: 0.75 })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />)
-    expect(screen.getByText("Daten: 75% · Verlässlich")).toBeInTheDocument()
+  // Fixed, absolute headline (v13, decision 7) — replaces the old percentage
+  // confidence badge. Quickstart's preset is fixed by app design (unlike
+  // Turbo's user-chosen filters), so the headline states the judgement
+  // outright. Uses category "museum" (not in SIMPLE_TOILET_REQUIRED_CATEGORIES)
+  // so the toilet value can't affect this judgement — only entrance does.
+  it("shows the fixed 'Barrierefrei nutzbar' headline when entrance passes cleanly", () => {
+    renderWithProvider(<SimpleDetail place={makePlace({ category: "museum" })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />)
+    expect(screen.getByText("Barrierefrei nutzbar")).toBeInTheDocument()
   })
 
-  it("reflects a low confidence score with its own label", () => {
-    renderWithProvider(<SimpleDetail place={makePlace({ overallConfidence: 0.2 })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />)
-    expect(screen.getByText("Daten: 20% · Unsicher")).toBeInTheDocument()
+  it("shows the caveat headline when entrance is 'limited'", () => {
+    const place = makePlace({ category: "museum" })
+    renderWithProvider(
+      <SimpleDetail
+        place={{ ...place, accessibility: { ...place.accessibility, entrance: buildAttribute("osm", "limited", "limited", {}) } }}
+        onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()}
+      />,
+    )
+    expect(screen.getByText("Barrierefrei nutzbar – mit Einschränkung")).toBeInTheDocument()
   })
 
-  // Same trigger (placeMayNotBeAccessible: entrance/toilet "no"/"unknown") and
-  // wording as PlaceCard/PlaceDebugSheet's shared NotAccessibleWarningBox —
-  // Simple View's reduced detail screen must not silently drop this warning.
+  // Same trigger (placeMayNotBeAccessible: entrance/toilet "no" only, since
+  // v13/decision 10 — "unknown" was dropped, see below) and wording as
+  // PlaceCard/PlaceDebugSheet's shared NotAccessibleWarningBox — Simple
+  // View's reduced detail screen must not silently drop this warning.
   describe("possibly-not-accessible warning", () => {
     it("is hidden when neither entrance nor toilet is flagged (default fixture: yes/limited)", () => {
       renderWithProvider(<SimpleDetail place={makePlace()} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />)
@@ -119,10 +126,25 @@ describe("SimpleDetail", () => {
       expect(screen.getByRole("alert")).toHaveTextContent("Achtung: Evtl. nicht barrierefrei.")
     })
 
-    it("shows the warning when toilet is 'unknown'", () => {
+    // v13/decision 10: "unknown" was DROPPED from this trigger — the
+    // judgement headline above now says "keine Angabe" explicitly for that
+    // case, and a second red box for the same fact competed with, rather
+    // than reinforced, that message.
+    it("does NOT show the warning when toilet is merely 'unknown'", () => {
       renderWithProvider(
         <SimpleDetail
           place={makePlace({ accessibility: { ...makePlace().accessibility, toilet: buildAttribute("osm", "unknown", "unknown", {}) } })}
+          onBack={vi.fn()}
+          onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()}
+        />,
+      )
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    })
+
+    it("shows the warning when toilet is 'no'", () => {
+      renderWithProvider(
+        <SimpleDetail
+          place={makePlace({ accessibility: { ...makePlace().accessibility, toilet: buildAttribute("osm", "no", "no", {}) } })}
           onBack={vi.fn()}
           onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()}
         />,

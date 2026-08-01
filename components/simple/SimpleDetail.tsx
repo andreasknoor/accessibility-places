@@ -5,11 +5,11 @@ import { NativeLink } from "@/components/ui/native-link"
 import ModeSwitcher from "@/components/ModeSwitcher"
 import NavigateButton from "@/components/ui/navigate-button"
 import { NotAccessibleWarningBox } from "@/components/results/NotAccessibleWarning"
-import ConfidenceBadge from "@/components/results/ConfidenceBadge"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { useTranslations } from "@/lib/i18n"
 import { placeMayNotBeAccessible } from "@/lib/matching/merge"
-import { criterionSentence, CRITERION_DOT_CLASS } from "@/lib/simple-view"
+import { evaluatePlaceJudgment, type JudgmentFilters } from "@/lib/reliability"
+import { criterionSentence, CRITERION_DOT_CLASS, SIMPLE_TOILET_REQUIRED_CATEGORIES } from "@/lib/simple-view"
 import type { Place } from "@/lib/types"
 
 interface Props {
@@ -44,6 +44,32 @@ export default function SimpleDetail({ place, distanceM, onBack, onOpenSettings,
   const t = useTranslations()
   const addr = [place.address.street, place.address.houseNumber, place.address.city]
     .filter(Boolean).join(" ")
+
+  // Quickstart's actual fixed preset (mirrors SIMPLE_FILTERS_OVERRIDE +
+  // HomeClient's client-side toilet post-filter): entrance always required,
+  // toilet strictly "yes" only for the three categories where Quickstart
+  // enforces it. Almost always "pass"/"pass_limited" since the place already
+  // survived that preset — except a deep-linked place, which can legitimately
+  // fail it (docs/plans/quickstart-mode-default.md: a linked place must still
+  // open even if it fails Quickstart's own filter).
+  const quickstartFilters: JudgmentFilters = {
+    entrance: true,
+    toilet:   SIMPLE_TOILET_REQUIRED_CATEGORIES.has(place.category),
+    parking:  false,
+    seating:  false,
+    acceptUnknown: false,
+  }
+  const judgment = evaluatePlaceJudgment(place, quickstartFilters)
+  const headline = judgment.status === "pass"
+    ? t.simple.accessibleHeadline
+    : judgment.status === "pass_limited"
+      ? t.simple.accessibleHeadlineCaveat
+      : judgment.status === "fail"
+        ? t.results.judgmentFail
+        : t.results.judgmentUnverified
+  const headlineColor = judgment.status === "pass" || judgment.status === "pass_limited"
+    ? "text-green-700"
+    : judgment.status === "fail" ? "text-red-700" : "text-amber-700"
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
@@ -87,16 +113,17 @@ export default function SimpleDetail({ place, distanceM, onBack, onOpenSettings,
           <CriterionRow label={criterionSentence(t, "parking", place.accessibility.parking.value)} dot={CRITERION_DOT_CLASS[place.accessibility.parking.value]} />
         </div>
 
-        {/* The plain badge only (no `place` prop) — deliberately skips the
-            interactive score-formula breakdown ConfidenceBadge otherwise offers
-            (tooltip on desktop, tap-through on mobile), matching this screen's
-            existing "no score formula" scope cut (see the component comment
-            above). Still shows the % and Verlässlich/Mittel/Unsicher label the
-            user asked for, just as a static fact rather than an interactive one. */}
-        <ConfidenceBadge confidence={place.overallConfidence} className="self-start" />
+        {/* Fixed, absolute headline (decision 7, v13) — Quickstart's preset is
+            fixed by app design, unlike Turbo's user-chosen filters, so this
+            can state the judgement outright rather than naming "your
+            criteria". No reliability tier/percentage here, matching this
+            screen's existing "no score formula" scope cut — see the
+            component comment above. */}
+        <p className={`self-start text-sm font-semibold ${headlineColor}`}>{headline}</p>
 
-        {/* Same trigger (placeMayNotBeAccessible: entrance/toilet "no"/"unknown")
-            and unconditional (not toggle-gated) rendering as PlaceDebugSheet's
+        {/* Same trigger (placeMayNotBeAccessible: entrance/toilet is "no" —
+            "unknown" alone no longer fires this since v13/decision 10) and
+            unconditional (not toggle-gated) rendering as PlaceDebugSheet's
             own use of this box — the full UI's detail sheet, which SimpleDetail
             otherwise mirrors as a reduced version of. */}
         {placeMayNotBeAccessible(place) && <NotAccessibleWarningBox />}

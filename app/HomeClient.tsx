@@ -2472,6 +2472,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         )}>
           <MapView
             places={places}
+            filters={filters}
             parkingSpots={visibleParkingSpots}
             toiletSpots={visibleToiletSpots.length > 0 ? visibleToiletSpots : undefined}
             center={searchCenter}

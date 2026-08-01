@@ -5,7 +5,9 @@ import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 // "Achtung: Dieser Ort ist evtl. nicht barrierefrei." — shown when entrance or
-// toilet is "no"/"unknown" (see placeMayNotBeAccessible in lib/matching/merge.ts).
+// toilet is "no" (see placeMayNotBeAccessible in lib/matching/merge.ts — the
+// "unknown" case was dropped from this trigger in v13/decision 10, since the
+// judgement line now says "keine Angabe zu X" explicitly for that case).
 // Split into pre/bold/post i18n strings so "nicht"/"not" can render bold
 // without embedding markup in the translation file.
 export function NotAccessibleWarningBox({ className }: { className?: string }) {

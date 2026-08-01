@@ -5,7 +5,12 @@ import { startDefaultNavigation } from "@/lib/native/navigation"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { LocaleProvider } from "@/lib/i18n"
 import { buildAttribute, emptyAttribute } from "@/lib/matching/merge"
-import type { Place } from "@/lib/types"
+import type { Place, SearchFilters } from "@/lib/types"
+
+const FILTERS: SearchFilters = {
+  entrance: true, toilet: true, parking: false, parkingNearby: true, seating: false,
+  onlyVerified: false, acceptUnknown: false, alwaysShowParking: false, alwaysShowToilets: false,
+}
 
 vi.mock("@/lib/native/navigation", () => ({
   startDefaultNavigation: vi.fn(),
@@ -55,9 +60,18 @@ describe("PlaceCard", () => {
     expect(screen.getByText(/Hauptstraße/)).toBeInTheDocument()
   })
 
-  it("renders confidence badge", () => {
+  // v13/docs/plans/reliability-tiers.md: the old place-wide percentage badge
+  // was replaced by a JudgmentLine against the active filters — entrance
+  // passes cleanly, toilet is "limited" → the caveat wording names it.
+  it("renders the judgement line against the active filters", () => {
+    renderWithProvider(<PlaceCard place={makePlace()} filters={FILTERS} />)
+    expect(screen.getByText("Erfüllt deine Kriterien")).toBeInTheDocument()
+    expect(screen.getByText("Mit Einschränkung: Toilette.")).toBeInTheDocument()
+  })
+
+  it("shows a neutral 'no criteria active' line when no filters are passed", () => {
     renderWithProvider(<PlaceCard place={makePlace()} />)
-    expect(screen.getByText(/72%/)).toBeInTheDocument()
+    expect(screen.getByText("Keine Kriterien aktiv")).toBeInTheDocument()
   })
 
   it("renders all three accessibility attributes", () => {
@@ -97,12 +111,12 @@ describe("PlaceCard", () => {
     expect(await screen.findByText(/Grunddaten|Basic information/i)).toBeInTheDocument()
   })
 
-  it("tapping the confidence badge opens the info sheet instead of its own quick view (decision D2c)", async () => {
+  it("tapping the judgement line opens the info sheet instead of its own quick view (decision D2c)", async () => {
     // Regression test for the "tapping the score badge does nothing, unexpectedly"
-    // usability finding: the badge must NOT stopPropagation — a tap on it is
-    // just another tap inside the single header tap target.
-    renderWithProvider(<PlaceCard place={makePlace()} onClick={vi.fn()} />)
-    fireEvent.click(screen.getByText(/72%/))
+    // usability finding: the judgement line must NOT stopPropagation — a tap
+    // on it is just another tap inside the single header tap target.
+    renderWithProvider(<PlaceCard place={makePlace()} filters={FILTERS} onClick={vi.fn()} />)
+    fireEvent.click(screen.getByText("Erfüllt deine Kriterien"))
     expect(await screen.findByText(/Grunddaten|Basic information/i)).toBeInTheDocument()
   })
 
@@ -290,5 +304,24 @@ describe("PlaceCard — navigate button (docs/plans/native-navigate-here.md, Pla
     fireEvent.click(screen.getByRole("button", { name: "Navigation starten" }))
     expect(startDefaultNavigation).toHaveBeenCalledWith({ lat: 52.52, lon: 13.405 })
     expect(screen.queryByText(/Grunddaten|Basic information/i)).not.toBeInTheDocument()
+  })
+})
+
+// v13/decision 10: placeMayNotBeAccessible only fires on an actual "no" —
+// the per-criterion "!" toggle must follow the same rule, or it would imply
+// a merely "unknown" value is why the warning appeared.
+describe("PlaceCard — not-accessible warning toggle (v13, decision 10)", () => {
+  it("shows the toggle only next to the criterion that is actually 'no', not next to a merely 'unknown' one", () => {
+    const place = makePlace({
+      accessibility: {
+        entrance: buildAttribute("osm", "no", "no", {}),
+        toilet:   buildAttribute("osm", "unknown", "unknown", {}),
+        parking:  buildAttribute("osm", "yes", "yes", {}),
+      },
+    })
+    renderWithProvider(<PlaceCard place={place} />)
+    // Exactly one toggle (entrance's) — toilet's "unknown" gets none, even
+    // though the warning itself is showing (triggered by entrance="no").
+    expect(screen.getAllByRole("button", { name: "Hinweis anzeigen" })).toHaveLength(1)
   })
 })

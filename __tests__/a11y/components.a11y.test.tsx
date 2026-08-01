@@ -15,7 +15,7 @@ import { render, fireEvent, screen } from "@testing-library/react"
 import { axe } from "vitest-axe"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { LocaleProvider } from "@/lib/i18n"
-import ConfidenceBadge from "@/components/results/ConfidenceBadge"
+import JudgmentLine from "@/components/results/JudgmentLine"
 import PlaceCard from "@/components/results/PlaceCard"
 import FilterPanel from "@/components/filters/FilterPanel"
 import ResultsList from "@/components/results/ResultsList"
@@ -82,9 +82,11 @@ function makePlace(overrides: Partial<Place> = {}): Place {
   }
 }
 
-describe("a11y baseline — ConfidenceBadge", () => {
+describe("a11y baseline — JudgmentLine", () => {
   it("has no structural axe violations", async () => {
-    const { container } = renderWithProviders(<ConfidenceBadge confidence={0.85} />)
+    const { container } = renderWithProviders(
+      <JudgmentLine place={makePlace()} filters={FILTERS} />,
+    )
     expect(await axe(container)).toHaveNoViolations()
   })
 })

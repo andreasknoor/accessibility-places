@@ -113,21 +113,33 @@ export interface Translations {
     resultsAnnounce:    (n: number) => string
     parkingCount:       (n: number) => string
     showMap:     string
-    confidence: {
-      high:   string
-      medium: string
-      low:    string
+    tier: {
+      sehr_hoch: string
+      gut:       string
+      gering:    string
+      keine:     string
     }
+    reliabilityNote: (tier: "sehr_hoch" | "gut" | "gering" | "keine", verifiedLabel?: string) => string
+    joinCriteria:    (labels: string[]) => string
+    judgmentPass:            string
+    judgmentPassAllNote:     string
+    judgmentPassLimitedNote: (criteria: string) => string
+    judgmentUnverified:      string
+    judgmentUnverifiedNote:  (criteria: string) => string
+    judgmentFail:            string
+    judgmentFailNote:        (criteria: string) => string
+    judgmentNone:            string
+    seoJudgmentFixed:  string
     rerun:             string
     retry:             string
     expandRadius:      string
     amenityAllFiltered: string
     expandRadiusYes:   string
     conflict:          string
-    lowConfidenceHint: string
     primarySource:     string
     noData:            string
-    // "Not accessible" warning shown when entrance or toilet is "no"/"unknown"
+    // "Not accessible" warning shown when entrance or toilet is "no" (v13:
+    // "unknown" alone no longer triggers this, see placeMayNotBeAccessible)
     // (docs/prototypes/unknown-value-microcopy.html) — split into three parts
     // so the middle word can be rendered bold without embedding markup in the
     // translation string itself.
@@ -156,10 +168,8 @@ export interface Translations {
     mapHint:           string
     placeSearchBanner: (name: string) => string
     scoreCalculation:     string
-    scorePrefix:          string
-    scoreDataQualityNote: string
-    scoreCriterion:       string
-    scoreValueWeight:     string
+    scoreCriterionCol:    string
+    scoreEvidenceCol:     string
     showRawData:          string
     detailsExpand:        string
     detailsCollapse:      string
@@ -244,12 +254,9 @@ export interface Translations {
     fullscreen:             string
     exitFullscreen:         string
     source:                 string
-    confidence:             string
-    confidenceShort: {
-      high:   string
-      medium: string
-      low:    string
-    }
+    judgmentPass:           string
+    judgmentCaveat:         string
+    judgmentUnknown:        string
     showInResults:          string
     showDetails:            string
     // Short chip labels for the map marker popup footers (parking/WC/venue —
@@ -556,5 +563,7 @@ export interface Translations {
     parkingBad:      string
     parkingUnknown:  string
     call:            string
+    accessibleHeadline:       string
+    accessibleHeadlineCaveat: string
   }
 }

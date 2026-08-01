@@ -107,26 +107,22 @@ export default function UeberUnsPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">Der Farbcode: Warum Rot nicht gleich „ungeeignet" bedeutet</h2>
+            <h2 className="text-lg font-bold mb-3">Zwei getrennte Fragen: Passt der Ort? Und wie gut ist das belegt?</h2>
             <p className="text-muted-foreground mb-4">
-              Ein zentrales Element, das beim Nutzen sofort ins Auge fällt, ist das Ampelsystem in Kombination mit einem „Verlässlichkeitswert". Diese Farbcodes finden sich sowohl in den Suchergebnissen als auch als kleine Kreise in der Kartenansicht. Hier verbirgt sich ein entscheidender, innovativer Ansatz: Die Ampelfarben zeigen primär nicht an, ob ein Ort barrierefrei ist, sondern wie verlässlich die Datenlage im Hintergrund aktuell ist.
+              Frühe Versionen der App zeigten beides in einer einzigen Ampelfarbe — mit der Konsequenz, dass Rot fast immer als &bdquo;hier nicht hinfahren&ldquo; gelesen wurde, obwohl es eigentlich nur &bdquo;dazu liegt kaum Datenmaterial vor&ldquo; bedeuten sollte. Diese Verwechslung war zu naheliegend, um sie wegzuerklären, also trennt die App die beiden Fragen inzwischen konsequent.
             </p>
             <ul className="flex flex-col gap-3">
               <li className="flex items-start gap-3">
-                <span className="text-lg leading-none mt-0.5">🔴</span>
-                <p className="text-muted-foreground"><span className="font-semibold text-foreground">Rot</span> bedeutet nicht automatisch, dass der Ort unzugänglich ist. Es heißt lediglich, dass die Datenlage im Moment noch unvollständig oder unsicher ist (z.&nbsp;B. wenn nur unbestätigte Basisdaten von Google Maps vorliegen).</p>
+                <span className="text-lg leading-none mt-0.5">🟢🟡⚪</span>
+                <p className="text-muted-foreground"><span className="font-semibold text-foreground">Die Markerfarbe</span> beantwortet ausschließlich: Passt dieser Ort zu den Filterkriterien, die du selbst eingestellt hast? Grün heißt, er erfüllt sie uneingeschränkt. Gelb heißt, er erfüllt sie mit einer Einschränkung — etwa ein Eingang, der nur eingeschränkt statt vollständig stufenlos ist. Grau heißt, zu einem deiner Kriterien liegt schlicht keine Angabe vor. Ein Ort, der deine Kriterien nicht erfüllt, taucht gar nicht erst in der Liste oder auf der Karte auf.</p>
               </li>
               <li className="flex items-start gap-3">
-                <span className="text-lg leading-none mt-0.5">🟡</span>
-                <p className="text-muted-foreground"><span className="font-semibold text-foreground">Gelb</span> steht für eine solide, mittelgute und plausible Datenbasis.</p>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-lg leading-none mt-0.5">🟢</span>
-                <p className="text-muted-foreground"><span className="font-semibold text-foreground">Grün</span> bedeutet: Die Informationen sind absolut verlässlich und wurden in der Regel durch die Community (z.&nbsp;B. von Wheelmap-Nutzern) manuell geprüft und verifiziert. Zudem werden manuell geprüfte Einträge mit einem speziellen Badge hervorgehoben.</p>
+                <span className="text-lg leading-none mt-0.5">📝</span>
+                <p className="text-muted-foreground"><span className="font-semibold text-foreground">Wie gut eine einzelne Angabe belegt ist</span> — Eingang, Toilette, Parkplatz jeweils für sich — steht als kurzer Satz direkt bei genau dieser Angabe in der Detailansicht: &bdquo;von mehreren Quellen bestätigt&ldquo;, &bdquo;aus verlässlicher Quelle&ldquo; oder &bdquo;nur eine schwache Angabe&ldquo;. Wurde ein Wert nachweislich innerhalb der letzten zwei Jahre vor Ort geprüft, steht auch das direkt dort.</p>
               </li>
             </ul>
             <p className="text-muted-foreground mt-4">
-              Dieser ehrliche Ansatz vermeidet böse Überraschungen vor Ort. Man weiß sofort, wann man den Daten der App blind vertrauen kann und wann es ratsam ist, zur Sicherheit doch noch kurz telefonisch beim Betreiber nachzufragen.
+              Diese Trennung ist absichtlich: Ein Ort kann sehr gut belegt und trotzdem nicht barrierefrei sein — und umgekehrt kann eine an sich passende Angabe nur schwach belegt sein. Beides gemeinsam in eine Farbe zu pressen, hatte genau die Verwechslung erzeugt, die diese Version vermeidet.
             </p>
           </section>
 

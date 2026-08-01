@@ -19,16 +19,21 @@ import { useTranslations, useLocale } from "@/lib/i18n"
 import { buildPlaceDeepLink } from "@/lib/place-link"
 import { openTallyPopup } from "@/lib/tally"
 import { track } from "@/lib/analytics"
-import { confidenceLabel, placeMayNotBeAccessible } from "@/lib/matching/merge"
+import { placeMayNotBeAccessible } from "@/lib/matching/merge"
 import { ScoreContent } from "./ConfidenceBadge"
+import JudgmentLine from "./JudgmentLine"
 import { NotAccessibleWarningBox } from "./NotAccessibleWarning"
+import { criterionTier, attrVerifiedAt, type JudgmentFilters } from "@/lib/reliability"
 import { cn } from "@/lib/utils"
-import type { Place, SourceId, ParkingDetails, EntranceDetails, ToiletDetails, SeatingDetails } from "@/lib/types"
+import type { Place, SourceId, ParkingDetails, EntranceDetails, ToiletDetails, SeatingDetails, AccessibilityAttribute, SearchFilters } from "@/lib/types"
 
 interface Props {
-  place:   Place
-  onClose: () => void
+  place:    Place
+  onClose:  () => void
+  filters?: SearchFilters
 }
+
+const NO_FILTERS: JudgmentFilters = { entrance: false, toilet: false, parking: false, seating: false, acceptUnknown: false }
 
 const VALUE_COLORS: Record<string, string> = {
   yes:     "text-green-600",
@@ -37,30 +42,31 @@ const VALUE_COLORS: Record<string, string> = {
   unknown: "text-zinc-400",
 }
 
-// Per-criterion reliability pill (proposal A2): surfaces the confidence the app
-// already computes for each accessibility attribute, so a value resting on a
-// single weak source (e.g. Google-only) reads as "Unsicher" instead of an
-// authoritative green "Ja". Purely presentational — no merge/filter change.
-const CONF_PILL: Record<"high" | "medium" | "low", string> = {
-  high:   "bg-green-50 text-green-700 border-green-200",
-  medium: "bg-amber-50 text-amber-700 border-amber-200",
-  low:    "bg-red-50 text-red-700 border-red-200",
-}
-const CONF_DOT: Record<"high" | "medium" | "low", string> = {
-  high:   "bg-green-600",
-  medium: "bg-amber-600",
-  low:    "bg-red-600",
-}
-
-function ReliabilityPill({ confidence }: { confidence: number }) {
-  const t     = useTranslations()
-  const level = confidenceLabel(confidence)
+// Per-criterion reliability pill (v13, docs/plans/reliability-tiers.md) —
+// surfaces the tier the app already computes for each accessibility
+// attribute, so a value resting on a single weak source (e.g. Google-only)
+// reads as "gering" instead of an authoritative-looking plain "Ja". Always
+// neutral/grey: reliability is a separate axis from the sachebene
+// yes/limited/no colour (VALUE_COLORS above) and must never look like a
+// second traffic light next to it.
+function ReliabilityPill({ attr }: { attr: AccessibilityAttribute }) {
+  const t    = useTranslations()
+  const tier = criterionTier(attr)
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full border px-1.5 py-px text-[10px] font-semibold ml-1.5 align-middle whitespace-nowrap", CONF_PILL[level])}>
-      <span className={cn("w-1.5 h-1.5 rounded-full", CONF_DOT[level])} aria-hidden />
-      {t.results.confidence[level]}
+    <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-px text-[10px] font-semibold ml-1.5 align-middle whitespace-nowrap bg-slate-100 text-slate-600 border-slate-200">
+      <span className="w-1.5 h-1.5 rounded-full bg-slate-500" aria-hidden />
+      {t.results.tier[tier]}
     </span>
   )
+}
+
+// Verified-on-site date (decision 8): folded in as a trailing clause after
+// the source list rather than a separate badge.
+function verifiedSuffix(t: ReturnType<typeof useTranslations>, attr: AccessibilityAttribute): string {
+  const iso = attrVerifiedAt(attr)
+  if (!iso) return ""
+  const s = t.results.verifiedAt(iso, [])
+  return ` · ${s.charAt(0).toLowerCase()}${s.slice(1)}`
 }
 
 const PRICE_LEVEL: Record<string, string> = {
@@ -155,7 +161,7 @@ function Section({
   )
 }
 
-export default function PlaceDebugSheet({ place, onClose }: Props) {
+export default function PlaceDebugSheet({ place, onClose, filters }: Props) {
   const [scoreOpen, setScoreOpen] = useState(false)
   const [shareFeedback, setShareFeedback] = useState<"copied" | "shared" | null>(null)
   const [copiedField,  setCopiedField]  = useState<"address" | "osm" | null>(null)
@@ -468,14 +474,21 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
           </div>
         </div>
 
+        {/* Judgement line (v13): does this place satisfy the ACTIVE filters?
+            A separate axis from the reliability tiers in the section below —
+            see docs/plans/reliability-tiers.md. */}
+        <div className="px-4 py-3 border-b border-border shrink-0">
+          <JudgmentLine place={place} filters={filters ? { entrance: filters.entrance, toilet: filters.toilet, parking: filters.parking, parkingNearby: filters.parkingNearby, seating: filters.seating, acceptUnknown: filters.acceptUnknown } : NO_FILTERS} />
+        </div>
+
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-4 text-xs divide-y divide-border">
 
           {/* ── Barrierefreiheit + Parkplatz ── */}
           <Section
-            title={`${ti.reliability} · ${Math.round(place.overallConfidence * 100)}%`}
+            title={ti.reliability}
             icon={Accessibility}
-            chipClass="bg-green-50 text-green-700 border-green-200"
+            chipClass="bg-slate-100 text-slate-700 border-slate-200"
             expandable
             expanded={scoreOpen}
             onToggleExpand={() => setScoreOpen((v) => !v)}
@@ -528,10 +541,11 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
                     <span className={cn("font-medium", VALUE_COLORS[attr.value])}>
                       {t.a11y[attr.value]}
                     </span>
-                    {attr.value !== "unknown" && <ReliabilityPill confidence={attr.confidence} />}
+                    {attr.value !== "unknown" && <ReliabilityPill attr={attr} />}
                     {attr.sources.length > 0 && (
                       <span className="text-muted-foreground ml-1.5">
                         · {attr.sources.map((s) => SOURCE_LABELS[s.sourceId]).join(", ")}
+                        {verifiedSuffix(t, attr)}
                       </span>
                     )}
                   </InfoRow>
@@ -548,10 +562,11 @@ export default function PlaceDebugSheet({ place, onClose }: Props) {
               <span className={cn("font-medium", VALUE_COLORS[parkingAttr.value])}>
                 {parkingValueLabel}
               </span>
-              {parkingAttr.value !== "unknown" && <ReliabilityPill confidence={parkingAttr.confidence} />}
+              {parkingAttr.value !== "unknown" && <ReliabilityPill attr={parkingAttr} />}
               {parkingAttr.sources.length > 0 && (
                 <span className="text-muted-foreground ml-1.5">
                   · {parkingAttr.sources.map((s) => SOURCE_LABELS[s.sourceId]).join(", ")}
+                  {verifiedSuffix(t, parkingAttr)}
                 </span>
               )}
             </InfoRow>

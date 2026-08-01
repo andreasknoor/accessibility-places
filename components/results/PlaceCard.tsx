@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { NativeLink } from "@/components/ui/native-link"
 import NavigateButton from "@/components/ui/navigate-button"
 import { Badge } from "@/components/ui/badge"
-import ConfidenceBadge, { VerifiedBadge } from "./ConfidenceBadge"
+import JudgmentLine     from "./JudgmentLine"
 import A11yAttribute    from "./A11yAttribute"
 import PlaceDebugSheet  from "./PlaceDebugSheet"
 import { NotAccessibleWarningBox, NotAccessibleWarningToggle } from "./NotAccessibleWarning"
@@ -16,24 +16,37 @@ import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS }   from "@/lib/config"
 import { CATEGORY_ICONS }  from "@/lib/category-icons"
 import { placeMayNotBeAccessible } from "@/lib/matching/merge"
+import type { JudgmentFilters } from "@/lib/reliability"
 import { cn } from "@/lib/utils"
-import type { Place } from "@/lib/types"
+import type { Place, SearchFilters } from "@/lib/types"
+
+// No active filter to judge against — degrades to JudgmentLine's own
+// "no criteria active" state rather than fabricating a green pass.
+const NO_FILTERS: JudgmentFilters = { entrance: false, toilet: false, parking: false, seating: false, acceptUnknown: false }
 
 interface Props {
   place:       Place
   isSelected?: boolean
   onClick?:    () => void
   distanceM?:  number
+  filters?:    SearchFilters
 }
 
-export default function PlaceCard({ place, isSelected, onClick, distanceM }: Props) {
+export default function PlaceCard({ place, isSelected, onClick, distanceM, filters }: Props) {
+  const judgmentFilters: JudgmentFilters = filters
+    ? { entrance: filters.entrance, toilet: filters.toilet, parking: filters.parking, parkingNearby: filters.parkingNearby, seating: filters.seating, acceptUnknown: filters.acceptUnknown }
+    : NO_FILTERS
   const t = useTranslations()
   const [expanded,  setExpanded]  = useState(false)
   const [showDebug, setShowDebug] = useState(false)
   const [warnExpanded, setWarnExpanded] = useState(false)
   const showNotAccessibleWarning = placeMayNotBeAccessible(place)
+  // Narrowed to "no" only (v13/decision 10, matching placeMayNotBeAccessible's
+  // own trigger) — showing this toggle next to a merely "unknown" value would
+  // wrongly imply that value is why the warning fired, when only an actual
+  // "no" on entrance or toilet does that now.
   const notAccessibleToggle = (value: string) =>
-    showNotAccessibleWarning && (value === "no" || value === "unknown")
+    showNotAccessibleWarning && value === "no"
       ? <NotAccessibleWarningToggle expanded={warnExpanded} onToggle={() => setWarnExpanded((v) => !v)} />
       : undefined
 
@@ -93,21 +106,22 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
             scattered interactive icons in it. role="button" div, not a real
             <button>, because <button>'s content model forbids a heading (h3)
             child — a real button can't legally wrap place.name's <h3>. The
-            confidence badge is a plain, non-stopPropagation child here
-            (decision D2c): tapping it opens this same detail sheet instead of
-            its own separate quick-view, so there is exactly one exception-free
-            tap target for the whole box, badge included.
+            judgement line is a plain, non-stopPropagation child here
+            (decision D2c, carried over from the old confidence badge):
+            tapping it opens this same detail sheet, so there is exactly one
+            exception-free tap target for the whole box.
 
             Fully stacked, not just two rows: the name row (icon + h3 +
-            chevron), the category line, the address line, and the confidence
-            badge each get their own full-width line. At large Android system
-            font sizes the badge (rem-scaled, no upper bound) was squeezing
-            the name — previously the only shrinkable sibling — down to a
-            near-unreadable sliver whenever it shared a row. Giving every
-            element its own line is the most robust option (also holds up for
-            very long, 2-line names), at the cost of a taller card. The
+            chevron), the category line, the address line, and the judgement
+            line each get their own full-width line — the same reasoning that
+            used to apply to the score badge (large Android font sizes
+            squeezing the name on a shared row) applies here too. The
             chevron stays attached to the name row specifically — it's the
-            "opens details" affordance for the heading, not for the badge. */}
+            "opens details" affordance for the heading, not for the judgement
+            line. See docs/plans/reliability-tiers.md (v13): this replaces
+            the place-wide percentage/colour badge with a judgement against
+            the ACTIVE filters — a separate axis from reliability, which now
+            lives per-criterion below (A11yAttribute's Nachsatz). */}
         <div
           role="button"
           tabIndex={0}
@@ -142,9 +156,7 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
               )}
             </p>
           )}
-          <div className="flex justify-end mt-0.5">
-            <ConfidenceBadge confidence={place.overallConfidence} place={place} className="shrink-0" />
-          </div>
+          <JudgmentLine place={place} filters={judgmentFilters} className="mt-0.5" />
         </div>
 
         {/* ── Source badge ── */}
@@ -260,7 +272,6 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
               <Map className="w-[1.1rem] h-[1.1rem]" />
             </NativeLink>
             <NavigateButton coords={place.coordinates} variant="icon" />
-            <VerifiedBadge place={place} />
           </div>
 
           <div className="flex items-center gap-2">
@@ -289,7 +300,7 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM }: Pro
       </CardContent>
 
       {showDebug && createPortal(
-        <PlaceDebugSheet place={place} onClose={() => setShowDebug(false)} />,
+        <PlaceDebugSheet place={place} onClose={() => setShowDebug(false)} filters={filters} />,
         document.body,
       )}
     </Card>

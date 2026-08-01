@@ -105,18 +105,56 @@ const de: Translations = {
     resultsAnnounce: (n: number) => `${n} Ort${n !== 1 ? "e" : ""} gefunden`,
     parkingCount: (n: number) => `(${n}x Parken)`,
     showMap: "Karte",
-    confidence: {
-      high:    "Verlässlich",
-      medium:  "Mittel",
-      low:     "Unsicher",
+    // Reliability tiers (v13, docs/plans/reliability-tiers.md) — describe how
+    // well-corroborated a KNOWN value is, never a place-wide colour/percentage.
+    // Rendered as a per-criterion Nachsatz (reliabilityNote below), and as the
+    // info-sheet section-title word (PlaceDebugSheet).
+    tier: {
+      sehr_hoch: "sehr hoch",
+      gut:       "gut",
+      gering:    "gering",
+      keine:     "keine Angabe",
     },
+    // Plain-language Nachsatz shown under a single criterion's own value row.
+    // verifiedLabel, if given, is a ready-made sentence (see verifiedAt below)
+    // appended as its own clause — this is where the old, separate "vor Ort
+    // verifiziert" badge (decision 8) now lives.
+    reliabilityNote: (tier: "sehr_hoch" | "gut" | "gering" | "keine", verifiedLabel?: string) => {
+      const base = {
+        sehr_hoch: "Besonders verlässlich belegt",
+        gut:       "Aus verlässlicher Quelle",
+        gering:    "Nur eine schwache Angabe",
+        keine:     "",
+      }[tier]
+      if (!base) return verifiedLabel ?? ""
+      return verifiedLabel ? `${base} · ${verifiedLabel}` : base
+    },
+    // Joins criterion labels for the judgement-line "why" clause: "X und Y".
+    joinCriteria: (labels: string[]) => {
+      if (labels.length === 0) return ""
+      if (labels.length === 1) return labels[0]
+      return `${labels.slice(0, -1).join(", ")} und ${labels[labels.length - 1]}`
+    },
+    // Judgement line (Turbo): does the place satisfy the ACTIVE filters? A
+    // separate axis from reliability above — never a colour, never combined
+    // with the tier words. See lib/reliability.ts's evaluatePlaceJudgment.
+    judgmentPass:            "Erfüllt deine Kriterien",
+    judgmentPassAllNote:     "Alle geprüften Kriterien uneingeschränkt.",
+    judgmentPassLimitedNote: (criteria: string) => `Mit Einschränkung: ${criteria}.`,
+    judgmentUnverified:      "Nicht gesichert",
+    judgmentUnverifiedNote:  (criteria: string) => `Zu ${criteria} liegen keine Angaben vor.`,
+    judgmentFail:            "Erfüllt deine Kriterien nicht",
+    judgmentFailNote:        (criteria: string) => `Betrifft: ${criteria}.`,
+    judgmentNone:            "Keine Kriterien aktiv",
+    // Fixed wording for SEO landing pages (decision 3): no per-visitor filter
+    // exists there, so the judgement line can't be filter-relative.
+    seoJudgmentFixed: "Eingang und WC barrierefrei",
     rerun:           "Filter anwenden",
     retry:           "Erneut versuchen",
     expandRadius:    "Suchradius vergrößern?",
     amenityAllFiltered: "Im Suchradius wurden Treffer gefunden, aber deine aktiven Filter blenden sie alle aus.",
     expandRadiusYes: "Ja",
     conflict: "Quellen widersprechen sich",
-    lowConfidenceHint: "Geringe Verlässlichkeit",
     primarySource: "Beste Quelle",
     noData: "Keine Daten",
     notAccessibleWarningPre:  "Achtung: Evtl. ",
@@ -165,11 +203,12 @@ const de: Translations = {
     showOnMap:  "Zur Karte",
     mapHint:    "Tipp: Eintrag antippen → Detailinfos öffnen",
     placeSearchBanner: (name: string) => `Treffer für „${name}“`,
-    scoreCalculation:      "Score-Berechnung",
-    scorePrefix:           "Daten: ",
-    scoreDataQualityNote:  "Wie verlässlich sind die zugrunde liegenden Quelldaten?",
-    scoreCriterion:        "Kriterium",
-    scoreValueWeight:      "Wert · Gewicht",
+    // Info-sheet expandable breakdown (decision 1b): the section TITLE shows
+    // the tier word, this heading introduces the evidence-sum table beneath
+    // it — no percentage average anymore (see ScoreContent in ConfidenceBadge.tsx).
+    scoreCalculation:      "Nachweis je Kriterium",
+    scoreCriterionCol:     "Kriterium",
+    scoreEvidenceCol:      "Belege · Stufe",
     showRawData:           "Rohdaten anzeigen",
     detailsExpand:         "Details",
     detailsCollapse:       "Weniger",
@@ -250,12 +289,13 @@ const de: Translations = {
     fullscreen:    "Vollbild",
     exitFullscreen:"Vollbild beenden",
     source:        "Quelle",
-    confidence:    "Verlässlichkeit",
-    confidenceShort: {
-      high:   "sicher",
-      medium: "mittel",
-      low:    "unsicher",
-    },
+    // Pin/popup colour now encodes the JUDGEMENT against active filters
+    // (decision 5/6), not the reliability tier — short captions for the
+    // popup subline. A failing place is never on the map at all (already
+    // excluded by passesFilters), so there is no "fail" caption.
+    judgmentPass:    "Passt",
+    judgmentCaveat:  "Passt mit Vorbehalt",
+    judgmentUnknown: "Ohne Angabe",
     showInResults: "Zeige in Ergebnissen",
     showDetails: "Details anzeigen",
     popupChipNavigate: "Navigation",
@@ -539,6 +579,11 @@ const de: Translations = {
     parkingBad:      "Kein barrierefreier Parkplatz",
     parkingUnknown:  "Parkplatz: keine Angabe",
     call:            "Anrufen",
+    // Quickstart headline (decision 7): fixed, absolute wording — unlike
+    // Turbo's filter-relative judgement line, Quickstart's preset is fixed
+    // per app design, so "barrierefrei nutzbar" is simply accurate.
+    accessibleHeadline:       "Barrierefrei nutzbar",
+    accessibleHeadlineCaveat: "Barrierefrei nutzbar – mit Einschränkung",
   },
 }
 

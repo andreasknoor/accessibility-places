@@ -542,6 +542,7 @@ export default function MobileLayout({
           {mapMounted && (
             <MapView
               places={places}
+              filters={filters}
               parkingSpots={parkingSpots}
               toiletSpots={toiletSpots}
               center={searchCenter}

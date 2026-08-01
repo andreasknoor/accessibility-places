@@ -32,25 +32,38 @@ function makePlace(overrides: Partial<Place> = {}): Place {
   }
 }
 
-describe("SeoPageContent — confidence badge", () => {
-  it("shows percentage and level label (DE)", () => {
-    render(<SeoPageContent locale="de" city={BERLIN} categorySlug="restaurant" places={[makePlace({ overallConfidence: 0.82 })]} />)
-    expect(screen.getByText(/82%\s*·\s*Verlässlich/)).toBeInTheDocument()
+// v13/docs/plans/reliability-tiers.md decision 3: SEO pages have no
+// per-visitor filter (FILTERS_STRICT is hard-coded), so the badge is fixed
+// wording rather than a dynamic percentage — every listed place already
+// passed the same strict entrance+toilet criteria. Per-criterion reliability
+// tiers render as a plain-language Nachsatz instead.
+describe("SeoPageContent — judgement badge + reliability Nachsatz", () => {
+  it("shows the fixed judgement wording (DE), not a percentage", () => {
+    render(<SeoPageContent locale="de" city={BERLIN} categorySlug="restaurant" places={[makePlace()]} />)
+    expect(screen.getByText("Eingang und WC barrierefrei")).toBeInTheDocument()
   })
 
-  it("shows percentage and level label (EN)", () => {
-    render(<SeoPageContent locale="en" city={BERLIN} categorySlug="restaurant" places={[makePlace({ overallConfidence: 0.82 })]} />)
-    expect(screen.getByText(/82%\s*·\s*Reliable/)).toBeInTheDocument()
+  it("shows the fixed judgement wording (EN), not a percentage", () => {
+    render(<SeoPageContent locale="en" city={BERLIN} categorySlug="restaurant" places={[makePlace()]} />)
+    expect(screen.getByText("Entrance and restroom accessible")).toBeInTheDocument()
   })
 
-  it("uses medium label for mid-range confidence", () => {
-    render(<SeoPageContent locale="de" city={BERLIN} categorySlug="restaurant" places={[makePlace({ overallConfidence: 0.55 })]} />)
-    expect(screen.getByText(/55%\s*·\s*Mittel/)).toBeInTheDocument()
+  it("shows the reliability Nachsatz per criterion, based on its own tier", () => {
+    // entrance: osm alone (0.75) → "gut"; toilet: osm alone (0.75) → "gut" too.
+    render(<SeoPageContent locale="de" city={BERLIN} categorySlug="restaurant" places={[makePlace()]} />)
+    expect(screen.getAllByText("aus verlässlicher Quelle").length).toBeGreaterThan(0)
   })
 
-  it("uses low label for low confidence", () => {
-    render(<SeoPageContent locale="de" city={BERLIN} categorySlug="restaurant" places={[makePlace({ overallConfidence: 0.2 })]} />)
-    expect(screen.getByText(/20%\s*·\s*Unsicher/)).toBeInTheDocument()
+  it("shows the gering Nachsatz for a criterion resting on a single weak source", () => {
+    const place = makePlace({
+      accessibility: {
+        entrance: buildAttribute("google_places", "yes", "true", {}),
+        toilet:   buildAttribute("osm", "limited", "limited", {}),
+        parking:  buildAttribute("osm", "no", "no", {}),
+      },
+    })
+    render(<SeoPageContent locale="de" city={BERLIN} categorySlug="restaurant" places={[place]} />)
+    expect(screen.getByText("nur eine schwache Angabe")).toBeInTheDocument()
   })
 })
 

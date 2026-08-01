@@ -12,7 +12,7 @@ import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { openExternalUrl } from "@/lib/native/browser"
 import { startDefaultNavigation } from "@/lib/native/navigation"
 import { hapticLight } from "@/lib/native/haptics"
-import { confidenceLabel } from "@/lib/matching/merge"
+import { evaluatePlaceJudgment, type JudgmentFilters, type JudgmentStatus } from "@/lib/reliability"
 import { haversineMetres } from "@/lib/matching/match"
 import { popupMaxHeight, isWithinProgrammaticMoveWindow, viewportRadiusKm } from "@/lib/map/geometry"
 import { ensureMaplibreWorkerConfigured } from "@/lib/map/maplibre-worker"
@@ -50,17 +50,34 @@ const PLACE_CLUSTER_MAX_RADIUS = 50            // px — grouping radius at low 
 const PLACE_CLUSTER_DISABLE_AT_ZOOM = 17       // street-level: always show every pin (matches Leaflet)
 const LAYERS_COLLAPSED_KEY = "ap_layers_collapsed"
 
-const CONF_RANK: Record<"high" | "medium" | "low", number> = { low: 0, medium: 1, high: 2 }
-const CONF_COLOR: Record<"high" | "medium" | "low", string> = { high: "#00c853", medium: "#ffd600", low: "#ff1744" }
-const RANK_TO_COLOR = ["#ff1744", "#ffd600", "#00c853"] // index by CONF_RANK
+// Pin colour now encodes the JUDGEMENT against active filters (v13,
+// docs/plans/reliability-tiers.md decisions 5/6), not the reliability tier.
+// A failing place is never in `places` at all — passesFilters already
+// excludes it upstream — so "fail" only appears here defensively (e.g. a
+// deep-linked place bypassing the filter) and gets the same neutral colour
+// as "no active criteria to judge by", never red: red is retired from the
+// map vocabulary entirely.
+const JUDGMENT_COLOR: Record<JudgmentStatus, string> = {
+  pass:         "#16a34a", // green-600
+  pass_limited: "#d97706", // amber-600 — decision 5a: amber only for an actual "limited" value
+  unverified:   "#94a3b8", // slate-400 — decision 5a: grey for unknown
+  fail:         "#94a3b8", // defensive only, see above
+  none:         "#94a3b8",
+}
+// Cluster circles get one fixed neutral colour (decision 6b) rather than
+// inheriting their strongest child's judgement — a single passing pin no
+// longer paints every ungraded sibling in the cluster green.
+const CLUSTER_COLOR = "#64748b" // slate-500
 
-function markerColor(confidence: number): string {
-  return CONF_COLOR[confidenceLabel(confidence)]
+function markerColorFor(place: Place, filters: JudgmentFilters): string {
+  return JUDGMENT_COLOR[evaluatePlaceJudgment(place, filters).status]
 }
 
-function placeIconKey(place: Place, selected: boolean): string {
-  return `place__${place.category}__${confidenceLabel(place.overallConfidence)}__${selected ? "sel" : "base"}`
+function placeIconKey(place: Place, filters: JudgmentFilters, selected: boolean): string {
+  return `place__${place.category}__${evaluatePlaceJudgment(place, filters).status}__${selected ? "sel" : "base"}`
 }
+
+const NO_MAP_FILTERS: JudgmentFilters = { entrance: false, toilet: false, parking: false, seating: false, acceptUnknown: false }
 
 // Conditional popup positioning (issue #48 follow-up): the popup's own anchor
 // is fixed to "bottom" (always above the point, horizontally centred — never
@@ -297,6 +314,7 @@ function applyPopupMaxHeight(popup: maplibregl.Popup | null, mapHeightPx: number
 
 export default function MapViewGL({
   places,
+  filters,
   parkingSpots,
   toiletSpots,
   center,
@@ -394,6 +412,7 @@ export default function MapViewGL({
   const onViewportChangeRef = useRef(onViewportChange)
   const focusModeRef     = useRef(focusMode)
   const amenityTypeRef   = useRef(amenityType)
+  const filtersRef       = useRef(filters)
   useEffect(() => { onPannedRef.current = onPanned }, [onPanned])
   useEffect(() => { onViewportChangeRef.current = onViewportChange }, [onViewportChange])
   useEffect(() => { onShowInResultsRef.current = onShowInResults }, [onShowInResults])
@@ -401,6 +420,7 @@ export default function MapViewGL({
   useEffect(() => { onShowAmenityInResultsRef.current = onShowAmenityInResults }, [onShowAmenityInResults])
   useEffect(() => { tRef.current = t }, [t])
   useEffect(() => { placesRef.current = places }, [places])
+  useEffect(() => { filtersRef.current = filters }, [filters])
   useEffect(() => { parkingSpotsRef.current = parkingSpots }, [parkingSpots])
   useEffect(() => { toiletSpotsRef.current = toiletSpots }, [toiletSpots])
   useEffect(() => { userLocationRef.current = userLocation }, [userLocation])
@@ -594,7 +614,6 @@ export default function MapViewGL({
         cluster: true,
         clusterMaxZoom: PLACE_CLUSTER_DISABLE_AT_ZOOM - 1,
         clusterRadius: PLACE_CLUSTER_MAX_RADIUS,
-        clusterProperties: { maxConf: ["max", ["get", "confRank"]] },
       })
       map.addLayer({
         id: "clusters", type: "circle", source: PLACE_SOURCE_ID, filter: ["has", "point_count"],
@@ -602,7 +621,7 @@ export default function MapViewGL({
           "circle-radius": ["step", ["get", "point_count"], 17, 10, 21],
           "circle-color": "#ffffff",
           "circle-stroke-width": 3,
-          "circle-stroke-color": ["match", ["get", "maxConf"], 2, RANK_TO_COLOR[2], 1, RANK_TO_COLOR[1], RANK_TO_COLOR[0]],
+          "circle-stroke-color": CLUSTER_COLOR,
         },
       })
       map.addLayer({
@@ -744,7 +763,11 @@ export default function MapViewGL({
   function openPlacePopup(place: Place): void {
     const map = mapInst.current
     if (!map) return
-    const html = buildVenuePopupHtml(place, tRef.current, { showResults: !!onShowInResults })
+    const judgmentFilters: JudgmentFilters = filtersRef.current
+      ? { entrance: filtersRef.current.entrance, toilet: filtersRef.current.toilet, parking: filtersRef.current.parking, parkingNearby: filtersRef.current.parkingNearby, seating: filtersRef.current.seating, acceptUnknown: filtersRef.current.acceptUnknown }
+      : NO_MAP_FILTERS
+    const judgment = evaluatePlaceJudgment(place, judgmentFilters).status
+    const html = buildVenuePopupHtml(place, tRef.current, { showResults: !!onShowInResults, judgment })
     openSmartPopup(map, [place.coordinates.lon, place.coordinates.lat], html, {
       // estimatedHeightPx is the QUICK-VIEW height now (popups open collapsed
       // by default) — was 230 (full height) before quick view existed.
@@ -908,20 +931,23 @@ export default function MapViewGL({
       return
     }
 
+    const judgmentFilters: JudgmentFilters = filters
+      ? { entrance: filters.entrance, toilet: filters.toilet, parking: filters.parking, parkingNearby: filters.parkingNearby, seating: filters.seating, acceptUnknown: filters.acceptUnknown }
+      : NO_MAP_FILTERS
+
     const features = places.map((place) => {
       const selected = place.id === selectedId
-      const key = placeIconKey(place, selected)
+      const key = placeIconKey(place, judgmentFilters, selected)
       const emoji = CATEGORY_ICONS[place.category] ?? "📍"
-      ensureImage(key, () => drawPlacePin(markerColor(place.overallConfidence), emoji, selected))
-      const level = confidenceLabel(place.overallConfidence)
+      ensureImage(key, () => drawPlacePin(markerColorFor(place, judgmentFilters), emoji, selected))
       return {
         type: "Feature" as const,
         geometry: { type: "Point" as const, coordinates: [place.coordinates.lon, place.coordinates.lat] },
-        properties: { id: place.id, iconKey: key, confRank: CONF_RANK[level] },
+        properties: { id: place.id, iconKey: key },
       }
     })
     src.setData({ type: "FeatureCollection", features })
-  }, [places, selectedId, mapReady, focusMode])
+  }, [places, filters, selectedId, mapReady, focusMode])
 
   // ── Fit bounds to all results ─────────────────────────────────────────
   useEffect(() => {
@@ -1262,7 +1288,7 @@ export default function MapViewGL({
       )}
 
       {detailPlace && typeof document !== "undefined" && createPortal(
-        <PlaceDebugSheet place={detailPlace} onClose={() => setDetailPlace(null)} />,
+        <PlaceDebugSheet place={detailPlace} onClose={() => setDetailPlace(null)} filters={filters} />,
         document.body,
       )}
     </div>

@@ -1,6 +1,7 @@
-import { confidenceLabel, placeMayNotBeAccessible } from "@/lib/matching/merge"
+import { placeMayNotBeAccessible } from "@/lib/matching/merge"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
 import type { useTranslations } from "@/lib/i18n"
+import type { JudgmentStatus } from "@/lib/reliability"
 import type { Place, ParkingSpot, AmenityFeature, AmenityTier } from "@/lib/types"
 
 // Unified "D" popup design (map-elements redesign prototype) — one template
@@ -20,8 +21,17 @@ import type { Place, ParkingSpot, AmenityFeature, AmenityTier } from "@/lib/type
 
 type T = ReturnType<typeof useTranslations>
 
-const CONFIDENCE_COLORS = { high: "#00c853", medium: "#ffd600", low: "#ff1744" }
-const CONFIDENCE_TEXT_COLORS = { high: "#15803d", medium: "#a16207", low: "#dc2626" }
+// Popup header bar/text colour now encodes the JUDGEMENT against active
+// filters (v13, docs/plans/reliability-tiers.md decision 5), not the
+// reliability tier — a failing place is never shown on the map at all
+// (passesFilters already excludes it upstream), so "fail"/"none" share the
+// same neutral grey as "unverified": red is retired from the map entirely.
+const JUDGMENT_COLORS: Record<JudgmentStatus, string> = {
+  pass: "#16a34a", pass_limited: "#d97706", unverified: "#94a3b8", fail: "#94a3b8", none: "#94a3b8",
+}
+const JUDGMENT_TEXT_COLORS: Record<JudgmentStatus, string> = {
+  pass: "#15803d", pass_limited: "#a16207", unverified: "#475569", fail: "#475569", none: "#475569",
+}
 const VALUE_COLORS: Record<string, string> = { yes: "#16a34a", limited: "#d97706", no: "#dc2626", unknown: "#a1a1aa" }
 const VALUE_GLYPH: Record<string, string> = { yes: "✓", limited: "±", no: "✗", unknown: "?" }
 
@@ -151,14 +161,19 @@ function notAccessibleWarning(t: T): string {
 
 export interface VenuePopupOptions {
   showResults: boolean
+  // Judgement against the active venue-search filters (v13) — replaces the
+  // old confidence-tier percentage. Computed by the caller (MapViewGL) via
+  // lib/reliability's evaluatePlaceJudgment, since that needs the active
+  // SearchFilters this file has no access to.
+  judgment: JudgmentStatus
 }
 
 export function buildVenuePopupHtml(place: Place, t: T, opts: VenuePopupOptions): string {
-  const level = confidenceLabel(place.overallConfidence)
-  const barColor  = CONFIDENCE_COLORS[level]
-  const textColor = CONFIDENCE_TEXT_COLORS[level]
-  const pct = Math.round(place.overallConfidence * 100)
-  const confLabel = t.results.confidence[level]
+  const barColor  = JUDGMENT_COLORS[opts.judgment]
+  const textColor = JUDGMENT_TEXT_COLORS[opts.judgment]
+  const judgmentLabel = opts.judgment === "pass" ? t.map.judgmentPass
+    : opts.judgment === "pass_limited" ? t.map.judgmentCaveat
+    : t.map.judgmentUnknown
   const addr = [place.address.street, place.address.houseNumber, place.address.city].filter(Boolean).join(" ")
   const emoji = CATEGORY_ICONS[place.category] ?? "📍"
 
@@ -166,7 +181,7 @@ export function buildVenuePopupHtml(place: Place, t: T, opts: VenuePopupOptions)
   const toi = place.accessibility.toilet
   const par = place.accessibility.parking
 
-  const subLine = `<span style="font-weight:700;color:${textColor}">${pct}%</span> · <span style="color:${dim()}">${confLabel}</span>${addr ? ` · <span style="color:${dim()}">${esc(addr)}</span>` : ""}`
+  const subLine = `<span style="font-weight:700;color:${textColor}">${judgmentLabel}</span>${addr ? ` · <span style="color:${dim()}">${esc(addr)}</span>` : ""}`
   const chips = chipD("🚪", t.criteria.entrance, ent.value) + chipD("🚻", t.map.criteriaShortToilet, toi.value) + chipD("🅿", t.map.criteriaShortParking, par.value)
   const ctas = ctaD(SVG_INFO, t.map.popupChipDetails, true, "data-show-details")
     + ctaD(SVG_NAV, t.map.popupChipNavigate, false, "data-navigate")
