@@ -316,6 +316,13 @@ export default function SimpleLayout({
   // read during render (its value isn't guaranteed stable across render
   // attempts under all rendering modes).
   const [detailReturnTo, setDetailReturnTo] = useState<"results" | "venue" | "start">("results")
+  // Same idea as detailReturnTo, one screen over: every existing path into
+  // "results" comes from the category/amenity tile picker, so "tiles" was
+  // simply hardcoded as the results screen's back-target. A venue search
+  // landing on "results" too (see openVenueResults below) needs its own
+  // back-target — "venue" (the search input), not "tiles", which the user
+  // never visited on that path.
+  const [resultsReturnTo, setResultsReturnTo] = useState<"tiles" | "venue">("tiles")
   const venueDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const venueAbortRef    = useRef<AbortController | undefined>(undefined)
 
@@ -414,6 +421,7 @@ export default function SimpleLayout({
     setSelectedCategory(cat)
     setSelectedAmenityType(null)
     setLocateError(null)
+    setResultsReturnTo("tiles")
     locateCancelledRef.current = false
 
     // A picked city already has known coords — no GPS wait, no "locating"
@@ -451,6 +459,7 @@ export default function SimpleLayout({
     setSelectedCategory(null)
     setSelectedAmenityType(type)
     setLocateError(null)
+    setResultsReturnTo("tiles")
     locateCancelledRef.current = false
 
     if (pickedCity) {
@@ -507,6 +516,26 @@ export default function SimpleLayout({
     setScreen("detail")
   }
 
+  // A venue search ("Einen konkreten Ort suchen") lands on the same map+list
+  // results screen every other search path uses, instead of jumping straight
+  // to the detail screen — the map shows the found place as an open popup
+  // (via selectAndPanMap's panTrigger bump, same mechanism a marker tap or a
+  // "Zur Karte" card button uses) and the list below shows it selected, so a
+  // single-venue result reads exactly like a filtered results list rather
+  // than a different, detail-only flow. selectedCategory is set from the
+  // PLACE's own category (there is no category the user picked here) purely
+  // so the results Header's title reads as e.g. "Restaurant in Deiner Nähe"
+  // instead of the generic categoryLabel(null) fallback "Orte" — it has no
+  // other effect in this file (see categoryLabel's only other call site).
+  function openVenueResults(place: Place) {
+    setSelectedCategory(place.category)
+    setSelectedAmenityType(null)
+    setResultsReturnTo("venue")
+    setHasSearchedNearby(true)
+    selectAndPanMap(place)
+    setScreen("results")
+  }
+
   // Deep-link target (Phase 4a): jump straight to a specific place's detail
   // screen once HomeClient resolves initialPlaceTarget. Keyed by place id
   // (not a boolean) so a DIFFERENT resolved place — e.g. a warm relaunch
@@ -536,6 +565,7 @@ export default function SimpleLayout({
     setPickedCity({ label: initialCityTarget.label, coords: initialCityTarget.coords })
     setSelectedCategory(initialCityTarget.category)
     setSelectedAmenityType(null)
+    setResultsReturnTo("tiles")
     // Marks "a search has run" — without it the results screen would treat an
     // empty result as "nothing searched yet" and show no empty state at all.
     setHasSearchedNearby(true)
@@ -560,6 +590,7 @@ export default function SimpleLayout({
     setPickedCity(null)
     setSelectedCategory(null)
     setSelectedAmenityType(initialAmenityTarget)
+    setResultsReturnTo("tiles")
     setHasSearchedNearby(true)
     setScreen("results")
     onAmenityTargetConsumed?.()
@@ -652,26 +683,27 @@ export default function SimpleLayout({
     onFocusSearchHere(coords, viewportRadiusKm)
   }
 
-  // Once a venue search settles, jump straight to its detail screen (the
-  // whole point of "check a place" is a single answer, not a results list).
-  // Two guards, both defending against a user who navigates away while the
-  // request is still in flight:
+  // Once a venue search settles, land on the map+list results screen with
+  // the found place selected (map popup open, card highlighted below) —
+  // the same screen every other search path uses, rather than a separate
+  // detail-only flow. Two guards, both defending against a user who
+  // navigates away while the request is still in flight:
   //  - `screen !== "venue"` — the only path that sets venuePending=true is
   //    from the venue screen; if the user has since gone back to "start" (or
   //    anywhere else), this search is stale and must not force-navigate them
-  //    into a detail screen for a lookup they may have abandoned.
+  //    onto the results screen for a lookup they may have abandoned.
   //  - `error` (not just `places.length`) — handlePlaceSearch has two
   //    early-return failure paths (geocode 404 / network error) that set
   //    `error` + isLoading(false) WITHOUT ever calling handleSearch, so
   //    `places` is never cleared and could still hold the PREVIOUS venue's
   //    results. Relying on places.length alone would silently reopen the old
-  //    venue's detail instead of reporting "not found" for the new one.
+  //    venue's results instead of reporting "not found" for the new one.
   useEffect(() => {
     if (!venuePending || isLoading) return
     setVenuePending(false)
     if (screen !== "venue") return
     if (!error && places.length > 0) {
-      openDetail(places[0], "venue")
+      openVenueResults(places[0])
     } else {
       setVenueNotFound(true)
     }
@@ -946,7 +978,7 @@ export default function SimpleLayout({
         {/* ── Results (map strip + single scroll) ── */}
         {screen === "results" && (
           <div className="flex-1 min-h-0 flex flex-col">
-            <Header title={t.simple.resultsTitle(selectedAmenityType ? amenityLabel(selectedAmenityType) : categoryLabel(selectedCategory), pickedCity?.label)} backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen("tiles")} onOpenSettings={() => setSettingsOpen(true)} onSwitchToTurbo={() => onUpdateSettings({ simpleView: false })} />
+            <Header title={t.simple.resultsTitle(selectedAmenityType ? amenityLabel(selectedAmenityType) : categoryLabel(selectedCategory), pickedCity?.label)} backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen(resultsReturnTo)} onOpenSettings={() => setSettingsOpen(true)} onSwitchToTurbo={() => onUpdateSettings({ simpleView: false })} />
             {/* Screen-reader live region: announces search progress and outcome
                 (WCAG 4.1.3) — mirrors ResultsList's own identical pattern in
                 the full UI, which Quickstart Mode's results screen otherwise
@@ -1087,7 +1119,15 @@ export default function SimpleLayout({
                       <div key={p.id} ref={(el) => { if (el) itemRefs.current.set(p.id, el); else itemRefs.current.delete(p.id) }}>
                         <SimplePlaceCard
                           place={p}
-                          distanceM={distanceFor(p)}
+                          // Suppressed for a venue-search-originated results screen —
+                          // same regression this mirrors on the detail screen
+                          // (detailReturnTo === "venue" there): a venue lookup's
+                          // `searchCenter` ends up equal to the found place's own
+                          // coordinates, so distanceFor(p) here would show a
+                          // meaningless "0 m entfernt". There is only ever one card
+                          // in that case, so gating the whole list is equivalent to
+                          // gating just this place.
+                          distanceM={resultsReturnTo === "venue" ? undefined : distanceFor(p)}
                           isSelected={p.id === selectedId}
                           onOpen={() => openDetail(p, "results")}
                           onShowOnMap={() => selectAndPanMap(p)}
@@ -1264,8 +1304,17 @@ export default function SimpleLayout({
             // A "start" origin (Phase 4a deep link) has the same problem: the
             // pure-coordinates link shape passes the target coords straight
             // through as the search centre (HomeClient's runPlaceDeepLink),
-            // so it would compute the same meaningless ~0 m.
-            distanceM={detailReturnTo === "venue" || detailReturnTo === "start" ? undefined : distanceFor(selectedPlace)}
+            // so it would compute the same meaningless ~0 m. Reaching detail
+            // via "results" is usually fine (a real search centre) — EXCEPT
+            // when that results screen is itself venue-search-originated
+            // (resultsReturnTo === "venue", tapping the single found card to
+            // expand into full detail): same stale/self searchCenter, same
+            // suppression needed.
+            distanceM={
+              detailReturnTo === "venue" || detailReturnTo === "start" || (detailReturnTo === "results" && resultsReturnTo === "venue")
+                ? undefined
+                : distanceFor(selectedPlace)
+            }
             onBack={() => setScreen(detailReturnTo)}
             onOpenSettings={() => setSettingsOpen(true)}
             onSwitchToTurbo={() => onUpdateSettings({ simpleView: false })}

@@ -129,6 +129,7 @@ function renderLayout(props: {
 // it's ready to assert on the outcome.
 let venueSettle: ((r: { places?: Place[]; error?: string; searchCenter?: { lat: number; lon: number } }) => void) | null = null
 const onPlaceSearchSpy = vi.fn<(name: string, coords?: { lat: number; lon: number }) => void>()
+const onSelectSpy = vi.fn<(place: Place) => void>()
 
 function VenueHarness({ settings = DEFAULT_APP_SETTINGS }: { settings?: AppSettings }) {
   const [places, setPlaces] = useState<Place[]>([])
@@ -157,7 +158,7 @@ function VenueHarness({ settings = DEFAULT_APP_SETTINGS }: { settings?: AppSetti
       isLoading={isLoading}
       error={error}
       searchCenter={searchCenter}
-      onSelect={vi.fn<(place: Place) => void>()}
+      onSelect={onSelectSpy}
       onSimpleNearbySearch={vi.fn<(query: string, coords: { lat: number; lon: number }) => void>()}
       onPlaceSearch={onPlaceSearch}
       onAmenitySearch={vi.fn<(type: AmenityType, coords: { lat: number; lon: number }) => void>()}
@@ -192,6 +193,7 @@ beforeEach(() => {
   mapViewProps.current = null
   venueSettle = null
   onPlaceSearchSpy.mockReset()
+  onSelectSpy.mockReset()
   vi.stubGlobal("fetch", vi.fn())
 })
 
@@ -1279,7 +1281,7 @@ describe("SimpleLayout — venue flow", () => {
     expect(screen.queryByText("Köln")).not.toBeInTheDocument()
   })
 
-  it("picking a suggestion calls onPlaceSearch and jumps to detail once results arrive", async () => {
+  it("picking a suggestion calls onPlaceSearch and lands on the results screen with the place selected", async () => {
     mockSuggestResponse([{ kind: "venue", name: "Café Sonnenschein", display: "Café Sonnenschein, Köln", lat: 50.93, lon: 6.93 }])
     renderVenueHarness()
     fireEvent.click(screen.getByText("Einen konkreten Ort bzw. Lokalität suchen"))
@@ -1290,10 +1292,24 @@ describe("SimpleLayout — venue flow", () => {
     // Still on the venue screen, showing its own loading state, not a stale one.
     expect(screen.getByPlaceholderText("Name der Lokalität (z. B. Adlon Hotel Berlin)")).toBeInTheDocument()
 
+    // MapView (and its panTrigger prop) doesn't exist yet — it only mounts
+    // once "results" is the active screen — so there's no "before" value to
+    // compare against here, unlike the "Zur Karte" test below which starts
+    // already on the results screen. The very first bump from a fresh
+    // mapPanTrigger useState(0) is 1.
     act(() => venueSettle?.({ places: [makePlace()] }))
-    expect(screen.getByRole("heading", { name: "Café Sonnenschein" })).toBeInTheDocument()
 
-    // Back from a venue-originated detail must return to "venue", not "results".
+    // Lands on the map+list results screen — the found place's card (an h2,
+    // SimplePlaceCard's own heading level) is present, but NOT SimpleDetail's
+    // h1, i.e. this is the results screen, not a jump straight to detail.
+    expect(screen.getByRole("heading", { level: 2, name: "Café Sonnenschein" })).toBeInTheDocument()
+    expect(screen.queryByRole("heading", { level: 1, name: "Café Sonnenschein" })).not.toBeInTheDocument()
+    // The place is selected and the map panned to it / its popup opened —
+    // the same selectAndPanMap mechanism a "Zur Karte" card button uses.
+    expect(onSelectSpy).toHaveBeenCalledWith(makePlace())
+    expect(mapViewProps.current.panTrigger).toBe(1)
+
+    // Back from a venue-originated results screen must return to "venue", not "tiles".
     fireEvent.click(screen.getByText("Zurück"))
     expect(screen.getByPlaceholderText("Name der Lokalität (z. B. Adlon Hotel Berlin)")).toBeInTheDocument()
   })
@@ -1303,8 +1319,8 @@ describe("SimpleLayout — venue flow", () => {
   // place-search behaviour), so a naive distance calculation shows a meaningless
   // "0 m entfernt". The full app already suppresses distance for text/place
   // search results for exactly this reason; Simple View's venue-originated
-  // detail screen must do the same.
-  it("does not show a distance on a venue-originated detail screen", async () => {
+  // results screen must do the same.
+  it("does not show a distance on a venue-originated results screen", async () => {
     mockSuggestResponse([{ kind: "venue", name: "Café Sonnenschein", display: "Café Sonnenschein, Köln", lat: 50.93, lon: 6.93 }])
     renderVenueHarness()
     fireEvent.click(screen.getByText("Einen konkreten Ort bzw. Lokalität suchen"))
@@ -1313,24 +1329,24 @@ describe("SimpleLayout — venue flow", () => {
     fireEvent.click(screen.getByText("Café Sonnenschein, Köln"))
 
     act(() => venueSettle?.({ places: [makePlace()], searchCenter: { lat: 50.93, lon: 6.93 } }))
-    expect(screen.getByRole("heading", { name: "Café Sonnenschein" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 2, name: "Café Sonnenschein" })).toBeInTheDocument()
     expect(screen.queryByText(/entfernt/)).not.toBeInTheDocument()
   })
 
   // Regression: handlePlaceSearch has early-return failure paths that set
   // `error` without ever clearing `places` — a stale non-empty `places` array
   // from a PREVIOUS successful venue lookup must not cause the new (failed)
-  // lookup to silently reopen the old venue's detail.
-  it("does not reopen a stale previous venue's detail when the new lookup fails", async () => {
+  // lookup to silently reopen the old venue's results.
+  it("does not reopen a stale previous venue's results when the new lookup fails", async () => {
     mockSuggestResponse([{ kind: "venue", name: "Café Sonnenschein", display: "Café Sonnenschein, Köln", lat: 50.93, lon: 6.93 }])
     renderVenueHarness()
     fireEvent.click(screen.getByText("Einen konkreten Ort bzw. Lokalität suchen"))
     fireEvent.change(screen.getByPlaceholderText("Name der Lokalität (z. B. Adlon Hotel Berlin)"), { target: { value: "Café" } })
     await waitFor(() => expect(screen.getByText("Café Sonnenschein, Köln")).toBeInTheDocument())
     fireEvent.click(screen.getByText("Café Sonnenschein, Köln"))
-    // First lookup succeeds, landing on its detail screen.
+    // First lookup succeeds, landing on its results screen.
     act(() => venueSettle?.({ places: [makePlace({ id: "stale", name: "Alte Bäckerei" })] }))
-    expect(screen.getByRole("heading", { name: "Alte Bäckerei" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 2, name: "Alte Bäckerei" })).toBeInTheDocument()
 
     // Back to venue, search again — this time the lookup fails. handlePlaceSearch's
     // real 404 path sets `error` WITHOUT clearing `places`, so simulate that
@@ -1341,13 +1357,13 @@ describe("SimpleLayout — venue flow", () => {
     fireEvent.click(screen.getByText("Café Sonnenschein, Köln"))
     act(() => venueSettle?.({ places: [makePlace({ id: "stale", name: "Alte Bäckerei" })], error: "place_not_found" }))
 
-    expect(screen.queryByRole("heading", { name: "Alte Bäckerei" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("heading", { level: 2, name: "Alte Bäckerei" })).not.toBeInTheDocument()
     expect(screen.getByText("Keine Treffer für diesen Namen.")).toBeInTheDocument()
   })
 
   // Regression: a user backing out of the venue screen mid-search must not be
-  // yanked into a detail screen once that abandoned search eventually settles.
-  it("does not force-navigate to detail if the user already left the venue screen", async () => {
+  // yanked onto the results screen once that abandoned search eventually settles.
+  it("does not force-navigate to results if the user already left the venue screen", async () => {
     mockSuggestResponse([{ kind: "venue", name: "Café Sonnenschein", display: "Café Sonnenschein, Köln", lat: 50.93, lon: 6.93 }])
     renderVenueHarness()
     fireEvent.click(screen.getByText("Einen konkreten Ort bzw. Lokalität suchen"))
@@ -1361,7 +1377,7 @@ describe("SimpleLayout — venue flow", () => {
 
     act(() => venueSettle?.({ places: [makePlace()] }))
     expect(screen.getByText("In meiner Nähe suchen")).toBeInTheDocument()
-    expect(screen.queryByRole("heading", { name: "Café Sonnenschein" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("heading", { level: 2, name: "Café Sonnenschein" })).not.toBeInTheDocument()
   })
 
   it("shows 'no matches' when the geocode lookup returns zero places without an error", async () => {
