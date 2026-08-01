@@ -119,7 +119,7 @@ function nextSimpleRadiusStep(currentKm: number): number {
 // SIMPLE_RADIUS_KM's reset-every-time behaviour for the venue/category path
 // — sharing the persisted state would leak Simple View's radius expansions
 // into the full UI's remembered setting and vice versa.
-const SIMPLE_AMENITY_RADIUS_KM = 4.0
+const SIMPLE_AMENITY_RADIUS_KM = 2.0
 
 const DEFAULT_SOURCES: ActiveSources = {
   accessibility_cloud: true,
