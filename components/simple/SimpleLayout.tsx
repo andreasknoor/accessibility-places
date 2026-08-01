@@ -1011,7 +1011,16 @@ export default function SimpleLayout({
                   selectedId={selectedId}
                   panTrigger={mapPanTrigger}
                   onSelect={selectAndScrollToCard}
-                  onShowInResults={(p) => openDetail(p, "results")}
+                  // No onShowInResults here (deliberately, unlike the full
+                  // Turbo UI): that prop only drives the venue popup's
+                  // "Ergebnisse" chip, and in Quickstart the results list is
+                  // always on screen below the map — tapping the marker
+                  // itself already calls onSelect above, which scrolls the
+                  // matching card into view. A separate "jump to results"
+                  // button would just duplicate that for no reason, so
+                  // MapView's showResults falls back to false and the chip
+                  // doesn't render.
+                  //
                   // Without this, the popup's own "Details" chip ignores
                   // onShowInResults entirely and always opens the full,
                   // rich PlaceDebugSheet — see MapView's onOpenDetails prop.

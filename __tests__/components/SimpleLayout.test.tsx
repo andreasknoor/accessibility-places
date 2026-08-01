@@ -677,10 +677,14 @@ describe("SimpleLayout — results screen", () => {
     expect(screen.getByText("Cafés & Eis in Deiner Nähe")).toBeInTheDocument()
   })
 
-  it("opening a place from the map's 'show in results' popup opens its detail", async () => {
+  // The map popup's "Ergebnisse" chip only renders when MapView receives an
+  // onShowInResults prop (see MapView's showResults option) — Quickstart
+  // deliberately omits it since the results list is always on screen and a
+  // marker tap (onSelect) already scrolls the matching card into view, so a
+  // separate "jump to results" chip would just duplicate that.
+  it("does not pass onShowInResults to MapView (its popup's 'Ergebnisse' chip would be redundant)", async () => {
     await goToResults()
-    act(() => { mapViewProps.current.onShowInResults(makePlace()) })
-    expect(screen.getByRole("heading", { name: "Café Sonnenschein" })).toBeInTheDocument()
+    expect(mapViewProps.current.onShowInResults).toBeUndefined()
   })
 
   // Regression (found via live browser testing): clicking a marker inside a
