@@ -355,6 +355,14 @@ export default function MapViewLeaflet({
   const placeClusterRef = useRef<any>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markers  = useRef<Map<string, any>>(new Map())
+  // Detects a locale switch inside the venue-marker effect below: unlike the
+  // parking/toilet effects (which unconditionally rebuild every marker on
+  // every run), that effect reuses existing markers via setIcon() and only
+  // builds popup content for markers it's creating fresh — so a locale
+  // change alone (places/selectedId/mapReady/focusMode all unchanged) would
+  // otherwise leave every already-open marker's popup HTML frozen in the old
+  // language until the next real search replaces the place set.
+  const lastPlacesTRef = useRef(t)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const parkingMarkersRef = useRef<any[]>([])
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1033,6 +1041,9 @@ export default function MapViewLeaflet({
       return
     }
 
+    const localeChanged = lastPlacesTRef.current !== t
+    lastPlacesTRef.current = t
+
     // Remove stale markers
     const currentIds = new Set(places.map((p) => p.id))
     for (const [id, m] of markers.current) {
@@ -1070,7 +1081,17 @@ export default function MapViewLeaflet({
         popupAnchor: [0, -pinH],
       })
 
-      const existing = markers.current.get(place.id)
+      let existing = markers.current.get(place.id)
+      if (existing && localeChanged) {
+        // Popup content (below) is only ever built in the "else" branch, so
+        // an existing marker must be torn down and recreated to pick up the
+        // new translations — removing it also closes its popup if it was
+        // open (Leaflet's normal marker-removal behaviour), which is the
+        // desired outcome here too, matching MapViewGL's equivalent fix.
+        placeClusterRef.current.removeLayer(existing)
+        markers.current.delete(place.id)
+        existing = undefined
+      }
       if (existing) {
         existing.setIcon(icon)
       } else {
@@ -1194,7 +1215,7 @@ export default function MapViewLeaflet({
     }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [places, selectedId, mapReady, focusMode])
+  }, [places, selectedId, mapReady, focusMode, t])
 
   // Fit bounds to show all results — runs only when places changes, not on marker click.
   // Separating this from the selectedId effect prevents fitBounds from firing when the

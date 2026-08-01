@@ -250,6 +250,15 @@ export default function MapViewGL({
   const onShowInResultsRef  = useRef(onShowInResults)
   const onOpenDetailsRef    = useRef(onOpenDetails)
   const onShowAmenityInResultsRef = useRef(onShowAmenityInResults)
+  // Popup HTML is built inside functions (openPlacePopup et al.) that are
+  // called from "click" listeners registered once in the map-init effect
+  // ([] deps) — those listeners permanently close over whichever render's
+  // scope existed at mount, so reading `t` directly would freeze every
+  // popup's language at mount time. A locale switch updates `t` via a
+  // normal (always re-run) effect below; reading it through this ref
+  // instead keeps popups built after a language switch correct without
+  // needing MapView itself to remount.
+  const tRef = useRef(t)
   const placesRef        = useRef(places)
   const parkingSpotsRef  = useRef(parkingSpots)
   const toiletSpotsRef   = useRef(toiletSpots)
@@ -266,6 +275,7 @@ export default function MapViewGL({
   useEffect(() => { onShowInResultsRef.current = onShowInResults }, [onShowInResults])
   useEffect(() => { onOpenDetailsRef.current = onOpenDetails }, [onOpenDetails])
   useEffect(() => { onShowAmenityInResultsRef.current = onShowAmenityInResults }, [onShowAmenityInResults])
+  useEffect(() => { tRef.current = t }, [t])
   useEffect(() => { placesRef.current = places }, [places])
   useEffect(() => { parkingSpotsRef.current = parkingSpots }, [parkingSpots])
   useEffect(() => { toiletSpotsRef.current = toiletSpots }, [toiletSpots])
@@ -586,7 +596,7 @@ export default function MapViewGL({
   function openPlacePopup(place: Place): void {
     const map = mapInst.current
     if (!map) return
-    const html = buildVenuePopupHtml(place, t, { showResults: !!onShowInResults })
+    const html = buildVenuePopupHtml(place, tRef.current, { showResults: !!onShowInResults })
     const popup = openSmartPopup(map, [place.coordinates.lon, place.coordinates.lat], html, {
       maxWidthPx: 296, estimatedHeightPx: 230, offsetPx: 44, lastProgrammaticMoveRef,
       onReady: (el) => wireVenuePopupButtons(el, place),
@@ -602,7 +612,7 @@ export default function MapViewGL({
       return best === null || d < best.dist ? { name: p.name, dist: d } : best
     }, null)
     const showResults = !!onShowAmenityInResultsRef.current && amenityTypeRef.current === "parking"
-    const html = buildParkingPopupHtml(spot, t, { nearestName: nearest?.name, nearestDistM: nearest?.dist, showResults })
+    const html = buildParkingPopupHtml(spot, tRef.current, { nearestName: nearest?.name, nearestDistM: nearest?.dist, showResults })
     const popup = openSmartPopup(map, [spot.lon, spot.lat], html, {
       maxWidthPx: 260, estimatedHeightPx: 180, offsetPx: 22, lastProgrammaticMoveRef,
       onReady: (el) => {
@@ -636,7 +646,7 @@ export default function MapViewGL({
     const showResults = !!onShowAmenityInResultsRef.current && amenityTypeRef.current === "toilet"
     const osmNodeId = spot.osmId?.startsWith("node/") ? spot.osmId.slice(5) : undefined
     const wheelmapUrl = osmNodeId ? `https://wheelmap.org/nodes/${osmNodeId}` : undefined
-    const html = buildToiletPopupHtml(spot, t, { showResults, wheelmapUrl })
+    const html = buildToiletPopupHtml(spot, tRef.current, { showResults, wheelmapUrl })
     const popup = openSmartPopup(map, [spot.lon, spot.lat], html, {
       maxWidthPx: 260, estimatedHeightPx: 180, offsetPx: 22, lastProgrammaticMoveRef,
       onReady: (el) => {
@@ -712,6 +722,20 @@ export default function MapViewGL({
     currentPopupRef.current?.remove()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [places, parkingSpots, toiletSpots, mapReady])
+
+  // ── Close any open popup on a locale switch ─────────────────────────────
+  // tRef above fixes the language of popups opened AFTER a switch; an
+  // already-open popup is a static HTML blob MapLibre never revisits, so it
+  // would otherwise keep showing the old language until the user happens to
+  // close and reopen it. Skips the initial mount (nothing is open yet) via
+  // the same guard style as the results-change effect above; unlike that
+  // effect this one doesn't need `mapReady` gating since it can't fire
+  // before first render anyway (t is always defined).
+  const firstLocaleRunRef = useRef(true)
+  useEffect(() => {
+    if (firstLocaleRunRef.current) { firstLocaleRunRef.current = false; return }
+    currentPopupRef.current?.remove()
+  }, [t])
 
   // ── Place markers + clustering ────────────────────────────────────────
   useEffect(() => {
