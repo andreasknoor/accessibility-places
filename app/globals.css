@@ -202,6 +202,46 @@ body {
   background-color: rgba(0, 0, 0, 0.06);
 }
 
+/* Popup quick view ↔ full view (lib/map/popup-content.ts popupShellD,
+   MapViewGL.tsx wirePopupToggle) — a popup opens collapsed by default (a
+   popup covering 40–90% of the map on a small phone made it hard to hop
+   between markers or navigate the map underneath it). `.expanded` is toggled
+   on the `.ap-pop` root by the footer button's click handler.
+   grid-template-rows: 0fr → 1fr is the standard CSS-only accordion trick for
+   animating to/from an unknown content height; it requires the child to have
+   overflow:hidden (any child taller than the 0fr row must stay clipped, not
+   forced to shrink-to-fit) and min-height:0 (grid items default to
+   min-height:auto, which would refuse to shrink below content size and
+   defeat the 0fr row entirely). */
+.ap-popup-gl .ap-pop-full {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.22s ease;
+}
+.ap-popup-gl .ap-pop.expanded .ap-pop-full {
+  grid-template-rows: 1fr;
+}
+.ap-popup-gl .ap-pop-full-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+.ap-popup-gl .ap-pop.expanded .ap-pop-quick {
+  display: none;
+}
+.ap-popup-gl .ap-pop [data-toggle] svg {
+  transition: transform 0.22s ease;
+}
+.ap-popup-gl .ap-pop.expanded [data-toggle] svg {
+  transform: rotate(180deg);
+}
+.ap-popup-gl .ap-pop [data-toggle] {
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.ap-popup-gl .ap-pop [data-toggle]:hover {
+  color: #201c18;
+  background-color: #e5e7eb;
+}
+
 /* ── Safe-area insets (iOS notch / home indicator) ───────────────────────────
    Needed once viewport-fit=cover is set (layout.tsx viewport). In the standalone
    PWA iOS auto-insets the webview, but the Capacitor WKWebView fills the whole

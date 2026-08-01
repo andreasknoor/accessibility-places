@@ -42,6 +42,10 @@ const SVG_LIST         = `<svg xmlns="http://www.w3.org/2000/svg" width="15" hei
 const SVG_WHEELMAP    = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="4" r="1"/><path d="m18 19 1-7-6 1"/><path d="m5 8 3-3 5.5 3-2.36 3.5"/><path d="M4.24 14.5a5 5 0 0 0 6.88 6"/><path d="M13.76 17.5a5 5 0 0 0-6.88-6"/></svg>`
 const SVG_FLAG         = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>`
 const SVG_WARN          = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`
+// Small chevron for the quick↔full footer toggle — same stroke weight family
+// as the CTA icons above, sized down (11px) to sit comfortably in a one-line
+// footer row.
+const SVG_CHEVRON       = `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`
 
 export const POPUP_D_SVG = { nav: SVG_NAV, info: SVG_INFO, list: SVG_LIST, wheelmap: SVG_WHEELMAP, flag: SVG_FLAG }
 
@@ -49,17 +53,58 @@ function dim(): string {
   return "#8a8072"
 }
 
-function shellD(headerColor: string, headerGlyph: string, title: string, subLineHtml: string, chipsHtml: string | null, ctasHtml: string): string {
-  return `<div style="font-family:sans-serif">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:3px">
-      <span style="width:32px;height:32px;border-radius:9px;background:${headerColor};color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;font-weight:800">${headerGlyph}</span>
-      <span style="font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</span>
+// Quick view ↔ full view (issue: on small phones a popup can cover 40–90% of
+// the map, making it hard to hop between markers or navigate the map at all
+// underneath it). Every popup now opens COLLAPSED by default — header row +
+// one derived overall-status glyph + a single-line summary — and expands to
+// today's full content (address/confidence, warning, all three criteria
+// chips, every CTA) only when the footer toggle is tapped. Ported from the
+// user-approved "Variante B" of a 3-variant HTML prototype (compared against
+// a pill→card morph and a peek-strip→full-sheet version; B won for being the
+// least likely to be mistaken for something else while still recognisable as
+// a real popup at a glance).
+//
+// The accordion itself is CSS-driven (app/globals.css, `.ap-pop`/`.ap-pop-full`
+// grid-template-rows trick) rather than inline styles like the rest of this
+// file — toggling a class and animating it is what CSS transitions are for;
+// doing that from inline styles would mean the click handler (MapViewGL.tsx)
+// reading and rewriting style properties by hand. The toggle wiring itself,
+// and the re-check of whether the now-taller expanded popup still fits
+// on-screen (reusing the same edge-avoidance math `openSmartPopup` already
+// runs at initial open), also live there — see wirePopupToggle().
+function popupShellD(opts: {
+  headerColor: string
+  headerGlyph: string
+  title: string
+  quickSummaryHtml: string
+  subLineHtml: string
+  warnHtml: string
+  chipsHtml: string | null
+  ctasHtml: string
+  moreLabel: string
+  lessLabel: string
+}): string {
+  return `<div class="ap-pop" style="font-family:sans-serif">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:2px">
+      <span style="width:32px;height:32px;border-radius:9px;background:${opts.headerColor};color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;font-weight:800">${opts.headerGlyph}</span>
+      <span style="flex:1;min-width:0;font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${opts.title}</span>
     </div>
-    ${subLineHtml ? `<div style="font-size:12px;margin:0 0 9px">${subLineHtml}</div>` : ""}
-    ${chipsHtml ? `<div style="display:flex;gap:6px;margin-bottom:11px">${chipsHtml}</div>` : ""}
-    <div style="display:flex;gap:7px;flex-wrap:wrap">${ctasHtml}</div>
+    <div class="ap-pop-quick" style="font-size:11.5px;color:${dim()};padding:0 0 8px">${opts.quickSummaryHtml}</div>
+    <div class="ap-pop-full"><div class="ap-pop-full-inner">
+      ${opts.subLineHtml ? `<div style="font-size:12px;margin:0 0 9px">${opts.subLineHtml}</div>` : ""}
+      ${opts.warnHtml}
+      ${opts.chipsHtml ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:11px">${opts.chipsHtml}</div>` : ""}
+      <div style="display:flex;gap:7px;flex-wrap:wrap">${opts.ctasHtml}</div>
+    </div></div>
+    <button type="button" data-toggle aria-expanded="false" data-more="${esc(opts.moreLabel)}" data-less="${esc(opts.lessLabel)}"
+      style="display:flex;align-items:center;justify-content:center;gap:4px;width:100%;border:0;border-radius:8px;background:#f3f4f6;padding:4px 0 3px;margin-top:8px;font-size:10.5px;font-weight:700;color:${dim()};cursor:pointer;font-family:sans-serif">
+      <span data-toggle-label>${esc(opts.moreLabel)}</span>${SVG_CHEVRON}
+    </button>
   </div>`
 }
+
+const OVERALL_GLYPH: Record<string, string> = VALUE_GLYPH
+const OVERALL_COLOR: Record<string, string> = VALUE_COLORS
 
 // Row-layout pill, not a one-third-width column (user-prototyped "Variante E":
 // docs/prototypes/popup-chip-compactness — value glyph moves inline next to
@@ -128,7 +173,18 @@ export function buildVenuePopupHtml(place: Place, t: T, opts: VenuePopupOptions)
     + (opts.showResults ? ctaD(SVG_LIST, t.map.popupChipResults, false, "data-show-id", true) : "")
 
   const warn = placeMayNotBeAccessible(place) ? notAccessibleWarning(t) : ""
-  return shellD(barColor, emoji, esc(place.name), subLine + warn, chips, ctas)
+  // Entrance + toilet only — parking is left out of the one-line summary
+  // (still in the full view's chip row) as the least universally relevant of
+  // the three at a first glance.
+  const quickSummary = `<span style="color:${OVERALL_COLOR[ent.value] ?? OVERALL_COLOR.unknown}">${OVERALL_GLYPH[ent.value] ?? OVERALL_GLYPH.unknown}</span> ${t.criteria.entrance}`
+    + ` · <span style="color:${OVERALL_COLOR[toi.value] ?? OVERALL_COLOR.unknown}">${OVERALL_GLYPH[toi.value] ?? OVERALL_GLYPH.unknown}</span> ${t.map.criteriaShortToilet}`
+
+  return popupShellD({
+    headerColor: barColor, headerGlyph: emoji, title: esc(place.name),
+    quickSummaryHtml: quickSummary,
+    subLineHtml: subLine, warnHtml: warn, chipsHtml: chips, ctasHtml: ctas,
+    moreLabel: t.map.popupMore, lessLabel: t.map.popupLess,
+  })
 }
 
 export function buildParkingPopupHtml(spot: ParkingSpot | AmenityFeature, t: T, opts: { nearestName?: string; nearestDistM?: number; showResults: boolean }): string {
@@ -160,7 +216,19 @@ export function buildParkingPopupHtml(spot: ParkingSpot | AmenityFeature, t: T, 
   const ctas = ctaD(SVG_NAV, t.map.popupChipNavigate, true, "data-navigate")
     + (opts.showResults ? ctaD(SVG_LIST, t.map.popupChipResults, false, "data-show-results", true) : "")
 
-  return shellD(barColor, "P", title, subLine, null, ctas) + nearSub + reportLink
+  const overall = tier === "strong" ? "yes" : "limited"
+  const quickSummary = `<span style="color:${OVERALL_COLOR[overall]}">${OVERALL_GLYPH[overall]}</span> ${tier === "strong" ? t.map.parkingReservedBadge : t.map.parkingNotReservedBadge}`
+    + (feeText ? ` · ${esc(feeText)}` : "")
+
+  // nearSub/reportLink move INSIDE the full view (wrapped into the shell's
+  // own accordion body, not appended after it) — both are exactly the kind
+  // of secondary detail the quick view is meant to hide.
+  return popupShellD({
+    headerColor: barColor, headerGlyph: "P", title,
+    quickSummaryHtml: quickSummary,
+    subLineHtml: subLine, warnHtml: nearSub, chipsHtml: null, ctasHtml: ctas + reportLink,
+    moreLabel: t.map.popupMore, lessLabel: t.map.popupLess,
+  })
 }
 
 export function buildToiletPopupHtml(spot: AmenityFeature, t: T, opts: { showResults: boolean; wheelmapUrl?: string }): string {
@@ -185,5 +253,18 @@ export function buildToiletPopupHtml(spot: AmenityFeature, t: T, opts: { showRes
     + (opts.wheelmapUrl ? ctaD(SVG_WHEELMAP, t.map.popupChipWheelmap, false, "data-wheelmap") : "")
     + (opts.showResults ? ctaD(SVG_LIST, t.map.popupChipResults, false, "data-show-results", true) : "")
 
-  return shellD(barColor, "🚻", title, subLine, null, ctas)
+  // A displayed WC is always at least "accessible" by construction (that's
+  // what the search filters for) — ✓ green regardless of tier. The euro-key
+  // requirement is the one thing worth surfacing at a glance even so (issue:
+  // arriving without a 🔑 you can't actually use it), so it rides along in
+  // the quick summary rather than being buried a tap away.
+  const quickSummary = `<span style="color:${OVERALL_COLOR.yes}">${OVERALL_GLYPH.yes}</span> ${tier === "strong" ? t.map.toiletDesignatedValue : t.a11y.yes}`
+    + (spot.euroKey ? ` · 🔑 ${t.map.toiletEuroKey}` : "")
+
+  return popupShellD({
+    headerColor: barColor, headerGlyph: "🚻", title,
+    quickSummaryHtml: quickSummary,
+    subLineHtml: subLine, warnHtml: "", chipsHtml: null, ctasHtml: ctas,
+    moreLabel: t.map.popupMore, lessLabel: t.map.popupLess,
+  })
 }

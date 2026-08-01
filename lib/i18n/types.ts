@@ -265,6 +265,11 @@ export interface Translations {
     popupChipResults:       string
     popupChipDetails:       string
     popupChipReport:        string
+    // Footer toggle label on the map popup's quick view (issue: popup covered
+    // 40–90% of the map on small phones) — visible text doubles as the
+    // accessible name, swapped on expand/collapse (see popupLess).
+    popupMore:              string
+    popupLess:              string
     // Shortened criteria labels for the venue popup's entrance/toilet/parking
     // pills (lib/map/popup-content.ts chipD) — the pills are packed inline
     // (not one-third-width columns), so the sentence-style criteria.toilet

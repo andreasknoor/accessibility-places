@@ -264,6 +264,8 @@ const de: Translations = {
     popupChipResults: "Ergebnisse",
     popupChipDetails: "Details",
     popupChipReport: "Fehler melden",
+    popupMore: "Mehr",
+    popupLess: "Weniger",
     criteriaShortToilet: "WC",
     criteriaShortParking: "Parken",
     parkingSpot:    "Behindertenparkplatz",

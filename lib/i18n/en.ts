@@ -264,6 +264,8 @@ const en: Translations = {
     popupChipResults: "Results",
     popupChipDetails: "Details",
     popupChipReport: "Report an issue",
+    popupMore: "More",
+    popupLess: "Less",
     criteriaShortToilet: "Toilet",
     criteriaShortParking: "Parking",
     parkingSpot:    "Disabled parking",

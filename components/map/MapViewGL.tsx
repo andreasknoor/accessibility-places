@@ -83,6 +83,94 @@ function placeIconKey(place: Place, selected: boolean): string {
 // (popupMaxHeight) is still the real safety net for the case where the
 // popup genuinely cannot fit even with maximum headroom.
 
+// Shared by openSmartPopup's initial-open recentre AND repositionPopupIfNeeded
+// below (the quick↔full toggle's own re-check) — the same "does this popup
+// fit, and if not, where should the camera centre so it does" math, just fed
+// a different height source each time (an estimate before the popup exists in
+// the DOM; the popup's own real measured height once it does). Returns null
+// when nothing needs to move.
+function computeRecenterTarget(
+  map: maplibregl.Map,
+  point: maplibregl.Point,
+  container: HTMLElement,
+  maxWidthPx: number,
+  heightPx: number,
+  margin = 16,
+): maplibregl.LngLat | null {
+  const overflowsLeft = point.x - maxWidthPx / 2 - margin < 0
+  const overflowsRight = point.x + maxWidthPx / 2 + margin > container.clientWidth
+  const overflowsTop = point.y - heightPx - margin < 0
+  if (!overflowsTop && !overflowsLeft && !overflowsRight) return null
+
+  const desiredY = container.clientHeight - margin
+  const currentCenterPoint = map.project(map.getCenter())
+  let newX = currentCenterPoint.x
+  if (overflowsLeft) {
+    const desiredX = maxWidthPx / 2 + margin
+    newX = currentCenterPoint.x + (point.x - desiredX)
+  } else if (overflowsRight) {
+    const desiredX = container.clientWidth - maxWidthPx / 2 - margin
+    newX = currentCenterPoint.x + (point.x - desiredX)
+  }
+  const newCenterPoint = new maplibregl.Point(newX, currentCenterPoint.y + (point.y - desiredY))
+  return map.unproject(newCenterPoint)
+}
+
+// Re-checks whether the popup — now possibly a different height than the
+// estimate openSmartPopup positioned it for — still fits, using its actual
+// rendered height instead of a guess. Wired to fire a beat after the
+// quick↔full accordion's CSS transition (MapViewGL's wirePopupToggle) has
+// settled: expanding a popup that opened comfortably in its short, collapsed
+// state can grow tall enough to need the exact same edge-avoidance recentring
+// openSmartPopup already does at initial open — this is that same correction,
+// just re-armed for a size change that happens after the popup already
+// exists, which openSmartPopup's own one-shot logic has no way to see.
+function repositionPopupIfNeeded(
+  map: maplibregl.Map,
+  popup: maplibregl.Popup,
+  maxWidthPx: number,
+  lastProgrammaticMoveRef: { current: number },
+): void {
+  const el = popup.getElement()
+  if (!el) return
+  const point = map.project(popup.getLngLat())
+  const container = map.getContainer()
+  const target = computeRecenterTarget(map, point, container, maxWidthPx, el.getBoundingClientRect().height)
+  if (!target) return
+  lastProgrammaticMoveRef.current = Date.now()
+  map.easeTo({ center: target, duration: 260 })
+  map.once("moveend", () => { lastProgrammaticMoveRef.current = Date.now() })
+}
+
+// Wires the quick-view ↔ full-view footer toggle (popupShellD's
+// [data-toggle] button) that every popup now has. Lives here rather than as
+// inline styles/handlers in lib/map/popup-content.ts because it needs real
+// map access (repositioning) that plain HTML-string builder has no reason to
+// know about. Called from each popup's onReady, alongside the existing
+// data-navigate/data-show-details/etc. wiring.
+function wirePopupToggle(
+  el: HTMLElement,
+  map: maplibregl.Map,
+  popup: maplibregl.Popup,
+  maxWidthPx: number,
+  lastProgrammaticMoveRef: { current: number },
+): void {
+  const root = el.querySelector<HTMLElement>(".ap-pop")
+  const btn = el.querySelector<HTMLElement>("[data-toggle]")
+  const label = btn?.querySelector<HTMLElement>("[data-toggle-label]")
+  if (!root || !btn) return
+  btn.addEventListener("click", (ev: Event) => {
+    ev.stopPropagation()
+    const expanded = root.classList.toggle("expanded")
+    btn.setAttribute("aria-expanded", String(expanded))
+    if (label) label.textContent = expanded ? (btn.dataset.less ?? "") : (btn.dataset.more ?? "")
+    applyPopupMaxHeight(popup, map.getContainer().clientHeight)
+    // 240ms: comfortably past the CSS accordion's own 220ms transition, so
+    // the measured height reflects the settled size, not a mid-animation one.
+    setTimeout(() => repositionPopupIfNeeded(map, popup, maxWidthPx, lastProgrammaticMoveRef), 240)
+  })
+}
+
 function openSmartPopup(
   map: maplibregl.Map,
   lngLat: [number, number],
@@ -97,7 +185,13 @@ function openSmartPopup(
     // (synchronously below, or from the deferred moveend callback) — the
     // single place that should update "which popup is current" bookkeeping.
     onAttach: (popup: maplibregl.Popup) => void
-    onReady: (el: HTMLElement) => void
+    // Passed the popup itself, not just its element — wirePopupToggle needs
+    // it (repositionPopupIfNeeded takes a Popup, not an HTMLElement), and at
+    // the time onReady fires (synchronously inside attach()'s addTo() call,
+    // for the non-recentre path) opts.onAttach hasn't run yet — a ref like
+    // currentPopupRef would still point at whichever OTHER popup was current
+    // before this one.
+    onReady: (el: HTMLElement, popup: maplibregl.Popup) => void
   },
 ): maplibregl.Popup {
   const myToken = ++opts.popupTokenRef.current
@@ -121,7 +215,7 @@ function openSmartPopup(
     const el = popup.getElement()
     if (!el) return
     applyPopupMaxHeight(popup, map.getContainer().clientHeight)
-    opts.onReady(el)
+    opts.onReady(el, popup)
   })
 
   // Attaching is centralised here (rather than the caller calling addTo()
@@ -144,15 +238,16 @@ function openSmartPopup(
     opts.onAttach(popup)
   }
 
+  // estimatedHeightPx is now the popup's QUICK-VIEW (collapsed) height — that's
+  // the state every popup opens in — not the full-content height the pre-quick-
+  // view version of this function estimated. A later expand can still grow the
+  // popup past what fits; repositionPopupIfNeeded (wirePopupToggle) re-runs
+  // this exact same math against the popup's real height once that happens.
   const point = map.project(lngLat)
   const container = map.getContainer()
-  const margin = 16
-  const overflowsLeft = point.x - opts.maxWidthPx / 2 - margin < 0
-  const overflowsRight = point.x + opts.maxWidthPx / 2 + margin > container.clientWidth
-  const needsRecenter =
-    point.y - opts.estimatedHeightPx - margin < 0 || overflowsLeft || overflowsRight
+  const target = computeRecenterTarget(map, point, container, opts.maxWidthPx, opts.estimatedHeightPx)
 
-  if (needsRecenter) {
+  if (target) {
     opts.lastProgrammaticMoveRef.current = Date.now()
     // Deliberately NOT `easeTo({ center: lngLat, offset: [...] })` — verified
     // live that this is a no-op whenever the map's current center already
@@ -161,30 +256,12 @@ function openSmartPopup(
     // from `offset` alone when `center` itself doesn't change, so the target
     // stayed exactly where it was despite a non-zero offset being passed.
     // Instead compute the destination geographic centre directly via
-    // project()/unproject() pixel math, which has no such dependency on
-    // whether `center` happens to differ from the current one.
-    //
-    // X is shifted independently of Y (only when actually needed) — an
-    // earlier version of this function only ever adjusted Y, so a marker
-    // near the left/right edge (common once international mode adds
-    // non-DACH cities the initial viewport isn't centred on) had its
-    // overflow correctly DETECTED by needsRecenter above but never
-    // corrected: the popup still poked off the side of the map. Found live
-    // in Paris (internationalMode) — confirmed via getBoundingClientRect
-    // that the popup's right edge sat 76px past the map container's edge.
-    const desiredY = container.clientHeight - margin
-    const currentCenterPoint = map.project(map.getCenter())
-    let newX = currentCenterPoint.x
-    if (overflowsLeft) {
-      const desiredX = opts.maxWidthPx / 2 + margin
-      newX = currentCenterPoint.x + (point.x - desiredX)
-    } else if (overflowsRight) {
-      const desiredX = container.clientWidth - opts.maxWidthPx / 2 - margin
-      newX = currentCenterPoint.x + (point.x - desiredX)
-    }
-    const newCenterPoint = new maplibregl.Point(newX, currentCenterPoint.y + (point.y - desiredY))
-    const newCenter = map.unproject(newCenterPoint)
-    map.easeTo({ center: newCenter, duration: 300 })
+    // project()/unproject() pixel math (computeRecenterTarget), which has no
+    // such dependency on whether `center` happens to differ from the current
+    // one. Found live in Paris (internationalMode) — confirmed via
+    // getBoundingClientRect that the popup's right edge sat 76px past the map
+    // container's edge before the X-axis half of this fix existed.
+    map.easeTo({ center: target, duration: 300 })
     map.once("moveend", () => {
       opts.lastProgrammaticMoveRef.current = Date.now()
       attach()
@@ -195,11 +272,25 @@ function openSmartPopup(
   return popup
 }
 
+// popupMaxHeight()'s ~55%-of-map-height cap was sized for the OLD
+// always-full popup (issue #43). Re-applying that same cap unchanged on
+// expand (wirePopupToggle) clips the now-taller full view a few pixels
+// short and forces an internal scrollbar — and since setting only
+// overflow-y (not overflow-x) makes the browser treat overflow-x as auto
+// too (CSS spec quirk), the reserved scrollbar gutter was also shaving a
+// sliver off the CTA row's width, intermittently clipping the rightmost
+// button. Expanded popups now get a far more generous cap (essentially
+// "as tall as the map container allows") because repositionPopupIfNeeded
+// (wirePopupToggle) already pans the camera to keep the whole thing
+// on-screen — this cap only needs to guard the genuinely pathological case
+// (content taller than the map itself), not the everyday expand.
 function applyPopupMaxHeight(popup: maplibregl.Popup | null, mapHeightPx: number): void {
   if (!popup) return
-  const el = popup.getElement()?.querySelector<HTMLElement>(".maplibregl-popup-content")
+  const rootEl = popup.getElement()
+  const el = rootEl?.querySelector<HTMLElement>(".maplibregl-popup-content")
   if (!el) return
-  const max = popupMaxHeight(mapHeightPx)
+  const expanded = !!rootEl?.querySelector(".ap-pop.expanded")
+  const max = expanded ? Math.max(160, mapHeightPx - 32) : popupMaxHeight(mapHeightPx)
   el.style.maxHeight = `${max}px`
   el.style.overflowY = "auto"
 }
@@ -446,6 +537,19 @@ export default function MapViewGL({
       console.warn("[MapViewGL] map error (likely a transient tile-fetch failure):", e.error?.message ?? e.error)
     })
 
+    // OpenFreeMap's "liberty" base style has POI symbol layers (office,
+    // bicycle_parking, bollard, atm, sports_centre, gate, lift_gate, …)
+    // referencing sprite icon names that the sprite sheet it ships
+    // (ofm_f384/ofm) doesn't actually contain — an upstream style/sprite
+    // mismatch, not one of our own markers. Left unhandled, MapLibre logs a
+    // "could not be loaded" warning every time a missing icon is needed
+    // (i.e. on most pans/zooms). A transparent placeholder silences it with
+    // no visual difference — the POI just renders without an icon either way.
+    map.on("styleimagemissing", (e: { id: string }) => {
+      if (map.hasImage(e.id)) return
+      map.addImage(e.id, { width: 1, height: 1, data: new Uint8Array(4) })
+    })
+
     map.on("dragstart", () => { userPannedRef.current = true })
     map.on("moveend", () => {
       const wasUserPan = userPannedRef.current
@@ -631,9 +735,16 @@ export default function MapViewGL({
     if (!map) return
     const html = buildVenuePopupHtml(place, tRef.current, { showResults: !!onShowInResults })
     openSmartPopup(map, [place.coordinates.lon, place.coordinates.lat], html, {
-      maxWidthPx: 296, estimatedHeightPx: 230, offsetPx: 44, lastProgrammaticMoveRef, popupTokenRef,
+      // estimatedHeightPx is the QUICK-VIEW height now (popups open collapsed
+      // by default) — was 230 (full height) before quick view existed.
+      // 332: wide enough that the venue chip row (Eingang/WC/Parken) fits on
+      // one line in both locales instead of routinely wrapping (was 296).
+      maxWidthPx: 332, estimatedHeightPx: 90, offsetPx: 44, lastProgrammaticMoveRef, popupTokenRef,
       onAttach: trackPopup,
-      onReady: (el) => wireVenuePopupButtons(el, place),
+      onReady: (el, popup) => {
+        wireVenuePopupButtons(el, place)
+        wirePopupToggle(el, map, popup, 332, lastProgrammaticMoveRef)
+      },
     })
   }
 
@@ -647,9 +758,10 @@ export default function MapViewGL({
     const showResults = !!onShowAmenityInResultsRef.current && amenityTypeRef.current === "parking"
     const html = buildParkingPopupHtml(spot, tRef.current, { nearestName: nearest?.name, nearestDistM: nearest?.dist, showResults })
     openSmartPopup(map, [spot.lon, spot.lat], html, {
-      maxWidthPx: 260, estimatedHeightPx: 180, offsetPx: 22, lastProgrammaticMoveRef, popupTokenRef,
+      // 80: quick-view height (was 180, full height, before quick view existed).
+      maxWidthPx: 260, estimatedHeightPx: 80, offsetPx: 22, lastProgrammaticMoveRef, popupTokenRef,
       onAttach: trackPopup,
-      onReady: (el) => {
+      onReady: (el, popup) => {
         el.querySelector<HTMLElement>("[data-navigate]")?.addEventListener("click", (ev: Event) => { ev.stopPropagation(); startDefaultNavigation({ lat: spot.lat, lon: spot.lon }) })
         el.querySelector<HTMLElement>("[data-show-results]")?.addEventListener("click", (ev: Event) => {
           ev.stopPropagation()
@@ -668,6 +780,7 @@ export default function MapViewGL({
             btn.style.opacity = "1"
           }).catch(() => { btn.textContent = tRef.current.map.parkingReportError; btn.style.opacity = "1" })
         })
+        wirePopupToggle(el, map, popup, 260, lastProgrammaticMoveRef)
       },
     })
     void idx
@@ -681,15 +794,17 @@ export default function MapViewGL({
     const wheelmapUrl = osmNodeId ? `https://wheelmap.org/nodes/${osmNodeId}` : undefined
     const html = buildToiletPopupHtml(spot, tRef.current, { showResults, wheelmapUrl })
     openSmartPopup(map, [spot.lon, spot.lat], html, {
-      maxWidthPx: 260, estimatedHeightPx: 180, offsetPx: 22, lastProgrammaticMoveRef, popupTokenRef,
+      // 80: quick-view height (was 180, full height, before quick view existed).
+      maxWidthPx: 260, estimatedHeightPx: 80, offsetPx: 22, lastProgrammaticMoveRef, popupTokenRef,
       onAttach: trackPopup,
-      onReady: (el) => {
+      onReady: (el, popup) => {
         el.querySelector<HTMLElement>("[data-navigate]")?.addEventListener("click", (ev: Event) => { ev.stopPropagation(); startDefaultNavigation({ lat: spot.lat, lon: spot.lon }) })
         el.querySelector<HTMLElement>("[data-wheelmap]")?.addEventListener("click", (ev: Event) => { ev.stopPropagation(); if (wheelmapUrl) void openExternalUrl(wheelmapUrl) })
         el.querySelector<HTMLElement>("[data-show-results]")?.addEventListener("click", (ev: Event) => {
           ev.stopPropagation()
           onShowAmenityInResultsRef.current?.({ osmId: spot.osmId, lat: spot.lat, lon: spot.lon })
         })
+        wirePopupToggle(el, map, popup, 260, lastProgrammaticMoveRef)
       },
     })
     void idx
