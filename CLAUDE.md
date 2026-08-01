@@ -139,7 +139,7 @@ Both the locale and `<html lang>` are applied in a **`useLayoutEffect`, not a pa
 
 **Distance display** — `PlaceCard` shows inline distance (`t.results.distanceFromHere`) when `distanceM` prop is provided. `searchCenter` reaches `ResultsList` **only when `chatMode === "nearby"` or an amenity search is active** — distance is intentionally not shown for text-search or panned-area results. This gate is applied independently on desktop (`HomeClient.tsx`) and mobile (`MobileLayout.tsx`, which receives its own `searchCenter` prop and must re-gate it locally — a v9.72 fix, mobile previously passed it through ungated).
 
-`MapView` (`components/map/MapView.tsx`) uses Leaflet, loaded via `dynamic(..., { ssr: false })`. Teardrop pins coloured by confidence with the category emoji, `leaflet.markercluster` grouping, the "Hier suchen" pan-detection time-window invariant, the two-effect ordering + first-mount `invalidateSize` invariants, and the `isolation: isolate` stacking-context rule → **[docs/architecture/mapview.md](docs/architecture/mapview.md)**.
+`MapView` (`components/map/MapView.tsx`) renders `MapViewGL.tsx`, loaded via `dynamic(..., { ssr: false })` — MapLibre GL JS + OpenFreeMap vector tiles, the sole map engine since the v12.0 cutover (issue #48; the pre-migration Leaflet implementation was removed). Teardrop pins coloured by confidence with the category emoji, native GPU-side clustering, the "Hier suchen" pan-detection time-window invariant, the effect-ordering + first-mount resize invariants, and the popup positioning/recentring logic → **[docs/architecture/mapview-gl.md](docs/architecture/mapview-gl.md)**.
 
 **Filter/source/radius persistence** — `HomeClient.tsx` persists the active filter criteria, source toggles, and radius to `localStorage` via a `useEffect` (guarded by `prefsLoadedRef` so the initial load effect fires first and the persist effect never overwrites saved prefs with defaults). `alwaysShowParking` and `alwaysShowToilets` are intentionally excluded from the filter-prefs key — they are persisted separately via `AppSettings`. `handleReset` restores defaults and writes them back, so the stored value self-heals on reset.
 
@@ -244,14 +244,14 @@ shared trigger + popover, in three variants:
   row is the only placement candidate, hence the heavier labelled treatment
   there instead of a bare icon.
 
-The map's parking/toilet marker popups (`MapView.tsx`, hand-built HTML +
-`L.DomEvent.on` bindings — **not** React, `NavigateButton` cannot be reused
-there) get their own, simpler treatment: "Navigate here" is now the
-popup's permanent primary CTA slot (`POPUP_CTA`), demoting the Google-Maps-
-search / Wheelmap links that used to occupy it into the secondary
-`POPUP_LINKS` row underneath. No in-popup chooser here even on Android —
-the popup is short-lived (closes on pan/zoom) and too narrow for a picker,
-so it always calls `startDefaultNavigation` directly.
+The map's parking/toilet marker popups (`lib/map/popup-content.ts`'s hand-
+built HTML, wired up via plain `addEventListener` in `MapViewGL.tsx` —
+**not** React, `NavigateButton` cannot be reused there) get their own,
+simpler treatment: "Navigate here" is the first, primary CTA in the unified
+popup template (`ctaD(...)`, `data-navigate`), ahead of the secondary
+Wheelmap / "show in results" chips. No in-popup chooser here even on
+Android — the popup is short-lived (closes on pan/zoom) and too narrow for
+a picker, so it always calls `startDefaultNavigation` directly.
 
 Every surface targets the coordinate of the specific thing being navigated
 to — a `Place`'s own `coordinates`, or an `AmenityFeature`'s own `lat`/`lon`
@@ -295,7 +295,7 @@ The app targets **WCAG 2.2 AA** and is itself an accessibility product, so keep 
 - **Landmarks:** desktop + mobile shells and all static pages wrap content in `<main id="main-content">`; the search bar is `role="search"`; footers are `<footer>`; a skip link (`common.skipToContent`) is the first focusable element (uses `focus-visible:` so it only shows on keyboard nav, not programmatic focus after navigation).
 - **Live regions:** `ResultsList` has an sr-only `role="status" aria-live="polite"` announcing search progress/outcome; error banners are `role="alert"`.
 - **Design tokens** (`globals.css`): `--card-border` (slightly darker card edge), `--primary-strong` (darker on-brand blue for primary-coloured **text** on light/tinted backgrounds, where `--primary` only hits 4.50:1). Composited contrast over map tiles/photos and reflow/zoom are **not** statically checkable — human/AT testing only.
-- **Map:** Leaflet markers aren't individually keyboard-focusable; the conformant path is the **equivalent alternative** — the fully keyboard/AT-operable `ResultsList`. The map container is a labelled `role="region"` pointing at it. Don't over-invest in marker keyboard nav.
+- **Map:** MapLibre's canvas-rendered markers aren't individually keyboard-focusable; the conformant path is the **equivalent alternative** — the fully keyboard/AT-operable `ResultsList`. The map container is a labelled `role="region"` pointing at it. Don't over-invest in marker keyboard nav.
 - **i18n invariant (reinforced):** every visible **and** assistive string (`alt`, `aria-label`, announcements) goes through `lib/i18n` (DE+EN) — no hardcoded UI text.
 - **Accessibility statement** lives as a FAQ section ("Barrierefreiheit dieser App" / "Accessibility of this app"), not a separate page. A PR a11y checklist is in `.github/pull_request_template.md`.
 

@@ -16,6 +16,23 @@ const withSerwist = withSerwistInit({
   disable: true,
 })
 
+// 'unsafe-eval' was carried for years as a suspected Leaflet requirement,
+// flagged in a 2026-05 security audit as "remove only after verification"
+// rather than dropped outright, since nothing had confirmed it was actually
+// needed vs. just never tested without it. Investigated after the v12.0
+// Leaflet removal: a production build with 'unsafe-eval' absent passed a
+// full manual pass (search, map interaction, popups, PlaceDebugSheet,
+// settings, amenity search) with no CSP violations — Leaflet was never the
+// real reason. React's OWN dev-mode tooling is: Fast Refresh / dev-only
+// stack-trace reconstruction calls eval() to re-run code in a different
+// stack context, but "React will never use eval() in production" (React's
+// own error message). So this only needs to be dev-only, not permanent —
+// confirmed live: `next dev` throws "eval() is not supported in this
+// environment" on this exact CSP the moment 'unsafe-eval' is dropped
+// unconditionally, while `next build && next start` (production mode) had
+// already been verified clean without it.
+const isDev = process.env.NODE_ENV === "development"
+
 const securityHeaders = [
   { key: "X-Frame-Options",           value: "DENY" },
   { key: "X-Content-Type-Options",    value: "nosniff" },
@@ -25,10 +42,18 @@ const securityHeaders = [
     key:   "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://tally.so https://va.vercel-scripts.com https://cloud.umami.is",
+      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://tally.so https://va.vercel-scripts.com https://cloud.umami.is`,
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: https://*.tile.openstreetmap.org https://maps.gstatic.com https://upload.wikimedia.org https://commons.wikimedia.org https://lh3.googleusercontent.com",
-      "connect-src 'self' https://nominatim.openstreetmap.org https://places.googleapis.com https://api.accessibility.cloud https://www.reisefueralle.de https://tally.so https://api.ginto.guide https://overpass.accessible-places.org https://overpass-api.de https://photon.komoot.io https://www.wikidata.org https://lh3.googleusercontent.com https://logs.accessible-places.org https://acceslibre.beta.gouv.fr https://cloud.umami.is https://gateway.umami.is",
+      "img-src 'self' data: https://maps.gstatic.com https://upload.wikimedia.org https://commons.wikimedia.org https://lh3.googleusercontent.com",
+      // tiles.openfreemap.org: MapLibre (issue #48 migration) fetches vector tiles,
+      // the style JSON, glyphs and the sprite all via fetch/XHR (from the main
+      // thread and the worker), never via <img> — CSP treats that as connect-src
+      // regardless of content type, so img-src does not need a matching entry.
+      "connect-src 'self' https://nominatim.openstreetmap.org https://places.googleapis.com https://api.accessibility.cloud https://www.reisefueralle.de https://tally.so https://api.ginto.guide https://overpass.accessible-places.org https://overpass-api.de https://photon.komoot.io https://www.wikidata.org https://lh3.googleusercontent.com https://logs.accessible-places.org https://acceslibre.beta.gouv.fr https://cloud.umami.is https://gateway.umami.is https://tiles.openfreemap.org",
+      // MapLibre's worker is self-hosted (public/maplibre-gl-worker.mjs, see
+      // lib/map/maplibre-worker.ts) specifically so this can stay 'self' — no
+      // blob: exception, which would be functionally close to unsafe-eval (R5).
+      "worker-src 'self'",
       "font-src 'self'",
       "frame-src https://tally.so",
       "object-src 'none'",
@@ -43,8 +68,10 @@ const nextConfig: NextConfig = {
   },
   // Next.js 16 defaults to Turbopack for build + dev. Keep it explicit: the
   // production build MUST use Turbopack. Switching to webpack (v3.84) broke the
-  // Leaflet map (dynamic CSS imports dropped / intermittent CSS race). This was
-  // the last known-good configuration.
+  // map (dynamic CSS imports dropped / intermittent CSS race) — true of the
+  // pre-migration Leaflet map then, and just as true of MapViewGL.tsx's own
+  // dynamic `maplibre-gl/dist/maplibre-gl.css` import now. This was the last
+  // known-good configuration.
   turbopack: {},
   async headers() {
     return [

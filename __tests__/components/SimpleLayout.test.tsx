@@ -677,10 +677,14 @@ describe("SimpleLayout — results screen", () => {
     expect(screen.getByText("Cafés & Eis in Deiner Nähe")).toBeInTheDocument()
   })
 
-  it("opening a place from the map's 'show in results' popup opens its detail", async () => {
+  // The map popup's "Ergebnisse" chip only renders when MapView receives an
+  // onShowInResults prop (see MapView's showResults option) — Quickstart
+  // deliberately omits it since the results list is always on screen and a
+  // marker tap (onSelect) already scrolls the matching card into view, so a
+  // separate "jump to results" chip would just duplicate that.
+  it("does not pass onShowInResults to MapView (its popup's 'Ergebnisse' chip would be redundant)", async () => {
     await goToResults()
-    act(() => { mapViewProps.current.onShowInResults(makePlace()) })
-    expect(screen.getByRole("heading", { name: "Café Sonnenschein" })).toBeInTheDocument()
+    expect(mapViewProps.current.onShowInResults).toBeUndefined()
   })
 
   // Regression (found via live browser testing): clicking a marker inside a
@@ -844,7 +848,7 @@ describe("SimpleLayout — results screen", () => {
       return m ? Number(m[1]) : NaN
     }
 
-    // The seeding effect (mapHeightPx: null → 40% of the measured container)
+    // The seeding effect (mapHeightPx: null → 70% of the measured container)
     // runs after the "results" screen commits, in its own effect pass — under
     // full-suite scheduling pressure that can land after a synchronous
     // assertion immediately following goToResults(), not just before it.
@@ -856,26 +860,26 @@ describe("SimpleLayout — results screen", () => {
     async function goToSeededResults() {
       stubClientHeight(400)
       await goToResults()
-      await waitFor(() => expect(mapPanelHeightPx()).toBe(160)) // 40% of 400
+      await waitFor(() => expect(mapPanelHeightPx()).toBe(280)) // 70% of 400
       return screen.getByRole("separator", { name: "Größe von Karte und Liste anpassen" })
     }
 
-    it("seeds the split at 40% map / 60% list once the container can be measured", async () => {
+    it("seeds the split at 70% map / 30% list once the container can be measured", async () => {
       await goToSeededResults()
     })
 
     it("exposes the split as an accessible separator with a current-value percentage", async () => {
       const separator = await goToSeededResults()
-      expect(separator).toHaveAttribute("aria-valuenow", "40")
+      expect(separator).toHaveAttribute("aria-valuenow", "70")
     })
 
     it("ArrowDown/ArrowUp on the separator resize the map pane, clamped to a minimum", async () => {
       const separator = await goToSeededResults()
       fireEvent.keyDown(separator, { key: "ArrowDown" })
-      expect(mapPanelHeightPx()).toBe(192) // 160 + 32 step
+      expect(mapPanelHeightPx()).toBe(310) // 280 + 32 step, clamped to containerHeight(400) - 90
       fireEvent.keyDown(separator, { key: "ArrowUp" })
       fireEvent.keyDown(separator, { key: "ArrowUp" })
-      expect(mapPanelHeightPx()).toBe(128) // 192 - 32 - 32
+      expect(mapPanelHeightPx()).toBe(246) // 310 - 32 - 32
       // Drive it far past the minimum — must clamp, not go negative or collapse to 0.
       for (let i = 0; i < 20; i++) fireEvent.keyDown(separator, { key: "ArrowUp" })
       expect(mapPanelHeightPx()).toBe(90) // SPLIT_PANE_MIN_PX
@@ -884,8 +888,8 @@ describe("SimpleLayout — results screen", () => {
     it("dragging the separator resizes the map pane arbitrarily within [min, max]", async () => {
       const separator = await goToSeededResults()
       fireEvent.pointerDown(separator, { clientY: 200, pointerId: 1 })
-      fireEvent.pointerMove(separator, { clientY: 260, pointerId: 1 }) // +60px
-      expect(mapPanelHeightPx()).toBe(220) // 160 + 60
+      fireEvent.pointerMove(separator, { clientY: 220, pointerId: 1 }) // +20px
+      expect(mapPanelHeightPx()).toBe(300) // 280 + 20
       fireEvent.pointerMove(separator, { clientY: 500, pointerId: 1 }) // driven past the max
       expect(mapPanelHeightPx()).toBe(310) // clamped to containerHeight(400) - 90
       fireEvent.pointerUp(separator, { pointerId: 1 })

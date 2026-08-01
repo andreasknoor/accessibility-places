@@ -283,7 +283,7 @@ export default function SimpleLayout({
     splitDragRef.current = null
   }
 
-  // Seed the default 40/60 split once the results screen's split container
+  // Seed the default 70/30 split once the results screen's split container
   // can actually be measured (it renders with height 0 the instant "results"
   // becomes the active screen, before layout settles). useLayoutEffect, not
   // useEffect: this is a layout measurement (same reasoning as useIsMobile's
@@ -298,7 +298,7 @@ export default function SimpleLayout({
     if (!el) return
     const h = el.clientHeight
     if (h > 0) {
-      setMapHeightPx(clampSplitHeight(h * 0.4, h))
+      setMapHeightPx(clampSplitHeight(h * 0.7, h))
       setContainerHeightPx(h)
     }
   }, [screen, mapHeightPx])
@@ -1011,7 +1011,16 @@ export default function SimpleLayout({
                   selectedId={selectedId}
                   panTrigger={mapPanTrigger}
                   onSelect={selectAndScrollToCard}
-                  onShowInResults={(p) => openDetail(p, "results")}
+                  // No onShowInResults here (deliberately, unlike the full
+                  // Turbo UI): that prop only drives the venue popup's
+                  // "Ergebnisse" chip, and in Quickstart the results list is
+                  // always on screen below the map — tapping the marker
+                  // itself already calls onSelect above, which scrolls the
+                  // matching card into view. A separate "jump to results"
+                  // button would just duplicate that for no reason, so
+                  // MapView's showResults falls back to false and the chip
+                  // doesn't render.
+                  //
                   // Without this, the popup's own "Details" chip ignores
                   // onShowInResults entirely and always opens the full,
                   // rich PlaceDebugSheet — see MapView's onOpenDetails prop.

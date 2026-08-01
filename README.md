@@ -58,7 +58,7 @@ Built with **Next.js 16 (Turbopack)**, **React 19**, **Tailwind v4**, and **Leaf
 |---|---|
 | Framework | Next.js 16.2 (App Router, Turbopack), React 19 |
 | Styling | Tailwind v4, shadcn/ui (Radix primitives), lucide-react icons |
-| Maps | Leaflet 1.9 + react-leaflet 5 + leaflet.markercluster (dynamically imported, no SSR) |
+| Maps | MapLibre GL JS + OpenFreeMap vector tiles (dynamically imported, no SSR) |
 | PWA | `@serwist/next` service worker (disabled in development) |
 | Analytics | Vercel Analytics + Vercel Speed Insights |
 | Error reporting | Self-hosted GlitchTip via `@sentry/nextjs` (production only) |
