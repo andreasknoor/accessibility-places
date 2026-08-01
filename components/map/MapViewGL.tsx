@@ -538,16 +538,27 @@ export default function MapViewGL({
     })
 
     // OpenFreeMap's "liberty" base style has POI symbol layers (office,
-    // bicycle_parking, bollard, atm, sports_centre, gate, lift_gate, …)
-    // referencing sprite icon names that the sprite sheet it ships
-    // (ofm_f384/ofm) doesn't actually contain — an upstream style/sprite
-    // mismatch, not one of our own markers. Left unhandled, MapLibre logs a
-    // "could not be loaded" warning every time a missing icon is needed
-    // (i.e. on most pans/zooms). A transparent placeholder silences it with
-    // no visual difference — the POI just renders without an icon either way.
-    map.on("styleimagemissing", (e: { id: string }) => {
-      if (map.hasImage(e.id)) return
-      map.addImage(e.id, { width: 1, height: 1, data: new Uint8Array(4) })
+    // bicycle_parking, bollard, atm, sports_centre, gate, lift_gate,
+    // recycling, …) referencing sprite icon names that the sprite sheet it
+    // ships (ofm_f384/ofm) doesn't actually contain — an upstream
+    // style/sprite mismatch, not one of our own markers. A transparent
+    // placeholder silences the resulting warning with no visual difference
+    // (the POI just renders without an icon either way).
+    //
+    // A `styleimagemissing` LISTENER (map.on(...)) is not enough: MapLibre's
+    // ImageManager fires that event and then unconditionally logs "could not
+    // be loaded" on the very next line, with no re-check of whether a
+    // synchronous listener just resolved it (verified in
+    // node_modules/maplibre-gl/dist/maplibre-gl-dev.mjs's
+    // ImageManager#_getImagesForIds) — a listener can only stop *repeat*
+    // warnings for an icon already added this session, never the first
+    // occurrence. setMissingStyleImageResolver's resolver runs BEFORE that
+    // recheck (its result is awaited, then `getImage(id)` is tested again
+    // before deciding whether to fire/warn at all), so resolving here
+    // suppresses the warning even on first occurrence — for any icon name,
+    // not just the ones already seen live.
+    map.setMissingStyleImageResolver((id: string) => {
+      if (!map.hasImage(id)) map.addImage(id, { width: 1, height: 1, data: new Uint8Array(4) })
     })
 
     map.on("dragstart", () => { userPannedRef.current = true })
