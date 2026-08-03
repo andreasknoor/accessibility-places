@@ -5,7 +5,7 @@ import type {
   SourceAttribution,
   SourceId,
 } from "../types"
-import { RELIABILITY_WEIGHTS, OSM_ENTRANCE_WEIGHT_FACTOR, CONFIDENCE_THRESHOLDS, SOURCE_FAMILY, type ConfidenceTier } from "../config"
+import { RELIABILITY_WEIGHTS, CONFIDENCE_THRESHOLDS, SOURCE_FAMILY, type ConfidenceTier } from "../config"
 
 // ─── Merge two AccessibilityAttribute objects from different sources ────────
 
@@ -280,14 +280,12 @@ export function buildAttribute(
   value: A11yValue,
   rawValue: string,
   details: AccessibilityAttribute["details"],
-  isOsmOverall = false,
   weightMultiplier = 1.0,
   verifiedAt?: string,
   verifiedRecently?: boolean,
 ): AccessibilityAttribute {
   const baseWeight = RELIABILITY_WEIGHTS[sourceId]
-  const overallAdj = isOsmOverall ? OSM_ENTRANCE_WEIGHT_FACTOR : 1.0
-  const weight     = Math.min(baseWeight * overallAdj * weightMultiplier, 1.0)
+  const weight     = Math.min(baseWeight * weightMultiplier, 1.0)
 
   // verifiedRecently can be passed explicitly (e.g. Ginto: weight boost from
   // LEVEL_2 should not show the badge; only updatedAt-based verification should).
@@ -327,21 +325,6 @@ export function confidenceTier(confidence: number, conflict = false): Confidence
   if (confidence >= CONFIDENCE_THRESHOLDS.sehrHoch) return conflict ? "gut" : "sehr_hoch"
   if (confidence >= CONFIDENCE_THRESHOLDS.gut) return "gut"
   return "gering"
-}
-
-// Trigger for the "Achtung: evtl. nicht barrierefrei" micro-copy
-// (docs/prototypes/unknown-value-microcopy.html) — entrance or toilet being
-// "no" is the pattern users misread as "the app has a data error" rather
-// than "we simply don't know" — the "unknown" case was DROPPED from this
-// trigger in v13 (docs/plans/reliability-tiers.md, decision 10): the
-// judgement line now says "keine Angabe zu X" explicitly for that case, and
-// a second red box for the same fact competed with, rather than reinforced,
-// that message. Deliberately excludes parking/seating: those are secondary
-// criteria with much sparser data and would fire the warning far too often
-// to stay meaningful. Shared by PlaceCard, PlaceDebugSheet, and MapView's
-// venue popup so the three surfaces can never disagree on when to show it.
-export function placeMayNotBeAccessible(place: Place): boolean {
-  return place.accessibility.entrance.value === "no" || place.accessibility.toilet.value === "no"
 }
 
 // ─── Filter places by active criteria ─────────────────────────────────────

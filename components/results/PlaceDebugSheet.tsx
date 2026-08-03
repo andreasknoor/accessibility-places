@@ -6,8 +6,9 @@ import {
   X, MapPin, Phone, Globe, Tag, Clock, Mail,
   Utensils, Leaf, Dog, Wifi, Star, DollarSign,
   MessageSquare, ExternalLink, Accessibility,
-  ShieldCheck, Award, ChevronDown, ChevronUp,
-  Truck, ShoppingBag, Share2, Car, Hash, Navigation, Copy, Flag, PenLine,
+  ShieldCheck, Award, ChevronDown, ChevronUp, CheckCircle2,
+  Truck, ShoppingBag, Share2, Car, DoorOpen, Toilet as ToiletIcon, Armchair,
+  Hash, Navigation, Copy, Flag, PenLine,
 } from "lucide-react"
 import { shareOrCopy } from "@/lib/native/share"
 import { hapticLight, hapticSuccess } from "@/lib/native/haptics"
@@ -19,11 +20,8 @@ import { useTranslations, useLocale } from "@/lib/i18n"
 import { buildPlaceDeepLink } from "@/lib/place-link"
 import { openTallyPopup } from "@/lib/tally"
 import { track } from "@/lib/analytics"
-import { placeMayNotBeAccessible } from "@/lib/matching/merge"
-import { ScoreContent } from "./ConfidenceBadge"
 import JudgmentLine from "./JudgmentLine"
-import { NotAccessibleWarningBox } from "./NotAccessibleWarning"
-import { criterionTier, attrVerifiedAt, type JudgmentFilters } from "@/lib/reliability"
+import { criterionTier, attrVerifiedAt, type JudgmentFilters, type ConfidenceTier } from "@/lib/reliability"
 import { cn } from "@/lib/utils"
 import type { Place, SourceId, ParkingDetails, EntranceDetails, ToiletDetails, SeatingDetails, AccessibilityAttribute, SearchFilters } from "@/lib/types"
 
@@ -31,6 +29,10 @@ interface Props {
   place:    Place
   onClose:  () => void
   filters?: SearchFilters
+  // Opens the filter view — passed through to JudgmentLine so its
+  // "Kriterien" text becomes a real link here (the only surface where this
+  // link exists, see JudgmentLine.tsx's own comment on why).
+  onOpenFilters?: () => void
 }
 
 const NO_FILTERS: JudgmentFilters = { entrance: false, toilet: false, parking: false, seating: false, acceptUnknown: false }
@@ -42,20 +44,31 @@ const VALUE_COLORS: Record<string, string> = {
   unknown: "text-zinc-400",
 }
 
-// Per-criterion reliability pill (v13, docs/plans/reliability-tiers.md) —
-// surfaces the tier the app already computes for each accessibility
-// attribute, so a value resting on a single weak source (e.g. Google-only)
-// reads as "gering" instead of an authoritative-looking plain "Ja". Always
-// neutral/grey: reliability is a separate axis from the sachebene
-// yes/limited/no colour (VALUE_COLORS above) and must never look like a
-// second traffic light next to it.
-function ReliabilityPill({ attr }: { attr: AccessibilityAttribute }) {
-  const t    = useTranslations()
-  const tier = criterionTier(attr)
+// Per-criterion reliability indicator (v13, docs/plans/reliability-tiers.md;
+// bar form since the 2026-08-03 table redesign) — surfaces the tier the app
+// already computes for each accessibility attribute, so a value resting on a
+// single weak source (e.g. Google-only) reads as "gering" instead of an
+// authoritative-looking plain "Ja". Always neutral/grey: reliability is a
+// separate axis from the sachebene yes/limited/no colour (VALUE_COLORS
+// above) and must never look like a second traffic light next to it. Three
+// bars (not a coloured pill) so tiers are comparable across rows at a
+// glance — the tier word itself is still the accessible name (role="img"
+// aria-label), never conveyed by fill count alone.
+const TIER_BAR_COUNT: Record<ConfidenceTier, number> = { sehr_hoch: 3, gut: 2, gering: 1, keine: 0 }
+
+function ReliabilityBars({ attr }: { attr: AccessibilityAttribute }) {
+  const t      = useTranslations()
+  const tier   = criterionTier(attr)
+  const filled = TIER_BAR_COUNT[tier]
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-px text-[10px] font-semibold ml-1.5 align-middle whitespace-nowrap bg-slate-100 text-slate-600 border-slate-200">
-      <span className="w-1.5 h-1.5 rounded-full bg-slate-500" aria-hidden />
-      {t.results.tier[tier]}
+    <span className="inline-flex items-center gap-[2px]" role="img" aria-label={t.results.tier[tier]}>
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          aria-hidden
+          className={cn("block w-1 h-2.5 rounded-[1px]", i < filled ? "bg-slate-500" : "bg-slate-200")}
+        />
+      ))}
     </span>
   )
 }
@@ -111,58 +124,25 @@ function Section({
   icon: Icon,
   chipClass,
   children,
-  expandable,
-  expanded,
-  onToggleExpand,
-  expandedContent,
 }: {
   title: string
   icon: React.ElementType
   chipClass: string
   children: React.ReactNode
-  // Variante B: the chip itself becomes the expand/collapse trigger for
-  // supplementary content (currently only the Barrierefreiheit section's
-  // confidence-score breakdown) instead of adding a separate row/element.
-  expandable?:      boolean
-  expanded?:        boolean
-  onToggleExpand?:  () => void
-  expandedContent?: React.ReactNode
 }) {
   const chipClasses = cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold mb-3 border", chipClass)
   return (
     <section className="py-4">
-      {expandable ? (
-        <button
-          type="button"
-          onClick={onToggleExpand}
-          aria-expanded={expanded}
-          className={cn(chipClasses, "cursor-pointer hover:opacity-80 transition-opacity")}
-        >
-          <Icon className="w-3 h-3 shrink-0" />
-          {/* role=heading (not a literal <h3>): this span sits inside a <button>
-              in the expandable case, and heading content isn't valid inside
-              button's phrasing-content model — the ARIA role gives screen
-              readers section-heading navigation (WCAG 1.3.1/2.4.6) without an
-              invalid DOM nesting. */}
-          <span role="heading" aria-level={3} className="uppercase tracking-wide">{title}</span>
-          {expanded ? <ChevronUp className="w-3 h-3 shrink-0" /> : <ChevronDown className="w-3 h-3 shrink-0" />}
-        </button>
-      ) : (
-        <div className={chipClasses}>
-          <Icon className="w-3 h-3 shrink-0" />
-          <span role="heading" aria-level={3} className="uppercase tracking-wide">{title}</span>
-        </div>
-      )}
-      {expandable && expanded && (
-        <div className="mb-3 bg-muted/40 border border-border rounded-lg p-3">{expandedContent}</div>
-      )}
+      <div className={chipClasses}>
+        <Icon className="w-3 h-3 shrink-0" />
+        <span role="heading" aria-level={3} className="uppercase tracking-wide">{title}</span>
+      </div>
       <div className="space-y-2">{children}</div>
     </section>
   )
 }
 
-export default function PlaceDebugSheet({ place, onClose, filters }: Props) {
-  const [scoreOpen, setScoreOpen] = useState(false)
+export default function PlaceDebugSheet({ place, onClose, filters, onOpenFilters }: Props) {
   const [shareFeedback, setShareFeedback] = useState<"copied" | "shared" | null>(null)
   const [copiedField,  setCopiedField]  = useState<"address" | "osm" | null>(null)
   const copyTimerRef      = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -335,6 +315,16 @@ export default function PlaceDebugSheet({ place, onClose, filters }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [place.coordinates.lat, place.coordinates.lon])
 
+  // One icon per criterion (not the generic wheelchair glyph everywhere) —
+  // 2026-08-03 table redesign: rows read faster when entrance/toilet/seating
+  // are silhouette-distinct, the same reasoning as CriterionIcon in
+  // Quickstart (components/simple/CriterionIcon.tsx) applied to Turbo.
+  const CRITERION_ROW_ICONS: Record<"entrance" | "toilet" | "seating", React.ElementType> = {
+    entrance: DoorOpen,
+    toilet:   ToiletIcon,
+    seating:  Armchair,
+  }
+
   const criteria = [
     { key: "entrance" as const, label: t.criteria.entrance, attr: place.accessibility.entrance },
     { key: "toilet"   as const, label: t.criteria.toilet,   attr: place.accessibility.toilet   },
@@ -342,6 +332,13 @@ export default function PlaceDebugSheet({ place, onClose, filters }: Props) {
       ? [{ key: "seating" as const, label: t.criteria.seating, attr: place.accessibility.seating }]
       : []),
   ]
+
+  // Shared with JudgmentLine below — also drives the table's "Gefiltert"
+  // column, so both surfaces agree on exactly which criteria count as
+  // "yours" without computing it twice.
+  const judgmentFilters: JudgmentFilters = filters
+    ? { entrance: filters.entrance, toilet: filters.toilet, parking: filters.parking, parkingNearby: filters.parkingNearby, seating: filters.seating, acceptUnknown: filters.acceptUnknown }
+    : NO_FILTERS
 
   const parkingAttr = place.accessibility.parking
   const parkingD    = parkingAttr.details as ParkingDetails
@@ -478,7 +475,18 @@ export default function PlaceDebugSheet({ place, onClose, filters }: Props) {
             A separate axis from the reliability tiers in the section below —
             see docs/plans/reliability-tiers.md. */}
         <div className="px-4 py-3 border-b border-border shrink-0">
-          <JudgmentLine place={place} filters={filters ? { entrance: filters.entrance, toilet: filters.toilet, parking: filters.parking, parkingNearby: filters.parkingNearby, seating: filters.seating, acceptUnknown: filters.acceptUnknown } : NO_FILTERS} />
+          <JudgmentLine
+            place={place}
+            filters={judgmentFilters}
+            // Also closes this sheet (2026-08-03): onOpenFilters alone only
+            // flips state behind the scenes (setActiveTab("filter") on
+            // mobile, setFilterCollapsed(false) on desktop) — this sheet is
+            // a fixed full-screen overlay on top of it, so without closing
+            // it too, the switch happens invisibly and the click looks like
+            // it did nothing. Only wired here, not inside JudgmentLine
+            // itself, so JudgmentLine stays agnostic of onClose.
+            onOpenFilters={onOpenFilters ? () => { onClose(); onOpenFilters() } : undefined}
+          />
         </div>
 
         {/* Scrollable content */}
@@ -489,112 +497,153 @@ export default function PlaceDebugSheet({ place, onClose, filters }: Props) {
             title={ti.reliability}
             icon={Accessibility}
             chipClass="bg-slate-100 text-slate-700 border-slate-200"
-            expandable
-            expanded={scoreOpen}
-            onToggleExpand={() => setScoreOpen((v) => !v)}
-            expandedContent={
-              <>
-                <p className="font-semibold text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
-                  {t.results.scoreCalculation}
-                </p>
-                <ScoreContent place={place} />
-              </>
-            }
           >
             {wheelchairDesc && (
               <InfoRow icon={MessageSquare} label={ti.description}>{wheelchairDesc}</InfoRow>
             )}
-            {criteria.map(({ key, label, attr }) => {
-              const ed = key === "entrance" ? (attr.details as EntranceDetails) : null
-              const td = key === "toilet"   ? (attr.details as ToiletDetails)   : null
-              const sd = key === "seating"  ? (attr.details as SeatingDetails)  : null
-              const subRows = (
-                <>
-                  {ed?.isLevel           != null && <InfoRow icon={Accessibility} label={t.details.entrance.isLevel}>{ed.isLevel ? "✓" : "✗"}</InfoRow>}
-                  {ed?.hasRamp           != null && <InfoRow icon={Accessibility} label={t.details.entrance.hasRamp}>{ed.hasRamp ? "✓" : "✗"}</InfoRow>}
-                  {ed?.rampSlopePercent  != null && <InfoRow icon={Hash}          label={t.details.entrance.rampSlopePercent}>{ed.rampSlopePercent} {t.details.units.percent}</InfoRow>}
-                  {ed?.stepCount         != null && <InfoRow icon={Hash}          label={t.details.entrance.stepCount}>{ed.stepCount}</InfoRow>}
-                  {ed?.stepHeightCm      != null && <InfoRow icon={Hash}          label={t.details.entrance.stepHeightCm}>{ed.stepHeightCm} {t.details.units.cm}</InfoRow>}
-                  {ed?.doorWidthCm       != null && <InfoRow icon={Hash}          label={t.details.entrance.doorWidthCm}>{ed.doorWidthCm} {t.details.units.cm}</InfoRow>}
-                  {ed?.hasAutomaticDoor  != null && <InfoRow icon={Accessibility} label={t.details.entrance.hasAutomaticDoor}>{ed.hasAutomaticDoor ? "✓" : "✗"}</InfoRow>}
-                  {ed?.hasHoist          != null && <InfoRow icon={Accessibility} label={t.details.entrance.hasHoist}>{ed.hasHoist ? "✓" : "✗"}</InfoRow>}
-                  {ed?.description             && <InfoRow icon={MessageSquare}  label={t.details.entrance.description}>{ed.description}</InfoRow>}
-                  {td?.isDesignated          != null && <InfoRow icon={Accessibility} label={t.details.toilet.isDesignated}>{td.isDesignated ? "✓" : "✗"}</InfoRow>}
-                  {td?.isInside              != null && <InfoRow icon={Accessibility} label={t.details.toilet.isInside}>{td.isInside ? "✓" : "✗"}</InfoRow>}
-                  {td?.hasGrabBars           != null && <InfoRow icon={Accessibility} label={t.details.toilet.hasGrabBars}>{td.hasGrabBars ? "✓" : "✗"}</InfoRow>}
-                  {td?.grabBarsOnBothSides   != null && <InfoRow icon={Accessibility} label={t.details.toilet.grabBarsOnBothSides}>{td.grabBarsOnBothSides ? "✓" : "✗"}</InfoRow>}
-                  {td?.grabBarsFoldable      != null && <InfoRow icon={Accessibility} label={t.details.toilet.grabBarsFoldable}>{td.grabBarsFoldable ? "✓" : "✗"}</InfoRow>}
-                  {td?.turningRadiusCm       != null && <InfoRow icon={Hash}          label={t.details.toilet.turningRadiusCm}>{td.turningRadiusCm} {t.details.units.cm}</InfoRow>}
-                  {td?.doorWidthCm           != null && <InfoRow icon={Hash}          label={t.details.toilet.doorWidthCm}>{td.doorWidthCm} {t.details.units.cm}</InfoRow>}
-                  {td?.hasEmergencyPullstring != null && <InfoRow icon={Accessibility} label={t.details.toilet.hasEmergencyPullstring}>{td.hasEmergencyPullstring ? "✓" : "✗"}</InfoRow>}
-                  {sd?.isAccessible          != null && <InfoRow icon={Accessibility} label={t.details.seating.isAccessible}>{sd.isAccessible ? "✓" : "✗"}</InfoRow>}
-                </>
-              )
-              const hasSubRows = ed != null
-                ? Object.values(ed).some((v) => v != null)
-                : td != null
-                  ? Object.values(td).some((v) => v != null)
-                  : sd?.isAccessible != null
-              return (
-                <Fragment key={key}>
-                  <InfoRow icon={Accessibility} label={label}>
-                    <span className={cn("font-medium", VALUE_COLORS[attr.value])}>
-                      {t.a11y[attr.value]}
-                    </span>
-                    {attr.value !== "unknown" && <ReliabilityPill attr={attr} />}
-                    {attr.sources.length > 0 && (
-                      <span className="text-muted-foreground ml-1.5">
-                        · {attr.sources.map((s) => SOURCE_LABELS[s.sourceId]).join(", ")}
-                        {verifiedSuffix(t, attr)}
+            {/* Lösung A (2026-08-03 prototype): the table keeps its natural
+                width and scrolls horizontally rather than squeezing columns
+                illegibly on a narrow screen or at a large system font size —
+                see docs artifact "Turbo-Modus: Verlässlichkeit-Tabelle". */}
+            <div className="overflow-x-auto -mx-1 px-1">
+              <table className="w-full min-w-[420px] text-xs border-collapse">
+                <thead>
+                  <tr className="text-muted-foreground">
+                    <th className="text-left font-normal pb-1.5 pr-2">{t.results.scoreCriterionCol}</th>
+                    <th className="text-left font-normal pb-1.5 pr-2">{t.results.tableValueCol}</th>
+                    <th className="text-center font-normal pb-1.5 pr-2">{t.results.tableFilteredCol}</th>
+                    <th className="text-left font-normal pb-1.5 pr-2">{t.results.tableReliabilityCol}</th>
+                    <th className="text-left font-normal pb-1.5">{t.results.tableSourceCol}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {criteria.map(({ key, label, attr }) => {
+                    const ed = key === "entrance" ? (attr.details as EntranceDetails) : null
+                    const td = key === "toilet"   ? (attr.details as ToiletDetails)   : null
+                    const sd = key === "seating"  ? (attr.details as SeatingDetails)  : null
+                    const subRows = (
+                      <>
+                        {ed?.isLevel           != null && <InfoRow icon={Accessibility} label={t.details.entrance.isLevel}>{ed.isLevel ? "✓" : "✗"}</InfoRow>}
+                        {ed?.hasRamp           != null && <InfoRow icon={Accessibility} label={t.details.entrance.hasRamp}>{ed.hasRamp ? "✓" : "✗"}</InfoRow>}
+                        {ed?.rampSlopePercent  != null && <InfoRow icon={Hash}          label={t.details.entrance.rampSlopePercent}>{ed.rampSlopePercent} {t.details.units.percent}</InfoRow>}
+                        {ed?.stepCount         != null && <InfoRow icon={Hash}          label={t.details.entrance.stepCount}>{ed.stepCount}</InfoRow>}
+                        {ed?.stepHeightCm      != null && <InfoRow icon={Hash}          label={t.details.entrance.stepHeightCm}>{ed.stepHeightCm} {t.details.units.cm}</InfoRow>}
+                        {ed?.doorWidthCm       != null && <InfoRow icon={Hash}          label={t.details.entrance.doorWidthCm}>{ed.doorWidthCm} {t.details.units.cm}</InfoRow>}
+                        {ed?.hasAutomaticDoor  != null && <InfoRow icon={Accessibility} label={t.details.entrance.hasAutomaticDoor}>{ed.hasAutomaticDoor ? "✓" : "✗"}</InfoRow>}
+                        {ed?.hasHoist          != null && <InfoRow icon={Accessibility} label={t.details.entrance.hasHoist}>{ed.hasHoist ? "✓" : "✗"}</InfoRow>}
+                        {ed?.description             && <InfoRow icon={MessageSquare}  label={t.details.entrance.description}>{ed.description}</InfoRow>}
+                        {td?.isDesignated          != null && <InfoRow icon={Accessibility} label={t.details.toilet.isDesignated}>{td.isDesignated ? "✓" : "✗"}</InfoRow>}
+                        {td?.isInside              != null && <InfoRow icon={Accessibility} label={t.details.toilet.isInside}>{td.isInside ? "✓" : "✗"}</InfoRow>}
+                        {td?.hasGrabBars           != null && <InfoRow icon={Accessibility} label={t.details.toilet.hasGrabBars}>{td.hasGrabBars ? "✓" : "✗"}</InfoRow>}
+                        {td?.grabBarsOnBothSides   != null && <InfoRow icon={Accessibility} label={t.details.toilet.grabBarsOnBothSides}>{td.grabBarsOnBothSides ? "✓" : "✗"}</InfoRow>}
+                        {td?.grabBarsFoldable      != null && <InfoRow icon={Accessibility} label={t.details.toilet.grabBarsFoldable}>{td.grabBarsFoldable ? "✓" : "✗"}</InfoRow>}
+                        {td?.turningRadiusCm       != null && <InfoRow icon={Hash}          label={t.details.toilet.turningRadiusCm}>{td.turningRadiusCm} {t.details.units.cm}</InfoRow>}
+                        {td?.doorWidthCm           != null && <InfoRow icon={Hash}          label={t.details.toilet.doorWidthCm}>{td.doorWidthCm} {t.details.units.cm}</InfoRow>}
+                        {td?.hasEmergencyPullstring != null && <InfoRow icon={Accessibility} label={t.details.toilet.hasEmergencyPullstring}>{td.hasEmergencyPullstring ? "✓" : "✗"}</InfoRow>}
+                        {sd?.isAccessible          != null && <InfoRow icon={Accessibility} label={t.details.seating.isAccessible}>{sd.isAccessible ? "✓" : "✗"}</InfoRow>}
+                      </>
+                    )
+                    const hasSubRows = ed != null
+                      ? Object.values(ed).some((v) => v != null)
+                      : td != null
+                        ? Object.values(td).some((v) => v != null)
+                        : sd?.isAccessible != null
+                    const Icon = CRITERION_ROW_ICONS[key]
+                    const isFiltered = judgmentFilters[key]
+                    return (
+                      <Fragment key={key}>
+                        <tr className={cn("border-t border-border", isFiltered && "bg-primary/5")}>
+                          <td className="py-1.5 pr-2 align-top">
+                            <span className="flex items-center gap-1.5 font-medium text-foreground">
+                              <Icon className="w-3.5 h-3.5 text-muted-foreground shrink-0" aria-hidden />
+                              {label}
+                            </span>
+                          </td>
+                          <td className={cn("py-1.5 pr-2 align-top font-medium", VALUE_COLORS[attr.value])}>
+                            {t.a11y[attr.value]}
+                          </td>
+                          <td className="py-1.5 pr-2 align-top text-center">
+                            {isFiltered
+                              ? <CheckCircle2 className="w-3.5 h-3.5 text-primary inline" aria-label={t.results.tableFilteredYes} />
+                              : <span className="inline-block w-1.5 h-1.5 rounded-full bg-border" aria-label={t.results.tableFilteredNo} />}
+                          </td>
+                          <td className="py-1.5 pr-2 align-top">
+                            {attr.value !== "unknown" ? <ReliabilityBars attr={attr} /> : <span className="text-muted-foreground">—</span>}
+                          </td>
+                          <td className="py-1.5 align-top text-muted-foreground">
+                            {attr.sources.length > 0
+                              ? <>{attr.sources.map((s) => SOURCE_LABELS[s.sourceId]).join(", ")}{verifiedSuffix(t, attr)}</>
+                              : "—"}
+                          </td>
+                        </tr>
+                        {hasSubRows && (
+                          <tr>
+                            <td colSpan={5} className="pb-1.5">
+                              <div className="ml-5 pl-3 pt-1 border-l border-border space-y-2">
+                                {subRows}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    )
+                  })}
+                  {/* Parkplatz — innerhalb der Barrierefreiheits-Sektion */}
+                  <tr className={cn("border-t border-border", judgmentFilters.parking && "bg-primary/5")}>
+                    <td className="py-1.5 pr-2 align-top">
+                      <span className="flex items-center gap-1.5 font-medium text-foreground">
+                        <Car className="w-3.5 h-3.5 text-muted-foreground shrink-0" aria-hidden />
+                        {t.criteria.parking}
                       </span>
-                    )}
-                  </InfoRow>
-                  {hasSubRows && (
-                    <div className="ml-6 pl-3 border-l border-border space-y-2">
-                      {subRows}
-                    </div>
+                    </td>
+                    <td className={cn("py-1.5 pr-2 align-top font-medium", VALUE_COLORS[parkingAttr.value])}>
+                      {parkingValueLabel}
+                    </td>
+                    <td className="py-1.5 pr-2 align-top text-center">
+                      {judgmentFilters.parking
+                        ? <CheckCircle2 className="w-3.5 h-3.5 text-primary inline" aria-label={t.results.tableFilteredYes} />
+                        : <span className="inline-block w-1.5 h-1.5 rounded-full bg-border" aria-label={t.results.tableFilteredNo} />}
+                    </td>
+                    <td className="py-1.5 pr-2 align-top">
+                      {parkingAttr.value !== "unknown" ? <ReliabilityBars attr={parkingAttr} /> : <span className="text-muted-foreground">—</span>}
+                    </td>
+                    <td className="py-1.5 align-top text-muted-foreground">
+                      {parkingAttr.sources.length > 0
+                        ? <>{parkingAttr.sources.map((s) => SOURCE_LABELS[s.sourceId]).join(", ")}{verifiedSuffix(t, parkingAttr)}</>
+                        : "—"}
+                    </td>
+                  </tr>
+                  {(parkingD.hasWheelchairSpaces != null || parkingD.spaceCount != null || parkingD.distanceToEntranceM != null || (parkingNearby && parkingNearbyDistM != null)) && (
+                    <tr>
+                      <td colSpan={5} className="pb-1.5">
+                        <div className="ml-5 pl-3 pt-1 border-l border-border space-y-2">
+                          {parkingD.hasWheelchairSpaces != null && (
+                            <InfoRow icon={Car} label={t.details.parking.hasWheelchairSpaces}>
+                              {parkingD.hasWheelchairSpaces ? "✓" : "✗"}
+                            </InfoRow>
+                          )}
+                          {parkingD.spaceCount != null && (
+                            <InfoRow icon={Hash} label={t.details.parking.spaceCount}>
+                              {parkingD.spaceCount}
+                            </InfoRow>
+                          )}
+                          {parkingD.distanceToEntranceM != null && (
+                            <InfoRow icon={MapPin} label={t.details.parking.distanceToEntranceM}>
+                              {parkingD.distanceToEntranceM} {t.details.units.m}
+                            </InfoRow>
+                          )}
+                          {parkingNearby && parkingNearbyDistM != null && (
+                            <InfoRow icon={Navigation} label={t.details.parking.nearbyParkingDistanceM}>
+                              {parkingNearbyDistM} {t.details.units.m}
+                            </InfoRow>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
                   )}
-                </Fragment>
-              )
-            })}
-            {/* Parkplatz — innerhalb der Barrierefreiheits-Sektion */}
-            <InfoRow icon={Car} label={t.criteria.parking}>
-              <span className={cn("font-medium", VALUE_COLORS[parkingAttr.value])}>
-                {parkingValueLabel}
-              </span>
-              {parkingAttr.value !== "unknown" && <ReliabilityPill attr={parkingAttr} />}
-              {parkingAttr.sources.length > 0 && (
-                <span className="text-muted-foreground ml-1.5">
-                  · {parkingAttr.sources.map((s) => SOURCE_LABELS[s.sourceId]).join(", ")}
-                  {verifiedSuffix(t, parkingAttr)}
-                </span>
-              )}
-            </InfoRow>
-            {(parkingD.hasWheelchairSpaces != null || parkingD.spaceCount != null || parkingD.distanceToEntranceM != null || (parkingNearby && parkingNearbyDistM != null)) && (
-              <div className="ml-6 pl-3 border-l border-border space-y-2">
-                {parkingD.hasWheelchairSpaces != null && (
-                  <InfoRow icon={Car} label={t.details.parking.hasWheelchairSpaces}>
-                    {parkingD.hasWheelchairSpaces ? "✓" : "✗"}
-                  </InfoRow>
-                )}
-                {parkingD.spaceCount != null && (
-                  <InfoRow icon={Hash} label={t.details.parking.spaceCount}>
-                    {parkingD.spaceCount}
-                  </InfoRow>
-                )}
-                {parkingD.distanceToEntranceM != null && (
-                  <InfoRow icon={MapPin} label={t.details.parking.distanceToEntranceM}>
-                    {parkingD.distanceToEntranceM} {t.details.units.m}
-                  </InfoRow>
-                )}
-                {parkingNearby && parkingNearbyDistM != null && (
-                  <InfoRow icon={Navigation} label={t.details.parking.nearbyParkingDistanceM}>
-                    {parkingNearbyDistM} {t.details.units.m}
-                  </InfoRow>
-                )}
-              </div>
-            )}
-            {placeMayNotBeAccessible(place) && <NotAccessibleWarningBox />}
+                </tbody>
+              </table>
+            </div>
             {acceslibreCommentaire && (
               <InfoRow icon={MessageSquare} label={ti.description}>
                 <span className="italic">{acceslibreCommentaire}</span>

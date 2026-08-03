@@ -13,8 +13,7 @@ interface Props {
   attr:        AccessibilityAttribute
   detailType?: "entrance" | "toilet" | "parking" | "seating"
   showDetails?: boolean
-  // Extra content appended after the conflict icon (if any) in the header —
-  // e.g. NotAccessibleWarningToggle (see PlaceCard.tsx).
+  // Extra content appended after the conflict icon (if any) in the header.
   headerExtra?: ReactNode
 }
 

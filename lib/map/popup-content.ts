@@ -1,7 +1,6 @@
-import { placeMayNotBeAccessible } from "@/lib/matching/merge"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
 import type { useTranslations } from "@/lib/i18n"
-import type { JudgmentStatus } from "@/lib/reliability"
+import type { PlaceJudgment, JudgmentStatus, CriterionKey } from "@/lib/reliability"
 import type { Place, ParkingSpot, AmenityFeature, AmenityTier } from "@/lib/types"
 
 // Unified "D" popup design (map-elements redesign prototype) — one template
@@ -51,7 +50,6 @@ const SVG_INFO        = `<svg xmlns="http://www.w3.org/2000/svg" width="15" heig
 const SVG_LIST         = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h.01"/><path d="M3 12h.01"/><path d="M3 19h.01"/><path d="M8 5h13"/><path d="M8 12h13"/><path d="M8 19h13"/></svg>`
 const SVG_WHEELMAP    = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="4" r="1"/><path d="m18 19 1-7-6 1"/><path d="m5 8 3-3 5.5 3-2.36 3.5"/><path d="M4.24 14.5a5 5 0 0 0 6.88 6"/><path d="M13.76 17.5a5 5 0 0 0-6.88-6"/></svg>`
 const SVG_FLAG         = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>`
-const SVG_WARN          = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`
 // Small chevron for the quick↔full footer toggle — same stroke weight family
 // as the CTA icons above, sized down (11px) to sit comfortably in a one-line
 // footer row.
@@ -155,8 +153,30 @@ function linkD(label: string, dataAttr: string): string {
   return `<button ${dataAttr} style="display:block;border:0;background:none;padding:0;margin-top:8px;font-size:11.5px;font-weight:600;text-decoration:underline;color:#b45309;cursor:pointer;font-family:sans-serif">${esc(label)}</button>`
 }
 
-function notAccessibleWarning(t: T): string {
-  return `<div style="display:flex;align-items:flex-start;gap:5px;margin-top:8px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:6px 8px;font-size:10.5px;color:#b91c1c;line-height:1.45">${SVG_WARN}<span>${t.results.notAccessibleWarningPre}<b>${t.results.notAccessibleWarningBold}</b>${t.results.notAccessibleWarningPost}</span></div>`
+// Short criterion label for the popup's narrow subline — reuses the same
+// shortened WC/Parken labels the chip row already uses (space is tight),
+// falling back to the sentence-style label for entrance/seating which have
+// no shorter map-specific variant.
+function mapCriterionLabel(t: T, key: CriterionKey): string {
+  if (key === "toilet")  return t.map.criteriaShortToilet
+  if (key === "parking") return t.map.criteriaShortParking
+  if (key === "seating") return t.criteria.seating
+  return t.criteria.entrance
+}
+
+// The popup's own version of the Urteilszeile (JudgmentLine.tsx) — brought
+// in here when the separate "Achtung: evtl. nicht barrierefrei" warning box
+// was retired (2026-08-02): that box said almost exactly what the judgement
+// already communicates, just a second time in a second element. Names the
+// affected criteria for every non-"pass" status; "none" (no active filter
+// criteria at all) has nothing to judge, so it renders no caption.
+function judgmentCaption(t: T, judgment: PlaceJudgment): string | null {
+  const names = (keys: CriterionKey[]) => keys.map((k) => mapCriterionLabel(t, k)).join(", ")
+  if (judgment.status === "pass")         return t.map.judgmentPass
+  if (judgment.status === "pass_limited") return `${t.map.judgmentCaveat} (${names(judgment.limited)})`
+  if (judgment.status === "unverified")   return `${t.map.judgmentUnknown} (${names(judgment.unknown)})`
+  if (judgment.status === "fail")         return `${t.map.judgmentFail} (${names(judgment.failed)})`
+  return null // "none"
 }
 
 export interface VenuePopupOptions {
@@ -165,15 +185,14 @@ export interface VenuePopupOptions {
   // old confidence-tier percentage. Computed by the caller (MapViewGL) via
   // lib/reliability's evaluatePlaceJudgment, since that needs the active
   // SearchFilters this file has no access to.
-  judgment: JudgmentStatus
+  judgment: PlaceJudgment
 }
 
 export function buildVenuePopupHtml(place: Place, t: T, opts: VenuePopupOptions): string {
-  const barColor  = JUDGMENT_COLORS[opts.judgment]
-  const textColor = JUDGMENT_TEXT_COLORS[opts.judgment]
-  const judgmentLabel = opts.judgment === "pass" ? t.map.judgmentPass
-    : opts.judgment === "pass_limited" ? t.map.judgmentCaveat
-    : t.map.judgmentUnknown
+  const status: JudgmentStatus = opts.judgment.status
+  const barColor  = JUDGMENT_COLORS[status]
+  const textColor = JUDGMENT_TEXT_COLORS[status]
+  const caption = judgmentCaption(t, opts.judgment)
   const addr = [place.address.street, place.address.houseNumber, place.address.city].filter(Boolean).join(" ")
   const emoji = CATEGORY_ICONS[place.category] ?? "📍"
 
@@ -181,13 +200,14 @@ export function buildVenuePopupHtml(place: Place, t: T, opts: VenuePopupOptions)
   const toi = place.accessibility.toilet
   const par = place.accessibility.parking
 
-  const subLine = `<span style="font-weight:700;color:${textColor}">${judgmentLabel}</span>${addr ? ` · <span style="color:${dim()}">${esc(addr)}</span>` : ""}`
+  const subLine = (caption ? `<span style="font-weight:700;color:${textColor}">${esc(caption)}</span>` : "")
+    + (caption && addr ? " · " : "")
+    + (addr ? `<span style="color:${dim()}">${esc(addr)}</span>` : "")
   const chips = chipD("🚪", t.criteria.entrance, ent.value) + chipD("🚻", t.map.criteriaShortToilet, toi.value) + chipD("🅿", t.map.criteriaShortParking, par.value)
   const ctas = ctaD(SVG_INFO, t.map.popupChipDetails, true, "data-show-details")
     + ctaD(SVG_NAV, t.map.popupChipNavigate, false, "data-navigate")
     + (opts.showResults ? ctaD(SVG_LIST, t.map.popupChipResults, false, "data-show-id", true) : "")
 
-  const warn = placeMayNotBeAccessible(place) ? notAccessibleWarning(t) : ""
   // Entrance + toilet only — parking is left out of the one-line summary
   // (still in the full view's chip row) as the least universally relevant of
   // the three at a first glance.
@@ -197,7 +217,7 @@ export function buildVenuePopupHtml(place: Place, t: T, opts: VenuePopupOptions)
   return popupShellD({
     headerColor: barColor, headerGlyph: emoji, title: esc(place.name),
     quickSummaryHtml: quickSummary,
-    subLineHtml: subLine, warnHtml: warn, chipsHtml: chips, ctasHtml: ctas,
+    subLineHtml: subLine, warnHtml: "", chipsHtml: chips, ctasHtml: ctas,
     moreLabel: t.map.popupMore, lessLabel: t.map.popupLess,
   })
 }

@@ -9,7 +9,6 @@ import {
   finalisePlaceConfidence,
   computeFilteredConfidence,
   countLimited,
-  placeMayNotBeAccessible,
 } from "@/lib/matching/merge"
 import { RELIABILITY_WEIGHTS } from "@/lib/config"
 import type { Place, SearchFilters } from "@/lib/types"
@@ -76,12 +75,6 @@ describe("buildAttribute", () => {
   it("confidence equals the source weight regardless of toilet detail (hasGrabBars false)", () => {
     const attr = buildAttribute("osm", "yes", "yes", { hasGrabBars: false })
     expect(attr.confidence).toBeCloseTo(RELIABILITY_WEIGHTS.osm)
-  })
-
-  it("applies OSM overall weight factor for entrance proxy", () => {
-    const normal = buildAttribute("osm", "yes", "yes", {}, false)
-    const overall = buildAttribute("osm", "yes", "yes", {}, true)
-    expect(overall.confidence).toBeLessThan(normal.confidence)
   })
 
   it("stores details", () => {
@@ -186,7 +179,7 @@ describe("mergePlaces", () => {
   })
 
   it("detects conflict when sources disagree", () => {
-    // osm(0.675) vs accessibility_cloud(0.50): ratio = 0.50/0.675 = 0.74 > 0.5 → conflict
+    // osm(0.75) vs accessibility_cloud(0.50): ratio = 0.50/0.75 = 0.67 > 0.5 → conflict
     const a = makePlace({
       id: "a",
       accessibility: {
@@ -199,7 +192,7 @@ describe("mergePlaces", () => {
     const b = makePlace({
       id: "b",
       accessibility: {
-        entrance: buildAttribute("osm", "no", "no", {}, true),  // isOsmOverall → 0.75×0.90=0.675
+        entrance: buildAttribute("osm", "no", "no", {}),
         toilet:   emptyAttribute(),
         parking:  emptyAttribute(),
       },
@@ -208,7 +201,7 @@ describe("mergePlaces", () => {
 
     const merged = mergePlaces(a, b)
     expect(merged.accessibility.entrance.conflict).toBe(true)
-    // osm (weight 0.675) now wins over accessibility_cloud entrance (weight 0.50)
+    // osm (weight 0.75) wins over accessibility_cloud entrance (weight 0.50)
     expect(merged.accessibility.entrance.value).toBe("no")
   })
 
@@ -433,7 +426,7 @@ describe("passesFilters", () => {
   it("onlyVerified accepts places with at least one verifiedRecently source", () => {
     const p = makePlace({
       accessibility: {
-        entrance: buildAttribute("osm", "yes", "yes", {}, true, 1.2),  // boosted → verifiedRecently
+        entrance: buildAttribute("osm", "yes", "yes", {}, 1.2),  // boosted → verifiedRecently
         toilet:   yesAttr,
         parking:  yesAttr,
       },
@@ -840,65 +833,10 @@ describe("family-aware reliability tiers via mergePlaces", () => {
   })
 })
 
-// ─── placeMayNotBeAccessible ─────────────────────────────────────────────────
-// v13/decision 10: narrowed to actual "no" only — "unknown" was dropped from
-// this trigger, since the judgement line now says "keine Angabe zu X"
-// explicitly for that case, and a second red box for the same fact competed
-// with, rather than reinforced, that message.
-
-describe("placeMayNotBeAccessible", () => {
-  it("is false when entrance and toilet are both known and not 'no'", () => {
-    const p = makePlace({
-      accessibility: {
-        entrance: { ...emptyAttribute(), value: "yes" },
-        toilet:   { ...emptyAttribute(), value: "limited" },
-        parking:  { ...emptyAttribute(), value: "unknown" },
-      },
-    })
-    expect(placeMayNotBeAccessible(p)).toBe(false)
-  })
-
-  it("is true when entrance is 'no'", () => {
-    const p = makePlace({
-      accessibility: {
-        entrance: { ...emptyAttribute(), value: "no" },
-        toilet:   { ...emptyAttribute(), value: "yes" },
-        parking:  { ...emptyAttribute(), value: "yes" },
-      },
-    })
-    expect(placeMayNotBeAccessible(p)).toBe(true)
-  })
-
-  it("is true when toilet is 'no'", () => {
-    const p = makePlace({
-      accessibility: {
-        entrance: { ...emptyAttribute(), value: "yes" },
-        toilet:   { ...emptyAttribute(), value: "no" },
-        parking:  { ...emptyAttribute(), value: "yes" },
-      },
-    })
-    expect(placeMayNotBeAccessible(p)).toBe(true)
-  })
-
-  it("is FALSE when entrance or toilet is merely 'unknown' (v13 — was true pre-v13)", () => {
-    const p = makePlace({
-      accessibility: {
-        entrance: { ...emptyAttribute(), value: "unknown" },
-        toilet:   { ...emptyAttribute(), value: "unknown" },
-        parking:  { ...emptyAttribute(), value: "yes" },
-      },
-    })
-    expect(placeMayNotBeAccessible(p)).toBe(false)
-  })
-
-  it("ignores a flagged parking value alone", () => {
-    const p = makePlace({
-      accessibility: {
-        entrance: { ...emptyAttribute(), value: "yes" },
-        toilet:   { ...emptyAttribute(), value: "yes" },
-        parking:  { ...emptyAttribute(), value: "no" },
-      },
-    })
-    expect(placeMayNotBeAccessible(p)).toBe(false)
-  })
-})
+// placeMayNotBeAccessible was retired 2026-08-02 (Option 3, "Zwei getrennte
+// Fragen" concept): the separate red warning box it drove said almost
+// exactly what JudgmentLine's headline already says, just a second time in
+// a second element. Its "no"-only vs. "no or unknown" behaviour is now
+// exercised via evaluatePlaceJudgment (lib/reliability.test.ts) instead,
+// which JudgmentLine renders directly — see that file's "fail"/"unverified"
+// status tests.

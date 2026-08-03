@@ -290,14 +290,13 @@ function itemToPlace(item: AccesLibreItem): Place | null {
   const rawValue = item.uuid
 
   const attr = (value: A11yValue, details = {}) =>
-    buildAttribute("acceslibre", value, rawValue, details, false, 1, undefined, false)
+    buildAttribute("acceslibre", value, rawValue, details, 1, undefined, false)
 
   const entranceAttr = buildAttribute(
     "acceslibre",
     entranceValue,
     rawValue,
     entranceDetails,
-    false,
     1,
     undefined,
     false,

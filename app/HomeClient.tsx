@@ -2409,6 +2409,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             selectedId={selectedId}
             onSelect={(p) => setSelectedId(p.id)}
             isLoading={isLoading}
+            onOpenFilters={() => setFilterCollapsed(false)}
             onRerun={resolvedOnRerun}
             hasSourceError={hasSourceError}
             onExpandRadius={resolvedOnExpandRadius}
@@ -2473,6 +2474,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
           <MapView
             places={places}
             filters={filters}
+            onOpenFilters={() => setFilterCollapsed(false)}
             parkingSpots={visibleParkingSpots}
             toiletSpots={visibleToiletSpots.length > 0 ? visibleToiletSpots : undefined}
             center={searchCenter}

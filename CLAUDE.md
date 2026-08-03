@@ -115,7 +115,7 @@ Disabled parking and wheelchair WCs are modelled as **typed point features** (`A
 
 Reliability weights live in `RELIABILITY_WEIGHTS` (`reisen_fuer_alle 1.0` > `ginto 0.90` = `acceslibre 0.90` > `osm 0.75` > `accessibility_cloud 0.50` > `google_places 0.35`). `accessibility_cloud` was lowered from 0.70 (2026-07-27) following the same data-quality audit as the Wheelmap filter above — the surviving (post-filter) records have no equivalent accuracy verification the audit could point to, unlike the removed Wheelmap mirror's 95% exact-match agreement. Ginto refines per-entry: SELF_DECLARED → 0.94, AUDITED → 1.0. The `osm_*`/`nominatim` entries are weight `0` (stats-only, never place attributions). `CONFIDENCE_THRESHOLDS`: `high = 0.70`, `medium = 0.40` → `confidenceLabel()` "Verlässlich" / "Mittel" / "Unsicher".
 
-`OSM_ENTRANCE_WEIGHT_FACTOR = 0.90` applies an extra reduction when OSM's whole-place `wheelchair=*` tag stands in for the entrance criterion specifically.
+OSM's `wheelchair=*` tag doubles as both the whole-place signal and the entrance criterion's value; it carries the same `osm` weight (0.75) as every other OSM-sourced criterion (no separate entrance discount — removed 2026-08-02, see `docs/plans/reliability-tiers.md`).
 
 ### i18n (`lib/i18n/`)
 

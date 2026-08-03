@@ -2,10 +2,11 @@
 
 import { ChevronRight, MapPin } from "lucide-react"
 import { CRITERION_STYLES } from "@/components/results/CriterionBox"
+import CriterionIcon from "@/components/simple/CriterionIcon"
 import NavigateButton from "@/components/ui/navigate-button"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { useTranslations } from "@/lib/i18n"
-import { criterionSentence, CRITERION_DOT_CLASS, SIMPLE_TOILET_REQUIRED_CATEGORIES } from "@/lib/simple-view"
+import { criterionSentence, SIMPLE_TOILET_REQUIRED_CATEGORIES } from "@/lib/simple-view"
 import { cn } from "@/lib/utils"
 import type { Place } from "@/lib/types"
 
@@ -80,12 +81,12 @@ export default function SimplePlaceCard({ place, distanceM, isSelected, onOpen, 
           <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 self-start mt-0.5" aria-hidden />
         </div>
         <p className={cn("text-xs flex items-center gap-1.5 pl-7", style.color)}>
-          <span className={cn("w-2 h-2 rounded-full shrink-0", CRITERION_DOT_CLASS[entrance])} aria-hidden />
+          <CriterionIcon value={entrance} className="w-3.5 h-3.5" />
           {criterionSentence(t, "entrance", entrance)}
         </p>
         {showToilet && (
           <p className={cn("text-xs flex items-center gap-1.5 pl-7", toiletStyle.color)}>
-            <span className={cn("w-2 h-2 rounded-full shrink-0", CRITERION_DOT_CLASS[toilet])} aria-hidden />
+            <CriterionIcon value={toilet} className="w-3.5 h-3.5" />
             {criterionSentence(t, "toilet", toilet)}
           </p>
         )}

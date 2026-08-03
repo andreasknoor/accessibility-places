@@ -27,6 +27,12 @@ export interface MapViewProps {
   // route straight to their own reduced detail screen instead; omitted, the
   // existing rich-sheet behaviour is unchanged for every other caller.
   onOpenDetails?:      (place: Place) => void
+  // Opens the filter view — forwarded to MapViewGL's own internal
+  // PlaceDebugSheet instance (opened from a popup's "Details" chip), so its
+  // JudgmentLine gets the same "Kriterien" link as the one opened from
+  // PlaceCard. See JudgmentLine.tsx's own comment on why only the sheet gets
+  // a real link, never the popup or the result card themselves.
+  onOpenFilters?:      () => void
   isFullscreen:        boolean
   onToggleFullscreen:  () => void
   showFullscreenToggle?: boolean

@@ -10,12 +10,10 @@ import { Badge } from "@/components/ui/badge"
 import JudgmentLine     from "./JudgmentLine"
 import A11yAttribute    from "./A11yAttribute"
 import PlaceDebugSheet  from "./PlaceDebugSheet"
-import { NotAccessibleWarningBox, NotAccessibleWarningToggle } from "./NotAccessibleWarning"
 import { track } from "@/lib/analytics"
 import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS }   from "@/lib/config"
 import { CATEGORY_ICONS }  from "@/lib/category-icons"
-import { placeMayNotBeAccessible } from "@/lib/matching/merge"
 import type { JudgmentFilters } from "@/lib/reliability"
 import { cn } from "@/lib/utils"
 import type { Place, SearchFilters } from "@/lib/types"
@@ -30,25 +28,19 @@ interface Props {
   onClick?:    () => void
   distanceM?:  number
   filters?:    SearchFilters
+  // Forwarded only to the Info-Sheet's JudgmentLine (see JudgmentLine.tsx) —
+  // the card's own on-card JudgmentLine never receives this, so its
+  // "Kriterien" text stays plain, non-interactive.
+  onOpenFilters?: () => void
 }
 
-export default function PlaceCard({ place, isSelected, onClick, distanceM, filters }: Props) {
+export default function PlaceCard({ place, isSelected, onClick, distanceM, filters, onOpenFilters }: Props) {
   const judgmentFilters: JudgmentFilters = filters
     ? { entrance: filters.entrance, toilet: filters.toilet, parking: filters.parking, parkingNearby: filters.parkingNearby, seating: filters.seating, acceptUnknown: filters.acceptUnknown }
     : NO_FILTERS
   const t = useTranslations()
   const [expanded,  setExpanded]  = useState(false)
   const [showDebug, setShowDebug] = useState(false)
-  const [warnExpanded, setWarnExpanded] = useState(false)
-  const showNotAccessibleWarning = placeMayNotBeAccessible(place)
-  // Narrowed to "no" only (v13/decision 10, matching placeMayNotBeAccessible's
-  // own trigger) — showing this toggle next to a merely "unknown" value would
-  // wrongly imply that value is why the warning fired, when only an actual
-  // "no" on entrance or toilet does that now.
-  const notAccessibleToggle = (value: string) =>
-    showNotAccessibleWarning && value === "no"
-      ? <NotAccessibleWarningToggle expanded={warnExpanded} onToggle={() => setWarnExpanded((v) => !v)} />
-      : undefined
 
   const addr = [place.address.street, place.address.houseNumber, place.address.city]
     .filter(Boolean).join(" ")
@@ -207,15 +199,13 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM, filte
 
         {/* ── Accessibility attributes ── */}
         <div className="flex flex-col gap-1.5">
-          <A11yAttribute label={t.criteria.entrance} attr={place.accessibility.entrance} detailType="entrance" showDetails={expanded} headerExtra={notAccessibleToggle(place.accessibility.entrance.value)} />
-          <A11yAttribute label={t.criteria.toilet}   attr={place.accessibility.toilet}   detailType="toilet"   showDetails={expanded} headerExtra={notAccessibleToggle(place.accessibility.toilet.value)} />
+          <A11yAttribute label={t.criteria.entrance} attr={place.accessibility.entrance} detailType="entrance" showDetails={expanded} />
+          <A11yAttribute label={t.criteria.toilet}   attr={place.accessibility.toilet}   detailType="toilet"   showDetails={expanded} />
           <A11yAttribute label={t.criteria.parking} attr={place.accessibility.parking} detailType="parking" showDetails={expanded} />
           {place.accessibility.seating && (
             <A11yAttribute label={t.criteria.seating} attr={place.accessibility.seating} detailType="seating" showDetails={expanded} />
           )}
         </div>
-
-        {showNotAccessibleWarning && warnExpanded && <NotAccessibleWarningBox />}
 
         {/* ── Expand / contact ── */}
         <div className="flex items-center justify-between mt-0.5">
@@ -300,7 +290,7 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM, filte
       </CardContent>
 
       {showDebug && createPortal(
-        <PlaceDebugSheet place={place} onClose={() => setShowDebug(false)} filters={filters} />,
+        <PlaceDebugSheet place={place} onClose={() => setShowDebug(false)} filters={filters} onOpenFilters={onOpenFilters} />,
         document.body,
       )}
     </Card>

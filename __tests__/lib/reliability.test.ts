@@ -223,7 +223,7 @@ describe("attrVerifiedAt / sourceLabelsFor", () => {
   })
 
   it("returns the verified date when a source carries it", () => {
-    const attr = buildAttribute("osm", "yes", "yes", {}, false, 1.0, "2026-03-01", true)
+    const attr = buildAttribute("osm", "yes", "yes", {}, 1.0, "2026-03-01", true)
     expect(attrVerifiedAt(attr)).toBe("2026-03-01")
   })
 

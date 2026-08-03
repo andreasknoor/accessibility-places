@@ -324,6 +324,7 @@ export default function MapViewGL({
   onSelect,
   onShowInResults,
   onOpenDetails,
+  onOpenFilters,
   isFullscreen,
   onToggleFullscreen,
   showFullscreenToggle = true,
@@ -766,7 +767,7 @@ export default function MapViewGL({
     const judgmentFilters: JudgmentFilters = filtersRef.current
       ? { entrance: filtersRef.current.entrance, toilet: filtersRef.current.toilet, parking: filtersRef.current.parking, parkingNearby: filtersRef.current.parkingNearby, seating: filtersRef.current.seating, acceptUnknown: filtersRef.current.acceptUnknown }
       : NO_MAP_FILTERS
-    const judgment = evaluatePlaceJudgment(place, judgmentFilters).status
+    const judgment = evaluatePlaceJudgment(place, judgmentFilters)
     const html = buildVenuePopupHtml(place, tRef.current, { showResults: !!onShowInResults, judgment })
     openSmartPopup(map, [place.coordinates.lon, place.coordinates.lat], html, {
       // estimatedHeightPx is the QUICK-VIEW height now (popups open collapsed
@@ -1288,7 +1289,7 @@ export default function MapViewGL({
       )}
 
       {detailPlace && typeof document !== "undefined" && createPortal(
-        <PlaceDebugSheet place={detailPlace} onClose={() => setDetailPlace(null)} filters={filters} />,
+        <PlaceDebugSheet place={detailPlace} onClose={() => setDetailPlace(null)} filters={filters} onOpenFilters={onOpenFilters} />,
         document.body,
       )}
     </div>

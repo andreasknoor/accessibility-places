@@ -2,7 +2,7 @@ import type { SourceId, Category } from "./types"
 
 // User-visible app version, shown in the header next to the subtitle.
 // Bump on every meaningful release.
-export const APP_VERSION = "13.0"
+export const APP_VERSION = "13.1"
 
 // Tally form IDs for the per-place "report data error" flow (PlaceDebugSheet).
 // Empty string = feature hidden. Fill in after creating the DE/EN forms in
@@ -39,10 +39,6 @@ export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
 // (qualityInfo.approvalLevels: who vouches for the data — operator vs. external audit)
 export const GINTO_SELF_DECLARED_WEIGHT = 0.94
 export const GINTO_AUDITED_WEIGHT       = 1.0
-
-// OSM wheelchair= main tag is a whole-place proxy, not entrance-specific
-// → reduce its effective weight for entrance criterion
-export const OSM_ENTRANCE_WEIGHT_FACTOR = 0.90
 
 // ─── Reliability tiers (v13, docs/plans/reliability-tiers.md) ────────────────
 //

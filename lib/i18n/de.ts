@@ -86,7 +86,6 @@ const de: Translations = {
     radiusLabel: (km: number) => `${km} km`,
     radiusSliderLabel: "Suchradius in Kilometern",
     acceptUnknown: "Orte mit unklaren Informationen anzeigen",
-    displayOptions: "Anzeigeoptionen",
     sourceCountTooltip: (raw: number, final: number) => `Rohtreffer: ${raw} → nach Filter: ${final}`,
     criteriaItems: {
       entrance:      "Rollstuhlgerechter Eingang",
@@ -138,14 +137,25 @@ const de: Translations = {
     // Judgement line (Turbo): does the place satisfy the ACTIVE filters? A
     // separate axis from reliability above — never a colour, never combined
     // with the tier words. See lib/reliability.ts's evaluatePlaceJudgment.
-    judgmentPass:            "Erfüllt deine Kriterien",
+    judgmentPass: (n: number) => ({
+      pre: "Erfüllt ",
+      criteria: n === 1 ? "dein Kriterium" : `deine ${n} Kriterien`,
+      post: "",
+    }),
     judgmentPassAllNote:     "Alle geprüften Kriterien uneingeschränkt.",
     judgmentPassLimitedNote: (criteria: string) => `Mit Einschränkung: ${criteria}.`,
     judgmentUnverified:      "Nicht gesichert",
     judgmentUnverifiedNote:  (criteria: string) => `Zu ${criteria} liegen keine Angaben vor.`,
-    judgmentFail:            "Erfüllt deine Kriterien nicht",
+    judgmentFail: (n: number) => ({
+      pre: "Erfüllt ",
+      criteria: n === 1 ? "dein Kriterium" : `deine ${n} Kriterien`,
+      post: " nicht",
+    }),
     judgmentFailNote:        (criteria: string) => `Betrifft: ${criteria}.`,
     judgmentNone:            "Keine Kriterien aktiv",
+    judgmentShowCriteria:    "Aktive Kriterien anzeigen",
+    judgmentActiveCriteria:  "Deine aktiven Kriterien",
+    judgmentEditFilters:     "Filter bearbeiten",
     // Fixed wording for SEO landing pages (decision 3): no per-visitor filter
     // exists there, so the judgement line can't be filter-relative.
     seoJudgmentFixed: "Eingang und WC barrierefrei",
@@ -157,10 +167,6 @@ const de: Translations = {
     conflict: "Quellen widersprechen sich",
     primarySource: "Beste Quelle",
     noData: "Keine Daten",
-    notAccessibleWarningPre:  "Achtung: Evtl. ",
-    notAccessibleWarningBold: "nicht",
-    notAccessibleWarningPost: " barrierefrei.",
-    notAccessibleWarningToggle: "Hinweis anzeigen",
     websiteLink:    "Website besuchen",
     phoneLink:      "Anrufen",
     wheelmapLink:   "Auf Wheelmap.org prüfen",
@@ -206,9 +212,13 @@ const de: Translations = {
     // Info-sheet expandable breakdown (decision 1b): the section TITLE shows
     // the tier word, this heading introduces the evidence-sum table beneath
     // it — no percentage average anymore (see ScoreContent in ConfidenceBadge.tsx).
-    scoreCalculation:      "Nachweis je Kriterium",
     scoreCriterionCol:     "Kriterium",
-    scoreEvidenceCol:      "Belege · Stufe",
+    tableValueCol:         "Wert",
+    tableFilteredCol:      "Gefiltert",
+    tableReliabilityCol:   "Verlässl.",
+    tableSourceCol:        "Quelle",
+    tableFilteredYes:      "Gehört zu deinen Filtern",
+    tableFilteredNo:       "Nur zur Info gezeigt",
     showRawData:           "Rohdaten anzeigen",
     detailsExpand:         "Details",
     detailsCollapse:       "Weniger",
@@ -296,6 +306,7 @@ const de: Translations = {
     judgmentPass:    "Passt",
     judgmentCaveat:  "Passt mit Vorbehalt",
     judgmentUnknown: "Ohne Angabe",
+    judgmentFail:    "Erfüllt nicht",
     showInResults: "Zeige in Ergebnissen",
     showDetails: "Details anzeigen",
     popupChipNavigate: "Navigation",
@@ -584,6 +595,8 @@ const de: Translations = {
     // per app design, so "barrierefrei nutzbar" is simply accurate.
     accessibleHeadline:       "Barrierefrei nutzbar",
     accessibleHeadlineCaveat: "Barrierefrei nutzbar – mit Einschränkung",
+    notAccessibleHeadline:    "Nicht barrierefrei",
+    unverifiedHeadline:       "Keine gesicherte Angabe",
   },
 }
 

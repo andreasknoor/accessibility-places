@@ -285,7 +285,7 @@ function nodeToPlace(node: GintoNode): Place {
   const weightMultiplier = baseWeight / RELIABILITY_WEIGHTS.ginto
 
   const attr = (value: A11yValue) =>
-    buildAttribute("ginto", value, rawValue, {}, false, weightMultiplier, undefined, false)
+    buildAttribute("ginto", value, rawValue, {}, weightMultiplier, undefined, false)
 
   return {
     id:          node.entryId ? `ginto:${node.entryId}` : nanoid(),

@@ -94,7 +94,6 @@ export interface Translations {
     radiusLabel:         (km: number) => string
     radiusSliderLabel:   string
     acceptUnknown:       string
-    displayOptions:      string
     sourceCountTooltip:  (raw: number, final: number) => string
     criteriaItems: {
       entrance:      string
@@ -121,14 +120,30 @@ export interface Translations {
     }
     reliabilityNote: (tier: "sehr_hoch" | "gut" | "gering" | "keine", verifiedLabel?: string) => string
     joinCriteria:    (labels: string[]) => string
-    judgmentPass:            string
+    // Split into pre/criteria/post (rather than one string) so the caller
+    // (JudgmentLine) can render "criteria" as a separate, optionally
+    // clickable span — the link that jumps to the filter view. `n` is the
+    // count of currently active filter criteria ("deine 2 Kriterien").
+    judgmentPass:            (n: number) => { pre: string; criteria: string; post: string }
     judgmentPassAllNote:     string
     judgmentPassLimitedNote: (criteria: string) => string
     judgmentUnverified:      string
     judgmentUnverifiedNote:  (criteria: string) => string
-    judgmentFail:            string
+    judgmentFail:            (n: number) => { pre: string; criteria: string; post: string }
     judgmentFailNote:        (criteria: string) => string
     judgmentNone:            string
+    // Accessible name for the "Kriterien" link inside the judgement headline
+    // — opens an inline popover naming the active criteria (2026-08-03: no
+    // longer jumps straight to the filter view, since that silently failed
+    // on mobile, where the Info-Sheet is a full-screen overlay and the tab
+    // switch happened invisibly behind it). Separate from the visible text
+    // since the link is just a few words inside a longer sentence.
+    judgmentShowCriteria:    string
+    // Popover heading + the secondary button that performs the actual
+    // navigation to the filter view (a deliberate, separate click from the
+    // headline link above).
+    judgmentActiveCriteria:  string
+    judgmentEditFilters:     string
     seoJudgmentFixed:  string
     rerun:             string
     retry:             string
@@ -138,15 +153,6 @@ export interface Translations {
     conflict:          string
     primarySource:     string
     noData:            string
-    // "Not accessible" warning shown when entrance or toilet is "no" (v13:
-    // "unknown" alone no longer triggers this, see placeMayNotBeAccessible)
-    // (docs/prototypes/unknown-value-microcopy.html) — split into three parts
-    // so the middle word can be rendered bold without embedding markup in the
-    // translation string itself.
-    notAccessibleWarningPre:  string
-    notAccessibleWarningBold: string
-    notAccessibleWarningPost: string
-    notAccessibleWarningToggle: string
     websiteLink:       string
     phoneLink:         string
     wheelmapLink:      string
@@ -167,9 +173,18 @@ export interface Translations {
     showOnMap:         string
     mapHint:           string
     placeSearchBanner: (name: string) => string
-    scoreCalculation:     string
+    // Reliability table (Info-Sheet "Barrierefreiheit" section, 2026-08-03
+    // redesign) — Kriterium | Wert | Gefiltert | Verlässl. | Quelle.
     scoreCriterionCol:    string
-    scoreEvidenceCol:     string
+    tableValueCol:        string
+    tableFilteredCol:     string
+    tableReliabilityCol:  string
+    tableSourceCol:       string
+    // aria-labels for the "Gefiltert" column's checkmark/dot (no visible
+    // text in the cell itself, so the accessible name must state the yes/no
+    // both ways rather than only labelling the positive case).
+    tableFilteredYes:     string
+    tableFilteredNo:      string
     showRawData:          string
     detailsExpand:        string
     detailsCollapse:      string
@@ -257,6 +272,10 @@ export interface Translations {
     judgmentPass:           string
     judgmentCaveat:         string
     judgmentUnknown:        string
+    // Distinct from judgmentUnknown (used for "no active filter"/"unverified")
+    // — this is specifically the confirmed-violation case, only reachable via
+    // a deep-linked place that bypassed the normal filter.
+    judgmentFail:           string
     showInResults:          string
     showDetails:            string
     // Short chip labels for the map marker popup footers (parking/WC/venue —
@@ -565,5 +584,11 @@ export interface Translations {
     call:            string
     accessibleHeadline:       string
     accessibleHeadlineCaveat: string
+    // Quickstart's own fallback wording for the rare deep-linked place that
+    // fails the fixed preset — deliberately NOT results.judgmentFail/
+    // judgmentUnverified, which say "deine Kriterien": Quickstart's criteria
+    // aren't user-chosen, so that possessive phrasing would be misleading here.
+    notAccessibleHeadline:    string
+    unverifiedHeadline:       string
   }
 }

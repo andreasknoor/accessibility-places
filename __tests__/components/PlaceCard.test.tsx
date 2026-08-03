@@ -63,10 +63,20 @@ describe("PlaceCard", () => {
   // v13/docs/plans/reliability-tiers.md: the old place-wide percentage badge
   // was replaced by a JudgmentLine against the active filters — entrance
   // passes cleanly, toilet is "limited" → the caveat wording names it.
-  it("renders the judgement line against the active filters", () => {
+  it("renders the judgement line against the active filters, naming the count", () => {
     renderWithProvider(<PlaceCard place={makePlace()} filters={FILTERS} />)
-    expect(screen.getByText("Erfüllt deine Kriterien")).toBeInTheDocument()
+    // FILTERS has 2 active criteria (entrance, toilet) — the count is now
+    // part of the headline text itself (2026-08-02).
+    expect(screen.getByText("Erfüllt")).toBeInTheDocument()
+    expect(screen.getByText("deine 2 Kriterien")).toBeInTheDocument()
     expect(screen.getByText("Mit Einschränkung: Toilette.")).toBeInTheDocument()
+  })
+
+  it("renders the criteria count as plain text, not a link, on the card itself", () => {
+    // Only the Info-Sheet's JudgmentLine gets a real link (see
+    // JudgmentLine.tsx) — the card's own copy never receives onOpenFilters.
+    renderWithProvider(<PlaceCard place={makePlace()} filters={FILTERS} />)
+    expect(screen.queryByRole("button", { name: "Aktive Kriterien anzeigen" })).not.toBeInTheDocument()
   })
 
   it("shows a neutral 'no criteria active' line when no filters are passed", () => {
@@ -116,7 +126,7 @@ describe("PlaceCard", () => {
     // usability finding: the judgement line must NOT stopPropagation — a tap
     // on it is just another tap inside the single header tap target.
     renderWithProvider(<PlaceCard place={makePlace()} filters={FILTERS} onClick={vi.fn()} />)
-    fireEvent.click(screen.getByText("Erfüllt deine Kriterien"))
+    fireEvent.click(screen.getByText("deine 2 Kriterien"))
     expect(await screen.findByText(/Grunddaten|Basic information/i)).toBeInTheDocument()
   })
 
@@ -307,21 +317,8 @@ describe("PlaceCard — navigate button (docs/plans/native-navigate-here.md, Pla
   })
 })
 
-// v13/decision 10: placeMayNotBeAccessible only fires on an actual "no" —
-// the per-criterion "!" toggle must follow the same rule, or it would imply
-// a merely "unknown" value is why the warning appeared.
-describe("PlaceCard — not-accessible warning toggle (v13, decision 10)", () => {
-  it("shows the toggle only next to the criterion that is actually 'no', not next to a merely 'unknown' one", () => {
-    const place = makePlace({
-      accessibility: {
-        entrance: buildAttribute("osm", "no", "no", {}),
-        toilet:   buildAttribute("osm", "unknown", "unknown", {}),
-        parking:  buildAttribute("osm", "yes", "yes", {}),
-      },
-    })
-    renderWithProvider(<PlaceCard place={place} />)
-    // Exactly one toggle (entrance's) — toilet's "unknown" gets none, even
-    // though the warning itself is showing (triggered by entrance="no").
-    expect(screen.getAllByRole("button", { name: "Hinweis anzeigen" })).toHaveLength(1)
-  })
-})
+// The separate "Achtung: evtl. nicht barrierefrei" warning box and its
+// per-criterion "!" toggle were retired 2026-08-02 (Option 3) — they said
+// almost exactly what the judgement line above already says. See
+// JudgmentLine.test-equivalent coverage in the "renders the judgement line"
+// tests above and lib/reliability.test.ts for the underlying status logic.

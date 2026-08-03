@@ -150,3 +150,83 @@ real `SearchFilters` (PlaceCard, PlaceDebugSheet, MapViewGL ×2) pass
 `parkingNearby` through; the two fixed-preset literals (Quickstart's
 `SIMPLE_MAP_FILTERS`/`quickstartFilters`, SEO's none) don't set the parking
 criterion active at all, so it doesn't apply there.
+
+## 2026-08-02 follow-up: the separate warning box is retired (Option 3)
+
+The original design (this doc's decision 10, above) kept a standalone
+"Achtung: evtl. nicht barrierefrei" box (`NotAccessibleWarningBox`,
+`components/results/NotAccessibleWarning.tsx`) narrowed to fire only on an
+actual `"no"`. On review this box was found to duplicate the judgement
+line's own headline almost word-for-word, at all three surfaces that had
+both (PlaceCard, PlaceDebugSheet, SimpleDetail) — the exact "two signals,
+one fact" problem the whole redesign exists to fix, just relocated one
+level down. It has been removed entirely, along with `placeMayNotBeAccessible`
+(`lib/matching/merge.ts`) and the per-criterion "!" toggle — nothing calls
+either anymore.
+
+The one place that genuinely lacked an equivalent was the map popup, which
+only had a bare judgement caption ("Passt" / "Passt mit Vorbehalt" / "Ohne
+Angabe") with no reasoning. `buildVenuePopupHtml`'s `judgment` option changed
+from a bare `JudgmentStatus` to the full `PlaceJudgment` (status +
+limited/unknown/failed), so the popup can now name the affected criteria
+too — e.g. "Passt mit Vorbehalt (WC)". A new `map.judgmentFail` i18n string
+distinguishes a confirmed violation from the generic "no data" caption,
+which `pass_limited`/`unverified`/`fail`/`none` used to share.
+
+### The judgement headline now names the count, and links to the filter view
+
+Two usability points raised during review: the headline's "deine Kriterien"
+doesn't say *how many*, and in Quickstart it's outright wrong — nothing
+there is user-chosen, so the possessive "deine" is misleading. Fixes:
+
+- `results.judgmentPass`/`judgmentFail` changed from plain strings to
+  `(n: number) => { pre, criteria, post }` — `n` is the active-criteria
+  count ("deine 2 Kriterien" / "dein Kriterium" for exactly one).
+  `JudgmentLine.tsx` renders `criteria` as its own span so it can optionally
+  become a link.
+- `JudgmentLine` gained an `onOpenFilters?: () => void` prop. When given,
+  `criteria` renders as a real, focusable `<button>` (stopPropagation'd,
+  `aria-label` from `results.judgmentOpenFilters`) that jumps to the filter
+  view; when absent, it's plain text. Only `PlaceDebugSheet`'s instance ever
+  receives it — the result card's own on-card `JudgmentLine` never does,
+  because that headline sits inside the card's single "opens detail sheet"
+  tap target (see PlaceCard.tsx's own header-box comment), and nesting a
+  second, differently-destined interactive control in there would either
+  require restructuring that box or create a confusing nested-button
+  situation for keyboard/screen-reader users. The card shows the same count
+  as inert text; tapping the card opens the sheet, where the link lives.
+- Threaded end-to-end: `HomeClient`/`MobileLayout` → `ResultsList` →
+  `PlaceCard` → `PlaceDebugSheet`, and separately `HomeClient`/`MobileLayout`
+  → `MapView` (new `onOpenFilters` on `MapViewProps`) → `MapViewGL` → its own
+  internal `PlaceDebugSheet`. Desktop opens the collapsible filter rail
+  (`setFilterCollapsed(false)`); mobile switches tabs (`setActiveTab("filter")`).
+  Deliberately a *separate* prop from `ResultsList`'s existing
+  `onAdjustFilters` (the empty-state CTA) rather than reusing it — passing
+  the same prop from `HomeClient` too would have silently changed desktop's
+  documented empty-state behaviour (text hint → button) as a side effect.
+- Quickstart (`SimpleDetail.tsx`) got its own neutral fallback strings
+  (`simple.notAccessibleHeadline` / `simple.unverifiedHeadline`) for the
+  rare deep-linked place that fails its fixed preset, instead of reusing
+  `results.judgmentFail`/`judgmentUnverified` — those say "deine Kriterien",
+  which doesn't apply to a preset nobody chose. In practice
+  `unverifiedHeadline` is currently unreachable there: Quickstart's preset
+  always has `acceptUnknown: false`, and `evaluatePlaceJudgment` only ever
+  produces `"unverified"` when `acceptUnknown` is on — kept anyway as
+  correct, harmless defensive code in case that preset ever changes.
+
+## 2026-08-02: OSM_ENTRANCE_WEIGHT_FACTOR removed
+
+`OSM_ENTRANCE_WEIGHT_FACTOR = 0.90` used to discount OSM's contribution to
+the **entrance** criterion only (not toilet/parking), reasoning that OSM's
+`wheelchair=*` tag is a whole-place proxy rather than an entrance-specific
+tag. Reviewed on request: the semantic reasoning was sound, but the
+magnitude had a side effect nobody intended — a lone OSM entrance value
+(0.75 × 0.90 = 0.675) fell below the `gut` tier threshold (0.70) while an
+otherwise-identical lone OSM toilet value (0.75) stayed at `gut`, making
+OSM's entrance data read as structurally less reliable than its toilet data
+with no visible explanation anywhere in the UI. Decision: remove the factor
+entirely — OSM's `wheelchair=*` now carries the same 0.75 weight for
+entrance as for every other OSM-sourced criterion. `buildAttribute()`
+(`lib/matching/merge.ts`) lost its `isOsmOverall` parameter; all callers
+(`osm.ts`, `acceslibre.ts`, `ginto.ts`) were updated to the shifted
+positional signature (`weightMultiplier` now the 5th argument, not 6th).
