@@ -135,3 +135,45 @@ describe("JudgmentLine — no active criteria", () => {
     expect(screen.queryByRole("button", { name: "Aktive Kriterien anzeigen" })).not.toBeInTheDocument()
   })
 })
+
+// Regression: the filter-rail/mobile-tab badges count onlyVerified as one of
+// the ticked boxes; the headline used to compute its own count from
+// CRITERION_KEYS only and silently forgot it — "3" in the badge, "deine 2
+// Kriterien" in the headline, for the exact same filter selection.
+describe("JudgmentLine — onlyVerified counts toward the headline", () => {
+  it("includes onlyVerified in the count alongside two real criteria", () => {
+    renderWithProvider(
+      <JudgmentLine place={makePlace()} filters={{ ...TWO_ACTIVE, onlyVerified: true }} />,
+    )
+    expect(screen.getByText("deine 3 Kriterien")).toBeInTheDocument()
+  })
+
+  it("counts onlyVerified alone with the singular form", () => {
+    renderWithProvider(
+      <JudgmentLine
+        place={makePlace()}
+        filters={{ entrance: false, toilet: false, parking: false, seating: false, acceptUnknown: false, onlyVerified: true }}
+      />,
+    )
+    expect(screen.getByText("dein Kriterium")).toBeInTheDocument()
+  })
+
+  it("lists 'Nur manuell verifizierte Orte' in the popover alongside the real criteria", () => {
+    renderWithProvider(
+      <JudgmentLine place={makePlace()} filters={{ ...TWO_ACTIVE, onlyVerified: true }} onOpenFilters={vi.fn()} />,
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Aktive Kriterien anzeigen" }))
+    expect(screen.getByText("Nur manuell verifizierte Orte")).toBeInTheDocument()
+  })
+
+  it("fails the judgement (not just the count) when onlyVerified has no verified source, even if the real criteria pass", () => {
+    renderWithProvider(
+      <JudgmentLine place={makePlace()} filters={{ ...TWO_ACTIVE, onlyVerified: true }} />,
+    )
+    // makePlace()'s fixture entrance/toilet are "yes" but carry no
+    // verifiedRecently source, so onlyVerified must fail the whole judgement.
+    expect(screen.getByText("deine 3 Kriterien")).toBeInTheDocument()
+    expect(screen.getByText(/nicht$/)).toBeInTheDocument()
+    expect(screen.getByText(/Verifizierung/)).toBeInTheDocument()
+  })
+})

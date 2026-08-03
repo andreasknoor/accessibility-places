@@ -337,7 +337,7 @@ export default function PlaceDebugSheet({ place, onClose, filters, onOpenFilters
   // column, so both surfaces agree on exactly which criteria count as
   // "yours" without computing it twice.
   const judgmentFilters: JudgmentFilters = filters
-    ? { entrance: filters.entrance, toilet: filters.toilet, parking: filters.parking, parkingNearby: filters.parkingNearby, seating: filters.seating, acceptUnknown: filters.acceptUnknown }
+    ? { entrance: filters.entrance, toilet: filters.toilet, parking: filters.parking, parkingNearby: filters.parkingNearby, seating: filters.seating, onlyVerified: filters.onlyVerified, acceptUnknown: filters.acceptUnknown }
     : NO_FILTERS
 
   const parkingAttr = place.accessibility.parking

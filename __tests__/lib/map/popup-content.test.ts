@@ -35,7 +35,7 @@ function makePlace(overrides: Partial<Place> = {}): Place {
 }
 
 function makeJudgment(overrides: Partial<PlaceJudgment>): PlaceJudgment {
-  return { status: "pass", limited: [], unknown: [], failed: [], ...overrides }
+  return { status: "pass", limited: [], unknown: [], failed: [], verifiedFailed: false, ...overrides }
 }
 
 describe("buildVenuePopupHtml — judgement colour", () => {

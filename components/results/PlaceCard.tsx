@@ -36,7 +36,7 @@ interface Props {
 
 export default function PlaceCard({ place, isSelected, onClick, distanceM, filters, onOpenFilters }: Props) {
   const judgmentFilters: JudgmentFilters = filters
-    ? { entrance: filters.entrance, toilet: filters.toilet, parking: filters.parking, parkingNearby: filters.parkingNearby, seating: filters.seating, acceptUnknown: filters.acceptUnknown }
+    ? { entrance: filters.entrance, toilet: filters.toilet, parking: filters.parking, parkingNearby: filters.parkingNearby, seating: filters.seating, onlyVerified: filters.onlyVerified, acceptUnknown: filters.acceptUnknown }
     : NO_FILTERS
   const t = useTranslations()
   const [expanded,  setExpanded]  = useState(false)

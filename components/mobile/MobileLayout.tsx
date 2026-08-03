@@ -10,6 +10,7 @@ import { useTranslations, useLocale } from "@/lib/i18n"
 import { hapticLight } from "@/lib/native/haptics"
 import { track } from "@/lib/analytics"
 import { amenitySpotKey, formatRadiusKm, headerRadiusControl, activeAmenityFilterCount, type ViewportOrigin } from "@/lib/search-ui"
+import { activeCriteriaCount } from "@/lib/reliability"
 import ChatPanel       from "@/components/chat/ChatPanel"
 import FilterPanel     from "@/components/filters/FilterPanel"
 import RadiusPresetPopover from "@/components/filters/RadiusPresetPopover"
@@ -210,7 +211,7 @@ export default function MobileLayout({
   // is what the venue branch below has always done — its defaults make it read 2.
   const activeFilterCount = amenityActive != null
     ? activeAmenityFilterCount(amenityActive, settings)
-    : [filters.entrance, filters.toilet, filters.parking, filters.seating, filters.onlyVerified].filter(Boolean).length
+    : activeCriteriaCount(filters)
 
   const resultCount = amenityActiveBool ? (amenityResults?.length ?? 0) : places.length
 

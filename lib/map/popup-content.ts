@@ -175,7 +175,13 @@ function judgmentCaption(t: T, judgment: PlaceJudgment): string | null {
   if (judgment.status === "pass")         return t.map.judgmentPass
   if (judgment.status === "pass_limited") return `${t.map.judgmentCaveat} (${names(judgment.limited)})`
   if (judgment.status === "unverified")   return `${t.map.judgmentUnknown} (${names(judgment.unknown)})`
-  if (judgment.status === "fail")         return `${t.map.judgmentFail} (${names(judgment.failed)})`
+  if (judgment.status === "fail") {
+    // verifiedFailed (the "nur manuell verifiziert" gate) doesn't fit
+    // CriterionKey/names() — it's a place-level check, not a per-criterion
+    // one — so it's appended separately rather than folded into `failed`.
+    const parts = [...judgment.failed.map((k) => mapCriterionLabel(t, k)), ...(judgment.verifiedFailed ? [t.criteria.verifiedOnly] : [])]
+    return `${t.map.judgmentFail} (${parts.join(", ")})`
+  }
   return null // "none"
 }
 

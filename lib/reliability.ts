@@ -32,6 +32,12 @@ export interface JudgmentFilters {
   // sub-filter on this (Quickstart, SEO) don't need to think about it.
   parkingNearby?: boolean
   seating:       boolean
+  // "Nur manuell verifizierte Orte" (passesFilters' onlyVerified gate,
+  // lib/matching/merge.ts): does ANY criterion carry a recently-verified
+  // source? A place-level gate, not a per-criterion value — doesn't fit
+  // CriterionKey, so it's tracked separately everywhere below rather than
+  // folded into CRITERION_KEYS.
+  onlyVerified?: boolean
   acceptUnknown: boolean
 }
 
@@ -42,6 +48,21 @@ export interface PlaceJudgment {
   limited: CriterionKey[] // active criteria whose value is "limited"
   unknown: CriterionKey[] // active criteria with no known value that still passed (acceptUnknown)
   failed:  CriterionKey[] // active criteria that block the place outright
+  // See JudgmentFilters.onlyVerified above — true only when that filter is
+  // active AND the place has no recently-verified source. Only ever
+  // contributes to "fail" (the gate is binary, unlike the per-criterion
+  // limited/unknown nuance), never "pass_limited"/"unverified".
+  verifiedFailed: boolean
+}
+
+// Single source of truth for "how many boxes are ticked" — JudgmentLine's
+// headline count and the filter-rail/mobile-tab badges (HomeClient,
+// MobileLayout) must never compute this separately: they did, and drifted —
+// the badges already counted onlyVerified, the headline forgot it entirely
+// ("3" in the badge vs. "deine 2 Kriterien" in the headline for the same
+// filter selection).
+export function activeCriteriaCount(filters: JudgmentFilters): number {
+  return CRITERION_KEYS.filter((k) => filters[k]).length + (filters.onlyVerified ? 1 : 0)
 }
 
 function attrFor(place: Place, key: CriterionKey): AccessibilityAttribute | undefined {
@@ -84,14 +105,25 @@ export function evaluatePlaceJudgment(place: Place, filters: JudgmentFilters): P
     failed.push(key)
   }
 
-  let status: JudgmentStatus
-  if (activeKeys.length === 0)   status = "none"
-  else if (failed.length > 0)   status = "fail"
-  else if (unknown.length > 0)  status = "unverified"
-  else if (limited.length > 0)  status = "pass_limited"
-  else                           status = "pass"
+  // Mirrors passesFilters' onlyVerified gate (lib/matching/merge.ts) exactly:
+  // ANY of the four attributes (not just the active ones — same as
+  // passesFilters) carrying a recently-verified source is enough.
+  let verifiedFailed = false
+  if (filters.onlyVerified) {
+    const attrs = CRITERION_KEYS
+      .map((k) => attrFor(place, k))
+      .filter((a): a is AccessibilityAttribute => a != null)
+    verifiedFailed = !attrs.some((a) => a.sources.some((s) => s.verifiedRecently))
+  }
 
-  return { status, limited, unknown, failed }
+  let status: JudgmentStatus
+  if (activeKeys.length === 0 && !filters.onlyVerified) status = "none"
+  else if (failed.length > 0 || verifiedFailed)          status = "fail"
+  else if (unknown.length > 0)                            status = "unverified"
+  else if (limited.length > 0)                            status = "pass_limited"
+  else                                                     status = "pass"
+
+  return { status, limited, unknown, failed, verifiedFailed }
 }
 
 // ─── Per-criterion reliability tier + Nachsatz ─────────────────────────────

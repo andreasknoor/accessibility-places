@@ -256,6 +256,7 @@ const en: Translations = {
     toilet:   "Toilet",
     parking:  "Parking",
     seating:  "Seating",
+    verifiedOnly: "Verification",
   },
   details: {
     entrance: {

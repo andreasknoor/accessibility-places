@@ -25,6 +25,7 @@ import { clampVenueRadiusKm, clampAmenityRadiusKm, snapAmenityRadiusKm, snapVenu
 import { SEO_CATEGORY_SLUGS, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
+import { activeCriteriaCount } from "@/lib/reliability"
 import { useSettings, loadSettings, DEFAULT_APP_SETTINGS, SETTINGS_PARKING_RADIUS_MAX_KM, SIMPLE_CATEGORIES } from "@/lib/settings"
 import { SIMPLE_TOILET_REQUIRED_CATEGORIES } from "@/lib/simple-view"
 import { markMountAndIsReturning, clearReturningFlag, loadActiveMode, saveActiveMode, loadSearchRun, saveSearchRun, clearSearchRun, clearSearchInput, clearSessionSearch } from "@/lib/session-restore"
@@ -2360,9 +2361,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             >
               <span className="relative">
                 <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
-                {[filters.entrance, filters.toilet, filters.parking, filters.seating, filters.onlyVerified].filter(Boolean).length > 0 && (
+                {activeCriteriaCount(filters) > 0 && (
                   <span className="absolute -top-3 -right-1.5 min-w-[1.125rem] h-[1.125rem] rounded-full bg-red-500 text-white text-[10px] font-bold leading-none flex items-center justify-center px-1">
-                    {[filters.entrance, filters.toilet, filters.parking, filters.seating, filters.onlyVerified].filter(Boolean).length}
+                    {activeCriteriaCount(filters)}
                   </span>
                 )}
               </span>

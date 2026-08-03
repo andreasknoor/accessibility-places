@@ -225,6 +225,10 @@ export interface Translations {
     toilet:   string
     parking:  string
     seating:  string
+    // Short noun form of filters.criteriaItems.onlyVerified, for joining into
+    // "Betrifft: Eingang, …"-style judgement reasoning (JudgmentLine,
+    // popup-content.ts) — the full checkbox sentence reads oddly mid-list.
+    verifiedOnly: string
   }
   details: {
     entrance: {

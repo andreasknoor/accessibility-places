@@ -765,7 +765,7 @@ export default function MapViewGL({
     const map = mapInst.current
     if (!map) return
     const judgmentFilters: JudgmentFilters = filtersRef.current
-      ? { entrance: filtersRef.current.entrance, toilet: filtersRef.current.toilet, parking: filtersRef.current.parking, parkingNearby: filtersRef.current.parkingNearby, seating: filtersRef.current.seating, acceptUnknown: filtersRef.current.acceptUnknown }
+      ? { entrance: filtersRef.current.entrance, toilet: filtersRef.current.toilet, parking: filtersRef.current.parking, parkingNearby: filtersRef.current.parkingNearby, seating: filtersRef.current.seating, onlyVerified: filtersRef.current.onlyVerified, acceptUnknown: filtersRef.current.acceptUnknown }
       : NO_MAP_FILTERS
     const judgment = evaluatePlaceJudgment(place, judgmentFilters)
     const html = buildVenuePopupHtml(place, tRef.current, { showResults: !!onShowInResults, judgment })
@@ -933,7 +933,7 @@ export default function MapViewGL({
     }
 
     const judgmentFilters: JudgmentFilters = filters
-      ? { entrance: filters.entrance, toilet: filters.toilet, parking: filters.parking, parkingNearby: filters.parkingNearby, seating: filters.seating, acceptUnknown: filters.acceptUnknown }
+      ? { entrance: filters.entrance, toilet: filters.toilet, parking: filters.parking, parkingNearby: filters.parkingNearby, seating: filters.seating, onlyVerified: filters.onlyVerified, acceptUnknown: filters.acceptUnknown }
       : NO_MAP_FILTERS
 
     const features = places.map((place) => {

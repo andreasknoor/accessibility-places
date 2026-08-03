@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import {
   evaluatePlaceJudgment,
+  activeCriteriaCount,
   criterionTier,
   attrVerifiedAt,
   sourceLabelsFor,
@@ -191,6 +192,79 @@ describe("evaluatePlaceJudgment", () => {
       })
       expect(evaluatePlaceJudgment(p, { ...parkingFilter, parkingNearby: false }).status).toBe("pass")
     })
+  })
+
+  // Regression (2026-08-03): onlyVerified is a place-level gate (mirrors
+  // passesFilters' own onlyVerified check, lib/matching/merge.ts) — it
+  // doesn't map onto any single CriterionKey, so it's easy to plumb into the
+  // "how many boxes are ticked" count while forgetting to also plumb it into
+  // pass/fail. A place shown despite failing this gate (deep-link bypass,
+  // same edge case as the other criteria) must still read "fail".
+  describe("onlyVerified gate", () => {
+    it("passes when a verified source exists on any criterion, even with no other active criteria", () => {
+      const p = makePlace({
+        accessibility: {
+          entrance: buildAttribute("osm", "yes", "yes", {}, 1, undefined, true),
+          toilet:   emptyAttribute(),
+          parking:  emptyAttribute(),
+        },
+      })
+      const j = evaluatePlaceJudgment(p, { ...NONE_ACTIVE, onlyVerified: true })
+      expect(j.status).toBe("pass")
+      expect(j.verifiedFailed).toBe(false)
+    })
+
+    it("fails when onlyVerified is active and no criterion carries a verified source", () => {
+      const p = makePlace({
+        accessibility: {
+          entrance: buildAttribute("osm", "yes", "yes", {}),
+          toilet:   emptyAttribute(),
+          parking:  emptyAttribute(),
+        },
+      })
+      const j = evaluatePlaceJudgment(p, { ...NONE_ACTIVE, onlyVerified: true })
+      expect(j.status).toBe("fail")
+      expect(j.verifiedFailed).toBe(true)
+      // Doesn't fit CriterionKey — tracked separately, not folded into `failed`.
+      expect(j.failed).toEqual([])
+    })
+
+    it("still returns 'none' when onlyVerified is the only thing off and nothing else is active", () => {
+      const p = makePlace()
+      expect(evaluatePlaceJudgment(p, NONE_ACTIVE).status).toBe("none")
+    })
+
+    it("combines with a real criterion: entrance passes but onlyVerified fails → overall fail", () => {
+      const p = makePlace({
+        accessibility: {
+          entrance: buildAttribute("osm", "yes", "yes", {}), // not verified
+          toilet:   emptyAttribute(),
+          parking:  emptyAttribute(),
+        },
+      })
+      const j = evaluatePlaceJudgment(p, { ...ENTRANCE_ONLY, onlyVerified: true })
+      expect(j.status).toBe("fail")
+      expect(j.verifiedFailed).toBe(true)
+    })
+  })
+})
+
+describe("activeCriteriaCount", () => {
+  it("counts only the four criteria when onlyVerified is off", () => {
+    expect(activeCriteriaCount(NO_SEATING_FILTER)).toBe(3)
+  })
+
+  it("adds one for onlyVerified — the filter-rail/mobile-tab badges (HomeClient, MobileLayout) and the", () => {
+    // judgement headline (JudgmentLine) must never drift on this count again.
+    expect(activeCriteriaCount({ ...NO_SEATING_FILTER, onlyVerified: true })).toBe(4)
+  })
+
+  it("counts onlyVerified alone", () => {
+    expect(activeCriteriaCount({ ...NONE_ACTIVE, onlyVerified: true })).toBe(1)
+  })
+
+  it("returns 0 when nothing is active", () => {
+    expect(activeCriteriaCount(NONE_ACTIVE)).toBe(0)
   })
 })
 

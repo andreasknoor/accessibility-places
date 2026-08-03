@@ -15,7 +15,7 @@
 import { CheckCircle2, HelpCircle, Pencil, XCircle } from "lucide-react"
 import { Popover, PopoverTrigger, PopoverContent, PopoverClose } from "@/components/ui/popover"
 import { useTranslations } from "@/lib/i18n"
-import { evaluatePlaceJudgment, CRITERION_KEYS, type JudgmentFilters, type CriterionKey } from "@/lib/reliability"
+import { evaluatePlaceJudgment, activeCriteriaCount, CRITERION_KEYS, type JudgmentFilters, type CriterionKey } from "@/lib/reliability"
 import { cn } from "@/lib/utils"
 import type { Place } from "@/lib/types"
 
@@ -45,7 +45,7 @@ export default function JudgmentLine({ place, filters, className, onOpenFilters 
   const t = useTranslations()
   const judgment = evaluatePlaceJudgment(place, filters)
   const label = (k: CriterionKey) => t.criteria[k]
-  const activeCount = CRITERION_KEYS.filter((k) => filters[k]).length
+  const activeCount = activeCriteriaCount(filters)
 
   if (judgment.status === "none") {
     return (
@@ -79,7 +79,10 @@ export default function JudgmentLine({ place, filters, className, onOpenFilters 
       ? t.results.judgmentPassLimitedNote(t.results.joinCriteria(judgment.limited.map(label)))
       : judgment.status === "unverified"
         ? t.results.judgmentUnverifiedNote(t.results.joinCriteria(judgment.unknown.map(label)))
-        : t.results.judgmentFailNote(t.results.joinCriteria(judgment.failed.map(label)))
+        : t.results.judgmentFailNote(t.results.joinCriteria([
+            ...judgment.failed.map(label),
+            ...(judgment.verifiedFailed ? [t.criteria.verifiedOnly] : []),
+          ]))
 
   return (
     <div className={cn("flex flex-col gap-0.5", className)}>
@@ -121,6 +124,12 @@ export default function JudgmentLine({ place, filters, className, onOpenFilters 
                         {label(k)}
                       </li>
                     ))}
+                    {filters.onlyVerified && (
+                      <li className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
+                        {t.filters.criteriaItems.onlyVerified}
+                      </li>
+                    )}
                   </ul>
                   <PopoverClose asChild>
                     <button
