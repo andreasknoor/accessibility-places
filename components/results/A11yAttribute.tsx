@@ -5,6 +5,7 @@ import { AlertTriangle } from "lucide-react"
 import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS } from "@/lib/config"
 import CriterionBox, { CRITERION_STYLES } from "@/components/results/CriterionBox"
+import { criterionTier, attrVerifiedAt } from "@/lib/reliability"
 import type { AccessibilityAttribute } from "@/lib/types"
 
 interface Props {
@@ -12,8 +13,7 @@ interface Props {
   attr:        AccessibilityAttribute
   detailType?: "entrance" | "toilet" | "parking" | "seating"
   showDetails?: boolean
-  // Extra content appended after the conflict icon (if any) in the header —
-  // e.g. NotAccessibleWarningToggle (see PlaceCard.tsx).
+  // Extra content appended after the conflict icon (if any) in the header.
   headerExtra?: ReactNode
 }
 
@@ -59,12 +59,27 @@ export default function A11yAttribute({ label, attr, detailType, showDetails, he
     ? (attr.details as Record<string, unknown>).description as string
     : undefined
 
+  // Reliability tier (v13) — plain-language Nachsatz, never a colour. Folds
+  // in the verified-on-site date (decision 8) as its own clause rather than
+  // a separate badge; only rendered for a known value.
+  const tier = criterionTier(attr)
+  const verifiedIso = attrVerifiedAt(attr)
+  const verifiedLabel = verifiedIso
+    ? (() => {
+        const s = t.results.verifiedAt(verifiedIso, [])
+        return s.charAt(0).toLowerCase() + s.slice(1)
+      })()
+    : undefined
+  const reliabilityNote = attr.value !== "unknown"
+    ? t.results.reliabilityNote(tier, verifiedLabel)
+    : undefined
+
   return (
     <CriterionBox
       tone={attr.value}
       label={label}
       value={valueLabel}
-      confidence={attr.confidence}
+      reliabilityNote={reliabilityNote}
       rows={rows}
       note={description}
       headerExtra={(attr.conflict || headerExtra) && (

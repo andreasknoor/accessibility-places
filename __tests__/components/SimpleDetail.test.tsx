@@ -84,63 +84,61 @@ describe("SimpleDetail", () => {
     expect(onOpenSettings).toHaveBeenCalledTimes(1)
   })
 
-  // Confidence score — the same ConfidenceBadge PlaceCard/PlaceDebugSheet use,
-  // between the criteria box and the possibly-not-accessible warning; no
-  // `place` prop passed to it, so it stays a plain badge without the
-  // interactive score-formula breakdown (out of scope here, like the rest of
-  // this reduced screen).
-  it("shows the confidence score badge with its percentage and label", () => {
-    renderWithProvider(<SimpleDetail place={makePlace({ overallConfidence: 0.75 })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />)
-    expect(screen.getByText("Daten: 75% · Verlässlich")).toBeInTheDocument()
+  // Fixed, absolute headline (v13, decision 7) — replaces the old percentage
+  // confidence badge. Quickstart's preset is fixed by app design (unlike
+  // Turbo's user-chosen filters), so the headline states the judgement
+  // outright. Uses category "museum" (not in SIMPLE_TOILET_REQUIRED_CATEGORIES)
+  // so the toilet value can't affect this judgement — only entrance does.
+  it("shows the fixed 'Barrierefrei nutzbar' headline when entrance passes cleanly", () => {
+    renderWithProvider(<SimpleDetail place={makePlace({ category: "museum" })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />)
+    expect(screen.getByText("Barrierefrei nutzbar")).toBeInTheDocument()
   })
 
-  it("reflects a low confidence score with its own label", () => {
-    renderWithProvider(<SimpleDetail place={makePlace({ overallConfidence: 0.2 })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />)
-    expect(screen.getByText("Daten: 20% · Unsicher")).toBeInTheDocument()
+  it("shows the caveat headline when entrance is 'limited'", () => {
+    const place = makePlace({ category: "museum" })
+    renderWithProvider(
+      <SimpleDetail
+        place={{ ...place, accessibility: { ...place.accessibility, entrance: buildAttribute("osm", "limited", "limited", {}) } }}
+        onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()}
+      />,
+    )
+    expect(screen.getByText("Barrierefrei nutzbar – mit Einschränkung")).toBeInTheDocument()
   })
 
-  // Same trigger (placeMayNotBeAccessible: entrance/toilet "no"/"unknown") and
-  // wording as PlaceCard/PlaceDebugSheet's shared NotAccessibleWarningBox —
-  // Simple View's reduced detail screen must not silently drop this warning.
-  describe("possibly-not-accessible warning", () => {
-    it("is hidden when neither entrance nor toilet is flagged (default fixture: yes/limited)", () => {
-      renderWithProvider(<SimpleDetail place={makePlace()} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />)
+  // The separate "Achtung: evtl. nicht barrierefrei" warning box was retired
+  // 2026-08-02 (Option 3) — it said almost exactly what the headline above
+  // already says. These deep-link-only edge cases (a place that fails
+  // Quickstart's own fixed preset can still open, see the component's own
+  // comment) now show a neutral, non-possessive headline instead — never
+  // "deine Kriterien" wording, since Quickstart's preset isn't user-chosen.
+  describe("deep-linked place failing Quickstart's fixed preset", () => {
+    it("shows the neutral 'Nicht barrierefrei' headline when entrance is 'no'", () => {
+      const place = makePlace({ category: "museum" }) // not toilet-required, isolates entrance
+      renderWithProvider(
+        <SimpleDetail
+          place={{ ...place, accessibility: { ...place.accessibility, entrance: buildAttribute("osm", "no", "no", {}) } }}
+          onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()}
+        />,
+      )
+      expect(screen.getByText("Nicht barrierefrei")).toBeInTheDocument()
       expect(screen.queryByRole("alert")).not.toBeInTheDocument()
     })
 
-    it("shows the warning when entrance is 'no'", () => {
+    // Quickstart's fixed preset always has acceptUnknown: false, so an
+    // unknown value on a required criterion resolves to "fail" (not
+    // "unverified") — evaluatePlaceJudgment only ever produces "unverified"
+    // when acceptUnknown is on, which Quickstart never sets. This is the
+    // same neutral headline as the entrance="no" case above, just reached
+    // via a different criterion.
+    it("shows the neutral 'Nicht barrierefrei' headline when a required toilet is merely unknown", () => {
+      const place = makePlace({ category: "restaurant" }) // toilet-required category
       renderWithProvider(
         <SimpleDetail
-          place={makePlace({ accessibility: { ...makePlace().accessibility, entrance: buildAttribute("osm", "no", "no", {}) } })}
-          onBack={vi.fn()}
-          onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()}
+          place={{ ...place, accessibility: { ...place.accessibility, toilet: buildAttribute("osm", "unknown", "unknown", {}) } }}
+          onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()}
         />,
       )
-      expect(screen.getByRole("alert")).toHaveTextContent("Achtung: Evtl. nicht barrierefrei.")
-    })
-
-    it("shows the warning when toilet is 'unknown'", () => {
-      renderWithProvider(
-        <SimpleDetail
-          place={makePlace({ accessibility: { ...makePlace().accessibility, toilet: buildAttribute("osm", "unknown", "unknown", {}) } })}
-          onBack={vi.fn()}
-          onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()}
-        />,
-      )
-      expect(screen.getByRole("alert")).toBeInTheDocument()
-    })
-
-    // Deliberately excluded from the trigger (see placeMayNotBeAccessible) —
-    // parking has much sparser data and would fire far too often.
-    it("does not fire on a flagged parking value alone", () => {
-      renderWithProvider(
-        <SimpleDetail
-          place={makePlace({ accessibility: { ...makePlace().accessibility, parking: buildAttribute("osm", "unknown", "unknown", {}) } })}
-          onBack={vi.fn()}
-          onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()}
-        />,
-      )
-      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      expect(screen.getByText("Nicht barrierefrei")).toBeInTheDocument()
     })
   })
 })

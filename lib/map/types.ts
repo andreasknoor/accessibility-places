@@ -1,10 +1,16 @@
-import type { Place, ParkingSpot, AmenityFeature, AmenityType } from "@/lib/types"
+import type { Place, ParkingSpot, AmenityFeature, AmenityType, SearchFilters } from "@/lib/types"
 
 // Prop contract for MapView.tsx / MapViewGL.tsx (the MapLibre engine adopted
 // in the issue #48 migration; the pre-migration Leaflet implementation and
 // this file's original dual-engine contract were retired at cutover, v12.0).
 export interface MapViewProps {
   places:        Place[]
+  // Active venue-search filter criteria (v13, docs/plans/reliability-tiers.md)
+  // — drives the pin/popup JUDGEMENT colour (pass/caveat/unknown against
+  // these filters), replacing the old confidence-tier colour. Undefined
+  // (e.g. during an amenity search, where `places` is empty anyway) degrades
+  // to "no active criteria" — every shown pin renders as a neutral pass.
+  filters?:      SearchFilters
   parkingSpots?: ParkingSpot[]
   toiletSpots?:  AmenityFeature[]
   center?:       { lat: number; lon: number }
@@ -21,6 +27,12 @@ export interface MapViewProps {
   // route straight to their own reduced detail screen instead; omitted, the
   // existing rich-sheet behaviour is unchanged for every other caller.
   onOpenDetails?:      (place: Place) => void
+  // Opens the filter view — forwarded to MapViewGL's own internal
+  // PlaceDebugSheet instance (opened from a popup's "Details" chip), so its
+  // JudgmentLine gets the same "Kriterien" link as the one opened from
+  // PlaceCard. See JudgmentLine.tsx's own comment on why only the sheet gets
+  // a real link, never the popup or the result card themselves.
+  onOpenFilters?:      () => void
   isFullscreen:        boolean
   onToggleFullscreen:  () => void
   showFullscreenToggle?: boolean

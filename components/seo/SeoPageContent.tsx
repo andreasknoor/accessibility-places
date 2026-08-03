@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Accessibility, Map, Globe } from "lucide-react"
 import type { Place, A11yValue, EntranceDetails, ToiletDetails, ParkingDetails } from "@/lib/types"
 import { CITIES, SEO_CATEGORY_LABEL, SEO_CATEGORY_SLUGS, type City } from "@/lib/cities"
-import { confidenceLabel } from "@/lib/matching/merge"
+import { criterionTier } from "@/lib/reliability"
 import { hasData } from "@/lib/seo-validity"
 import NavigationProgress from "@/components/seo/NavigationProgress"
 
@@ -160,18 +160,18 @@ function buildAmenityFeatures(place: Place): LdFeature[] {
 // ─── Page stats + mini-FAQ ───────────────────────────────────────────────────
 
 interface PageStats {
-  total:        number
-  nHighConf:    number  // overallConfidence >= 0.70
-  nParking:     number  // parking yes/limited
-  nToiletYes:   number  // toilet.value === "yes" (fully accessible, not just limited)
+  total:          number
+  nMultiSourced:  number  // entrance reliability tier === "sehr_hoch" (v13: multiple corroborating sources, not a percentage)
+  nParking:       number  // parking yes/limited
+  nToiletYes:     number  // toilet.value === "yes" (fully accessible, not just limited)
 }
 
 function computePageStats(places: Place[]): PageStats {
   return {
-    total:      places.length,
-    nHighConf:  places.filter(p => p.overallConfidence >= 0.70).length,
-    nParking:   places.filter(p => p.accessibility.parking.value === "yes" || p.accessibility.parking.value === "limited").length,
-    nToiletYes: places.filter(p => p.accessibility.toilet?.value === "yes").length,
+    total:         places.length,
+    nMultiSourced: places.filter(p => criterionTier(p.accessibility.entrance) === "sehr_hoch").length,
+    nParking:      places.filter(p => p.accessibility.parking.value === "yes" || p.accessibility.parking.value === "limited").length,
+    nToiletYes:    places.filter(p => p.accessibility.toilet?.value === "yes").length,
   }
 }
 
@@ -193,8 +193,8 @@ function buildFaqItems(
       ? `Wie viele ${catLabel} in ${cityName} sind rollstuhlgerecht?`
       : `How many ${catLabel} in ${cityName} are wheelchair-accessible?`,
     answer: de
-      ? `Accessible Places listet aktuell ${stats.total} ${catLabel} in ${cityName} – alle mit rollstuhlgerechtem Eingang und barrierefreiem WC. ${stats.nHighConf} Einträge haben eine Verlässlichkeit von mindestens 70 %.`
-      : `Accessible Places currently lists ${stats.total} ${catLabel} in ${cityName} – all with a wheelchair-accessible entrance and toilet. ${stats.nHighConf} entries have a reliability score of at least 70%.`,
+      ? `Accessible Places listet aktuell ${stats.total} ${catLabel} in ${cityName} – alle mit rollstuhlgerechtem Eingang und barrierefreiem WC. Bei ${stats.nMultiSourced} Einträgen bestätigen mehrere Quellen den Eingang übereinstimmend.`
+      : `Accessible Places currently lists ${stats.total} ${catLabel} in ${cityName} – all with a wheelchair-accessible entrance and toilet. For ${stats.nMultiSourced} entries, multiple sources confirm the entrance in agreement.`,
   })
 
   // Q2 — fully accessible toilet (only when data exists)
@@ -242,18 +242,25 @@ function buildFaqItems(
   return items
 }
 
-// ─── Confidence badge ────────────────────────────────────────────────────────
-
-const CONFIDENCE_COLORS: Record<"high" | "medium" | "low", string> = {
-  high:   "bg-green-100 text-green-800 border border-green-200",
-  medium: "bg-yellow-100 text-yellow-800 border border-yellow-200",
-  low:    "bg-red-100 text-red-800 border border-red-200",
+// ─── Judgement badge (v13, docs/plans/reliability-tiers.md decision 3) ───────
+// SEO pages have no per-visitor filter (FILTERS_STRICT is hard-coded), so —
+// unlike the app's own filter-relative JudgmentLine — the badge is simply
+// fixed wording: every place on this page already passed the same strict
+// entrance+toilet criteria. No colour tier, no percentage.
+const SEO_JUDGMENT_LABEL: Record<Locale, string> = {
+  de: "Eingang und WC barrierefrei",
+  en: "Entrance and restroom accessible",
 }
+const SEO_JUDGMENT_CLASS = "bg-green-100 text-green-800 border border-green-200"
 
-const CONFIDENCE_LABEL: Record<"high" | "medium" | "low", { de: string; en: string }> = {
-  high:   { de: "Verlässlich", en: "Reliable" },
-  medium: { de: "Mittel",      en: "Moderate" },
-  low:    { de: "Unsicher",    en: "Uncertain" },
+// Per-criterion reliability tier Nachsatz — same neutral vocabulary as the
+// app's ReliabilityPill/A11yAttribute, inlined bilingually to match this
+// file's existing convention (no lib/i18n hook in server components).
+const TIER_LABEL: Record<"sehr_hoch" | "gut" | "gering" | "keine", { de: string; en: string }> = {
+  sehr_hoch: { de: "von mehreren Quellen bestätigt", en: "confirmed by multiple sources" },
+  gut:       { de: "aus verlässlicher Quelle",       en: "from a reliable source" },
+  gering:    { de: "nur eine schwache Angabe",       en: "only one weak source" },
+  keine:     { de: "",                               en: "" },
 }
 
 // ─── Single place card ───────────────────────────────────────────────────────
@@ -303,14 +310,9 @@ function SeoPlaceCard({ place, locale, searchBaseUrl }: { place: Place; locale: 
       >
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-semibold text-gray-900 text-sm leading-snug">{place.name}</h3>
-          {(() => {
-            const level = confidenceLabel(place.overallConfidence)
-            return (
-              <span className={`shrink-0 text-xs font-semibold px-2.5 py-0.5 rounded-full ${CONFIDENCE_COLORS[level]}`}>
-                {locale === "de" ? "Daten: " : "Data: "}{Math.round(place.overallConfidence * 100)}% · {CONFIDENCE_LABEL[level][locale]}
-              </span>
-            )
-          })()}
+          <span className={`shrink-0 text-xs font-semibold px-2.5 py-0.5 rounded-full ${SEO_JUDGMENT_CLASS}`}>
+            {SEO_JUDGMENT_LABEL[locale]}
+          </span>
         </div>
 
         {addr && <p className="text-xs text-gray-500">{addr}</p>}
@@ -322,12 +324,16 @@ function SeoPlaceCard({ place, locale, searchBaseUrl }: { place: Place; locale: 
             { key: "parking"  as const, attr: parking,  items: parkItems,   valueLabel: parking  ? parkingValueLabel(parking, locale) : "" },
           ]).map(({ key, attr, items, valueLabel }) => {
             if (!attr) return null
+            const tier = criterionTier(attr)
             return (
               <div key={key}>
                 <div className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${VALUE_CLASSES[attr.value]}`}>
                   <span className="font-medium">{criteriaLabel[key]}:</span>
                   <span>{valueLabel}</span>
                 </div>
+                {attr.value !== "unknown" && (
+                  <p className="mt-0.5 text-xs text-gray-500">{TIER_LABEL[tier][locale]}</p>
+                )}
                 {items.length > 0 && (
                   <ul className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0">
                     {items.map((item, i) => (
@@ -545,7 +551,7 @@ export default function SeoPageContent({ locale, city, categorySlug, places }: P
                 <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                   {([
                     { value: stats.total,             label: locale === "de" ? "Einträge"            : "Entries"            },
-                    { value: stats.nHighConf,          label: locale === "de" ? "Verlässlichkeit ≥ 70 %" : "Reliability ≥ 70%" },
+                    { value: stats.nMultiSourced,      label: locale === "de" ? "Eingang mehrfach belegt" : "Entrance multi-sourced" },
                     { value: stats.nParking,           label: locale === "de" ? "Mit Parkplatz in der Nähe" : "With nearby parking" },
                     { value: stats.nToiletYes,         label: locale === "de" ? "WC voll zugänglich"  : "Toilet fully accessible" },
                   ] as { value: number; label: string }[]).map(({ value, label }) => (

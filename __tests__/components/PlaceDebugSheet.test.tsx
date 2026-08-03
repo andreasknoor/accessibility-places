@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 import PlaceDebugSheet from "@/components/results/PlaceDebugSheet"
-import type { Place } from "@/lib/types"
+import type { Place, SearchFilters } from "@/lib/types"
 
 vi.mock("@/lib/tally", () => ({ openTallyPopup: vi.fn() }))
 vi.mock("@/lib/analytics", () => ({ track: vi.fn(), getPlatform: () => "web" }))
@@ -147,48 +147,25 @@ describe("PlaceDebugSheet accessibility section", () => {
     expect(screen.getByText("Ja")).toBeInTheDocument()
   })
 
-  it("shows confidence percentage in the section heading", () => {
+  // v13/docs/plans/reliability-tiers.md decision 1b: the section title no
+  // longer shows a percentage — it's a neutral "Verlässlichkeit" heading; the
+  // tier lives per-criterion (ReliabilityBars below), and the table (2026-08-03
+  // redesign) is the section's only content — no separate expandable chip/
+  // evidence-sum breakdown anymore (ConfidenceBadge.tsx/ScoreContent removed:
+  // it duplicated exactly what the table's own row already says).
+  it("shows a neutral section heading, no percentage", () => {
     renderSheet()
-    expect(screen.getByText(/75%/)).toBeInTheDocument()
+    expect(screen.getByText("Verlässlichkeit")).toBeInTheDocument()
+    expect(screen.queryByText(/75%/)).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Verlässlichkeit" })).not.toBeInTheDocument()
   })
 
-  // ─── Variante B: the "Verlässlichkeit · X%" chip is the score-breakdown toggle ──
-  describe("confidence-score breakdown (chip toggle, Variante B)", () => {
-    it("does not show the calculation breakdown until the chip is toggled open", () => {
-      renderSheet()
-      expect(screen.queryByText(/Score-Berechnung|Score calculation/i)).not.toBeInTheDocument()
-    })
-
-    it("shows the formula breakdown after clicking the reliability chip", () => {
-      renderSheet()
-      fireEvent.click(screen.getByRole("button", { name: /75%/ }))
-      expect(screen.getByText(/Score-Berechnung|Score calculation/i)).toBeInTheDocument()
-      // ScoreContent's formula line: entrance @75% and parking @75% are known
-      // (value !== "unknown"); toilet is unknown and excluded from the average.
-      expect(screen.getByText(/\(75% \+ 75%\) ÷ 2 = 75%/)).toBeInTheDocument()
-    })
-
-    it("hides the breakdown again when the chip is toggled a second time", () => {
-      renderSheet()
-      const chip = screen.getByRole("button", { name: /75%/ })
-      fireEvent.click(chip)
-      expect(screen.getByText(/Score-Berechnung|Score calculation/i)).toBeInTheDocument()
-      fireEvent.click(chip)
-      expect(screen.queryByText(/Score-Berechnung|Score calculation/i)).not.toBeInTheDocument()
-    })
-
-    it("sets aria-expanded on the chip to reflect open/closed state", () => {
-      renderSheet()
-      const chip = screen.getByRole("button", { name: /75%/ })
-      expect(chip).toHaveAttribute("aria-expanded", "false")
-      fireEvent.click(chip)
-      expect(chip).toHaveAttribute("aria-expanded", "true")
-    })
-  })
-
-  it("shows a per-criterion reliability pill for known values, not for unknown (proposal A2)", () => {
-    // Fixture: entrance yes @0.75 → "Verlässlich"; toilet unknown → no pill;
-    // a lone weak source (Google @0.35) on toilet → "Unsicher".
+  // ReliabilityBars renders the tier as an accessible name (role="img"
+  // aria-label), not as visible text — three fill bars are the visual, the
+  // tier word is still what a screen reader announces.
+  it("shows a per-criterion reliability tier for known values, not for unknown (v13: neutral 4-tier)", () => {
+    // Fixture: entrance yes @0.75 (OSM alone) → "gut"; toilet unknown → no
+    // tier; a lone weak source (Google @0.35) on toilet → "gering".
     renderSheet(makePlace({
       accessibility: {
         entrance: { value: "yes", confidence: 0.75, conflict: false, sources: [{ sourceId: "osm", value: "yes", rawValue: "yes", reliabilityWeight: 0.75 }], details: {} },
@@ -196,12 +173,11 @@ describe("PlaceDebugSheet accessibility section", () => {
         parking:  { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
       },
     }))
-    // entrance → Verlässlich, toilet → Unsicher; both pills present
-    expect(screen.getByText("Verlässlich")).toBeInTheDocument()
-    expect(screen.getByText("Unsicher")).toBeInTheDocument()
+    expect(screen.getByRole("img", { name: "gut" })).toBeInTheDocument()
+    expect(screen.getByRole("img", { name: "gering" })).toBeInTheDocument()
   })
 
-  it("shows no reliability pill when every criterion is unknown", () => {
+  it("shows no reliability tier when every criterion is unknown", () => {
     renderSheet(makePlace({
       accessibility: {
         entrance: { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
@@ -209,9 +185,36 @@ describe("PlaceDebugSheet accessibility section", () => {
         parking:  { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
       },
     }))
-    expect(screen.queryByText("Verlässlich")).toBeNull()
-    expect(screen.queryByText("Mittel")).toBeNull()
-    expect(screen.queryByText("Unsicher")).toBeNull()
+    expect(screen.queryByRole("img", { name: "sehr hoch" })).toBeNull()
+    expect(screen.queryByRole("img", { name: "gut" })).toBeNull()
+    expect(screen.queryByRole("img", { name: "gering" })).toBeNull()
+  })
+
+  // 2026-08-03 table redesign, Fix #1: which criteria count toward the
+  // judgement headline's "deine N Kriterien" is no longer only implicit —
+  // the table marks each row that's part of the active filters.
+  describe("'Gefiltert' column", () => {
+    const FILTERS: SearchFilters = {
+      entrance: true, toilet: false, parking: false, parkingNearby: true, seating: false,
+      onlyVerified: false, acceptUnknown: false, alwaysShowParking: false, alwaysShowToilets: false,
+    }
+
+    it("marks a row that is part of the active filters", () => {
+      render(<PlaceDebugSheet place={makePlace()} onClose={vi.fn()} filters={FILTERS} />)
+      expect(screen.getAllByLabelText("Gehört zu deinen Filtern").length).toBeGreaterThan(0)
+    })
+
+    it("marks a row that is NOT part of the active filters as info-only", () => {
+      render(<PlaceDebugSheet place={makePlace()} onClose={vi.fn()} filters={FILTERS} />)
+      // toilet/parking are both inactive filters in FILTERS above
+      expect(screen.getAllByLabelText("Nur zur Info gezeigt").length).toBeGreaterThan(0)
+    })
+
+    it("marks every row as info-only when no filters prop is given", () => {
+      renderSheet()
+      expect(screen.queryByLabelText("Gehört zu deinen Filtern")).not.toBeInTheDocument()
+      expect(screen.getAllByLabelText("Nur zur Info gezeigt").length).toBeGreaterThan(0)
+    })
   })
 
   it("shows seating row only when seating data is present", () => {
@@ -398,5 +401,44 @@ describe("PlaceDebugSheet navigate button", () => {
     expect(navigateBtn).toBeInTheDocument()
     fireEvent.click(navigateBtn)
     expect(startDefaultNavigation).toHaveBeenCalledWith({ lat: 52.52, lon: 13.405 })
+  })
+})
+
+// ─── Judgement line "Kriterien" link (2026-08-02) ──────────────────────────
+// The Info-Sheet is the ONLY surface where this link is real — see
+// JudgmentLine.tsx's own comment on why the result card never gets one.
+
+describe("PlaceDebugSheet judgement line", () => {
+  const FILTERS: SearchFilters = {
+    entrance: true, toilet: true, parking: false, parkingNearby: true, seating: false,
+    onlyVerified: false, acceptUnknown: false, alwaysShowParking: false, alwaysShowToilets: false,
+  }
+
+  it("renders the criteria count as a popover trigger when onOpenFilters is given, calling it only via 'Filter bearbeiten'", () => {
+    const onOpenFilters = vi.fn()
+    render(<PlaceDebugSheet place={makePlace()} onClose={vi.fn()} filters={FILTERS} onOpenFilters={onOpenFilters} />)
+    fireEvent.click(screen.getByRole("button", { name: "Aktive Kriterien anzeigen" }))
+    expect(onOpenFilters).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole("button", { name: "Filter bearbeiten" }))
+    expect(onOpenFilters).toHaveBeenCalledOnce()
+  })
+
+  // Regression (2026-08-03): onOpenFilters alone only flips state behind the
+  // sheet (setActiveTab("filter") on mobile, setFilterCollapsed(false) on
+  // desktop) — this sheet is a fixed full-screen overlay on top of it, so
+  // without also closing it, the switch happened invisibly and "Filter
+  // bearbeiten" looked like it did nothing.
+  it("also closes the sheet when 'Filter bearbeiten' is clicked", () => {
+    const onClose = vi.fn()
+    render(<PlaceDebugSheet place={makePlace()} onClose={onClose} filters={FILTERS} onOpenFilters={vi.fn()} />)
+    fireEvent.click(screen.getByRole("button", { name: "Aktive Kriterien anzeigen" }))
+    fireEvent.click(screen.getByRole("button", { name: "Filter bearbeiten" }))
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it("renders the criteria count as plain text when onOpenFilters is absent", () => {
+    render(<PlaceDebugSheet place={makePlace()} onClose={vi.fn()} filters={FILTERS} />)
+    expect(screen.queryByRole("button", { name: "Aktive Kriterien anzeigen" })).not.toBeInTheDocument()
+    expect(screen.getByText("deine 2 Kriterien")).toBeInTheDocument()
   })
 })

@@ -4,13 +4,12 @@ import { ChevronLeft, Globe, Phone, Settings as SettingsIcon } from "lucide-reac
 import { NativeLink } from "@/components/ui/native-link"
 import ModeSwitcher from "@/components/ModeSwitcher"
 import NavigateButton from "@/components/ui/navigate-button"
-import { NotAccessibleWarningBox } from "@/components/results/NotAccessibleWarning"
-import ConfidenceBadge from "@/components/results/ConfidenceBadge"
+import CriterionIcon from "@/components/simple/CriterionIcon"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { useTranslations } from "@/lib/i18n"
-import { placeMayNotBeAccessible } from "@/lib/matching/merge"
-import { criterionSentence, CRITERION_DOT_CLASS } from "@/lib/simple-view"
-import type { Place } from "@/lib/types"
+import { evaluatePlaceJudgment, type JudgmentFilters } from "@/lib/reliability"
+import { criterionSentence, SIMPLE_TOILET_REQUIRED_CATEGORIES } from "@/lib/simple-view"
+import type { A11yValue, Place } from "@/lib/types"
 
 interface Props {
   place:      Place
@@ -25,10 +24,10 @@ interface Props {
   onSwitchToTurbo: () => void
 }
 
-function CriterionRow({ label, dot }: { label: string; dot: string }) {
+function CriterionRow({ label, value }: { label: string; value: A11yValue }) {
   return (
     <div className="flex items-center gap-3 py-2.5 border-b border-border last:border-b-0">
-      <span className={`w-3 h-3 rounded-full shrink-0 ${dot}`} aria-hidden />
+      <CriterionIcon value={value} className="w-5 h-5" />
       <span className="text-sm">{label}</span>
     </div>
   )
@@ -44,6 +43,35 @@ export default function SimpleDetail({ place, distanceM, onBack, onOpenSettings,
   const t = useTranslations()
   const addr = [place.address.street, place.address.houseNumber, place.address.city]
     .filter(Boolean).join(" ")
+
+  // Quickstart's actual fixed preset (mirrors SIMPLE_FILTERS_OVERRIDE +
+  // HomeClient's client-side toilet post-filter): entrance always required,
+  // toilet strictly "yes" only for the three categories where Quickstart
+  // enforces it. Almost always "pass"/"pass_limited" since the place already
+  // survived that preset — except a deep-linked place, which can legitimately
+  // fail it (docs/plans/quickstart-mode-default.md: a linked place must still
+  // open even if it fails Quickstart's own filter).
+  const quickstartFilters: JudgmentFilters = {
+    entrance: true,
+    toilet:   SIMPLE_TOILET_REQUIRED_CATEGORIES.has(place.category),
+    parking:  false,
+    seating:  false,
+    acceptUnknown: false,
+  }
+  const judgment = evaluatePlaceJudgment(place, quickstartFilters)
+  // Deliberately NOT results.judgmentFail/judgmentUnverified for the fail/
+  // unverified fallback — those say "deine Kriterien", but Quickstart's
+  // preset isn't user-chosen, so that possessive phrasing would mislead here.
+  const headline = judgment.status === "pass"
+    ? t.simple.accessibleHeadline
+    : judgment.status === "pass_limited"
+      ? t.simple.accessibleHeadlineCaveat
+      : judgment.status === "fail"
+        ? t.simple.notAccessibleHeadline
+        : t.simple.unverifiedHeadline
+  const headlineColor = judgment.status === "pass" || judgment.status === "pass_limited"
+    ? "text-green-700"
+    : judgment.status === "fail" ? "text-red-700" : "text-amber-700"
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
@@ -82,24 +110,18 @@ export default function SimpleDetail({ place, distanceM, onBack, onOpenSettings,
         </div>
 
         <div className="rounded-lg border border-border px-3">
-          <CriterionRow label={criterionSentence(t, "entrance", place.accessibility.entrance.value)} dot={CRITERION_DOT_CLASS[place.accessibility.entrance.value]} />
-          <CriterionRow label={criterionSentence(t, "toilet", place.accessibility.toilet.value)} dot={CRITERION_DOT_CLASS[place.accessibility.toilet.value]} />
-          <CriterionRow label={criterionSentence(t, "parking", place.accessibility.parking.value)} dot={CRITERION_DOT_CLASS[place.accessibility.parking.value]} />
+          <CriterionRow label={criterionSentence(t, "entrance", place.accessibility.entrance.value)} value={place.accessibility.entrance.value} />
+          <CriterionRow label={criterionSentence(t, "toilet", place.accessibility.toilet.value)} value={place.accessibility.toilet.value} />
+          <CriterionRow label={criterionSentence(t, "parking", place.accessibility.parking.value)} value={place.accessibility.parking.value} />
         </div>
 
-        {/* The plain badge only (no `place` prop) — deliberately skips the
-            interactive score-formula breakdown ConfidenceBadge otherwise offers
-            (tooltip on desktop, tap-through on mobile), matching this screen's
-            existing "no score formula" scope cut (see the component comment
-            above). Still shows the % and Verlässlich/Mittel/Unsicher label the
-            user asked for, just as a static fact rather than an interactive one. */}
-        <ConfidenceBadge confidence={place.overallConfidence} className="self-start" />
-
-        {/* Same trigger (placeMayNotBeAccessible: entrance/toilet "no"/"unknown")
-            and unconditional (not toggle-gated) rendering as PlaceDebugSheet's
-            own use of this box — the full UI's detail sheet, which SimpleDetail
-            otherwise mirrors as a reduced version of. */}
-        {placeMayNotBeAccessible(place) && <NotAccessibleWarningBox />}
+        {/* Fixed, absolute headline (decision 7, v13) — Quickstart's preset is
+            fixed by app design, unlike Turbo's user-chosen filters, so this
+            can state the judgement outright rather than naming "your
+            criteria". No reliability tier/percentage here, matching this
+            screen's existing "no score formula" scope cut — see the
+            component comment above. */}
+        <p className={`self-start text-sm font-semibold ${headlineColor}`}>{headline}</p>
 
         <div className="flex flex-col gap-2">
           <NavigateButton coords={place.coordinates} variant="sticky" />

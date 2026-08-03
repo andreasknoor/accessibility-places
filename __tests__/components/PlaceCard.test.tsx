@@ -5,7 +5,12 @@ import { startDefaultNavigation } from "@/lib/native/navigation"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { LocaleProvider } from "@/lib/i18n"
 import { buildAttribute, emptyAttribute } from "@/lib/matching/merge"
-import type { Place } from "@/lib/types"
+import type { Place, SearchFilters } from "@/lib/types"
+
+const FILTERS: SearchFilters = {
+  entrance: true, toilet: true, parking: false, parkingNearby: true, seating: false,
+  onlyVerified: false, acceptUnknown: false, alwaysShowParking: false, alwaysShowToilets: false,
+}
 
 vi.mock("@/lib/native/navigation", () => ({
   startDefaultNavigation: vi.fn(),
@@ -55,9 +60,28 @@ describe("PlaceCard", () => {
     expect(screen.getByText(/Hauptstraße/)).toBeInTheDocument()
   })
 
-  it("renders confidence badge", () => {
+  // v13/docs/plans/reliability-tiers.md: the old place-wide percentage badge
+  // was replaced by a JudgmentLine against the active filters — entrance
+  // passes cleanly, toilet is "limited" → the caveat wording names it.
+  it("renders the judgement line against the active filters, naming the count", () => {
+    renderWithProvider(<PlaceCard place={makePlace()} filters={FILTERS} />)
+    // FILTERS has 2 active criteria (entrance, toilet) — the count is now
+    // part of the headline text itself (2026-08-02).
+    expect(screen.getByText("Erfüllt")).toBeInTheDocument()
+    expect(screen.getByText("deine 2 Kriterien")).toBeInTheDocument()
+    expect(screen.getByText("Mit Einschränkung: Toilette.")).toBeInTheDocument()
+  })
+
+  it("renders the criteria count as plain text, not a link, on the card itself", () => {
+    // Only the Info-Sheet's JudgmentLine gets a real link (see
+    // JudgmentLine.tsx) — the card's own copy never receives onOpenFilters.
+    renderWithProvider(<PlaceCard place={makePlace()} filters={FILTERS} />)
+    expect(screen.queryByRole("button", { name: "Aktive Kriterien anzeigen" })).not.toBeInTheDocument()
+  })
+
+  it("shows a neutral 'no criteria active' line when no filters are passed", () => {
     renderWithProvider(<PlaceCard place={makePlace()} />)
-    expect(screen.getByText(/72%/)).toBeInTheDocument()
+    expect(screen.getByText("Keine Kriterien aktiv")).toBeInTheDocument()
   })
 
   it("renders all three accessibility attributes", () => {
@@ -97,12 +121,12 @@ describe("PlaceCard", () => {
     expect(await screen.findByText(/Grunddaten|Basic information/i)).toBeInTheDocument()
   })
 
-  it("tapping the confidence badge opens the info sheet instead of its own quick view (decision D2c)", async () => {
+  it("tapping the judgement line opens the info sheet instead of its own quick view (decision D2c)", async () => {
     // Regression test for the "tapping the score badge does nothing, unexpectedly"
-    // usability finding: the badge must NOT stopPropagation — a tap on it is
-    // just another tap inside the single header tap target.
-    renderWithProvider(<PlaceCard place={makePlace()} onClick={vi.fn()} />)
-    fireEvent.click(screen.getByText(/72%/))
+    // usability finding: the judgement line must NOT stopPropagation — a tap
+    // on it is just another tap inside the single header tap target.
+    renderWithProvider(<PlaceCard place={makePlace()} filters={FILTERS} onClick={vi.fn()} />)
+    fireEvent.click(screen.getByText("deine 2 Kriterien"))
     expect(await screen.findByText(/Grunddaten|Basic information/i)).toBeInTheDocument()
   })
 
@@ -292,3 +316,9 @@ describe("PlaceCard — navigate button (docs/plans/native-navigate-here.md, Pla
     expect(screen.queryByText(/Grunddaten|Basic information/i)).not.toBeInTheDocument()
   })
 })
+
+// The separate "Achtung: evtl. nicht barrierefrei" warning box and its
+// per-criterion "!" toggle were retired 2026-08-02 (Option 3) — they said
+// almost exactly what the judgement line above already says. See
+// JudgmentLine.test-equivalent coverage in the "renders the judgement line"
+// tests above and lib/reliability.test.ts for the underlying status logic.

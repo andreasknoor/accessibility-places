@@ -145,22 +145,22 @@ const FAQ_CATEGORIES_EN: FaqCategory[] = [
       {
         id: "reliability",
         q: "How reliable is the accessibility information?",
-        a: "The app combines data from several specialised sources: OpenStreetMap (including Wheelmap.org, since Wheelmap edits flow directly into OpenStreetMap), accessibility.cloud, Ginto (for Switzerland) and Google Places. Each source is weighted by its trustworthiness — from manually verified entries to automatically collected data. The coloured circle next to each entry shows at a glance how solid the data is.",
+        a: "The app combines data from several specialised sources: OpenStreetMap (including Wheelmap.org, since Wheelmap edits flow directly into OpenStreetMap), accessibility.cloud, Reisen für Alle, Ginto (for Switzerland), AccèsLibre (for France) and Google Places. For each individual piece of information — entrance, toilet, parking — Accessible Places keeps two separate things apart: whether it matches your chosen filter criteria, and how well it's documented. A value is especially well documented when several independent sources confirm it in agreement, or a single especially trustworthy source (such as a certified on-site survey) backs it; it counts as weakly documented when only one, less reliable source is available.",
       },
       {
         id: "coloured-circle",
-        q: "What does the coloured circle next to each entry mean?",
-        a: "Green means reliable accessibility information, yellow means moderate data quality, and red means uncertain or incomplete data. The colour reflects how trustworthy the available information is — not whether a place is accessible or not.",
+        q: "What does the map marker's colour (green, amber, grey) mean?",
+        a: "The colour shows whether a place matches your chosen filter criteria: green means it meets them unconditionally; amber means it meets them with a limitation (e.g. limited rather than fully accessible); grey means no data is available for that criterion. The colour says nothing about how well a value is documented — that's shown separately for each individual criterion (entrance, toilet, parking) in the detail view.",
       },
       {
         id: "up-to-date",
         q: "Is the accessibility information up to date and verified?",
-        a: "Data is fetched live from the sources on every search. Manually verified entries from Wheelmap contributors are highlighted with a special badge.",
+        a: "Data is fetched live from the sources on every search. When a value has been verifiably checked on-site within the last two years (e.g. via OpenStreetMap's check date), that's shown directly next to that value in the detail view.",
       },
       {
         id: "vs-google-maps",
         q: "What is the difference from Google Maps when searching for accessible places?",
-        a: "Google Maps contains little structured accessibility information and offers no dedicated filter for it. Accessible Places is built specifically for this search: it combines multiple specialised data sources, rates each piece of information by reliability, and shows at a glance how suitable a venue is for wheelchair users.",
+        a: "Google Maps contains little structured accessibility information and offers no dedicated filter for it. Accessible Places is built specifically for this search: it combines multiple specialised data sources and shows, for each criterion separately, whether it matches your filter criteria and how well it's documented.",
       },
       {
         id: "vs-wheelmap",
@@ -186,8 +186,8 @@ const FAQ_CATEGORIES_EN: FaqCategory[] = [
                 information checked on the ground; while automatically collected data is available almost
                 everywhere but is often less precise. As a result, how complete and verified the
                 information is varies from entry to entry. Rather than blurring those differences,
-                Accessible Places makes them visible: a coloured circle shows at a glance how solid each
-                entry&apos;s information is, and the detail view reveals which sources it came from.
+                Accessible Places makes them visible: for each individual value — entrance, toilet,
+                parking — the detail view shows how well it&apos;s documented and which sources it came from.
               </li>
               <li>
                 <strong className="font-semibold text-foreground">Best data per region:</strong> For
@@ -198,9 +198,9 @@ const FAQ_CATEGORIES_EN: FaqCategory[] = [
               <li>
                 <strong className="font-semibold text-foreground">List view instead of map:</strong>{" "}
                 Wheelmap.org shows places primarily on a map — you navigate to see what&apos;s nearby.
-                Accessible Places delivers results as a sorted list first: with reliability rating,
-                entrance and toilet information at a glance. The map is always available as an
-                alternative, but isn&apos;t the primary view.
+                Accessible Places delivers results as a sorted list first: with entrance and toilet
+                information and an at-a-glance read on whether the place matches your filter criteria.
+                The map is always available as an alternative, but isn&apos;t the primary view.
               </li>
               <li>
                 <strong className="font-semibold text-foreground">Wheelchair parking:</strong> Accessible
@@ -216,7 +216,7 @@ const FAQ_CATEGORIES_EN: FaqCategory[] = [
           </>
         ),
         schemaText:
-          "Wheelmap.org and Accessible Places pursue similar goals but set different priorities — they are not competitors but complement each other. Wheelmap is one of the largest crowdsourcing platforms for accessibility: thousands of people add places there directly. Since Wheelmap edits flow directly into OpenStreetMap, this valuable data is also available in Accessible Places. Accessible Places focuses on four things: Multiple sources, transparently rated — Accessible Places merges data from different sources into a single, unified view, from professionally certified on-site surveys through community-maintained maps like Wheelmap and OpenStreetMap to automatically aggregated listings such as Google Places; each source has its strengths, and because they vary in how complete and verified they are, a coloured circle on each entry shows how solid the information is. Best data per region — for each region we integrate the strongest local source; in Switzerland, for example, Ginto provides particularly high-quality accessibility data. List view instead of map — Wheelmap.org shows places primarily on a map; Accessible Places delivers results as a sorted list first with reliability rating and details at a glance — the map is always available as an alternative. Wheelchair parking — Accessible Places shows wheelchair-accessible parking directly on the map, and the question \"Where is the nearest accessible parking space?\" can be answered with a single click. If you'd like to contribute accessibility data yourself, Wheelmap.org is the best place to do so — new entries appear here too after a short while.",
+          "Wheelmap.org and Accessible Places pursue similar goals but set different priorities — they are not competitors but complement each other. Wheelmap is one of the largest crowdsourcing platforms for accessibility: thousands of people add places there directly. Since Wheelmap edits flow directly into OpenStreetMap, this valuable data is also available in Accessible Places. Accessible Places focuses on four things: Multiple sources, transparently rated — Accessible Places merges data from different sources into a single, unified view, from professionally certified on-site surveys through community-maintained maps like Wheelmap and OpenStreetMap to automatically aggregated listings such as Google Places; each source has its strengths, and for each individual value the detail view shows how well it's documented and which sources it came from. Best data per region — for each region we integrate the strongest local source; in Switzerland, for example, Ginto provides particularly high-quality accessibility data. List view instead of map — Wheelmap.org shows places primarily on a map; Accessible Places delivers results as a sorted list first with entrance and toilet information and an at-a-glance read on whether the place matches your filter criteria — the map is always available as an alternative. Wheelchair parking — Accessible Places shows wheelchair-accessible parking directly on the map, and the question \"Where is the nearest accessible parking space?\" can be answered with a single click. If you'd like to contribute accessibility data yourself, Wheelmap.org is the best place to do so — new entries appear here too after a short while.",
       },
     ],
   },

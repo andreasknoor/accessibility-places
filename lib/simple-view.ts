@@ -13,17 +13,6 @@ export const SIMPLE_TOILET_REQUIRED_CATEGORIES: ReadonlySet<Category> = new Set(
   "cafe", "restaurant", "hotel",
 ])
 
-// Solid dot fill per A11yValue, matching CriterionBox's CRITERION_STYLES hues
-// (green/yellow/red/slate) at a stronger shade — CRITERION_STYLES itself only
-// exports pastel *background* tints (bg-green-50 etc.), meant for a tinted
-// panel, not a small solid indicator dot.
-export const CRITERION_DOT_CLASS: Record<A11yValue, string> = {
-  yes:     "bg-green-600",
-  limited: "bg-yellow-600",
-  no:      "bg-red-600",
-  unknown: "bg-slate-400",
-}
-
 // Plain-language sentence per accessibility criterion, used by Simple View
 // (components/simple/*) instead of the badge/score vocabulary the full UI
 // uses elsewhere (ConfidenceBadge, A11yAttribute). Kept as a small shared

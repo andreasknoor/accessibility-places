@@ -147,22 +147,22 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
       {
         id: "reliability",
         q: "Wie verlässlich sind die Barrierefreiheitsinformationen?",
-        a: "Die App kombiniert Daten aus mehreren spezialisierten Quellen: OpenStreetMap (einschließlich Wheelmap.org, da Wheelmap-Bearbeitungen direkt in OpenStreetMap einfließen), accessibility.cloud, Ginto (für die Schweiz) und Google Places. Jede Quelle wird mit einem Verlässlichkeitswert gewichtet — von manuell verifizierten Einträgen bis hin zu automatisch erhobenen Daten. Der farbige Kreis bei jedem Eintrag zeigt auf einen Blick, wie gut die Datenlage ist.",
+        a: "Die App kombiniert Daten aus mehreren spezialisierten Quellen: OpenStreetMap (einschließlich Wheelmap.org, da Wheelmap-Bearbeitungen direkt in OpenStreetMap einfließen), accessibility.cloud, Reisen für Alle, Ginto (für die Schweiz), AccèsLibre (für Frankreich) und Google Places. Für jede einzelne Angabe — Eingang, Toilette, Parkplatz — unterscheidet Accessible Places zwei getrennte Dinge: ob sie zu deinen gewählten Filterkriterien passt, und wie gut sie belegt ist. Eine Angabe ist besonders verlässlich belegt, wenn mehrere unabhängige Quellen sie übereinstimmend bestätigen oder eine besonders vertrauenswürdige Einzelquelle (etwa eine zertifizierte Vor-Ort-Erhebung) dahintersteht; sie gilt als schwach belegt, wenn nur eine einzelne, weniger verlässliche Quelle vorliegt.",
       },
       {
         id: "coloured-circle",
-        q: "Was bedeutet der farbige Kreis bei jedem Eintrag?",
-        a: "Grün steht für eine verlässliche Barrierefreiheitsinformation, Gelb für eine mittelgute Datenlage und Rot für eine unsichere oder unvollständige Datenlage. Die Farbe gibt also an, wie verlässlich die verfügbaren Informationen sind — nicht ob ein Ort barrierefrei ist oder nicht.",
+        q: "Was bedeutet die Farbe des Kartenmarkers (grün, gelb, grau)?",
+        a: "Die Farbe zeigt, ob ein Ort zu deinen gewählten Filterkriterien passt: Grün bedeutet, er erfüllt sie uneingeschränkt; Gelb bedeutet, er erfüllt sie mit einer Einschränkung (z. B. eingeschränkt statt vollständig barrierefrei); Grau bedeutet, dazu liegt keine Angabe vor. Die Farbe sagt also nichts darüber aus, wie gut eine Angabe belegt ist — das steht getrennt davon bei jedem einzelnen Kriterium (Eingang, Toilette, Parkplatz) in der Detailansicht.",
       },
       {
         id: "up-to-date",
         q: "Sind die Barrierefreiheitsinformationen aktuell und geprüft?",
-        a: "Die Daten werden bei jeder Suche live aus den Quellen abgerufen. Manuell verifizierte Einträge von Wheelmap-Nutzern werden mit einem speziellen Badge hervorgehoben.",
+        a: "Die Daten werden bei jeder Suche live aus den Quellen abgerufen. Wurde eine Angabe innerhalb der letzten zwei Jahre nachweislich vor Ort geprüft (etwa über OpenStreetMaps Prüf-Datum), steht das direkt bei der jeweiligen Angabe in der Detailansicht.",
       },
       {
         id: "vs-google-maps",
         q: "Was ist der Unterschied zu Google Maps bei der Suche nach barrierefreien Orten?",
-        a: "Google Maps enthält kaum strukturierte Barrierefreiheitsinformationen und bietet keine gezielte Filterfunktion dafür. Accessible Places ist speziell auf diese Suche ausgerichtet: Die App kombiniert mehrere spezialisierte Datenquellen, bewertet jede Information nach ihrer Verlässlichkeit und zeigt auf einen Blick, wie gut ein Ort für Rollstuhlfahrer geeignet ist.",
+        a: "Google Maps enthält kaum strukturierte Barrierefreiheitsinformationen und bietet keine gezielte Filterfunktion dafür. Accessible Places ist speziell auf diese Suche ausgerichtet: Die App kombiniert mehrere spezialisierte Datenquellen und zeigt für jedes Kriterium separat, ob es zu deinen Filterkriterien passt und wie gut es belegt ist.",
       },
       {
         id: "vs-wheelmap",
@@ -189,9 +189,8 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
                 Informationen bei, während automatisch erfasste Daten zwar fast überall verfügbar, aber
                 oft ungenauer sind. Entsprechend unterschiedlich ist, wie umfassend und gesichert die
                 Angaben pro Ort ausfallen. Statt diese Unterschiede zu verwischen, macht Accessible
-                Places sie sichtbar: Ein farbiger Kreis zeigt bei jedem Eintrag auf einen Blick, wie
-                belastbar die Information ist, und in der Detailansicht kannst du nachvollziehen, aus
-                welchen Quellen sie stammt.
+                Places sie sichtbar: Bei jeder einzelnen Angabe — Eingang, Toilette, Parkplatz — steht in
+                der Detailansicht, wie gut sie belegt ist und aus welchen Quellen sie stammt.
               </li>
               <li>
                 <strong className="font-semibold text-foreground">Beste Daten je Region:</strong> Für
@@ -203,8 +202,9 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
                 <strong className="font-semibold text-foreground">Listenansicht statt Karte:</strong>{" "}
                 Wheelmap.org zeigt Orte primär als Karte — du navigierst, um zu sehen, was in der Nähe
                 ist. Accessible Places liefert die Ergebnisse zuerst als sortierte Liste: mit
-                Verlässlichkeitsgrad, Eingangs- und Toiletteninformationen auf einen Blick. Die Karte ist
-                als Alternative jederzeit verfügbar, steht aber nicht im Vordergrund.
+                Eingangs- und Toiletteninformationen sowie einer sofortigen Einschätzung, ob der Ort zu
+                deinen Filterkriterien passt, auf einen Blick. Die Karte ist als Alternative jederzeit
+                verfügbar, steht aber nicht im Vordergrund.
               </li>
               <li>
                 <strong className="font-semibold text-foreground">Rollstuhlparkplätze:</strong>{" "}
@@ -220,7 +220,7 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
           </>
         ),
         schemaText:
-          "Wheelmap.org und Accessible Places verfolgen ähnliche Ziele, setzen aber unterschiedliche Schwerpunkte — sie sind keine Konkurrenten, sondern ergänzen sich. Wheelmap ist eine der größten Crowdsourcing-Plattformen für Barrierefreiheit: Tausende Menschen tragen dort Orte direkt ein. Da Wheelmap-Bearbeitungen direkt in OpenStreetMap einfließen, stehen diese wertvollen Daten auch in Accessible Places zur Verfügung. Accessible Places konzentriert sich auf vier Dinge: Mehrere Quellen, transparent bewertet — Accessible Places führt Daten aus verschiedenen Quellen zu einer einheitlichen Ansicht zusammen, von professionell zertifizierten Vor-Ort-Erhebungen über ehrenamtlich gepflegte Karten wie Wheelmap und OpenStreetMap bis zu automatisch zusammengetragenen Angaben, etwa aus Google Places; jede Quelle hat ihre Stärken, und weil sie unterschiedlich umfassend und gesichert sind, zeigt ein farbiger Kreis bei jedem Eintrag, wie belastbar die Information ist. Beste Daten je Region — für jede Region binden wir die jeweils stärkste lokale Quelle ein; in der Schweiz etwa liefert Ginto besonders hochwertige Barrierefreiheitsdaten. Listenansicht statt Karte — Wheelmap.org zeigt Orte primär als Karte; Accessible Places liefert die Ergebnisse zuerst als sortierte Liste mit Verlässlichkeitsgrad und Detailinfos auf einen Blick — die Karte ist als Alternative jederzeit verfügbar. Rollstuhlparkplätze — Accessible Places zeigt rollstuhlgerechte Parkplätze direkt auf der Karte, und die Frage nach dem nächsten Rollstuhlparkplatz lässt sich mit einem Klick beantworten. Wenn du selbst Barrierefreiheitsdaten beitragen möchtest, ist Wheelmap.org der beste Ort dafür — neue Einträge erscheinen nach kurzer Zeit auch bei uns.",
+          "Wheelmap.org und Accessible Places verfolgen ähnliche Ziele, setzen aber unterschiedliche Schwerpunkte — sie sind keine Konkurrenten, sondern ergänzen sich. Wheelmap ist eine der größten Crowdsourcing-Plattformen für Barrierefreiheit: Tausende Menschen tragen dort Orte direkt ein. Da Wheelmap-Bearbeitungen direkt in OpenStreetMap einfließen, stehen diese wertvollen Daten auch in Accessible Places zur Verfügung. Accessible Places konzentriert sich auf vier Dinge: Mehrere Quellen, transparent bewertet — Accessible Places führt Daten aus verschiedenen Quellen zu einer einheitlichen Ansicht zusammen, von professionell zertifizierten Vor-Ort-Erhebungen über ehrenamtlich gepflegte Karten wie Wheelmap und OpenStreetMap bis zu automatisch zusammengetragenen Angaben, etwa aus Google Places; jede Quelle hat ihre Stärken, und bei jeder einzelnen Angabe steht in der Detailansicht, wie gut sie belegt ist und aus welchen Quellen sie stammt. Beste Daten je Region — für jede Region binden wir die jeweils stärkste lokale Quelle ein; in der Schweiz etwa liefert Ginto besonders hochwertige Barrierefreiheitsdaten. Listenansicht statt Karte — Wheelmap.org zeigt Orte primär als Karte; Accessible Places liefert die Ergebnisse zuerst als sortierte Liste mit Eingangs- und Toiletteninformationen und einer sofortigen Einschätzung, ob der Ort zu deinen Filterkriterien passt — die Karte ist als Alternative jederzeit verfügbar. Rollstuhlparkplätze — Accessible Places zeigt rollstuhlgerechte Parkplätze direkt auf der Karte, und die Frage nach dem nächsten Rollstuhlparkplatz lässt sich mit einem Klick beantworten. Wenn du selbst Barrierefreiheitsdaten beitragen möchtest, ist Wheelmap.org der beste Ort dafür — neue Einträge erscheinen nach kurzer Zeit auch bei uns.",
       },
     ],
   },

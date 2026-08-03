@@ -332,6 +332,25 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
               <span className="ml-1 text-xs opacity-60">(Google)</span>
             </span>
           </label>
+
+          {/* acceptUnknown — moved here from its own "Anzeigeoptionen" section
+              (2026-08-02): it isn't a display option, it genuinely changes
+              which places the search returns, exactly like the criteria
+              above. Extra top margin (not just the list's own gap-2.5) sets
+              it apart as a MODIFIER of those criteria — it relaxes how
+              strictly they're enforced — rather than one more independent
+              attribute to filter by. */}
+          <label className="flex items-start gap-2.5 cursor-pointer mt-1.5">
+            <Checkbox
+              checked={filters.acceptUnknown}
+              onCheckedChange={() => toggleFilter("acceptUnknown")}
+              id="accept-unknown"
+              className="mt-0.5"
+            />
+            <span className="text-sm text-muted-foreground leading-snug">
+              {t.filters.acceptUnknown}
+            </span>
+          </label>
         </div>
       </section>
 
@@ -364,27 +383,6 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
         </div>
       </section>
 
-      <Separator />
-
-      {/* ── Display options ── */}
-      <section>
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-          {t.filters.displayOptions}
-        </h2>
-        <div className="flex flex-col gap-2.5">
-          <label className="flex items-start gap-2.5 cursor-pointer">
-            <Checkbox
-              checked={filters.acceptUnknown}
-              onCheckedChange={() => toggleFilter("acceptUnknown")}
-              id="accept-unknown"
-              className="mt-0.5"
-            />
-            <span className="text-sm text-muted-foreground leading-snug">
-              {t.filters.acceptUnknown}
-            </span>
-          </label>
-        </div>
-      </section>
       </>)}
     </aside>
   )

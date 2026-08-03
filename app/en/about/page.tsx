@@ -107,26 +107,22 @@ export default function AboutPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">The Color Code: Why Red Doesn't Mean "Inaccessible"</h2>
+            <h2 className="text-lg font-bold mb-3">Two separate questions: Does it match? And how well is that documented?</h2>
             <p className="text-muted-foreground mb-4">
-              A central element that immediately catches the eye is the traffic light system combined with a "reliability score". These color codes appear both in the search results and as small circles in the map view. There's a key, innovative insight here: the colors primarily indicate not whether a place is accessible, but how reliable the underlying data currently is.
+              Early versions of the app folded both into a single traffic-light colour — with the result that red was almost always read as &ldquo;don&apos;t bother going here,&rdquo; when it was only ever meant to say &ldquo;little data exists for this one.&rdquo; That mix-up was too easy to make, so the app now keeps the two questions strictly apart.
             </p>
             <ul className="flex flex-col gap-3">
               <li className="flex items-start gap-3">
-                <span className="text-lg leading-none mt-0.5">🔴</span>
-                <p className="text-muted-foreground"><span className="font-semibold text-foreground">Red</span> does not automatically mean the place is inaccessible. It simply means the data is currently incomplete or uncertain (e.g. only unverified baseline data from Google Maps is available).</p>
+                <span className="text-lg leading-none mt-0.5">🟢🟡⚪</span>
+                <p className="text-muted-foreground"><span className="font-semibold text-foreground">The marker colour</span> answers exactly one question: does this place match the filter criteria you chose yourself? Green means it meets them unconditionally. Amber means it meets them with a limitation — for example an entrance that&apos;s only partially, not fully, step-free. Grey means no data exists for one of your criteria. A place that fails your criteria never appears in the list or on the map at all.</p>
               </li>
               <li className="flex items-start gap-3">
-                <span className="text-lg leading-none mt-0.5">🟡</span>
-                <p className="text-muted-foreground"><span className="font-semibold text-foreground">Yellow</span> indicates a solid, reasonably good and plausible data basis.</p>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-lg leading-none mt-0.5">🟢</span>
-                <p className="text-muted-foreground"><span className="font-semibold text-foreground">Green</span> means the information is highly reliable and has typically been manually checked and verified by the community (e.g. Wheelmap users). Manually verified entries are also highlighted with a special badge.</p>
+                <span className="text-lg leading-none mt-0.5">📝</span>
+                <p className="text-muted-foreground"><span className="font-semibold text-foreground">How well a single value is documented</span> — entrance, toilet, and parking each on their own — appears as a short phrase right next to that specific value in the detail view: &ldquo;confirmed by multiple sources,&rdquo; &ldquo;from a reliable source,&rdquo; or &ldquo;only one weak source.&rdquo; When a value has been verifiably checked on-site within the last two years, that&apos;s shown right there too.</p>
               </li>
             </ul>
             <p className="text-muted-foreground mt-4">
-              This honest approach prevents nasty surprises on arrival. You immediately know when you can trust the app's data completely – and when it's worth making a quick call to the venue just to be sure.
+              This separation is deliberate: a place can be extremely well documented and still not accessible — and, the other way round, an otherwise matching value can rest on thin evidence. Squeezing both into one colour is exactly what caused the confusion this version avoids.
             </p>
           </section>
 

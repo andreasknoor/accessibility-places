@@ -224,7 +224,7 @@ This powers the per-source loader / count / warning icon in the filter panel. Th
 | accessibility.cloud | 0.70 | A11yJSON records; largely a Wheelmap mirror of OSM for DACH, plus supplementary datasets (dog policies etc.) |
 | Google Places (New) | 0.35 | Broad but sparse/heuristic accessibility data. **Disabled by default** |
 
-OSM `wheelchair=*` is treated as a whole-place proxy; an extra `OSM_ENTRANCE_WEIGHT_FACTOR = 0.90` reduction applies when it stands in for the entrance attribute specifically. A handful of additional source IDs (`osm_parking`, `osm_private`, `osm_public`, `nominatim`, …) carry weight `0` and exist purely for usage statistics.
+A handful of additional source IDs (`osm_parking`, `osm_private`, `osm_public`, `nominatim`, …) carry weight `0` and exist purely for usage statistics.
 
 ### Matching & merging
 

@@ -5,7 +5,7 @@ import {
   mergePlaces,
   passesFilters,
   passesFiltersForSource,
-  confidenceLabel,
+  confidenceTier,
   finalisePlaceConfidence,
   computeFilteredConfidence,
   countLimited,
@@ -63,20 +63,18 @@ describe("buildAttribute", () => {
     expect(attr.sources[0].value).toBe("no")
   })
 
-  it("sets confidence to 1.0 when toilet hasGrabBars is true", () => {
+  // v13/decision 4: the old toilet-specific 0.9 confidence cap (and its
+  // hasGrabBars → 1.0 special case) was removed — confidence is now always
+  // exactly the source's own reliability weight, regardless of toilet detail
+  // richness. Detail richness isn't part of the tier model at all.
+  it("confidence equals the source weight regardless of toilet detail (hasGrabBars true)", () => {
     const attr = buildAttribute("osm", "yes", "yes", { hasGrabBars: true })
-    expect(attr.confidence).toBe(1.0)
-  })
-
-  it("does not boost confidence when hasGrabBars is false", () => {
-    const attr = buildAttribute("osm", "yes", "yes", { hasGrabBars: false })
     expect(attr.confidence).toBeCloseTo(RELIABILITY_WEIGHTS.osm)
   })
 
-  it("applies OSM overall weight factor for entrance proxy", () => {
-    const normal = buildAttribute("osm", "yes", "yes", {}, false)
-    const overall = buildAttribute("osm", "yes", "yes", {}, true)
-    expect(overall.confidence).toBeLessThan(normal.confidence)
+  it("confidence equals the source weight regardless of toilet detail (hasGrabBars false)", () => {
+    const attr = buildAttribute("osm", "yes", "yes", { hasGrabBars: false })
+    expect(attr.confidence).toBeCloseTo(RELIABILITY_WEIGHTS.osm)
   })
 
   it("stores details", () => {
@@ -181,7 +179,7 @@ describe("mergePlaces", () => {
   })
 
   it("detects conflict when sources disagree", () => {
-    // osm(0.675) vs accessibility_cloud(0.50): ratio = 0.50/0.675 = 0.74 > 0.5 → conflict
+    // osm(0.75) vs accessibility_cloud(0.50): ratio = 0.50/0.75 = 0.67 > 0.5 → conflict
     const a = makePlace({
       id: "a",
       accessibility: {
@@ -194,7 +192,7 @@ describe("mergePlaces", () => {
     const b = makePlace({
       id: "b",
       accessibility: {
-        entrance: buildAttribute("osm", "no", "no", {}, true),  // isOsmOverall → 0.75×0.90=0.675
+        entrance: buildAttribute("osm", "no", "no", {}),
         toilet:   emptyAttribute(),
         parking:  emptyAttribute(),
       },
@@ -203,7 +201,7 @@ describe("mergePlaces", () => {
 
     const merged = mergePlaces(a, b)
     expect(merged.accessibility.entrance.conflict).toBe(true)
-    // osm (weight 0.675) now wins over accessibility_cloud entrance (weight 0.50)
+    // osm (weight 0.75) wins over accessibility_cloud entrance (weight 0.50)
     expect(merged.accessibility.entrance.value).toBe("no")
   })
 
@@ -239,12 +237,13 @@ describe("mergePlaces", () => {
     expect(merged.phone).toBe("+49123")
   })
 
-  it("toilet confidence stays capped at 0.9 when OSM (yes-only, no designated) merges with Google's bare wheelchairAccessibleRestroom flag", () => {
-    // Regression: Peter Pane Potsdam — OSM `toilets:wheelchair=yes` (no
-    // `designated`, no `toilets=yes`) plus Google `wheelchairAccessibleRestroom:
-    // true`. Source weights sum to 1.05 → capped baseConf = 1.0. Without
-    // looking at source-level details the merged details collapsed to {} and
-    // the 0.9 cap was bypassed, yielding a misleading 100 %.
+  it("toilet confidence is NOT capped (v13/decision 4) — OSM + Google add to the full family-evidence sum", () => {
+    // Was: Peter Pane Potsdam regression — OSM `toilets:wheelchair=yes` (no
+    // `designated`) plus Google's bare wheelchairAccessibleRestroom flag used
+    // to be capped at 0.9 pre-v13. That cap existed for a PERCENTAGE display
+    // ("thin detail shouldn't claim 100%") and was retired: reliability tiers
+    // are about source CORROBORATION, not detail richness, so two distinct
+    // families (osm, google) now add uncapped — 0.75 + 0.35 = 1.10, "sehr_hoch".
     const osm = makePlace({
       id: "osm",
       accessibility: {
@@ -266,8 +265,8 @@ describe("mergePlaces", () => {
 
     const merged = mergePlaces(osm, google)
     expect(merged.accessibility.toilet.value).toBe("yes")
-    expect(merged.accessibility.toilet.confidence).toBeLessThanOrEqual(0.9)
-    expect(merged.accessibility.toilet.confidence).toBeGreaterThan(0.7)
+    expect(merged.accessibility.toilet.confidence).toBeCloseTo(RELIABILITY_WEIGHTS.osm + RELIABILITY_WEIGHTS.google_places)
+    expect(confidenceTier(merged.accessibility.toilet.confidence, merged.accessibility.toilet.conflict)).toBe("sehr_hoch")
   })
 
   it("merge clears dogPolicyOnly when wheelchair-data side joins", () => {
@@ -427,7 +426,7 @@ describe("passesFilters", () => {
   it("onlyVerified accepts places with at least one verifiedRecently source", () => {
     const p = makePlace({
       accessibility: {
-        entrance: buildAttribute("osm", "yes", "yes", {}, true, 1.2),  // boosted → verifiedRecently
+        entrance: buildAttribute("osm", "yes", "yes", {}, 1.2),  // boosted → verifiedRecently
         toilet:   yesAttr,
         parking:  yesAttr,
       },
@@ -717,23 +716,127 @@ describe("countLimited", () => {
   })
 })
 
-// ─── confidenceLabel ─────────────────────────────────────────────────────────
+// ─── confidenceTier (v13, docs/plans/reliability-tiers.md) ──────────────────
+// Replaces the old 3-tier confidenceLabel. Per-criterion, additive
+// family-evidence sum: "sehr_hoch" ≥ 1.00, "gut" ≥ 0.70, else "gering" (or
+// "keine" for 0/unknown). A conflicting runner-up caps the tier at "gut" —
+// it can never read "sehr_hoch" — but never turns a lower tier into
+// something even lower.
 
-describe("confidenceLabel", () => {
-  it("returns high for ≥ 0.70", () => {
-    expect(confidenceLabel(0.70)).toBe("high")
-    expect(confidenceLabel(1.00)).toBe("high")
-    expect(confidenceLabel(0.85)).toBe("high")
+describe("confidenceTier", () => {
+  it("returns keine for 0 (no known value)", () => {
+    expect(confidenceTier(0)).toBe("keine")
   })
 
-  it("returns medium for 0.40–0.69", () => {
-    expect(confidenceLabel(0.40)).toBe("medium")
-    expect(confidenceLabel(0.55)).toBe("medium")
-    expect(confidenceLabel(0.69)).toBe("medium")
+  it("returns gering below 0.70", () => {
+    expect(confidenceTier(0.35)).toBe("gering")   // Google alone
+    expect(confidenceTier(0.50)).toBe("gering")   // accessibility.cloud alone (decision 11: stays weak)
+    expect(confidenceTier(0.69)).toBe("gering")
   })
 
-  it("returns low for < 0.40", () => {
-    expect(confidenceLabel(0.00)).toBe("low")
-    expect(confidenceLabel(0.39)).toBe("low")
+  it("returns gut for 0.70–0.99", () => {
+    expect(confidenceTier(0.70)).toBe("gut")
+    expect(confidenceTier(0.75)).toBe("gut")      // OSM alone
+    expect(confidenceTier(0.90)).toBe("gut")      // AccèsLibre alone
+    expect(confidenceTier(0.99)).toBe("gut")
+  })
+
+  it("returns sehr_hoch for ≥ 1.00", () => {
+    expect(confidenceTier(1.00)).toBe("sehr_hoch")  // Reisen für Alle alone (decision: sufficient on its own)
+    expect(confidenceTier(1.10)).toBe("sehr_hoch")  // OSM + Google, uncapped (was capped pre-v13)
+  })
+
+  it("a conflict caps the tier at gut — never sehr_hoch — even when the sum alone would qualify", () => {
+    expect(confidenceTier(1.65, true)).toBe("gut")
+    expect(confidenceTier(1.00, true)).toBe("gut")
+  })
+
+  it("a conflict does not push a lower tier down further", () => {
+    expect(confidenceTier(0.50, true)).toBe("gering")
+    expect(confidenceTier(0, true)).toBe("keine")
   })
 })
+
+// ─── Family-aware evidence sum (v13) ────────────────────────────────────────
+// accessibility_cloud gets its OWN family, not folded into osm (see
+// SOURCE_FAMILY in lib/config.ts) — so two genuinely distinct sources ADD,
+// uncapped, across every real adapter sourceId pairing used today.
+
+describe("family-aware reliability tiers via mergePlaces", () => {
+  it("Reisen für Alle alone reaches sehr_hoch", () => {
+    const p = makePlace({
+      accessibility: {
+        entrance: buildAttribute("reisen_fuer_alle", "yes", "yes", {}),
+        toilet:   emptyAttribute(),
+        parking:  emptyAttribute(),
+      },
+    })
+    expect(confidenceTier(p.accessibility.entrance.confidence, p.accessibility.entrance.conflict)).toBe("sehr_hoch")
+  })
+
+  it("accessibility.cloud alone is gering (decision 11: stays a weak source)", () => {
+    const p = makePlace({
+      accessibility: {
+        entrance: buildAttribute("accessibility_cloud", "yes", "yes", {}),
+        toilet:   emptyAttribute(),
+        parking:  emptyAttribute(),
+      },
+    })
+    expect(confidenceTier(p.accessibility.entrance.confidence, p.accessibility.entrance.conflict)).toBe("gering")
+  })
+
+  it("OSM + accessibility.cloud (distinct families) add uncapped to sehr_hoch", () => {
+    const a = makePlace({
+      id: "a",
+      accessibility: { entrance: buildAttribute("osm", "yes", "yes", {}), toilet: emptyAttribute(), parking: emptyAttribute() },
+      sourceRecords: [{ sourceId: "osm", externalId: "1", fetchedAt: "", raw: {} }],
+    })
+    const b = makePlace({
+      id: "b",
+      accessibility: { entrance: buildAttribute("accessibility_cloud", "yes", "yes", {}), toilet: emptyAttribute(), parking: emptyAttribute() },
+      sourceRecords: [{ sourceId: "accessibility_cloud", externalId: "2", fetchedAt: "", raw: {} }],
+    })
+    const merged = mergePlaces(a, b)
+    expect(merged.accessibility.entrance.confidence).toBeCloseTo(RELIABILITY_WEIGHTS.osm + RELIABILITY_WEIGHTS.accessibility_cloud)
+    expect(confidenceTier(merged.accessibility.entrance.confidence, merged.accessibility.entrance.conflict)).toBe("sehr_hoch")
+  })
+
+  it("a strong conflicting minority caps an otherwise-sehr_hoch tier at gut", () => {
+    // Winner "yes": osm(0.75) + ginto(0.90) = 1.65 (would be sehr_hoch alone).
+    // Runner-up "no": google(0.35) + accessibility_cloud(0.50) = 0.85, which
+    // is > 50% of 1.65 → conflict=true → tier capped at "gut".
+    const osmYes = makePlace({
+      id: "a",
+      accessibility: { entrance: buildAttribute("osm", "yes", "yes", {}), toilet: emptyAttribute(), parking: emptyAttribute() },
+      sourceRecords: [{ sourceId: "osm", externalId: "1", fetchedAt: "", raw: {} }],
+    })
+    const gintoYes = makePlace({
+      id: "b",
+      accessibility: { entrance: buildAttribute("ginto", "yes", "yes", {}), toilet: emptyAttribute(), parking: emptyAttribute() },
+      sourceRecords: [{ sourceId: "ginto", externalId: "2", fetchedAt: "", raw: {} }],
+    })
+    const googleNo = makePlace({
+      id: "c",
+      accessibility: { entrance: buildAttribute("google_places", "no", "false", {}), toilet: emptyAttribute(), parking: emptyAttribute() },
+      sourceRecords: [{ sourceId: "google_places", externalId: "3", fetchedAt: "", raw: {} }],
+    })
+    const acloudNo = makePlace({
+      id: "d",
+      accessibility: { entrance: buildAttribute("accessibility_cloud", "no", "false", {}), toilet: emptyAttribute(), parking: emptyAttribute() },
+      sourceRecords: [{ sourceId: "accessibility_cloud", externalId: "4", fetchedAt: "", raw: {} }],
+    })
+    const merged = mergePlaces(mergePlaces(mergePlaces(osmYes, gintoYes), googleNo), acloudNo)
+    expect(merged.accessibility.entrance.value).toBe("yes")
+    expect(merged.accessibility.entrance.conflict).toBe(true)
+    expect(merged.accessibility.entrance.confidence).toBeCloseTo(RELIABILITY_WEIGHTS.osm + RELIABILITY_WEIGHTS.ginto)
+    expect(confidenceTier(merged.accessibility.entrance.confidence, merged.accessibility.entrance.conflict)).toBe("gut")
+  })
+})
+
+// placeMayNotBeAccessible was retired 2026-08-02 (Option 3, "Zwei getrennte
+// Fragen" concept): the separate red warning box it drove said almost
+// exactly what JudgmentLine's headline already says, just a second time in
+// a second element. Its "no"-only vs. "no or unknown" behaviour is now
+// exercised via evaluatePlaceJudgment (lib/reliability.test.ts) instead,
+// which JudgmentLine renders directly — see that file's "fail"/"unverified"
+// status tests.

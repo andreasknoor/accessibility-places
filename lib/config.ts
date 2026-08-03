@@ -2,7 +2,7 @@ import type { SourceId, Category } from "./types"
 
 // User-visible app version, shown in the header next to the subtitle.
 // Bump on every meaningful release.
-export const APP_VERSION = "12.5"
+export const APP_VERSION = "13.1"
 
 // Tally form IDs for the per-place "report data error" flow (PlaceDebugSheet).
 // Empty string = feature hidden. Fill in after creating the DE/EN forms in
@@ -40,14 +40,48 @@ export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
 export const GINTO_SELF_DECLARED_WEIGHT = 0.94
 export const GINTO_AUDITED_WEIGHT       = 1.0
 
-// OSM wheelchair= main tag is a whole-place proxy, not entrance-specific
-// → reduce its effective weight for entrance criterion
-export const OSM_ENTRANCE_WEIGHT_FACTOR = 0.90
+// ─── Reliability tiers (v13, docs/plans/reliability-tiers.md) ────────────────
+//
+// A criterion's reliability is no longer a single 0-1 "confidence" percentage
+// shown to users — it's a tier derived from an ADDITIVE, UNCAPPED sum of
+// evidence across independent SOURCE FAMILIES. Within one family only the
+// strongest agreeing source counts (a family can't out-vote itself); distinct
+// families that agree simply add.
+//
+// accessibility_cloud gets its OWN family rather than being folded into `osm`.
+// This was checked explicitly, not assumed: pre-v11.10, 83% of A.Cloud's DACH
+// volume was a Wheelmap mirror of OSM (same node, 95% exact-match agreement —
+// not a second observation) — but that population is already dropped by the
+// infoPageUrl host filter in accessibility-cloud.ts before it reaches merge.ts.
+// What survives is the ~9-17% of genuinely independent local surveys (rural
+// AT/CH), for which a dedicated family is the accurate model. See
+// docs/analysis/acloud-wheelmap-origin-2026-07.md.
+export const SOURCE_FAMILY: Record<SourceId, string> = {
+  reisen_fuer_alle:    "rfa",
+  ginto:               "ginto",       // both approval levels are one API/family
+  acceslibre:          "acceslibre",
+  osm:                 "osm",
+  accessibility_cloud: "acloud",      // deliberately NOT "osm" — see above
+  google_places:       "google",
+  osm_parking:         "osm",
+  osm_parking_private: "osm",
+  osm_parking_public:  "osm",
+  osm_private:         "osm",
+  osm_public:          "osm",
+  nominatim:           "osm",
+}
 
+// Tier thresholds against the additive family-evidence sum. A conflicting
+// runner-up (>50% of the winning value's evidence, family-aware) caps the
+// tier at "gut" — it can never read "sehr_hoch" — but never turns "gering"
+// into something lower; the underlying sum itself is not adjusted for
+// conflict, only the tier label is.
 export const CONFIDENCE_THRESHOLDS = {
-  high:   0.70,
-  medium: 0.40,
+  sehrHoch: 1.00,
+  gut:      0.70,
 } as const
+
+export type ConfidenceTier = "sehr_hoch" | "gut" | "gering" | "keine"
 
 export const DEFAULT_RADIUS_KM = 5
 export const RADIUS_MIN_KM = 1

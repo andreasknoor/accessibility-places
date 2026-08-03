@@ -32,6 +32,12 @@ interface Props {
   filterDebug?:         FilterDebug
   searchCenter?:        { lat: number; lon: number }
   onAdjustFilters?:     () => void
+  // Opens the filter view — forwarded to PlaceCard, which forwards it only to
+  // its Info-Sheet's JudgmentLine (see JudgmentLine.tsx). Deliberately a
+  // separate prop from onAdjustFilters above: that one gates the empty-state
+  // CTA vs. hint-text distinction and must keep its existing behaviour
+  // untouched; this one only ever powers the "Kriterien" link.
+  onOpenFilters?:       () => void
   parkingSpotCount?:    number
   sortBy?:              "confidence" | "distance"
   onSortChange?:        (s: "confidence" | "distance") => void
@@ -70,7 +76,7 @@ interface Props {
   selectedAmenityKey?: string
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, scrollTrigger, filterDebug, searchCenter, onAdjustFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToText, isFirstVisit, onDismissWelcome, onStartNearby, intlNotice, placeSearchName, amenityType, amenityResults, amenityHint, amenityAllFilteredOut, onAmenityExpandRadius, onAmenitySelect, selectedAmenityKey }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, scrollTrigger, filterDebug, searchCenter, onAdjustFilters, onOpenFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToText, isFirstVisit, onDismissWelcome, onStartNearby, intlNotice, placeSearchName, amenityType, amenityResults, amenityHint, amenityAllFilteredOut, onAmenityExpandRadius, onAmenitySelect, selectedAmenityKey }: Props) {
   const t = useTranslations()
   const amenityMode = amenityType != null
   const [mapHintSeen, setMapHintSeen] = useState(() =>
@@ -441,6 +447,8 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
                 isSelected={place.id === selectedId}
                 onClick={() => handleSelect(place)}
                 distanceM={searchCenter ? haversineMetres(searchCenter, place.coordinates) : undefined}
+                filters={filters}
+                onOpenFilters={onOpenFilters}
                 />
             </div>
           ))}

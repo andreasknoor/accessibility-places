@@ -17,7 +17,7 @@ import ModeSwitcher from "@/components/ModeSwitcher"
 import SimplePlaceCard from "@/components/simple/SimplePlaceCard"
 import SimpleDetail from "@/components/simple/SimpleDetail"
 import AmenityCard from "@/components/results/AmenityCard"
-import type { Place, Category, AmenityType, AmenityFeature, ParkingSpot } from "@/lib/types"
+import type { Place, Category, AmenityType, AmenityFeature, ParkingSpot, SearchFilters } from "@/lib/types"
 import type { AppSettings } from "@/lib/settings"
 
 const MapView = dynamic(() => import("@/components/map/MapView"), { ssr: false })
@@ -36,6 +36,20 @@ const POSITION_CACHE_MS = 2 * 60_000
 // treatment. A handful of results often means the search radius is just too
 // small, not that there's genuinely nothing nearby.
 const LOW_RESULTS_THRESHOLD = 3
+
+// Quickstart's own fixed preset for the map pin JUDGEMENT colour (v13,
+// docs/plans/reliability-tiers.md) — mirrors SIMPLE_FILTERS_OVERRIDE
+// (app/HomeClient.tsx): only entrance is a real server-side filter here, so
+// every result already passes it. The per-category toilet requirement
+// (SIMPLE_TOILET_REQUIRED_CATEGORIES) varies place-by-place and can't be
+// expressed as one SearchFilters value — SimplePlaceCard/SimpleDetail's own
+// plain-language toilet line already carries that nuance, so the map pin
+// judges entrance only.
+const SIMPLE_MAP_FILTERS: SearchFilters = {
+  entrance: true, toilet: false, parking: false, parkingNearby: true,
+  seating: false, onlyVerified: false, acceptUnknown: false,
+  alwaysShowParking: false, alwaysShowToilets: false,
+}
 
 type Screen = "start" | "tiles" | "locating" | "results" | "venue" | "city" | "detail"
 
@@ -1015,6 +1029,7 @@ export default function SimpleLayout({
               >
                 <MapView
                   places={sortedPlaces}
+                  filters={SIMPLE_MAP_FILTERS}
                   // Always passed through — HomeClient's simpleParkingSpots/
                   // simpleToiletSpots are already `undefined` outside Simple
                   // View's OWN active parking/WC search (never the full UI's

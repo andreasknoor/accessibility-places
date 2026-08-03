@@ -457,6 +457,7 @@ export default function MobileLayout({
             onExpandRadius={handleExpandRadius}
             onAmenityExpandRadius={handleAmenityExpandRadius}
             onAdjustFilters={() => setActiveTab("filter")}
+            onOpenFilters={() => setActiveTab("filter")}
             radiusKm={radiusKm}
             onRadiusChange={onRadiusChange}
             hasSearched={hasSearched}
@@ -542,6 +543,8 @@ export default function MobileLayout({
           {mapMounted && (
             <MapView
               places={places}
+              filters={filters}
+              onOpenFilters={() => setActiveTab("filter")}
               parkingSpots={parkingSpots}
               toiletSpots={toiletSpots}
               center={searchCenter}
