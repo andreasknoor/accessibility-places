@@ -20,6 +20,11 @@ Sentry.init({
     "ResizeObserver loop completed with undelivered notifications.",
     "Non-Error promise rejection captured",
     "AbortError",               // aborted in-flight search/fetch requests
+    // Browser-specific wording for a plain failed fetch() (offline, flaky
+    // mobile network, DNS hiccup) — Safari says "Load failed", Firefox says
+    // "network error". Same class of noise as AbortError above.
+    "Load failed",
+    "network error",
     // Firefox for iOS injects a `__firefox__` content script (reader-mode
     // detection) into every page; on article-like pages such as /faq it throws
     // "Can't find variable: __firefox__" / "window.__firefox__.reader" from the

@@ -156,6 +156,7 @@ export const FROM_ACLOUD: Record<string, Category> = {
   hostel:            "hostel",
   apartment:         "apartment",
   ferienwohnung:     "apartment",
+  chalet:            "apartment",
   caravan_site:      "camp_site",
   camp_site:         "camp_site",
   campingplatz:      "camp_site",
@@ -174,6 +175,9 @@ export const FROM_ACLOUD: Record<string, Category> = {
   galerie:           "gallery",
   attraction:        "attraction",
   theme_park:        "attraction",
+  themepark:         "attraction",
+  castle:            "attraction",
+  cave:              "attraction",
   zoo:               "zoo",
   aquarium:          "zoo",
   tierpark:          "zoo",
@@ -191,6 +195,7 @@ export const FROM_ACLOUD: Record<string, Category> = {
   sports_centre:     "sports_centre",
   sports_complex:    "sports_centre",
   sporthalle:        "sports_centre",
+  stadium:           "sports_centre",
   // Health
   pharmacy:          "pharmacy",
   apotheke:          "pharmacy",
@@ -260,6 +265,7 @@ export const FROM_ACLOUD: Record<string, Category> = {
   "frisör":          "hairdresser",
   laundry:           "laundry",
   waschsalon:        "laundry",
+  dry_cleaning:      "laundry",
   // Public & transit
   place_of_worship:  "place_of_worship",
   kirche:            "place_of_worship",
@@ -284,11 +290,11 @@ export const ACLOUD_KNOWN_UNMAPPED = new Set<string>([
   "undefined", "other", "public_transport", "bus_stop", "bus_station", "tram_stop",
   "subway_station", "platform", "train", "transport", "ferry", "parking", "atm",
   "toilets", "elevator", "drinkingwater", "memorial", "public_art", "viewpoint",
-  "archaeological_site", "hiking", "house", "car_sharing", "car_rental",
+  "archaeological_site", "hiking", "house", "car_sharing", "car_rental", "cablecar",
   // Institutions / offices — out of scope for a venue search
   "government_office", "official", "police", "court", "embassy", "school",
   "university", "college", "kindergarten", "driving_school", "social_facility",
-  "communitycentre", "association", "company", "insurance", "lawyer",
+  "communitycentre", "association", "company", "insurance", "lawyer", "education", "ngo",
   // Real venues, but no matching Category in this app (yet)
   "jewelry", "department_store", "mall", "shopping", "electronics", "computers",
   "mobile_phones", "toys", "gifts", "stationery", "photography", "textiles",
@@ -298,7 +304,7 @@ export const ACLOUD_KNOWN_UNMAPPED = new Set<string>([
   "organic_food", "food", "confectionery", "nightclub", "stripclub", "massage",
   "beautysalon", "ophthalmologist", "alternative_medicine", "bed_breakfast",
   "accommodation", "arts_center", "culture", "tourism", "leisure", "health",
-  "diy", "car_dealer",
+  "diy", "car_dealer", "car_repair", "brothel", "casino", "marina",
   // Sport as an activity/field, not a visitable venue category in this app
   "soccer",
 ])

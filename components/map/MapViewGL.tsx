@@ -528,8 +528,12 @@ export default function MapViewGL({
       pitchWithRotate: false,
       touchPitch: false,
     })
-    map.touchZoomRotate.disableRotation()
-    map.keyboard.disableRotation()
+    // Optional chaining: GlitchTip showed this throwing "Cannot read
+    // properties of undefined (reading 'disableRotation')" for some
+    // visitors — these handlers are apparently not always initialised
+    // synchronously right after construction in every environment.
+    map.touchZoomRotate?.disableRotation()
+    map.keyboard?.disableRotation()
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left")
 
     mapInst.current = map
