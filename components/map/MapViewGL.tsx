@@ -16,6 +16,7 @@ import { evaluatePlaceJudgment, type JudgmentFilters, type JudgmentStatus } from
 import { haversineMetres } from "@/lib/matching/match"
 import { popupMaxHeight, isWithinProgrammaticMoveWindow, viewportRadiusKm } from "@/lib/map/geometry"
 import { ensureMaplibreWorkerConfigured } from "@/lib/map/maplibre-worker"
+import { startSlowTileMonitoring } from "@/lib/map/tile-timing"
 import { drawPlacePin, drawParkingBadge, drawToiletBadge, drawGpsDot, getMarkerPixelRatio } from "@/lib/map/marker-images"
 import { buildVenuePopupHtml, buildParkingPopupHtml, buildToiletPopupHtml } from "@/lib/map/popup-content"
 import type { MapViewProps } from "@/lib/map/types"
@@ -708,7 +709,10 @@ export default function MapViewGL({
       setMapReady(true)
     })
 
+    const stopSlowTileMonitoring = startSlowTileMonitoring(map)
+
     return () => {
+      stopSlowTileMonitoring()
       map.remove()
       mapInst.current = null
       registeredImages.current.clear()
