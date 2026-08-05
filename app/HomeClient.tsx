@@ -1040,7 +1040,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     handleSearch(lastQuery, clampedRadius, coords, undefined, SIMPLE_FILTERS_OVERRIDE, DEFAULT_SOURCES)
   }, [lastQuery, handleSearch])
 
-  const handleSearchHere = useCallback((coords: { lat: number; lon: number }, viewportRadiusKm: number, origin: "drag" | "locate" = "drag") => {
+  const handleSearchHere = useCallback((coords: { lat: number; lon: number }, viewportRadiusKm: number, origin: "drag" | "locate" | "zoom" = "drag") => {
     // Use the viewport-derived radius so the search covers exactly what the user
     // sees, not the last user-setting radius. (Amenity "search here" is wired
     // separately via MapView's onFocusSearchHere → handleAmenitySearchHere.)
@@ -1052,6 +1052,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       // exitNearbyTriggerKey here — that would reset ChatPanel's nearbyPhase
       // (and hide the token) that mapLocateFix just populated.
       setChatMode("nearby")
+    } else if (origin === "zoom") {
+      // Same centre as before, only the radius changed (zoomed in/out without
+      // panning) — leave chatMode exactly as it is. Forcing "nearby" would be
+      // wrong if this wasn't a GPS search to begin with; forcing "text" would
+      // wrongly kick a genuine nearby search out of nearby mode even though
+      // the user never moved away from their own location.
     } else {
       // Searching an explicitly panned area means the results are no longer "near me":
       // leave nearby mode so a subsequent chip pick refines THIS area (activeSearchCoords)

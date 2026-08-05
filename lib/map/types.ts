@@ -60,13 +60,14 @@ export interface MapViewProps {
   // Whether the weak "accessible" parking tier is enabled — drives the legend
   // (the yellow entry is only relevant when those markers can appear).
   showWeakParking?:        boolean
-  // Called when the user pans the map and clicks "Search here". Receives the
-  // new map centre; caller should re-run the last search at that location.
+  // Called when the user pans/zooms the map and clicks "Search here". Receives
+  // the new map centre; caller should re-run the last search at that location.
   // `origin` distinguishes a genuine drag-pan pill from one armed by the locate
-  // button (see searchHereOriginRef below) — the caller uses this to decide
-  // whether the resulting search counts as "near me" (distance display, the
-  // green location token) or an ordinary panned-area search (neither).
-  onSearchHere?:           (center: { lat: number; lon: number }, radiusKm: number, origin: "drag" | "locate") => void
+  // button, or by a same-spot zoom change (see searchHereOriginRef below) — the
+  // caller uses this to decide whether the resulting search counts as "near me"
+  // (distance display, the green location token), an ordinary panned-area
+  // search (neither), or a same-place radius refinement (mode left untouched).
+  onSearchHere?:           (center: { lat: number; lon: number }, radiusKm: number, origin: "drag" | "locate" | "zoom") => void
   // When true, MapView does NOT render its own (centred) "search here" button.
   // Instead it reports pan state via onPanned so the parent can render the pill
   // inline next to the result-count pill (mobile). Has no effect in focus mode.

@@ -98,7 +98,7 @@ interface Props {
   deferAutoLocate?:     boolean
   onChatModeChange:     (mode: "text" | "nearby") => void
   biasCoords?:          { lat: number; lon: number }
-  onSearchHere?:        (center: { lat: number; lon: number }, radiusKm: number, origin: "drag" | "locate") => void
+  onSearchHere?:        (center: { lat: number; lon: number }, radiusKm: number, origin: "drag" | "locate" | "zoom") => void
   onLocate?:            () => Promise<void>
   locatePanTrigger?:    number
   gpsCoords?:           { lat: number; lon: number } | null

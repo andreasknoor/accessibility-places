@@ -50,6 +50,10 @@ const GPS_SOURCE_ID      = "ap-gps"
 const PLACE_CLUSTER_MAX_RADIUS = 50            // px — grouping radius at low zoom (matches Leaflet)
 const PLACE_CLUSTER_DISABLE_AT_ZOOM = 17       // street-level: always show every pin (matches Leaflet)
 const LAYERS_COLLAPSED_KEY = "ap_layers_collapsed"
+// How far the viewport radius must drift from the last-searched radius
+// (relative) before a same-spot zoom offers "search here" — see the moveend
+// handler's zoom-only branch.
+const ZOOM_RADIUS_CHANGE_RATIO = 0.4
 
 // Pin colour now encodes the JUDGEMENT against active filters (v13,
 // docs/plans/reliability-tiers.md decisions 5/6), not the reliability tier.
@@ -415,6 +419,7 @@ export default function MapViewGL({
   const focusModeRef     = useRef(focusMode)
   const amenityTypeRef   = useRef(amenityType)
   const filtersRef       = useRef(filters)
+  const searchRadiusKmRef = useRef(searchRadiusKm)
   useEffect(() => { onPannedRef.current = onPanned }, [onPanned])
   useEffect(() => { onViewportChangeRef.current = onViewportChange }, [onViewportChange])
   useEffect(() => { onShowInResultsRef.current = onShowInResults }, [onShowInResults])
@@ -431,9 +436,10 @@ export default function MapViewGL({
   useEffect(() => { onFocusSearchHereRef.current = onFocusSearchHere }, [onFocusSearchHere])
   useEffect(() => { focusModeRef.current = focusMode }, [focusMode])
   useEffect(() => { amenityTypeRef.current = amenityType }, [amenityType])
+  useEffect(() => { searchRadiusKmRef.current = searchRadiusKm }, [searchRadiusKm])
 
   const [searchHereCenter, setSearchHereCenter] = useState<{ lat: number; lon: number } | null>(null)
-  const searchHereOriginRef = useRef<"drag" | "locate">("drag")
+  const searchHereOriginRef = useRef<"drag" | "locate" | "zoom">("drag")
 
   useEffect(() => {
     const notify = onPannedRef.current
@@ -479,7 +485,7 @@ export default function MapViewGL({
   const [locateErrorVisible, setLocateErrorVisible] = useState(false)
   const [popupOpen, setPopupOpen] = useState(false)
   const lastProgrammaticMoveRef = useRef(Date.now())
-  const userPannedRef = useRef(false)
+  const userInteractedRef = useRef(false)
   const prevCenterRef = useRef<{ lat: number; lon: number } | null>(null)
 
   useEffect(() => { setSearchHereCenter(null) }, [center])
@@ -587,12 +593,19 @@ export default function MapViewGL({
       if (!map.hasImage(id)) map.addImage(id, { width: 1, height: 1, data: new Uint8Array(4) })
     })
 
-    map.on("dragstart", () => { userPannedRef.current = true })
+    // zoomstart fires for scroll/pinch/dblclick zoom AND the +/- NavigationControl
+    // buttons — a user can radically change the visible radius without ever
+    // firing dragstart. Both handlers only ever mark "a user did something";
+    // the isWithinProgrammaticMoveWindow() check below is what actually filters
+    // out our own programmatic easeTo/jumpTo/fitBounds calls (which also fire
+    // zoomstart), same as it always has for dragstart.
+    map.on("dragstart", () => { userInteractedRef.current = true })
+    map.on("zoomstart", () => { userInteractedRef.current = true })
     map.on("moveend", () => {
-      const wasUserPan = userPannedRef.current
-      userPannedRef.current = false
+      const wasUserInteraction = userInteractedRef.current
+      userInteractedRef.current = false
       if (focusModeRef.current) return
-      if (!wasUserPan) return
+      if (!wasUserInteraction) return
       if (isWithinProgrammaticMoveWindow(lastProgrammaticMoveRef.current, Date.now())) return
       if (!onSearchHereRef.current || !searchCenterRef.current) return
       const newCenter = map.getCenter()
@@ -605,6 +618,21 @@ export default function MapViewGL({
       const sc = searchCenterRef.current
       if (Math.abs(newCenter.lat - sc.lat) > threshold || Math.abs(newCenter.lng - sc.lon) > threshold) {
         searchHereOriginRef.current = "drag"
+        setSearchHereCenter({ lat: newCenter.lat, lon: newCenter.lng })
+        return
+      }
+      // No real pan (e.g. zoomed via scroll/pinch/+-/dblclick around the same
+      // spot) — still offer "search here" if the visible radius drifted far
+      // enough from what was actually searched, so zooming out to widen the
+      // search doesn't require an incidental drag to surface the button.
+      const baselineRadiusKm = searchRadiusKmRef.current
+      if (!baselineRadiusKm || baselineRadiusKm <= 0) return
+      const currentRadiusKm = viewportRadiusKm(
+        { lat: newCenter.lat, lon: newCenter.lng },
+        { lat: bounds.getNorthEast().lat, lon: bounds.getNorthEast().lng },
+      )
+      if (Math.abs(currentRadiusKm - baselineRadiusKm) / baselineRadiusKm > ZOOM_RADIUS_CHANGE_RATIO) {
+        searchHereOriginRef.current = "zoom"
         setSearchHereCenter({ lat: newCenter.lat, lon: newCenter.lng })
       }
     })

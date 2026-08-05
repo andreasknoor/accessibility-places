@@ -139,7 +139,7 @@ async function runInitialSearch(radiusKm?: number) {
 async function triggerSearchHere(
   coords: { lat: number; lon: number },
   viewportRadiusKm: number,
-  origin: "drag" | "locate" = "drag",
+  origin: "drag" | "locate" | "zoom" = "drag",
 ) {
   await act(async () => {
     mapViewProps.current.onSearchHere(coords, viewportRadiusKm, origin)
@@ -299,6 +299,38 @@ describe("HomeClient — handleSearchHere branches on pill-arm origin", () => {
 
     await triggerSearchHere({ lat: 52.52, lon: 13.41 }, 9.0, "drag")
     expect(chatPanelProps.current.initialMode).toBe("text")
+  })
+
+  // origin='zoom' (a same-spot radius change, e.g. zooming out with no drag)
+  // must leave chatMode exactly as it already was — neither forcing "nearby"
+  // (this may not be a GPS search at all) nor kicking a genuine nearby search
+  // out of nearby mode just because the user zoomed instead of panning.
+  it("origin='zoom' leaves nearby mode untouched when already nearby", async () => {
+    vi.stubGlobal("fetch", mockSearchFetch())
+    render(<HomeClient />)
+    await runInitialSearch()
+
+    await triggerSearchHere({ lat: 48.14, lon: 11.56 }, 12.3, "locate")
+    expect(chatPanelProps.current.initialMode).toBe("nearby")
+    const exitNearbyTriggerBefore = chatPanelProps.current.exitNearbyTrigger
+
+    await triggerSearchHere({ lat: 48.14, lon: 11.56 }, 20.0, "zoom")
+    expect(chatPanelProps.current.initialMode).toBe("nearby")
+    expect(chatPanelProps.current.exitNearbyTrigger).toBe(exitNearbyTriggerBefore)
+  })
+
+  it("origin='zoom' leaves text mode untouched (does not force nearby)", async () => {
+    vi.stubGlobal("fetch", mockSearchFetch())
+    render(<HomeClient />)
+    await runInitialSearch()
+    await triggerSearchHere({ lat: 52.52, lon: 13.41 }, 12.3, "drag")
+    expect(chatPanelProps.current.initialMode).toBe("text")
+
+    const exitNearbyTriggerBefore = chatPanelProps.current.exitNearbyTrigger
+    await triggerSearchHere({ lat: 52.52, lon: 13.41 }, 20.0, "zoom")
+
+    expect(chatPanelProps.current.initialMode).toBe("text")
+    expect(chatPanelProps.current.exitNearbyTrigger).toBe(exitNearbyTriggerBefore)
   })
 })
 
