@@ -31,6 +31,7 @@ import { SIMPLE_TOILET_REQUIRED_CATEGORIES } from "@/lib/simple-view"
 import { markMountAndIsReturning, clearReturningFlag, loadActiveMode, saveActiveMode, loadSearchRun, saveSearchRun, clearSearchRun, clearSearchInput, clearSessionSearch } from "@/lib/session-restore"
 import { getCurrentPosition, getBestPosition, isGeolocationAvailable } from "@/lib/native/geolocation"
 import { consumePendingNativeAction } from "@/lib/native/actions"
+import { maybeRequestReview } from "@/lib/native/review"
 import { Capacitor } from "@capacitor/core"
 import { cn } from "@/lib/utils"
 import type { AppSettings } from "@/lib/settings"
@@ -747,6 +748,16 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             if (chatMode === "nearby") track("nearby_search", { result_count: data.places.length })
             if (data.places.length === 0) {
               track("search_no_results", { mode: chatMode, radius_km: radiusKmOverride ?? radiusKm })
+            }
+            // A search that surfaced at least one place with every criterion
+            // actually known (not "unknown") is a good-faith moment to ask
+            // for a review — the app just did the thing it exists to do.
+            if (data.places.some((p) =>
+              p.accessibility.entrance.value !== "unknown" &&
+              p.accessibility.toilet.value   !== "unknown" &&
+              p.accessibility.seating && p.accessibility.seating.value !== "unknown"
+            )) {
+              void maybeRequestReview()
             }
 
             // Auto-select single result for place search
