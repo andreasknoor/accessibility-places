@@ -578,6 +578,7 @@ describe("HomeClient — Simple View's expand-radius button", () => {
         const body = lastSearchRequestBody(fetchMock) as unknown as { radiusKm?: number }
         expect(body.radiusKm).toBe(expected)
       })
+      await waitFor(() => expect(screen.getByText("Suchradius vergrößern?")).toBeInTheDocument())
     }
   })
 
@@ -606,6 +607,11 @@ describe("HomeClient — Simple View's expand-radius button", () => {
         const body = lastSearchRequestBody(fetchMock) as unknown as { radiusKm?: number }
         expect(body.radiusKm).toBe(expected)
       })
+      // The button unmounts while isLoading (replaced by a spinner) — wait
+      // for the search to finish and the button to reappear before the next
+      // click, or a fast-resolving fetch under CI load can leave getByText()
+      // racing the still-in-flight previous search.
+      await waitFor(() => expect(screen.getByText("Suchradius vergrößern?")).toBeInTheDocument())
     }
   })
 })
@@ -663,6 +669,7 @@ describe("HomeClient — Simple View's own (non-persisted) amenity radius", () =
     for (const expected of [4, 8, 16, 25, 25]) {
       fireEvent.click(screen.getByText("Suchradius vergrößern?"))
       await waitFor(() => expect(lastAmenityRadius(fetchMock)).toBe(expected))
+      await waitFor(() => expect(screen.getByText("Suchradius vergrößern?")).toBeInTheDocument())
     }
   })
 
