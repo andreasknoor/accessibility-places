@@ -4,7 +4,20 @@ A web app that finds wheelchair-accessible cafés, restaurants, hotels, museums 
 
 A particular focus is placed on **data reliability**: each source is weighted by the trustworthiness of its accessibility information. Reisen für Alle (a certified-survey programme) carries the highest weight (1.00); Google Places carries the lowest (0.35) — its accessibility data is frequently sparse, heuristic, or absent entirely.
 
-Built with **Next.js 16 (Turbopack)**, **React 19**, **Tailwind v4**, and **Leaflet**, with a streaming NDJSON search route that updates the UI as each data source returns. The app is installable as a PWA and ships SEO landing pages for 32 DACH cities.
+This project exists because finding out *in advance* whether a place is actually wheelchair-accessible is still mostly guesswork — accessibility data is scattered across half a dozen incompatible sources, each with different coverage and different accuracy. Rather than picking one source and accepting its blind spots, the app cross-references five of them, weighs each by how trustworthy its accessibility claims actually are, and surfaces the disagreements instead of hiding them.
+
+Built with **Next.js 16 (Turbopack)**, **React 19**, **Tailwind v4**, and **MapLibre GL JS**, with a streaming NDJSON search route that updates the UI as each data source returns. The app is installable as a PWA and ships SEO landing pages for 32 DACH cities.
+
+![Accessible Places — search results with map view](docs/screenshot.jpg)
+
+---
+
+## Live
+
+- **Web:** [accessible-places.org](https://accessible-places.org)
+- **iOS:** live on the App Store — [Accessible Places](https://apps.apple.com/de/app/accessible-places-app/id6781726948)
+- **Android:** live on the Play Store — [Accessible Places](https://play.google.com/store/apps/details?id=org.accessibleplaces.app)
+- Runs on a self-hosted Overpass mirror (Hetzner) alongside the public OSM endpoints, with a private Nominatim instance for geocoding — see [`docs/overpass-server.md`](docs/overpass-server.md)
 
 ---
 
@@ -24,6 +37,7 @@ Built with **Next.js 16 (Turbopack)**, **React 19**, **Tailwind v4**, and **Leaf
   - [Confidence scoring](#confidence-scoring)
   - [Verified-recently badge](#verified-recently-badge)
   - [Nearby disabled-parking enrichment](#nearby-disabled-parking-enrichment)
+- [Notable engineering decisions](#notable-engineering-decisions)
 - [Search modes](#search-modes)
 - [Categories](#categories)
 - [Filters & user settings](#filters--user-settings)
@@ -39,7 +53,7 @@ Built with **Next.js 16 (Turbopack)**, **React 19**, **Tailwind v4**, and **Leaf
 
 ## Key features
 
-- **Multi-source aggregation.** Pulls data in parallel from OpenStreetMap (Overpass), accessibility.cloud, Reisen für Alle, Ginto (Switzerland) and Google Places, then deduplicates places by name + address + geo proximity.
+- **Multi-source aggregation.** Pulls data in parallel from OpenStreetMap (Overpass), accessibility.cloud, Reisen für Alle, Ginto (Switzerland), AccèsLibre (France, international mode only) and Google Places, then deduplicates places by name + address + geo proximity.
 - **Per-criterion confidence.** Each place gets entrance / toilet / parking attributes (seating where available), scored by source reliability and the presence of strong signals (e.g. `toilets:wheelchair=designated`, A.Cloud `grabBars`).
 - **Streaming search.** The `/api/search` endpoint emits NDJSON events as each source responds, so the UI shows per-source loaders → counts → warning icons live.
 - **Containment-aware deduplication.** OSM duplicates like `Meierei` (node) and `Meierei – Brauerei Potsdam` (way) at the same coordinates merge into a single canonical place.
@@ -52,6 +66,8 @@ Built with **Next.js 16 (Turbopack)**, **React 19**, **Tailwind v4**, and **Leaf
 
 ---
 
+*Development note: this codebase is built and maintained solo, using Claude Code as the primary coding tool — the architecture decisions and trade-offs documented below are the actual engineering record, not a retrospective summary.*
+
 ## Tech stack
 
 | Layer | Choice |
@@ -62,7 +78,7 @@ Built with **Next.js 16 (Turbopack)**, **React 19**, **Tailwind v4**, and **Leaf
 | PWA | `@serwist/next` service worker (disabled in development) |
 | Analytics | Vercel Analytics + Vercel Speed Insights |
 | Error reporting | Self-hosted GlitchTip via `@sentry/nextjs` (production only) |
-| Android app | Capacitor shell (`android/`) wrapping the deployed web URL |
+| Native apps | Capacitor shells (`android/`, `ios/`) wrapping the deployed web URL — same codebase, same `appId` |
 | Stats store | Upstash Redis (optional; adapter usage metrics) |
 | Tests | Vitest + Testing Library + jsdom |
 | Build & deploy | Vercel streaming with `Cache-Control: no-store` and `X-Accel-Buffering: no` |
@@ -98,6 +114,8 @@ The app is then available at <http://localhost:3000>.
 | `npm run lint` | Run ESLint |
 | `npm test` | Run all Vitest tests once (required before every commit/push) |
 | `npm run test:watch` | Run tests in watch mode |
+| `npm run test:a11y` | Run `vitest-axe` structural accessibility tests (`__tests__/a11y/`) |
+| `npm run check:contrast` | Check WCAG contrast of the design tokens in `globals.css` (CI-gated — fails the build on a sub-threshold pair) |
 | `npm run check:seo` | Update which city/category combos actually have accessible data |
 | `npm run warm:seo` | Prime the ISR cache for all SEO pages |
 | `npx vitest run <file>` | Run a single test file |
@@ -118,6 +136,7 @@ Create a `.env.local` in the project root. None of these are exposed to the brow
 | `GINTO_API_KEY` | optional | Ginto GraphQL API (Swiss-focused accessibility data, queried DACH-wide) |
 | `GINTO_GEOFENCE` | optional | Set to `1` to restrict Ginto calls to searches that can reach the CH bounding box (emergency brake against rate limits) |
 | `GOOGLE_PLACES_API_KEY` | optional | Google Places (New) data |
+| `ACCESLIBRE_API_KEY` | optional | AccèsLibre (France) data; only queried in international mode with the search centre inside France |
 | `GITHUB_REPORT_TOKEN` | optional | Enables `POST /api/report-parking` (user parking reports → GitHub issues) |
 | `NEXT_PUBLIC_SENTRY_DSN` | optional | GlitchTip (Sentry-protocol) error reporting; production only |
 | `OVERPASS_ENDPOINTS` | optional | Comma-separated Overpass URLs (defaults to two public mirrors; production prepends a private server) |
@@ -144,14 +163,14 @@ app/
   api/
     search/route.ts             NDJSON streaming search pipeline
     nearby-parking/route.ts     Amenity fetch: disabled parking + wheelchair WCs (?types=)
-    geocode/                    route + suggest + place-suggest + reverse (Nominatim / Photon proxies)
+    geocode/                    route + unified-suggest + suggest + place-suggest + reverse (Nominatim / Photon proxies)
     health/route.ts             Token-protected E2E health check (live + mock modes)
     stats/route.ts              Token-protected adapter usage stats
     report-parking/route.ts     User reports a parking marker → GitHub issue
 components/
   chat/ChatPanel.tsx              Search input, mode tabs, example chips, nearby + parking info row
   filters/FilterPanel.tsx         Source toggles, criteria, radius, predictive per-source counts
-  map/MapView.tsx                 Leaflet (dynamic), clustered confidence-coloured markers, parking legend
+  map/MapView.tsx                 MapLibre GL JS (dynamic), clustered confidence-coloured markers, parking legend
   mobile/MobileLayout.tsx         Mobile tab-bar layout (results / map / filter)
   results/                        ResultsList, PlaceCard, A11yAttribute, ConfidenceBadge, PlaceDebugSheet
   settings/SettingsSheet.tsx      User-configurable defaults (gear icon)
@@ -160,7 +179,7 @@ components/
 lib/
   types.ts config.ts utils.ts llm.ts settings.ts stats.ts
   cities.ts seo-search.ts seo-validity.ts generated/seo-validity.json
-  adapters/                       osm, accessibility-cloud, reisen-fuer-alle, ginto, google-places, index
+  adapters/                       osm, accessibility-cloud, reisen-fuer-alle, ginto, acceslibre, google-places, index
   amenities/                      registry.ts (per-amenity-type properties)
   matching/                       match.ts, merge.ts, nearby-parking.ts
   native/                         geolocation.ts, browser.ts (Capacitor-aware wrappers)
@@ -221,7 +240,7 @@ This powers the per-source loader / count / warning icon in the filter panel. Th
 | Reisen für Alle | 1.00 | Certified on-site surveys; highest trust. Always active when the key is set (hidden from the source toggles) |
 | Ginto | 0.90 | GraphQL API, Swiss-focused (queried DACH-wide). SELF_DECLARED entries → 0.94, AUDITED → 1.0 (via `qualityInfo.approvalLevels`) |
 | OpenStreetMap (Overpass) | 0.75 | Primary source; broadest coverage, live data, direct wheelchair tags |
-| accessibility.cloud | 0.70 | A11yJSON records; largely a Wheelmap mirror of OSM for DACH, plus supplementary datasets (dog policies etc.) |
+| accessibility.cloud | 0.50 | A11yJSON records; Wheelmap-mirrored entries are filtered out entirely (see [Notable engineering decisions](#notable-engineering-decisions)), leaving genuinely A.Cloud-only records plus supplementary datasets (dog policies etc.) |
 | Google Places (New) | 0.35 | Broad but sparse/heuristic accessibility data. **Disabled by default** |
 
 A handful of additional source IDs (`osm_parking`, `osm_private`, `osm_public`, `nominatim`, …) carry weight `0` and exist purely for usage statistics.
@@ -256,6 +275,19 @@ Wheelchair WCs are a second amenity type sharing the same machinery — but **di
 
 ---
 
+## Notable engineering decisions
+
+A few decisions that came out of running this in production rather than as a prototype, documented in more depth under `docs/architecture/`:
+
+- **Wheelmap records are dropped from accessibility.cloud entirely.** A five-round data-quality audit found 83% of accessibility.cloud's DACH volume was a Wheelmap mirror of OSM data the app already fetches live — and 25% of it pointed at already-deleted OSM nodes. Filtering it out cost nothing (OSM covers the same ground) and removed a source of stale duplicates.
+- **Category classification is exact-match only, never substring.** An earlier `.includes()`-based mapping silently misclassified ~4.4% of records — `"public_transport"` matched `"pub"`, `"barber"` matched `"bar"`. Every source's vocabulary is now matched exactly, with unmapped values reported to error tracking so drift is visible rather than silently swallowed.
+- **A private Overpass mirror races against public ones, never replaces them.** Self-hosting the OSM query backend cut latency and rate-limit risk for DACH searches, but an overloaded self-hosted instance can return HTML with an HTTP 200 instead of an error — so the client treats a malformed response, not just a failed one, as a reason to fail over.
+- **The confidence score is a merge across independently weighted sources, not a single provider's opinion.** Reisen für Alle's certified on-site surveys are weighted highest (1.00); Google Places' heuristic accessibility data lowest (0.35) — and disagreements between sources are surfaced, not silently averaged away.
+
+Full write-ups: [`docs/architecture/matching.md`](docs/architecture/matching.md), [`docs/architecture/amenities.md`](docs/architecture/amenities.md), [`docs/architecture/seo-pages.md`](docs/architecture/seo-pages.md).
+
+---
+
 ## Search modes
 
 `chatMode` is a two-way union:
@@ -269,28 +301,22 @@ A name field (separate from the query string) lets users restrict any search to 
 
 ## Categories
 
-16 fine-grained categories, each with dedicated OSM tag mappings:
+51 fine-grained categories, each with dedicated OSM tag mappings (`CATEGORY_OSM_TAGS` in `lib/config.ts`), grouped into 8 drill-in chip groups in the UI:
 
-```
-cafe          amenity=cafe
-restaurant    amenity=restaurant
-bar           amenity=bar
-pub           amenity=pub
-biergarten    amenity=biergarten
-fast_food     amenity=fast_food | food_court
-hotel         tourism=hotel | motel | guest_house
-hostel        tourism=hostel
-apartment     tourism=apartment
-museum        tourism=museum
-theater       amenity=theatre
-cinema        amenity=cinema
-library       amenity=library
-gallery       tourism=gallery | amenity=arts_centre
-attraction    tourism=attraction | theme_park
-ice_cream     amenity=ice_cream
-```
+| Group | Categories |
+|---|---|
+| 🍽 Food & Drink | bar, biergarten, cafe (merged with ice cream — see below), fast_food, pub, restaurant |
+| 🏨 Accommodation | camp_site, apartment, hostel, hotel |
+| 🎭 Culture | library, gallery, cinema, museum, attraction, theater, zoo |
+| 🤸 Sport & Leisure | fitness_centre, park, swimming_pool, playground, sports_centre |
+| 🩺 Health | pharmacy, doctors, hearing_aids, hospital, optician, physiotherapist, rehabilitation, medical_supply, veterinary, dentist |
+| 🛒 Shopping | bakery, clothes, florist, books, chemist, bicycle, convenience, butcher, furniture, shoes, supermarket |
+| 🧾 Everyday Services | bank, hairdresser, post_office, laundry |
+| 🏛 Public & Transit | railway_station, place_of_worship, townhall, fuel |
 
-The split (e.g. `bar` / `pub` / `biergarten`, `theater` / `cinema`) keeps queries precise. Only 10 of these have SEO landing pages; `fast_food`, `hostel`, `apartment`, `library`, `gallery` and `ice_cream` are search-only.
+`cafe` is a merged category covering both `amenity=cafe` and `amenity=ice_cream` — ice cream parlours are frequently only tagged as cafés, so every adapter classifies them under `cafe`. Category classification across all adapters is **exact-match only, never substring** (see [Notable engineering decisions](#notable-engineering-decisions)).
+
+Only 10 categories have SEO landing pages (cafe, restaurant, bar, pub, biergarten, hotel, museum, theater, cinema, attraction); the rest are search-only.
 
 ---
 
@@ -298,7 +324,7 @@ The split (e.g. `bar` / `pub` / `biergarten`, `theater` / `cinema`) keeps querie
 
 The `FilterPanel` is the left-hand sidebar (desktop) or the third tab (mobile):
 
-- **Sources** — toggle OSM / accessibility.cloud / Ginto / Google Places, each with a live status indicator and a predictive per-source result count. (Reisen für Alle is hidden but always active when keyed.)
+- **Sources** — toggle OSM / accessibility.cloud / Ginto / AccèsLibre / Google Places, each with a live status indicator and a predictive per-source result count. (Reisen für Alle is hidden but always active when keyed; AccèsLibre only returns results for searches centred in France.)
 - **Criteria** — wheelchair entrance, toilet, parking (with a `parkingNearby` sub-toggle), seating. Each active criterion contributes to `passesFilters` and `computeFilteredConfidence`.
 - **Radius** — default 5 km.
 - **"Show places with unclear information"** (`acceptUnknown`) — when off, places with `value === "unknown"` are dropped for any active criterion.
@@ -306,7 +332,7 @@ The `FilterPanel` is the left-hand sidebar (desktop) or the third tab (mobile):
 
 Active filters, source toggles and radius are persisted to `localStorage`. Separately, **user settings** (`lib/settings.ts`, key `ap_settings`) configure defaults via the `SettingsSheet` (gear icon): default search mode, default mobile view, pre-selected chip, sort order, auto-zoom, always-show-parking / always-show-toilets, show-weak-parking, public-toilets-only, and the amenity focus radius. First-time visitors see a welcome/onboarding screen.
 
-> **Invariant:** `SETTING_CHIPS` (in `lib/settings.ts`) and `CHIPS` (in `ChatPanel.tsx`) must stay in the same order — `defaultChipIdx` indexes both.
+> **Invariant:** chip identity is keyed by `Category`, not array position (`SETTING_CHIPS` in `lib/settings.ts`, `CHIP_GROUPS` in `ChatPanel.tsx`) — persistence and deep-links store the category itself, so reordering or removing a chip can no longer silently re-map a saved preference.
 
 ---
 
@@ -328,7 +354,7 @@ The service worker (`app/sw.ts` via `@serwist/next`) is **disabled in developmen
 
 In production the search pipeline races a **self-hosted Overpass server** (DACH-only, Hetzner) ahead of two public mirrors via `OVERPASS_ENDPOINTS` — first successful response wins, the rest are aborted. This eliminates public-mirror rate limits and cuts latency from 2–15 s to ~50–200 ms. The OSM adapter detects an overloaded daemon's HTML-200 responses and rejects that endpoint so the race falls through to the mirrors. See `CLAUDE.md` for the full server configuration and operational notes.
 
-`/api/search` applies in-memory per-IP sliding-window rate limits (10 searches/min general, 3/min for Google Places); these reset on serverless cold start.
+`/api/search` applies Redis-backed rate limits (`@upstash/ratelimit`, durable across cold starts and instances): 30 searches/min per IP generally, 5/min per IP when Google Places is requested, plus a cross-IP circuit breaker on Google Places specifically (15 requests/hour and 60/day, summed across all IPs) as a cost guard against IP-rotated abuse. The general limiter fails open if Redis is unreachable; the Google-specific limiters fail closed.
 
 ---
 
@@ -339,8 +365,9 @@ In production the search pipeline races a **self-hosted Overpass server** (DACH-
 | `POST /api/search` | NDJSON streaming search pipeline |
 | `GET /api/nearby-parking` | Disabled-parking and wheelchair-WC OSM nodes within a radius (`?types=parking,toilet`) |
 | `GET /api/geocode` | Nominatim forward geocode (DACH) |
-| `GET /api/geocode/suggest` | Photon city/district autocomplete |
-| `GET /api/geocode/place-suggest` | Photon POI autocomplete (name field) |
+| `GET /api/geocode/unified-suggest` | The active autocomplete route — one Photon call classified into areas + venues |
+| `GET /api/geocode/suggest` | Legacy area-only autocomplete (superseded by `unified-suggest`, no longer called by the UI) |
+| `GET /api/geocode/place-suggest` | Legacy POI-only autocomplete (superseded by `unified-suggest`, no longer called by the UI) |
 | `GET /api/geocode/reverse` | Nominatim reverse geocode (coords → district) |
 | `GET /api/health` | Token-protected E2E health check (live + `?mock=1`) |
 | `GET /api/stats` | Token-protected adapter usage stats |
@@ -369,7 +396,10 @@ npm run test:watch       # watch mode
 - `__tests__/components/` — React component tests (Testing Library / jsdom)
 - `__tests__/lib/` — pure unit tests (matching, merge, config, cities, adapters)
 - `__tests__/api/` — API route unit tests (node environment, mocked `fetch`)
+- `__tests__/a11y/` — `vitest-axe` structural accessibility tests (names/roles/labels/ARIA), run via `npm run test:a11y` and CI-gated on every push/PR
 - `__tests__/integration/` — live tests against OSM, A.Cloud, Google etc. They **skip themselves when keys or network are absent** and are not required for CI.
+
+The app targets **WCAG 2.2 AA** and is itself an accessibility product; `npm run check:contrast` additionally fails the build on a sub-threshold color-contrast pair in the design tokens.
 
 `vitest.setup.ts` mocks `window.matchMedia` (always desktop), `localStorage` and `ResizeObserver`.
 
