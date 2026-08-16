@@ -70,7 +70,7 @@ const pairs = [
   // colours on a plain page background.
   ["simple-city", "background", UI, "city-tile icon on bg"],
   ["simple-venue", "background", UI, "venue-tile icon on bg"],
-  ["simple-turbo", "background", UI, "turbo-mode switcher icon on bg"],
+  ["simple-expert", "background", UI, "expert-mode switcher icon on bg"],
 ]
 
 // Informational only — NOT gating. The default border is a light divider used

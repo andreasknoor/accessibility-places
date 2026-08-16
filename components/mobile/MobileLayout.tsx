@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import dynamic from "next/dynamic"
 import Script from "next/script"
 import Link from "next/link"
-import { Map, List, SlidersHorizontal, Compass, ChevronRight, LocateFixed, CheckCircle2, Search, Rocket } from "lucide-react"
+import { Map, List, SlidersHorizontal, Compass, ChevronRight, LocateFixed, CheckCircle2, Search, GraduationCap } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { hapticLight } from "@/lib/native/haptics"
@@ -294,12 +294,12 @@ export default function MobileLayout({
             {/* Identity label (v11.13) instead of the generic app subtitle —
                 names the mode actually active here, using its OWN icon/colour
                 (mirrors ModeSwitcher's own icon, which always shows the
-                target mode instead). This header only renders in Turbo (the
-                isQuickstart branch in HomeClient returns SimpleLayout first),
-                so it's unconditionally the Turbo identity. */}
-            <p className="flex items-center gap-1 text-xs font-semibold text-simple-turbo mt-0.5">
-              <Rocket className="w-3 h-3 shrink-0" aria-hidden />
-              {t.modeSwitcher.turboLabel}
+                target mode instead). This header only renders in Expert Mode
+                (the isQuickstart branch in HomeClient returns SimpleLayout
+                first), so it's unconditionally the Expert identity. */}
+            <p className="flex items-center gap-1 text-xs font-semibold text-simple-expert mt-0.5">
+              <GraduationCap className="w-3 h-3 shrink-0" aria-hidden />
+              {t.modeSwitcher.expertLabel}
             </p>
           </button>
         </div>
@@ -325,7 +325,7 @@ export default function MobileLayout({
               first row in the settings sheet (docs/plans/quickstart-mode-default.md
               Phase 1) — a one-tap mode toggle is used far more often than a
               once-per-session language change. */}
-          <ModeSwitcher mode="turbo" onSwitch={() => onUpdateSettings({ simpleView: true })} />
+          <ModeSwitcher mode="expert" onSwitch={() => onUpdateSettings({ simpleView: true })} />
           <SettingsSheet settings={settings} onUpdate={onUpdateSettings} onResetOnboarding={onResetOnboarding} />
         </div>
         <h1 className="sr-only">{t.app.srHeading}</h1>

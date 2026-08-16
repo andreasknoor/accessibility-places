@@ -139,7 +139,7 @@ describe("a11y baseline — SimplePlaceCard", () => {
 describe("a11y baseline — SimpleDetail", () => {
   it("has no structural axe violations", async () => {
     const { container } = renderSimple(
-      <SimpleDetail place={makePlace()} distanceM={240} onBack={() => {}} onOpenSettings={() => {}} onSwitchToTurbo={() => {}} />,
+      <SimpleDetail place={makePlace()} distanceM={240} onBack={() => {}} onOpenSettings={() => {}} onSwitchToExpert={() => {}} />,
     )
     expect(await axe(container)).toHaveNoViolations()
   })
@@ -159,7 +159,7 @@ describe("a11y baseline — SimpleDetail", () => {
         })}
         onBack={() => {}}
         onOpenSettings={() => {}}
-        onSwitchToTurbo={() => {}}
+        onSwitchToExpert={() => {}}
       />,
     )
     expect(await axe(container)).toHaveNoViolations()

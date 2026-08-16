@@ -3,7 +3,7 @@
 **Date:** 2026-07-25 (audit) / 2026-07-25 (fixes implemented, v11.4)
 **Scope:** `components/simple/SimpleLayout.tsx`, `components/simple/SimplePlaceCard.tsx`, `components/simple/SimpleDetail.tsx`, `components/ModeSwitcher.tsx` — i.e. every screen reachable while `simpleView` resolves truthy (`start`, `tiles`, `locating`, `results`, `venue`, `city`, `detail`).
 **Status:** **All findings below (D1–D5, P1–P2) have been implemented, v11.4.** `npm test` and `npx tsc --noEmit` pass; every fix except D2 was re-verified live in a running browser (see the "Fix" note under each finding). This document is kept as the audit record — findings are left in their original, as-found wording, with a short implementation note appended to each.
-**Reason this scope matters now:** per `docs/plans/quickstart-mode-default.md`, this is now the **default landing experience on mobile** for new users, not an opt-in secondary mode. Defects here reach more users than defects in Turbo Mode.
+**Reason this scope matters now:** per `docs/plans/quickstart-mode-default.md`, this is now the **default landing experience on mobile** for new users, not an opt-in secondary mode. Defects here reach more users than defects in Expert Mode.
 
 This report follows the same honesty framework as the app-wide `docs/wcag-accessibility-plan.md`: every finding below is labelled **Confirmed** (empirically verified live in a running browser), **Confirmed (static)** (verified by direct code/config inspection, not runtime), or **Needs human/AT testing** (outside what this session's tooling could check). Nothing here is reported as fact without one of those three labels attached.
 
@@ -16,7 +16,7 @@ This report follows the same honesty framework as the app-wide `docs/wcag-access
 - **What worked well:** injecting JS to call `.focus()` on a specific element, then reading `document.activeElement` and `getComputedStyle()`, reliably and precisely confirmed both focus-reachability and focus-indicator styling. Dispatching a real `KeyboardEvent('keydown', {key:'ArrowDown'})` on a focused element and observing the resulting `aria-valuenow` change reliably confirmed a working keyboard alternative to a drag interaction.
 - **What did not work, and is therefore *not* covered below:**
   - **Synthetic Tab-key navigation** (`computer` tool's `key: "Tab"` action) did not reliably move focus in this environment — it left `document.activeElement` on `BODY`, or landed on an unexpected element depending on prior click position. **Result: SC 2.4.3 Focus Order could not be live-verified this session.** Findings below that touch focus order are code-review inferences only, flagged as such.
-  - **Viewport resize** (`resize_window` to 320×700) did not actually shrink `window.innerWidth` (stayed at 1710). **Result: SC 1.4.10 Reflow at 320 CSS px / 400% zoom could not be live-verified.** Quickstart's layout is simpler and more single-column than Turbo Mode's (no resizable desktop columns visible on the phone-width screens actually used), so risk is judged lower, but this is inference, not verification.
+  - **Viewport resize** (`resize_window` to 320×700) did not actually shrink `window.innerWidth` (stayed at 1710). **Result: SC 1.4.10 Reflow at 320 CSS px / 400% zoom could not be live-verified.** Quickstart's layout is simpler and more single-column than Expert Mode's (no resizable desktop columns visible on the phone-width screens actually used), so risk is judged lower, but this is inference, not verification.
   - Real screen-reader output (VoiceOver/TalkBack/NVDA) was not exercised — no AT is attached to this browser session. All "would a screen reader announce X" judgments below are based on ARIA semantics/DOM structure, not captured audio/braille output.
 
 ---
@@ -100,7 +100,7 @@ One test needed updating as a result (`__tests__/components/SimpleLayout.test.ts
 
 All three matches are: an error `<p role="alert">` (×2, correct) and one `role="status"` on the venue/city-suggestion debounce spinner (`aria-label={t.chat.thinking}`, correct for that specific narrow case). **Nothing else is a live region** — specifically, the `locating` screen's "Standort wird ermittelt…" text (line ~903) and the results screen's arrival/count (e.g. "28 Orte gefunden") have no `aria-live` announcement at all.
 
-Contrast with the full UI: `ResultsList` (Turbo Mode) has a dedicated sr-only `role="status" aria-live="polite"` specifically for announcing search progress/outcome (documented in `CLAUDE.md`'s Accessibility section). Quickstart Mode has no equivalent — a screen-reader user who taps a category tile gets no spoken confirmation that a search started, is still running, or has finished with N results; they would need to manually re-explore the DOM to discover the outcome.
+Contrast with the full UI: `ResultsList` (Expert Mode) has a dedicated sr-only `role="status" aria-live="polite"` specifically for announcing search progress/outcome (documented in `CLAUDE.md`'s Accessibility section). Quickstart Mode has no equivalent — a screen-reader user who taps a category tile gets no spoken confirmation that a search started, is still running, or has finished with N results; they would need to manually re-explore the DOM to discover the outcome.
 
 **Suggested fix direction:** add a shared sr-only `aria-live="polite"` region (mirroring `ResultsList`'s pattern) that announces locating-in-progress → result count / no-results, reused across the `locating`→`results` transition.
 
@@ -114,7 +114,7 @@ Re-verified live: after a category search settled, the results-screen live regio
 
 ## 3. Confirmed but only a narrow pass — worth flagging as a process gap
 
-### P1 — `ModeSwitcher`'s Turbo-mode color bypasses the design-token contrast gate
+### P1 — `ModeSwitcher`'s Expert-mode color bypasses the design-token contrast gate
 Status: **Confirmed (static)**, manual contrast calculation.
 
 `components/ModeSwitcher.tsx` uses hardcoded Tailwind utility colors instead of the app's HSL custom-property token system:
@@ -127,9 +127,9 @@ target === "quickstart"
 
 Manually computed: amber-600 icon on white = **3.19:1**; amber-600 on amber-50 hover state = **3.07:1**. Both **narrowly pass** the 3:1 non-text-contrast threshold (SC 1.4.11) for this icon-only button — this is not currently a failure. But `scripts/check-contrast.mjs` only parses `:root` HSL token pairs in `app/globals.css`; a hardcoded Tailwind color is invisible to it. A future tweak to this specific shade (e.g. a slightly lighter amber for "warmer" branding) would ship without any CI signal, unlike every other interactive color in the app.
 
-**Suggested fix direction:** either move this into a named token (`--simple-turbo` alongside the existing `--simple-city`/`--simple-venue` pattern) and add it to the gate, or accept the risk explicitly and leave a comment noting it's intentionally outside the gate.
+**Suggested fix direction:** either move this into a named token (`--simple-expert` alongside the existing `--simple-city`/`--simple-venue` pattern) and add it to the gate, or accept the risk explicitly and leave a comment noting it's intentionally outside the gate.
 
-**✅ Fixed (v11.4):** added `--simple-turbo: 32.1 94.6% 43.7%` to `app/globals.css` `:root` (the HSL conversion of Tailwind's amber-600, so the resting-state colour is visually unchanged) plus a `--color-simple-turbo` Tailwind mapping; `ModeSwitcher.tsx` now uses `text-simple-turbo hover:bg-simple-turbo/10` instead of the hardcoded classes (the hover background changes from the flat `amber-50` swatch to a 10%-opacity tint of the same token, matching the pattern the `quickstart`-target branch already used with `bg-primary/10` — a deliberate small consistency improvement, not a visual regression). Added to `check-contrast.mjs`'s gated pairs; re-ran the script: `simple-turbo on background` → **3.19:1**, passing the 3:1 gate (matches this report's earlier manual calculation exactly).
+**✅ Fixed (v11.4):** added `--simple-expert: 32.1 94.6% 43.7%` to `app/globals.css` `:root` (the HSL conversion of Tailwind's amber-600, so the resting-state colour is visually unchanged) plus a `--color-simple-expert` Tailwind mapping; `ModeSwitcher.tsx` now uses `text-simple-expert hover:bg-simple-expert/10` instead of the hardcoded classes (the hover background changes from the flat `amber-50` swatch to a 10%-opacity tint of the same token, matching the pattern the `quickstart`-target branch already used with `bg-primary/10` — a deliberate small consistency improvement, not a visual regression). Added to `check-contrast.mjs`'s gated pairs; re-ran the script: `simple-expert on background` → **3.19:1**, passing the 3:1 gate (matches this report's earlier manual calculation exactly).
 
 ### P2 — `--simple-city` / `--simple-venue` tokens are also outside the contrast gate
 Status: **Confirmed (static)**, via grep of `scripts/check-contrast.mjs`.

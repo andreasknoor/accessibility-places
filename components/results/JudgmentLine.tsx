@@ -1,6 +1,6 @@
 "use client"
 
-// The Turbo-mode headline (v13, docs/plans/reliability-tiers.md): answers
+// The Expert Mode headline (v13, docs/plans/reliability-tiers.md): answers
 // "does this place satisfy my ACTIVE filters?" — a separate axis from
 // reliability (ConfidenceBadge.tsx's ScoreContent / the per-criterion
 // Nachsatz in A11yAttribute.tsx). Colour here is legitimate — this is the

@@ -318,7 +318,7 @@ export default function PlaceDebugSheet({ place, onClose, filters, onOpenFilters
   // One icon per criterion (not the generic wheelchair glyph everywhere) —
   // 2026-08-03 table redesign: rows read faster when entrance/toilet/seating
   // are silhouette-distinct, the same reasoning as CriterionIcon in
-  // Quickstart (components/simple/CriterionIcon.tsx) applied to Turbo.
+  // Quickstart (components/simple/CriterionIcon.tsx) applied to Expert Mode.
   const CRITERION_ROW_ICONS: Record<"entrance" | "toilet" | "seating", React.ElementType> = {
     entrance: DoorOpen,
     toilet:   ToiletIcon,
@@ -504,7 +504,8 @@ export default function PlaceDebugSheet({ place, onClose, filters, onOpenFilters
             {/* Lösung A (2026-08-03 prototype): the table keeps its natural
                 width and scrolls horizontally rather than squeezing columns
                 illegibly on a narrow screen or at a large system font size —
-                see docs artifact "Turbo-Modus: Verlässlichkeit-Tabelle". */}
+                see docs/plans/reliability-tiers.md for the reliability table
+                this renders. */}
             <div className="overflow-x-auto -mx-1 px-1">
               <table className="w-full min-w-[420px] text-xs border-collapse">
                 <thead>

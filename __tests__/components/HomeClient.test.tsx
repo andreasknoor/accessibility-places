@@ -856,12 +856,12 @@ describe("HomeClient — place deep-link honesty when the target isn't found", (
   })
 })
 
-// ─── Quickstart-vs-Turbo mode resolution ──────────────────────────────────
+// ─── Quickstart-vs-Expert mode resolution ──────────────────────────────────
 // The mode is resolved from three sources in strict precedence:
 //   1. the persisted explicit choice (settings.simpleView, tri-state)
 //   2. the device fallback, but ONLY for a device that hasn't used the app
 //      before (so an existing user is never moved without choosing to)
-//   3. a one-shot override that forces Turbo for deep links Quickstart
+//   3. a one-shot override that forces Expert for deep links Quickstart
 //      cannot represent — deliberately never persisted.
 // jsdom's matchMedia mock reports desktop by default (vitest.setup.ts), so
 // the mobile cases override it explicitly — without that they would silently
@@ -881,7 +881,7 @@ function setMobileViewport(isMobile: boolean) {
 // Quickstart's start screen is unmistakable: the full UI never renders it.
 const quickstartMarker = "Wie willst Du suchen?"
 
-describe("HomeClient — Quickstart/Turbo mode resolution", () => {
+describe("HomeClient — Quickstart/Expert mode resolution", () => {
   afterEach(() => setMobileViewport(false))
 
   it("a fresh install on a mobile device starts in Quickstart", async () => {
@@ -891,14 +891,14 @@ describe("HomeClient — Quickstart/Turbo mode resolution", () => {
     expect(await screen.findByText(quickstartMarker)).toBeInTheDocument()
   })
 
-  it("a fresh install on desktop starts in Turbo — the reduced layout is opt-in there", async () => {
+  it("a fresh install on desktop starts in Expert — the reduced layout is opt-in there", async () => {
     setMobileViewport(false)
     vi.stubGlobal("fetch", mockSearchFetch())
     render(<HomeClient />)
     await waitFor(() => expect(screen.queryByText(quickstartMarker)).not.toBeInTheDocument())
   })
 
-  it("an existing mobile user who never chose a mode keeps Turbo, rather than being moved", async () => {
+  it("an existing mobile user who never chose a mode keeps Expert, rather than being moved", async () => {
     setMobileViewport(true)
     localStorage.setItem("ap_visited", "1")
     vi.stubGlobal("fetch", mockSearchFetch())
@@ -906,7 +906,7 @@ describe("HomeClient — Quickstart/Turbo mode resolution", () => {
     await waitFor(() => expect(screen.queryByText(quickstartMarker)).not.toBeInTheDocument())
   })
 
-  it("an explicit Turbo choice wins over the mobile fallback", async () => {
+  it("an explicit Expert choice wins over the mobile fallback", async () => {
     setMobileViewport(true)
     localStorage.setItem("ap_settings", JSON.stringify({ ...DEFAULT_APP_SETTINGS, simpleView: false }))
     vi.stubGlobal("fetch", mockSearchFetch())
@@ -914,7 +914,7 @@ describe("HomeClient — Quickstart/Turbo mode resolution", () => {
     await waitFor(() => expect(screen.queryByText(quickstartMarker)).not.toBeInTheDocument())
   })
 
-  it("an explicit Quickstart choice wins on desktop, where the fallback would say Turbo", async () => {
+  it("an explicit Quickstart choice wins on desktop, where the fallback would say Expert", async () => {
     setMobileViewport(false)
     localStorage.setItem("ap_settings", JSON.stringify({ ...DEFAULT_APP_SETTINGS, simpleView: true }))
     vi.stubGlobal("fetch", mockSearchFetch())
@@ -926,7 +926,7 @@ describe("HomeClient — Quickstart/Turbo mode resolution", () => {
   // screen without either inventing a tile or silently searching something
   // else, so it falls back to the full UI. "theater" is an SEO category but
   // not one of Quickstart's eight tiles.
-  it("a city/category deep link outside Quickstart's tiles forces Turbo, even for a fresh mobile install", async () => {
+  it("a city/category deep link outside Quickstart's tiles forces Expert, even for a fresh mobile install", async () => {
     setMobileViewport(true)
     vi.stubGlobal("fetch", mockSearchFetch())
     render(<HomeClient initialCity="Berlin" initialCategory="theater" />)
@@ -936,7 +936,7 @@ describe("HomeClient — Quickstart/Turbo mode resolution", () => {
 
   // ...but that override must never be written to disk: the next ordinary
   // launch has to be back in Quickstart.
-  it("the deep-link Turbo override is not persisted", async () => {
+  it("the deep-link Expert override is not persisted", async () => {
     setMobileViewport(true)
     vi.stubGlobal("fetch", mockSearchFetch())
     render(<HomeClient initialCity="Berlin" initialCategory="theater" />)
@@ -1009,7 +1009,7 @@ describe("HomeClient — mode resolution stays stable across a session", () => {
 
   // A device that genuinely used the app in an EARLIER session is a different
   // case and must still keep the full UI it is used to.
-  it("a brand-new tab for a device that used the app earlier starts in Turbo", async () => {
+  it("a brand-new tab for a device that used the app earlier starts in Expert", async () => {
     setMobileViewport(true)
     localStorage.setItem("ap_visited", "1")
     sessionStorage.clear()  // a new tab has no snapshot yet

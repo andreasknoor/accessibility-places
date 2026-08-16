@@ -21,7 +21,7 @@ interface Props {
   // Same one-tap mode switcher as SimpleLayout's shared Header — this screen
   // has its own separate top row (not that shared component), so it needs
   // its own wiring rather than inheriting it for free.
-  onSwitchToTurbo: () => void
+  onSwitchToExpert: () => void
 }
 
 function CriterionRow({ label, value }: { label: string; value: A11yValue }) {
@@ -39,7 +39,7 @@ function CriterionRow({ label, value }: { label: string; value: A11yValue }) {
 // verified/dog/veggie badges — see the Rein/Raus table in the plan. Kept:
 // name, distance, address, the 3 core criteria as plain sentences, call,
 // website, "Hinbringen".
-export default function SimpleDetail({ place, distanceM, onBack, onOpenSettings, onSwitchToTurbo }: Props) {
+export default function SimpleDetail({ place, distanceM, onBack, onOpenSettings, onSwitchToExpert }: Props) {
   const t = useTranslations()
   const addr = [place.address.street, place.address.houseNumber, place.address.city]
     .filter(Boolean).join(" ")
@@ -87,7 +87,7 @@ export default function SimpleDetail({ place, distanceM, onBack, onOpenSettings,
           {t.simple.back}
         </button>
         <span className="flex-1" />
-        <ModeSwitcher mode="quickstart" onSwitch={onSwitchToTurbo} />
+        <ModeSwitcher mode="quickstart" onSwitch={onSwitchToExpert} />
         <button
           onClick={onOpenSettings}
           aria-label={t.settings.title}
@@ -116,7 +116,7 @@ export default function SimpleDetail({ place, distanceM, onBack, onOpenSettings,
         </div>
 
         {/* Fixed, absolute headline (decision 7, v13) — Quickstart's preset is
-            fixed by app design, unlike Turbo's user-chosen filters, so this
+            fixed by app design, unlike Expert Mode's user-chosen filters, so this
             can state the judgement outright rather than naming "your
             criteria". No reliability tier/percentage here, matching this
             screen's existing "no score formula" scope cut — see the

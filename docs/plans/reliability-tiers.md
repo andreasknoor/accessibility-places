@@ -75,16 +75,16 @@ which doesn't map onto a tier system built around source corroboration
 rather than data completeness. A toilet can now reach `sehr_hoch` like any
 other criterion.
 
-## Judgement line copy (Turbo vs. Quickstart)
+## Judgement line copy (Expert vs. Quickstart)
 
-- **Turbo**: names the active filters and, on a pass, whether it was
+- **Expert**: names the active filters and, on a pass, whether it was
   unconditional, "mit Einschränkung bei X", or "keine Angabe zu X" (only
   when `acceptUnknown` is on — otherwise unknown never passes the filter in
   the first place, so the line is close to constant when strict). Never
   claims "barrierefrei" outright — the filters are the user's own choice,
   not a universal fact.
 - **Quickstart**: fixed preset, so the absolute wording "Barrierefrei
-  nutzbar" is accurate and simpler than mirroring Turbo's filter-relative
+  nutzbar" is accurate and simpler than mirroring Expert's filter-relative
   phrasing.
 - **SEO landing pages**: no user filters exist at all (`FILTERS_STRICT` is
   hard-coded). Fixed wording "Eingang und WC barrierefrei" — no dynamic

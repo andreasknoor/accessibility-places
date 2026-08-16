@@ -78,7 +78,7 @@ The migration plan flagged "no caching strategy for vector tiles/glyphs/sprite" 
 
 ## Verification status (Phase 4, closed out at the v12.0 cutover)
 
-Manual test matrix (desktop Turbo-Modus, mobile Turbo-Modus, Quickstart-Modus, international mode, native iOS/Android shells) signed off by manual testing ahead of the cutover — see the commit history from v11.24 through v12.0 for the individual bugs found and fixed along the way (popup positioning, clustering, attribution control, the Quickstart split ratio, etc.).
+Manual test matrix (desktop Experten-Modus, mobile Experten-Modus, Quickstart-Modus, international mode, native iOS/Android shells) signed off by manual testing ahead of the cutover — see the commit history from v11.24 through v12.0 for the individual bugs found and fixed along the way (popup positioning, clustering, attribution control, the Quickstart split ratio, etc.).
 
 - R11 (popup button touch handling on real mobile devices) — plain `addEventListener` is used (MapLibre popups are ordinary DOM outside the WebGL canvas, unlike Leaflet's touch-interception problem), which was the main touch-specific risk; covered by the manual pass above.
 - E2E/visual regression automation — deferred by explicit choice (2026-07-31): the team is not adopting Playwright for this yet, given the added devDependency weight; live manual verification was the safety net for this migration.

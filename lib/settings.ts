@@ -52,11 +52,11 @@ export interface AppSettings {
   // existing search call instead of mutating the shared `filters`/`radiusKm`
   // state). Reachable from every screen with a header via the mode switcher
   // (MobileLayout / SimpleLayout's shared Header / the desktop header), plus
-  // the "Turbo-Modus an" pill on Quickstart's own start screen.
+  // the "Experten-Modus an" pill on Quickstart's own start screen.
   //
   // Tri-state, not boolean: `null` means "never explicitly chosen" and is
   // resolved at the single read site (HomeClient) against the device's
-  // pointer/width — mobile/touch defaults to Quickstart, desktop to Turbo.
+  // pointer/width — mobile/touch defaults to Quickstart, desktop to Expert.
   // This is deliberately NOT collapsed into a persisted boolean default: a
   // one-time migration that WRITES a guessed value to localStorage risks
   // permanently mis-moding an existing user if the read that informed the

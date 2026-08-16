@@ -134,7 +134,7 @@ describe("SettingsPanel — simple mode (opened from within Simple View)", () =>
   // content) — this row, reachable via the gear from every one of those
   // screens, is its only path to these three pages. Without it, an imprint
   // that legally must stay "unmittelbar erreichbar" (§ 5 DDG) would be
-  // unreachable for anyone who never switches to Turbo Mode.
+  // unreachable for anyone who never switches to Expert Mode.
   it("shows FAQ/Impressum/Über uns links, reachable from Quickstart's only settings entry point", () => {
     render(<SettingsPanel settings={DEFAULT_APP_SETTINGS} onUpdate={vi.fn()} onClose={vi.fn()} simple />)
     expect(screen.getByRole("link", { name: "FAQ" })).toHaveAttribute("href", "/faq")
@@ -156,7 +156,7 @@ describe("SettingsPanel — simple mode (opened from within Simple View)", () =>
 // self-explanatory, discoverable alternative in both modes, not just
 // Quickstart's.
 describe("SettingsPanel — mode switch row", () => {
-  it("is on when opened from Quickstart, and switches to Turbo Mode on toggle", () => {
+  it("is on when opened from Quickstart, and switches to Expert Mode on toggle", () => {
     const onUpdate = vi.fn()
     render(<SettingsPanel settings={DEFAULT_APP_SETTINGS} onUpdate={onUpdate} onClose={vi.fn()} simple />)
     const row = screen.getByText("Quickstart-Modus").parentElement!.parentElement!
@@ -166,7 +166,7 @@ describe("SettingsPanel — mode switch row", () => {
     expect(onUpdate).toHaveBeenCalledWith({ simpleView: false })
   })
 
-  it("is off when opened from Turbo Mode, and switches to Quickstart Mode on toggle", () => {
+  it("is off when opened from Expert Mode, and switches to Quickstart Mode on toggle", () => {
     const onUpdate = vi.fn()
     render(<SettingsPanel settings={DEFAULT_APP_SETTINGS} onUpdate={onUpdate} onClose={vi.fn()} />)
     const row = screen.getByText("Quickstart-Modus").parentElement!.parentElement!

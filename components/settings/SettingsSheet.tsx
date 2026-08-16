@@ -286,11 +286,11 @@ export function SettingsPanel({ settings, onUpdate, onResetOnboarding, onClose, 
               reachable via the gear from every one of those screens, is its
               only path to FAQ/Impressum/Über uns. Satisfies the legal
               "unmittelbar erreichbar" requirement for the imprint (§ 5 DDG,
-              "two-click rule") — Turbo Mode already meets it via the footer and
+              "two-click rule") — Expert Mode already meets it via the footer and
               is deliberately left unchanged here (see docs/plans). Feedback is
               NOT included: unlike these three static/legal links it's an
               action worth keeping low-friction, not something to fold in here.
-              text-xs/text-muted-foreground matches the Turbo footer's own
+              text-xs/text-muted-foreground matches the Expert Mode footer's own
               styling for these exact links. */}
           <div className="border-t border-border mt-6 pt-4 flex flex-wrap justify-center gap-x-5 gap-y-1.5">
             <Link href={locale === "en" ? "/en/faq" : "/faq"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">

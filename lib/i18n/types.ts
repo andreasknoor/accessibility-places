@@ -524,21 +524,21 @@ export interface Translations {
     mode:                  string
     modeHint:              string
   }
-  // Header control that switches between Quickstart Mode and Turbo Mode —
+  // Header control that switches between Quickstart Mode and Expert Mode —
   // see docs/plans/quickstart-mode-default.md. Two aria-label/title strings
   // rather than one generic "switch mode" label: each always names the mode
   // a tap would switch TO, since the control shows the target mode's own
   // icon/colour, not the current mode's.
   modeSwitcher: {
     switchToQuickstart: string
-    switchToTurbo:      string
+    switchToExpert:     string
     // Identity labels (not actions) — shown next to the mode's OWN icon in
     // place of the generic app subtitle, so the header/start-screen names
     // whichever mode is currently active rather than only the one a tap
     // would switch to. See ModeSwitcher.tsx's own comment for the
     // target-vs-current icon distinction this pairs with.
     quickstartLabel: string
-    turboLabel:      string
+    expertLabel:     string
   }
   // Simple View ("Variante B — Zwei Wege"): reduced mobile layout, see
   // components/simple/SimpleLayout.tsx. Plain-language sentences per

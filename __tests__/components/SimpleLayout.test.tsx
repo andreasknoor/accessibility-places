@@ -228,7 +228,7 @@ describe("SimpleLayout — start screen", () => {
   it("the return-to-full-UI link is present", () => {
     renderLayout()
     expect(screen.getByText("oder alternativ")).toBeInTheDocument()
-    expect(screen.getByText("Turbo-Modus an: Alle Features aktivieren.")).toBeInTheDocument()
+    expect(screen.getByText("Experten-Modus an: Alle Features aktivieren.")).toBeInTheDocument()
   })
 
   // Regression: this button used to just open the Settings sheet, leaving the
@@ -237,7 +237,7 @@ describe("SimpleLayout — start screen", () => {
   // simpleView off directly instead.
   it("switches off Simple View directly, without opening the Settings sheet", () => {
     const { handlers } = renderLayout()
-    fireEvent.click(screen.getByText("Turbo-Modus an: Alle Features aktivieren."))
+    fireEvent.click(screen.getByText("Experten-Modus an: Alle Features aktivieren."))
     expect(handlers.onUpdateSettings).toHaveBeenCalledWith({ simpleView: false })
     // "Sprache" is the settings sheet's first row — its absence is what shows
     // the sheet never opened. (This used to look for the old "Einfache Ansicht"
@@ -1540,22 +1540,22 @@ describe("SimpleLayout — settings always reachable", () => {
   })
 })
 
-// The gear icon → Settings sheet no longer carries a Quickstart/Turbo toggle
+// The gear icon → Settings sheet no longer carries a Quickstart/Expert toggle
 // row (removed as redundant once every screen with a header got its own
 // one-tap mode switcher, see components/ModeSwitcher.tsx) — these cover that
 // switcher instead, on every screen that has a header.
 describe("SimpleLayout — mode switcher always reachable", () => {
-  it("is reachable from the category tiles screen and switches to Turbo Mode", () => {
+  it("is reachable from the category tiles screen and switches to Expert Mode", () => {
     const { handlers } = renderLayout()
     fireEvent.click(screen.getByText("In meiner Nähe suchen"))
-    fireEvent.click(screen.getByRole("button", { name: "Zu Turbo-Modus wechseln" }))
+    fireEvent.click(screen.getByRole("button", { name: "Zu Experten-Modus wechseln" }))
     expect(handlers.onUpdateSettings).toHaveBeenCalledWith({ simpleView: false })
   })
 
-  it("is reachable from the venue search screen and switches to Turbo Mode", () => {
+  it("is reachable from the venue search screen and switches to Expert Mode", () => {
     const { handlers } = renderLayout()
     fireEvent.click(screen.getByText("Einen konkreten Ort bzw. Lokalität suchen"))
-    fireEvent.click(screen.getByRole("button", { name: "Zu Turbo-Modus wechseln" }))
+    fireEvent.click(screen.getByRole("button", { name: "Zu Experten-Modus wechseln" }))
     expect(handlers.onUpdateSettings).toHaveBeenCalledWith({ simpleView: false })
   })
 })

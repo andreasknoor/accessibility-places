@@ -34,8 +34,8 @@ const FAQ_CATEGORIES_EN: FaqCategory[] = [
         a: "Restaurants, cafés & ice cream shops, bars, pubs, beer gardens, fast food / snack bars, hotels, hostels, holiday apartments, campsites, museums, theatres, cinemas, libraries, galleries, attractions and zoos — everyday places such as pharmacies, doctor's offices, dentists, veterinarians, hospitals, drugstores, supermarkets, bakeries, hairdressers, banks and post offices — plus swimming pools, fitness centers, playgrounds, parks, physiotherapists, medical supply stores, hearing aid stores, opticians, town halls, places of worship and train stations.",
       },
       {
-        id: "quickstart-vs-turbo",
-        q: "What is Quickstart Mode, and how is it different from Turbo Mode?",
+        id: "quickstart-vs-expert",
+        q: "What is Quickstart Mode, and how is it different from Expert Mode?",
         a: (
           <>
             <p>
@@ -43,7 +43,7 @@ const FAQ_CATEGORIES_EN: FaqCategory[] = [
               a reduced interface for a fast start: three big paths (&ldquo;Search nearby&rdquo;, &ldquo;Search a
               venue&rdquo;, &ldquo;Search another city&rdquo;), eight fixed categories, and no filter settings. On
               smartphones it&apos;s the default view on a fresh install.{" "}
-              <strong className="font-semibold text-foreground">Turbo Mode</strong> is the full app
+              <strong className="font-semibold text-foreground">Expert Mode</strong> is the full app
               with every filter, every source, and all 51 categories — the default on desktop.
             </p>
             <p className="mt-2">
@@ -52,14 +52,14 @@ const FAQ_CATEGORIES_EN: FaqCategory[] = [
               the mode-switch icon at the top of the header; your choice is remembered.
             </p>
             <p className="mt-2 text-muted-foreground">
-              Note: unless stated otherwise, the rest of this FAQ describes Turbo Mode. In
+              Note: unless stated otherwise, the rest of this FAQ describes Expert Mode. In
               Quickstart Mode, the same searches run through the three tiles on the start screen
               instead of the search field and category chips.
             </p>
           </>
         ),
         schemaText:
-          "Accessible Places has two views. Quickstart Mode is a reduced interface for a fast start: three big paths (Search nearby, Search a venue, Search another city), eight fixed categories, and no filter settings. On smartphones it's the default view on a fresh install. Turbo Mode is the full app with every filter, every source, and all 51 categories — the default on desktop. Both modes draw on the same accessibility data — Quickstart Mode just shows a narrower, pre-filtered selection. You can switch between them at any time by tapping the mode-switch icon at the top of the header; your choice is remembered. Unless stated otherwise, the rest of this FAQ describes Turbo Mode. In Quickstart Mode, the same searches run through the three tiles on the start screen instead of the search field and category chips.",
+          "Accessible Places has two views. Quickstart Mode is a reduced interface for a fast start: three big paths (Search nearby, Search a venue, Search another city), eight fixed categories, and no filter settings. On smartphones it's the default view on a fresh install. Expert Mode is the full app with every filter, every source, and all 51 categories — the default on desktop. Both modes draw on the same accessibility data — Quickstart Mode just shows a narrower, pre-filtered selection. You can switch between them at any time by tapping the mode-switch icon at the top of the header; your choice is remembered. Unless stated otherwise, the rest of this FAQ describes Expert Mode. In Quickstart Mode, the same searches run through the three tiles on the start screen instead of the search field and category chips.",
       },
       {
         id: "free",
@@ -249,15 +249,15 @@ const FAQ_CATEGORIES_EN: FaqCategory[] = [
               Android on Google Play
             </a>
             . Once installed, it opens straight into{" "}
-            <a href="#quickstart-vs-turbo" className="text-primary underline hover:opacity-80">
+            <a href="#quickstart-vs-expert" className="text-primary underline hover:opacity-80">
               Quickstart Mode
             </a>{" "}
-            on smartphones — tap the mode-switch icon any time to switch to Turbo Mode and its full
+            on smartphones — tap the mode-switch icon any time to switch to Expert Mode and its full
             feature set.
           </>
         ),
         schemaText:
-          "Yes — Accessible Places is available as a free app for iPhone/iPad on the App Store and for Android on Google Play. Once installed, it opens straight into Quickstart Mode on smartphones — tap the mode-switch icon any time to switch to Turbo Mode and its full feature set.",
+          "Yes — Accessible Places is available as a free app for iPhone/iPad on the App Store and for Android on Google Play. Once installed, it opens straight into Quickstart Mode on smartphones — tap the mode-switch icon any time to switch to Expert Mode and its full feature set.",
       },
       {
         id: "feedback",

@@ -34,8 +34,8 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
         a: "Restaurants, Cafés & Eisdielen, Bars, Kneipen, Biergärten, Imbisse, Hotels, Hostels, Ferienwohnungen, Campingplätze, Museen, Theater, Kinos, Bibliotheken, Galerien, Sehenswürdigkeiten und Zoos — Alltagsorte wie Apotheken, Arztpraxen, Zahnärzte, Tierärzte, Krankenhäuser, Drogerien, Supermärkte, Bäckereien, Friseure, Banken und Postfilialen — sowie Schwimmbäder, Fitnessstudios, Spielplätze, Parks, Physiotherapiepraxen, Sanitätshäuser, Hörakustiker, Optiker, Rathäuser, Gotteshäuser und Bahnhöfe.",
       },
       {
-        id: "quickstart-vs-turbo",
-        q: "Was ist der Quickstart-Modus, und wie unterscheidet er sich vom Turbo-Modus?",
+        id: "quickstart-vs-expert",
+        q: "Was ist der Quickstart-Modus, und wie unterscheidet er sich vom Experten-Modus?",
         a: (
           <>
             <p>
@@ -44,7 +44,7 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
               (&bdquo;In der Nähe suchen&ldquo;, &bdquo;Einen Ort suchen&ldquo;, &bdquo;In einer anderen
               Stadt suchen&ldquo;), acht feste Kategorien und keine Filtereinstellungen. Auf dem
               Smartphone ist er die Standardansicht bei einer Neuinstallation. Der{" "}
-              <strong className="font-semibold text-foreground">Turbo-Modus</strong> ist die volle
+              <strong className="font-semibold text-foreground">Experten-Modus</strong> ist die volle
               App mit allen Filtern, allen Quellen und allen 51 Kategorien — die Standardansicht am
               Desktop.
             </p>
@@ -55,13 +55,13 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
             </p>
             <p className="mt-2 text-muted-foreground">
               Hinweis: Die übrigen Antworten in dieser FAQ beschreiben, sofern nicht anders angegeben,
-              den Turbo-Modus. Im Quickstart-Modus laufen dieselben Suchen über die drei Kacheln auf
+              den Experten-Modus. Im Quickstart-Modus laufen dieselben Suchen über die drei Kacheln auf
               dem Startbildschirm statt über Sucheingabe und Kategorie-Chips.
             </p>
           </>
         ),
         schemaText:
-          "Accessible Places hat zwei Ansichten. Der Quickstart-Modus ist eine reduzierte Oberfläche für einen schnellen Einstieg: drei große Wege (In der Nähe suchen, Einen Ort suchen, In einer anderen Stadt suchen), acht feste Kategorien und keine Filtereinstellungen. Auf dem Smartphone ist er die Standardansicht bei einer Neuinstallation. Der Turbo-Modus ist die volle App mit allen Filtern, allen Quellen und allen 51 Kategorien — die Standardansicht am Desktop. Beide Modi greifen auf dieselben Barrierefreiheitsdaten zu — der Quickstart-Modus zeigt nur eine engere, bereits gefilterte Auswahl. Zwischen beiden wechselst du jederzeit mit einem Tipp auf das Umschalt-Symbol oben im Kopfbereich; deine Wahl wird gespeichert. Die übrigen Antworten in dieser FAQ beschreiben, sofern nicht anders angegeben, den Turbo-Modus. Im Quickstart-Modus laufen dieselben Suchen über die drei Kacheln auf dem Startbildschirm statt über Sucheingabe und Kategorie-Chips.",
+          "Accessible Places hat zwei Ansichten. Der Quickstart-Modus ist eine reduzierte Oberfläche für einen schnellen Einstieg: drei große Wege (In der Nähe suchen, Einen Ort suchen, In einer anderen Stadt suchen), acht feste Kategorien und keine Filtereinstellungen. Auf dem Smartphone ist er die Standardansicht bei einer Neuinstallation. Der Experten-Modus ist die volle App mit allen Filtern, allen Quellen und allen 51 Kategorien — die Standardansicht am Desktop. Beide Modi greifen auf dieselben Barrierefreiheitsdaten zu — der Quickstart-Modus zeigt nur eine engere, bereits gefilterte Auswahl. Zwischen beiden wechselst du jederzeit mit einem Tipp auf das Umschalt-Symbol oben im Kopfbereich; deine Wahl wird gespeichert. Die übrigen Antworten in dieser FAQ beschreiben, sofern nicht anders angegeben, den Experten-Modus. Im Quickstart-Modus laufen dieselben Suchen über die drei Kacheln auf dem Startbildschirm statt über Sucheingabe und Kategorie-Chips.",
       },
       {
         id: "free",
@@ -253,15 +253,15 @@ const FAQ_CATEGORIES_DE: FaqCategory[] = [
               Android im Play Store
             </a>
             . Nach der Installation startest du auf dem Smartphone automatisch im{" "}
-            <a href="#quickstart-vs-turbo" className="text-primary underline hover:opacity-80">
+            <a href="#quickstart-vs-expert" className="text-primary underline hover:opacity-80">
               Quickstart-Modus
             </a>{" "}
-            — mit einem Tipp auf das Umschalt-Symbol wechselst du jederzeit in den Turbo-Modus mit
+            — mit einem Tipp auf das Umschalt-Symbol wechselst du jederzeit in den Experten-Modus mit
             allen Funktionen.
           </>
         ),
         schemaText:
-          "Ja — Accessible Places gibt es als kostenlose App für iPhone/iPad im App Store und für Android im Play Store. Nach der Installation startest du auf dem Smartphone automatisch im Quickstart-Modus — mit einem Tipp auf das Umschalt-Symbol wechselst du jederzeit in den Turbo-Modus mit allen Funktionen.",
+          "Ja — Accessible Places gibt es als kostenlose App für iPhone/iPad im App Store und für Android im Play Store. Nach der Installation startest du auf dem Smartphone automatisch im Quickstart-Modus — mit einem Tipp auf das Umschalt-Symbol wechselst du jederzeit in den Experten-Modus mit allen Funktionen.",
       },
       {
         id: "feedback",

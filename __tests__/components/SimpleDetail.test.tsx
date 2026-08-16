@@ -39,25 +39,25 @@ function makePlace(overrides: Partial<Place> = {}): Place {
 
 describe("SimpleDetail", () => {
   it("renders name, address, and distance", () => {
-    renderWithProvider(<SimpleDetail place={makePlace()} distanceM={410} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />)
+    renderWithProvider(<SimpleDetail place={makePlace()} distanceM={410} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToExpert={vi.fn()} />)
     expect(screen.getByText("Restaurant Zur Post")).toBeInTheDocument()
     expect(screen.getByText(/Hohenzollernring 8 Köln/)).toBeInTheDocument()
     expect(screen.getByText("410 m entfernt")).toBeInTheDocument()
   })
 
   it("renders all three criteria as plain sentences matching their values", () => {
-    renderWithProvider(<SimpleDetail place={makePlace()} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />)
+    renderWithProvider(<SimpleDetail place={makePlace()} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToExpert={vi.fn()} />)
     expect(screen.getByText("Eingang stufenlos erreichbar")).toBeInTheDocument()
     expect(screen.getByText("WC eingeschränkt nutzbar")).toBeInTheDocument()
     expect(screen.getByText("Kein barrierefreier Parkplatz")).toBeInTheDocument()
   })
 
   it("shows a call link only when a phone number is present", () => {
-    const { rerender } = renderWithProvider(<SimpleDetail place={makePlace()} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />)
+    const { rerender } = renderWithProvider(<SimpleDetail place={makePlace()} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToExpert={vi.fn()} />)
     expect(screen.queryByText("Anrufen")).not.toBeInTheDocument()
     rerender(
       <LocaleProvider initialLocale="de">
-        <SimpleDetail place={makePlace({ phone: "+49123456789" })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />
+        <SimpleDetail place={makePlace({ phone: "+49123456789" })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToExpert={vi.fn()} />
       </LocaleProvider>,
     )
     const callLink = screen.getByText("Anrufen").closest("a")
@@ -65,32 +65,32 @@ describe("SimpleDetail", () => {
   })
 
   it("shows a website link only when a website is present", () => {
-    renderWithProvider(<SimpleDetail place={makePlace({ website: "https://example.com" })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />)
+    renderWithProvider(<SimpleDetail place={makePlace({ website: "https://example.com" })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToExpert={vi.fn()} />)
     const websiteLink = screen.getByText("Website besuchen").closest("a")
     expect(websiteLink).toHaveAttribute("href", "https://example.com")
   })
 
   it("calls onBack when the back button is clicked", () => {
     const onBack = vi.fn()
-    renderWithProvider(<SimpleDetail place={makePlace()} onBack={onBack} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />)
+    renderWithProvider(<SimpleDetail place={makePlace()} onBack={onBack} onOpenSettings={vi.fn()} onSwitchToExpert={vi.fn()} />)
     fireEvent.click(screen.getByText("Zurück"))
     expect(onBack).toHaveBeenCalledTimes(1)
   })
 
   it("calls onOpenSettings when the settings icon is clicked — the full-UI return path must stay reachable from the detail screen too", () => {
     const onOpenSettings = vi.fn()
-    renderWithProvider(<SimpleDetail place={makePlace()} onBack={vi.fn()} onOpenSettings={onOpenSettings} onSwitchToTurbo={vi.fn()} />)
+    renderWithProvider(<SimpleDetail place={makePlace()} onBack={vi.fn()} onOpenSettings={onOpenSettings} onSwitchToExpert={vi.fn()} />)
     fireEvent.click(screen.getByRole("button", { name: "Einstellungen" }))
     expect(onOpenSettings).toHaveBeenCalledTimes(1)
   })
 
   // Fixed, absolute headline (v13, decision 7) — replaces the old percentage
   // confidence badge. Quickstart's preset is fixed by app design (unlike
-  // Turbo's user-chosen filters), so the headline states the judgement
+  // Expert Mode's user-chosen filters), so the headline states the judgement
   // outright. Uses category "museum" (not in SIMPLE_TOILET_REQUIRED_CATEGORIES)
   // so the toilet value can't affect this judgement — only entrance does.
   it("shows the fixed 'Barrierefrei nutzbar' headline when entrance passes cleanly", () => {
-    renderWithProvider(<SimpleDetail place={makePlace({ category: "museum" })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()} />)
+    renderWithProvider(<SimpleDetail place={makePlace({ category: "museum" })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToExpert={vi.fn()} />)
     expect(screen.getByText("Barrierefrei nutzbar")).toBeInTheDocument()
   })
 
@@ -99,7 +99,7 @@ describe("SimpleDetail", () => {
     renderWithProvider(
       <SimpleDetail
         place={{ ...place, accessibility: { ...place.accessibility, entrance: buildAttribute("osm", "limited", "limited", {}) } }}
-        onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()}
+        onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToExpert={vi.fn()}
       />,
     )
     expect(screen.getByText("Barrierefrei nutzbar – mit Einschränkung")).toBeInTheDocument()
@@ -117,7 +117,7 @@ describe("SimpleDetail", () => {
       renderWithProvider(
         <SimpleDetail
           place={{ ...place, accessibility: { ...place.accessibility, entrance: buildAttribute("osm", "no", "no", {}) } }}
-          onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()}
+          onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToExpert={vi.fn()}
         />,
       )
       expect(screen.getByText("Nicht barrierefrei")).toBeInTheDocument()
@@ -135,7 +135,7 @@ describe("SimpleDetail", () => {
       renderWithProvider(
         <SimpleDetail
           place={{ ...place, accessibility: { ...place.accessibility, toilet: buildAttribute("osm", "unknown", "unknown", {}) } }}
-          onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToTurbo={vi.fn()}
+          onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToExpert={vi.fn()}
         />,
       )
       expect(screen.getByText("Nicht barrierefrei")).toBeInTheDocument()

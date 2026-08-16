@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import dynamic from "next/dynamic"
-import { ChevronLeft, LocateFixed, Search as SearchIcon, Building2, X as XIcon, Rocket, Sparkles, Loader2, Settings as SettingsIcon } from "lucide-react"
+import { ChevronLeft, LocateFixed, Search as SearchIcon, Building2, X as XIcon, GraduationCap, Sparkles, Loader2, Settings as SettingsIcon } from "lucide-react"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { getBestPosition, hasLocationPermission, type GeoPosition } from "@/lib/native/geolocation"
 import { haversineMetres } from "@/lib/matching/match"
@@ -161,15 +161,15 @@ interface Props {
 // on every keystroke.
 //
 // `onOpenSettings` is a quiet gear icon reachable from every screen that uses
-// this Header. `onSwitchToTurbo` sits next to it for the same "reachable from
+// this Header. `onSwitchToExpert` sits next to it for the same "reachable from
 // wherever the user currently is" reason — it's Quickstart's one-tap way back
 // to the full UI on these screens (tiles/results/venue/city), in the slot the
 // language switcher used to occupy (moved into the settings sheet, see
 // docs/plans/quickstart-mode-default.md Phase 1). The start screen has no back
 // target and no header bar, so it renders its own top row instead — with the
 // gear in the same rightmost position, but deliberately no mode-switch icon:
-// its own full "Turbo-Modus an" pill already is that action.
-function Header({ title, backLabel, settingsLabel, onBack, onOpenSettings, onSwitchToTurbo }: { title?: string; backLabel: string; settingsLabel: string; onBack?: () => void; onOpenSettings: () => void; onSwitchToTurbo: () => void }) {
+// its own full "Experten-Modus an" pill already is that action.
+function Header({ title, backLabel, settingsLabel, onBack, onOpenSettings, onSwitchToExpert }: { title?: string; backLabel: string; settingsLabel: string; onBack?: () => void; onOpenSettings: () => void; onSwitchToExpert: () => void }) {
   return (
     // pt-safe-3, not pt-3: this row sits flush at the very top of the h-svh
     // root (no browser chrome/native title bar above it, unlike MobileLayout's
@@ -186,7 +186,7 @@ function Header({ title, backLabel, settingsLabel, onBack, onOpenSettings, onSwi
       ) : <span className="w-4" />}
       {title && <h1 className="flex-1 text-center text-sm font-semibold px-1 truncate">{title}</h1>}
       {!title && <span className="flex-1" />}
-      <ModeSwitcher mode="quickstart" onSwitch={onSwitchToTurbo} />
+      <ModeSwitcher mode="quickstart" onSwitch={onSwitchToExpert} />
       <button
         onClick={onOpenSettings}
         aria-label={settingsLabel}
@@ -806,7 +806,7 @@ export default function SimpleLayout({
                 puts it — so settings (and, inside them, the language switcher)
                 are reachable from EVERY screen, this one included. It
                 deliberately gets no ModeSwitcher next to it, unlike the shared
-                Header: the full "Turbo-Modus an" pill further down this very
+                Header: the full "Experten-Modus an" pill further down this very
                 screen is already that action, with a label and a subline, and
                 a second bare icon a few hundred pixels away would just be the
                 same switch twice. */}
@@ -837,7 +837,7 @@ export default function SimpleLayout({
                     unconditionally the Quickstart identity; the shared
                     Header() further down this file (tiles/results/detail)
                     has no subtitle slot to begin with, so ModeSwitcher's own
-                    Rocket icon remains its only identity signal. */}
+                    GraduationCap icon remains its only identity signal. */}
                 <p className="flex items-center gap-1 text-xs font-semibold text-primary mt-1">
                   <Sparkles className="w-3 h-3 shrink-0" aria-hidden />
                   {t.modeSwitcher.quickstartLabel}
@@ -912,7 +912,7 @@ export default function SimpleLayout({
               className="flex flex-col items-center gap-0.5 rounded-2xl bg-primary/10 text-primary px-3.5 py-2 mt-1 mx-auto hover:bg-primary/15 transition-colors"
             >
               <span className="flex items-center gap-1.5 text-xs font-semibold">
-                <Rocket className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                <GraduationCap className="w-3.5 h-3.5 shrink-0" aria-hidden />
                 {t.simple.showFullApp}
               </span>
               <span className="text-[11px] font-normal text-primary/70">{t.simple.showFullAppSub}</span>
@@ -924,7 +924,7 @@ export default function SimpleLayout({
         {/* ── Category tiles ── */}
         {screen === "tiles" && (
           <div className="flex-1 min-h-0 flex flex-col">
-            <Header title={t.simple.tilesTitle} backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen("start")} onOpenSettings={() => setSettingsOpen(true)} onSwitchToTurbo={() => onUpdateSettings({ simpleView: false })} />
+            <Header title={t.simple.tilesTitle} backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen("start")} onOpenSettings={() => setSettingsOpen(true)} onSwitchToExpert={() => onUpdateSettings({ simpleView: false })} />
             {locateError && (
               <p role="alert" className="mx-4 mt-1 mb-0 text-xs text-destructive">{locateError}</p>
             )}
@@ -992,7 +992,7 @@ export default function SimpleLayout({
         {/* ── Results (map strip + single scroll) ── */}
         {screen === "results" && (
           <div className="flex-1 min-h-0 flex flex-col">
-            <Header title={t.simple.resultsTitle(selectedAmenityType ? amenityLabel(selectedAmenityType) : categoryLabel(selectedCategory), pickedCity?.label)} backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen(resultsReturnTo)} onOpenSettings={() => setSettingsOpen(true)} onSwitchToTurbo={() => onUpdateSettings({ simpleView: false })} />
+            <Header title={t.simple.resultsTitle(selectedAmenityType ? amenityLabel(selectedAmenityType) : categoryLabel(selectedCategory), pickedCity?.label)} backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen(resultsReturnTo)} onOpenSettings={() => setSettingsOpen(true)} onSwitchToExpert={() => onUpdateSettings({ simpleView: false })} />
             {/* Screen-reader live region: announces search progress and outcome
                 (WCAG 4.1.3) — mirrors ResultsList's own identical pattern in
                 the full UI, which Quickstart Mode's results screen otherwise
@@ -1059,7 +1059,7 @@ export default function SimpleLayout({
                   panTrigger={mapPanTrigger}
                   onSelect={selectAndScrollToCard}
                   // No onShowInResults here (deliberately, unlike the full
-                  // Turbo UI): that prop only drives the venue popup's
+                  // Expert UI): that prop only drives the venue popup's
                   // "Ergebnisse" chip, and in Quickstart the results list is
                   // always on screen below the map — tapping the marker
                   // itself already calls onSelect above, which scrolls the
@@ -1214,7 +1214,7 @@ export default function SimpleLayout({
         {/* ── Venue search ── */}
         {screen === "venue" && (
           <div className="flex-1 min-h-0 flex flex-col">
-            <Header backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen("start")} onOpenSettings={() => setSettingsOpen(true)} onSwitchToTurbo={() => onUpdateSettings({ simpleView: false })} />
+            <Header backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen("start")} onOpenSettings={() => setSettingsOpen(true)} onSwitchToExpert={() => onUpdateSettings({ simpleView: false })} />
             {/* Header renders no visible title on this screen (the input IS
                 the screen's content) — a screen-reader-only h1 still gives
                 AT users a landmark heading to navigate by. */}
@@ -1269,7 +1269,7 @@ export default function SimpleLayout({
         {/* ── City search ("In einer anderen Stadt suchen") ── */}
         {screen === "city" && (
           <div className="flex-1 min-h-0 flex flex-col">
-            <Header backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen("start")} onOpenSettings={() => setSettingsOpen(true)} onSwitchToTurbo={() => onUpdateSettings({ simpleView: false })} />
+            <Header backLabel={t.simple.back} settingsLabel={t.settings.title} onBack={() => setScreen("start")} onOpenSettings={() => setSettingsOpen(true)} onSwitchToExpert={() => onUpdateSettings({ simpleView: false })} />
             {/* See the venue screen's identical comment above. */}
             <h1 className="sr-only">{t.simple.startCity}</h1>
             <div className="px-4 pb-2">
@@ -1332,7 +1332,7 @@ export default function SimpleLayout({
             }
             onBack={() => setScreen(detailReturnTo)}
             onOpenSettings={() => setSettingsOpen(true)}
-            onSwitchToTurbo={() => onUpdateSettings({ simpleView: false })}
+            onSwitchToExpert={() => onUpdateSettings({ simpleView: false })}
           />
         )}
 

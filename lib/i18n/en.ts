@@ -134,7 +134,7 @@ const en: Translations = {
       if (labels.length === 1) return labels[0]
       return `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`
     },
-    // Judgement line (Turbo): does the place satisfy the ACTIVE filters? A
+    // Judgement line (Expert Mode): does the place satisfy the ACTIVE filters? A
     // separate axis from reliability above — never a colour, never combined
     // with the tier words. See lib/reliability.ts's evaluatePlaceJudgment.
     judgmentPass: (n: number) => ({
@@ -535,13 +535,13 @@ const en: Translations = {
     language:              "Language",
     languageHint:          "Switches immediately — the page reloads.",
     mode:                  "Quickstart Mode",
-    modeHint:              "Simplified view instead of all features (Turbo Mode).",
+    modeHint:              "Simplified view instead of all features (Expert Mode).",
   },
   modeSwitcher: {
     switchToQuickstart: "Switch to Quickstart Mode",
-    switchToTurbo:      "Switch to Turbo Mode",
+    switchToExpert:     "Switch to Expert Mode",
     quickstartLabel:    "Quickstart Mode",
-    turboLabel:         "Turbo Mode",
+    expertLabel:        "Expert Mode",
   },
   simple: {
     startTitle:      "How would you like to search?",
@@ -552,7 +552,7 @@ const en: Translations = {
     startCity:       "Search in another city",
     startCityHint:   "Shows accessible places in a city of your choice",
     showFullAppAlt:  "or alternatively",
-    showFullApp:     "Turbo mode on: unlock all features.",
+    showFullApp:     "Expert Mode on: unlock all features.",
     showFullAppSub:  "(can do a lot more – just not this simple)",
     back:            "Back",
     tilesTitle:      "What kind of place?",
@@ -591,7 +591,7 @@ const en: Translations = {
     parkingUnknown:  "Parking: not specified",
     call:            "Call",
     // Quickstart headline (decision 7): fixed, absolute wording — unlike
-    // Turbo's filter-relative judgement line, Quickstart's preset is fixed
+    // Expert Mode's filter-relative judgement line, Quickstart's preset is fixed
     // per app design, so "accessible to use" is simply accurate.
     accessibleHeadline:       "Accessible to use",
     accessibleHeadlineCaveat: "Accessible to use – with a limitation",

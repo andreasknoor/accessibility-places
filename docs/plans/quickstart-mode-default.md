@@ -9,11 +9,11 @@ Deviations from the plan, decided during implementation:
   after all — without it every existing mobile user who never touched the
   setting would have been moved into Quickstart. It is snapshotted per tab
   session in `sessionStorage`, not read per mount.
-- The native quick-action path initially took the Turbo fallback; since v11.1
+- The native quick-action path initially took the Expert fallback; since v11.1
   it follows the active mode instead (Phase 4's last bullet), so no scoped-out
   deep-link path remains.
 - The play-circle glyph mentioned below was replaced by a sparkles glyph in
-  v11.8 — on the mobile Turbo header it sits directly above the map's own
+  v11.8 — on the mobile Expert header it sits directly above the map's own
   zoom control, and a circle-with-triangle read as a third zoom step rather
   than a mode switch. See `docs/wcag-quickstart-mode-audit.md`'s icon
   follow-up for the prototype/reasoning.
@@ -28,21 +28,21 @@ has no gear icon, the main SEO link is not a pure place link, and
 ## Goal
 
 New installs land in **Quickstart Mode** (today's Simple View,
-`settings.simpleView`) instead of Turbo Mode. Quickstart's own start screen
+`settings.simpleView`) instead of Expert Mode. Quickstart's own start screen
 (`simple.startTitle` — "Wie willst Du suchen?", three labelled routes) doubles
 as the welcome screen, so a first-time user reaches an actionable state with
 zero interstitials.
 
-Existing users and anyone who has switched to Turbo are unaffected.
+Existing users and anyone who has switched to Expert are unaffected.
 
 Naming and iconography (decided separately): **Quickstart Mode** uses a
-play-circle glyph in the primary blue; **Turbo Mode** uses a gauge glyph in
+play-circle glyph in the primary blue; **Expert Mode** uses a gauge glyph in
 orange. Both replace the current "Einfache Ansicht (Beta)" label.
 
 ## Why Variant 1 (Quickstart default) over an explicit mode prompt
 
 The risk is asymmetric. If Quickstart turns out to be too little, the switch is
-one tap away and — after Phase 1 — visibly so. If Turbo is the default and
+one tap away and — after Phase 1 — visibly so. If Expert is the default and
 turns out to be too much, the user may abandon the app before ever finding the
 switch.
 
@@ -58,7 +58,7 @@ The question "should Quickstart be smartphone-only?" splits into two that are
 answered differently:
 
 - **Default** — Quickstart is the default only on mobile/touch devices. A
-  desktop browser starts in Turbo.
+  desktop browser starts in Expert.
 - **Availability** — the switcher exists in both layouts. A desktop user who
   wants Quickstart gets it.
 
@@ -93,7 +93,7 @@ All line numbers are as of this writing.
    `useSettings()`, which starts at `DEFAULT_APP_SETTINGS` and loads in a
    *passive* `useEffect` (`lib/settings.ts:155–159`). So `settings.simpleView`
    is the default on the first render and only settles afterwards — the branch
-   at `:1726` renders Turbo first, then swaps. Today invisible (default and
+   at `:1726` renders Expert first, then swaps. Today invisible (default and
    stored value agree for nearly everyone); after Phase 5 it becomes a visible
    layout swap. Partly masked by `SplashOverlay`, but only partly: that
    overlay shows on mobile only (`SplashOverlay.tsx:23`) and only on the first
@@ -149,7 +149,7 @@ All line numbers are as of this writing.
 9. **The Quickstart start screen has no `<Header>` and no gear icon.**
    `SimpleLayout.tsx:647–654`: its top row contains only `LanguageSwitcher`.
    The shared `<Header>` (`:128–153`, with gear + language) is used by
-   `tiles`/`results`/`venue`/`city`/`detail` only. The "Turbo-Modus an" pill
+   `tiles`/`results`/`venue`/`city`/`detail` only. The "Experten-Modus an" pill
    (`:710–723`) likewise exists only on the start screen.
 
 10. **Two stale comments claim the settings toggle is the only way out of
@@ -191,7 +191,7 @@ discoverable *before* it becomes the default.
   rightmost; the header keeps three elements.
 - **Leave the Quickstart start screen alone** (`SimpleLayout.tsx:647–654`).
   Per finding 9 it has no gear and no `<Header>` — its top row is the only
-  language access that screen has, and it already carries the "Turbo-Modus an"
+  language access that screen has, and it already carries the "Experten-Modus an"
   pill, so a second mode control there would be redundant *and* would remove
   the last way to change language before entering the app. This is the one
   place the swap must **not** happen.
@@ -222,7 +222,7 @@ belongs in the i18n strings only.
 ## Phase 2 — Make `simpleView` tri-state (no behaviour change)
 
 The field currently models two states but needs three: *chose Quickstart*,
-*chose Turbo*, *never chose*. Without the third, deciding a default requires
+*chose Expert*, *never chose*. Without the third, deciding a default requires
 seeding a persisted value — which cannot be done safely (finding 3).
 
 - `AppSettings.simpleView: boolean` → `boolean | null`, `null` = never chosen.
@@ -238,21 +238,21 @@ seeding a persisted value — which cannot be done safely (finding 3).
 
 This phase is behaviourally inert and can land on its own.
 
-## Phase 3 — Deep-link resolver and Turbo fallback
+## Phase 3 — Deep-link resolver and Expert fallback
 
 - Add one **resolver** shared by this phase and Phase 4:
 
   ```
-  resolveDeepLinkTarget(props) → "quickstart-detail" | "quickstart-results" | "turbo" | null
+  resolveDeepLinkTarget(props) → "quickstart-detail" | "quickstart-results" | "expert" | null
   ```
 
   `null` = no deep link. It must handle all three shapes from finding 8 — `q`
   + `cat`; `selectLat` + `selectLon`; and the combined SEO shape carrying both.
-  In this phase every non-`null` result is treated as `"turbo"`; Phase 4 fills
+  In this phase every non-`null` result is treated as `"expert"`; Phase 4 fills
   in the two Quickstart branches. Two independently grown conditions across the
   phases is exactly the drift this avoids.
 - Add a session-scoped override in `HomeClient`,
-  `const [deepLinkForcesTurbo, setDeepLinkForcesTurbo] = useState(false)`, and
+  `const [deepLinkForcesExpert, setDeepLinkForcesExpert] = useState(false)`, and
   change the branch at `:1726` accordingly.
 - Seed it from props deterministically, the same way `isPlaceDeepLink` is
   computed (`:171`), so there is no hydration mismatch.
@@ -294,18 +294,18 @@ Quickstart exists for, and Phase 3 drops them into the full UI.
   (`SEO_CATEGORY_SLUGS`, `lib/cities.ts`) and the 8 Quickstart tiles
   (`SIMPLE_CATEGORIES`, `lib/settings.ts:70`) — currently `cafe`, `restaurant`,
   `hotel`, `attraction`.
-- **Everything outside that intersection returns `"turbo"` from the resolver.**
+- **Everything outside that intersection returns `"expert"` from the resolver.**
   A `theater` or `biergarten` link has no Quickstart tile; silently searching a
   different category, or showing an empty tile screen, would both be worse than
   the full UI. Make it an explicit, commented branch, not an accident of the
   mapping.
 - The combined SEO shape (finding 8) is the common case: route it to
   `"quickstart-detail"` when its category is in the intersection, since the
-  user tapped a specific venue; fall back to `"turbo"` otherwise.
+  user tapped a specific venue; fall back to `"expert"` otherwise.
 - Native quick actions (`pendingFocusAction` → `handleAmenitySearch`) target
   the parking/WC amenity search. Quickstart has its own amenity path
   (`handleSimpleAmenitySearch`, `onAmenitySearch`), so route them there rather
-  than to the Turbo fallback.
+  than to the Expert fallback.
 
 ## Phase 5 — The device-aware default
 
@@ -317,7 +317,7 @@ With Phase 2 in place this is one expression, not a migration.
   `useState` initialiser in `HomeClient` — the pattern already used for
   `sortBy` (`:232`) and `amenityRadiusKm` (`:257`) — then reconcile with
   `settings.simpleView` once `useSettings()` resolves. Without this the app
-  paints Turbo and swaps to Quickstart on every uncovered cold start.
+  paints Expert and swaps to Quickstart on every uncovered cold start.
 - **Reuse `useIsMobile`'s query string** (`(pointer: coarse), (max-width: 767px)`,
   `hooks/useIsMobile.ts:5`); export the constant so the fallback and the layout
   branch cannot drift apart. Guard for the SSR/no-`window` path.
@@ -350,10 +350,10 @@ surfaces: the `isFirstVisit` screen and Quickstart's own start screen.
 ## Tests
 
 - **Tri-state resolution** (Phase 2): stored `true` → Quickstart; stored
-  `false` → Turbo; key absent → `null`; no blob → `null`; an explicit value is
+  `false` → Expert; key absent → `null`; no blob → `null`; an explicit value is
   never overwritten in either direction.
 - **Default resolution** (Phase 5): `null` + mobile query matches → Quickstart;
-  `null` + desktop → Turbo; `null` + mobile + `ap_visited` present → Turbo (if
+  `null` + desktop → Expert; `null` + mobile + `ap_visited` present → Expert (if
   the soft guard ships).
 
   `vitest.setup.ts:51` mocks `window.matchMedia` to always return
