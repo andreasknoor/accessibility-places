@@ -383,6 +383,18 @@ function renderHtml({ sources: stats, oldestHour }: StatsResponse, topUsers: Top
   const kpiColor = errorColor(globalRate)
   const timeToResults = renderTimeToResults(stats)
 
+  // ── Tab bar meta chips — computed once here so each tab shows its state
+  // at a glance without switching to it (source count, avg time, user count,
+  // plus a fatal-rate warning dot on the Time to Results tab).
+  const totalSearch  = stats.search_total
+  const resultsAvg   = totalSearch?.avgMs != null ? fmtMs(totalSearch.avgMs) : "–"
+  const resultsFatalRate = totalSearch && totalSearch.totalCalls > 0
+    ? (totalSearch.totalErrors / totalSearch.totalCalls) * 100
+    : 0
+  const resultsFlag = resultsFatalRate >= 1
+    ? `<span class="tab-flag" style="background:${errorColor(resultsFatalRate)}" title="Elevated fatal rate"></span>`
+    : ""
+
   return `<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -394,7 +406,26 @@ function renderHtml({ sources: stats, oldestHour }: StatsResponse, topUsers: Top
   body { background: #111827; color: #f9fafb; font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace; min-height: 100vh; padding: 32px 24px }
   h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: 0.05em; color: #e5e7eb }
   .subtitle { color: #6b7280; font-size: 0.8rem; margin-top: 4px }
-  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-top: 28px }
+
+  /* ── Tab bar ──────────────────────────────────────────────────────── */
+  .tabbar { display: flex; gap: 4px; margin-top: 28px; border-bottom: 1px solid #374151 }
+  .tab { appearance: none; background: none; border: none; cursor: pointer; font: inherit; color: #9ca3af; font-size: 0.82rem; padding: 12px 4px 12px; margin-right: 22px; display: flex; align-items: center; gap: 9px; border-bottom: 2px solid transparent; translate: 0 1px; transition: color 0.15s ease, border-color 0.15s ease }
+  .tab:hover { color: #e5e7eb }
+  .tab.active { color: #f9fafb; border-bottom-color: #22d3ee }
+  .tab .tab-icon { font-size: 0.95rem; filter: grayscale(1); opacity: 0.75 }
+  .tab.active .tab-icon { filter: none; opacity: 1 }
+  .tab .tab-meta { color: #6b7280; font-size: 0.72rem }
+  .tab.active .tab-meta { color: #9ca3af }
+  .tab-flag { display: inline-block; width: 6px; height: 6px; border-radius: 50%; box-shadow: 0 0 6px rgba(245,158,11,0.7) }
+  @media (prefers-reduced-motion: reduce) { .tab { transition: none } }
+  .panel { display: none; margin-top: 28px }
+  .panel.active { display: block }
+  @media (max-width: 720px) {
+    .tabbar { gap: 0 }
+    .tab { margin-right: 14px; font-size: 0.76rem }
+    .tab .tab-meta { display: none }
+  }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px }
   .kpi { background: #1f2937; border: 1px solid #374151; border-radius: 8px; padding: 20px 24px }
   .kpi-value { font-size: 2rem; font-weight: 700; line-height: 1; margin-bottom: 6px }
   .kpi-label { color: #9ca3af; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase }
@@ -470,6 +501,19 @@ function renderHtml({ sources: stats, oldestHour }: StatsResponse, topUsers: Top
 <h1>♿ Adapter Stats Dashboard</h1>
 <p class="subtitle">Last updated: ${now} &nbsp;·&nbsp; 90-day window &nbsp;·&nbsp; hourly granularity${oldestHour ? (() => { const days = Math.max(1, Math.round((Date.now() - new Date(oldestHour.replace("T", " ") + ":00:00Z").getTime()) / 86_400_000)); return ` &nbsp;·&nbsp; Since: ${formatHour(oldestHour)} (${days} day${days !== 1 ? "s" : ""})`; })() : ""}</p>
 
+<nav class="tabbar" role="tablist" aria-label="Stats sections">
+  <button class="tab active" role="tab" aria-selected="true" aria-controls="panel-sources" id="tab-sources" data-tab="sources">
+    <span class="tab-icon">📡</span> Sources <span class="tab-meta">${entries.length}/${SOURCE_ORDER.length}</span>
+  </button>
+  <button class="tab" role="tab" aria-selected="false" aria-controls="panel-results" id="tab-results" data-tab="results">
+    <span class="tab-icon">⏱</span> Time to Results <span class="tab-meta">Ø ${resultsAvg}</span>${resultsFlag}
+  </button>
+  <button class="tab" role="tab" aria-selected="false" aria-controls="panel-users" id="tab-users" data-tab="users">
+    <span class="tab-icon">👥</span> Top Users <span class="tab-meta">${topUsers.length}</span>
+  </button>
+</nav>
+
+<section id="panel-sources" class="panel active" role="tabpanel" aria-labelledby="tab-sources">
 ${entries.length === 0 ? `
 <div class="empty">
   <div class="empty-icon">📭</div>
@@ -539,10 +583,44 @@ ${entries.length === 0 ? `
       .catch(() => alert('Reset failed.'));
   ">Reset adapter stats</button>
 </div>
+</section>
 
-${timeToResults}
+<section id="panel-results" class="panel" role="tabpanel" aria-labelledby="tab-results">
+${timeToResults || `
+<div class="empty">
+  <div class="empty-icon">⏱</div>
+  <div class="empty-title">No searches recorded yet</div>
+  <div class="empty-hint">Data will appear here once the first search completes on the live system.</div>
+</div>
+`}
+</section>
 
-${renderTopUsers(topUsers, userTotals)}
+<section id="panel-users" class="panel" role="tabpanel" aria-labelledby="tab-users">
+${renderTopUsers(topUsers, userTotals) || `
+<div class="empty">
+  <div class="empty-icon">👥</div>
+  <div class="empty-title">No user stats yet</div>
+</div>
+`}
+</section>
+
+<script>
+  (function () {
+    var tabs = document.querySelectorAll('.tab');
+    var panels = { sources: document.getElementById('panel-sources'), results: document.getElementById('panel-results'), users: document.getElementById('panel-users') };
+    function activate(name) {
+      if (!panels[name]) return;
+      tabs.forEach(function (t) { var on = t.dataset.tab === name; t.classList.toggle('active', on); t.setAttribute('aria-selected', String(on)); });
+      Object.keys(panels).forEach(function (k) { panels[k].classList.toggle('active', k === name); });
+      var url = new URL(location.href);
+      url.searchParams.set('tab', name);
+      history.replaceState(null, '', url);
+    }
+    tabs.forEach(function (t) { t.addEventListener('click', function () { activate(t.dataset.tab); }); });
+    var initial = new URLSearchParams(location.search).get('tab');
+    if (initial) activate(initial);
+  })();
+</script>
 </body>
 </html>`
 }
