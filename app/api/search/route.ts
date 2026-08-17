@@ -143,6 +143,11 @@ export async function POST(req: NextRequest) {
   const { userQuery, radiusKm: rawRadius, filters: rawFilters, sources: rawSources, locale, coordinates: rawCoords, nameHint: rawNameHint, placeSearch: rawPlaceSearch, international: rawInternational } = rawBody
   const placeSearch = rawPlaceSearch === true
   const international = rawInternational === true
+  // App mode (Quickstart vs. Expert) — client-only UI state (HomeClient's
+  // isQuickstart), sent purely for the search_total_quickstart/expert stats
+  // split. Only tracked when it's one of the two known values, so requests
+  // that don't send it (or send garbage) don't skew the split.
+  const appMode = rawBody.mode === "quickstart" || rawBody.mode === "expert" ? rawBody.mode : undefined
 
   const coordinates = (() => {
     if (!rawCoords || typeof rawCoords !== "object") return undefined
@@ -511,6 +516,17 @@ export async function POST(req: NextRequest) {
         } else {
           trackCall("search_total_filtered")
           trackDuration("search_total_filtered", totalMs)
+        }
+        // App-mode segment: Quickstart runs with a fixed, reduced filter/radius
+        // preset (see CLAUDE.md "Quickstart Mode vs. Expert Mode") — tracked
+        // separately so the dashboard can show whether that preset is actually
+        // faster in practice, not just assumed to be.
+        if (appMode === "quickstart") {
+          trackCall("search_total_quickstart")
+          trackDuration("search_total_quickstart", totalMs)
+        } else if (appMode === "expert") {
+          trackCall("search_total_expert")
+          trackDuration("search_total_expert", totalMs)
         }
 
         emit({

@@ -13,6 +13,8 @@ export type SourceId =
   | "search_total"
   | "search_total_allcats"
   | "search_total_filtered"
+  | "search_total_quickstart"
+  | "search_total_expert"
   | "osm_parking"
   | "osm_parking_private"
   | "osm_parking_public"

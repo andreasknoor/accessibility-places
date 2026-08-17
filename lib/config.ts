@@ -2,7 +2,7 @@ import type { SourceId, Category } from "./types"
 
 // User-visible app version, shown in the header next to the subtitle.
 // Bump on every meaningful release.
-export const APP_VERSION = "12.17"
+export const APP_VERSION = "12.18"
 
 // Tally form IDs for the per-place "report data error" flow (PlaceDebugSheet).
 // Empty string = feature hidden. Fill in after creating the DE/EN forms in
@@ -36,6 +36,8 @@ export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
   search_total:        0,  // stats-only; whole-search "time to visible results"
   search_total_allcats:0,  // stats-only; search_total subset with no category filter
   search_total_filtered:0, // stats-only; search_total subset with a category filter
+  search_total_quickstart:0, // stats-only; search_total subset from Quickstart Mode
+  search_total_expert:0,     // stats-only; search_total subset from Expert Mode
 }
 
 // Ginto entries get higher weights for stronger approval levels
@@ -75,6 +77,8 @@ export const SOURCE_FAMILY: Record<SourceId, string> = {
   search_total:        "meta",  // stats-only; not a place-attribution family
   search_total_allcats:"meta",
   search_total_filtered:"meta",
+  search_total_quickstart:"meta",
+  search_total_expert:"meta",
 }
 
 // Tier thresholds against the additive family-evidence sum. A conflicting
@@ -118,6 +122,8 @@ export const SOURCE_LABELS: Record<SourceId, string> = {
   search_total:        "Suche gesamt",
   search_total_allcats:"Suche gesamt (alle Kategorien)",
   search_total_filtered:"Suche gesamt (Kategorie gewählt)",
+  search_total_quickstart:"Suche gesamt (Quickstart)",
+  search_total_expert:"Suche gesamt (Experte)",
 }
 
 // Raced in parallel — the first successful response wins.

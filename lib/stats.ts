@@ -84,7 +84,7 @@ export interface SourceStats {
 export type StatsResult = Partial<Record<SourceId, SourceStats>>
 
 const ALL_SOURCES: SourceId[] = [
-  "search_total", "search_total_allcats", "search_total_filtered",
+  "search_total", "search_total_allcats", "search_total_filtered", "search_total_quickstart", "search_total_expert",
   "osm", "osm_private", "osm_public",
   "accessibility_cloud", "reisen_fuer_alle", "ginto", "google_places",
   "osm_parking", "osm_parking_private", "osm_parking_public", "nominatim",
@@ -167,7 +167,7 @@ export async function resetStats(): Promise<number> {
 export async function resetSearchTotalStats(): Promise<number> {
   const redis = getRedis()
   if (!redis) return 0
-  const patterns = ["stats:h:*:search_total:*", "stats:h:*:search_total_allcats:*", "stats:h:*:search_total_filtered:*"]
+  const patterns = ["stats:h:*:search_total:*", "stats:h:*:search_total_allcats:*", "stats:h:*:search_total_filtered:*", "stats:h:*:search_total_quickstart:*", "stats:h:*:search_total_expert:*"]
   let total = 0
   for (const pattern of patterns) {
     const keys = await scanKeys(redis, pattern)

@@ -224,9 +224,11 @@ function renderTopUsers(topUsers: TopUser[], totals: UserTotals): string {
 // the top-users table: it's the headline outcome metric, the per-adapter
 // table is the "why", and top users is a different axis entirely.
 function renderTimeToResults(stats: StatsResult): string {
-  const total    = stats.search_total
-  const allcats  = stats.search_total_allcats
-  const filtered = stats.search_total_filtered
+  const total      = stats.search_total
+  const allcats    = stats.search_total_allcats
+  const filtered   = stats.search_total_filtered
+  const quickstart = stats.search_total_quickstart
+  const expert     = stats.search_total_expert
 
   if (!total || total.totalCalls === 0) return ""
 
@@ -278,6 +280,18 @@ function renderTimeToResults(stats: StatsResult): string {
     ? `<div class="ttr-delta-badge">⚠ ${(allcats.avgMs / filtered.avgMs).toFixed(1)}&times; slower on average when no category is selected &middot; ${pct(allcats?.totalCalls ?? 0)}% of all searches hit this path</div>`
     : ""
 
+  // App-mode segment: unlike the worst-case pair above, neither side is
+  // inherently "worse" — direction (which mode is faster) isn't assumed, it's
+  // computed from whichever numbers actually come in.
+  const modeScaleMax = Math.max(quickstart?.avgMs ?? 0, expert?.avgMs ?? 0, 1)
+  const modeDelta = (quickstart?.avgMs && expert?.avgMs && quickstart.avgMs > 0 && expert.avgMs > 0)
+    ? (() => {
+        const faster = quickstart.avgMs! < expert.avgMs! ? "Quickstart" : "Expert"
+        const ratio  = Math.max(quickstart.avgMs!, expert.avgMs!) / Math.min(quickstart.avgMs!, expert.avgMs!)
+        return `<div class="ttr-delta-badge" style="background:rgba(34,211,238,0.1);border-color:rgba(34,211,238,0.4);color:#22d3ee">${ratio.toFixed(1)}&times; faster on average in ${faster} Mode</div>`
+      })()
+    : ""
+
   return `
 <h2 style="font-size:1rem;font-weight:600;letter-spacing:0.05em;color:#e5e7eb;margin-top:40px;display:flex;align-items:center;gap:10px">
   <span style="width:10px;height:10px;border-radius:2px;background:#22d3ee;box-shadow:0 0 10px rgba(34,211,238,0.5);display:inline-block"></span>
@@ -319,6 +333,14 @@ function renderTimeToResults(stats: StatsResult): string {
   ${compareRow("All categories — worst case", allcats, true, scaleMax)}
 </div>
 ${delta}
+
+<h3 style="font-size:0.85rem;font-weight:600;color:#e5e7eb;margin-top:28px">Segmented by App Mode</h3>
+<p class="subtitle">Quickstart Mode runs with a fixed, reduced filter/radius preset; Expert Mode uses whatever the user has configured.</p>
+<div class="ttr-compare">
+  ${compareRow("Quickstart Mode", quickstart, false, modeScaleMax)}
+  ${compareRow("Expert Mode", expert, false, modeScaleMax)}
+</div>
+${modeDelta}
 
 <h3 style="font-size:0.85rem;font-weight:600;color:#e5e7eb;margin-top:28px">Failed Searches</h3>
 <p class="subtitle">Previously invisible: searches that never reach a result event (geocoding errors, unhandled exceptions) &mdash; excluded from the timings above.</p>

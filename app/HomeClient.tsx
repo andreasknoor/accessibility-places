@@ -699,7 +699,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       const res = await fetch("/api/search", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ userQuery: query, radiusKm: radiusKmOverride ?? radiusKm, filters: { ...filters, ...filtersOverride }, sources: { ...sources, ...sourcesOverride }, locale, coordinates: coords, nameHint, placeSearch, international: settings.internationalMode, userId: getUserId(settings.usageStats), platform: getPlatform() }),
+        body:    JSON.stringify({ userQuery: query, radiusKm: radiusKmOverride ?? radiusKm, filters: { ...filters, ...filtersOverride }, sources: { ...sources, ...sourcesOverride }, locale, coordinates: coords, nameHint, placeSearch, international: settings.internationalMode, userId: getUserId(settings.usageStats), platform: getPlatform(), mode: isQuickstart ? "quickstart" : "expert" }),
         signal:  controller.signal,
       })
 
@@ -902,7 +902,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       // while the newer one runs — but a timeout has no successor, so it must.
       if (!controller.signal.aborted || timedOut) setIsLoading(false)
     }
-  }, [filters, sources, radiusKm, t, settings.internationalMode])
+  }, [filters, sources, radiusKm, t, settings.internationalMode, isQuickstart])
 
   const clearSearchState = useCallback(() => {
     setPlaces([])
