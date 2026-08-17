@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 import FilterPanel from "@/components/filters/FilterPanel"
+import { LocaleProvider } from "@/lib/i18n"
 import type { SearchFilters, ActiveSources } from "@/lib/types"
 
 // Radix's real Slider fires onValueChange continuously during a pointer drag
@@ -197,5 +198,56 @@ describe("FilterPanel — amenity mode radius (finding F4: parkingRadiusKm must 
     const slider = screen.getByTestId("radius-slider")
     fireEvent.change(slider, { target: { value: "6" } })
     expect(screen.getByText("6 km")).toBeInTheDocument()
+  })
+})
+
+describe("FilterPanel — WC 'Nur jetzt geöffnete Orte' (review decision ②)", () => {
+  function renderToiletPanel(amenityOpenNowOnly = false, onAmenityOpenNowOnlyChange = vi.fn()) {
+    return render(
+      <LocaleProvider initialLocale="de">
+        <FilterPanel
+          filters={DEFAULT_FILTERS}
+          sources={DEFAULT_SOURCES}
+          radiusKm={5}
+          onFilters={vi.fn()}
+          onSources={vi.fn()}
+          onRadius={vi.fn()}
+          amenityType="toilet"
+          amenityRadiusKm={1}
+          onAmenityRadius={vi.fn()}
+          amenityOpenNowOnly={amenityOpenNowOnly}
+          onAmenityOpenNowOnlyChange={onAmenityOpenNowOnlyChange}
+        />
+      </LocaleProvider>,
+    )
+  }
+
+  it("renders the checkbox during a WC search", () => {
+    renderToiletPanel()
+    expect(screen.getByText("Nur jetzt geöffnete Orte")).toBeInTheDocument()
+    expect(screen.getByText("Orte ohne Öffnungszeiten-Angabe bleiben sichtbar")).toBeInTheDocument()
+  })
+
+  it("does NOT render during a parking search — the filter has nothing to act on there", () => {
+    render(
+      <FilterPanel
+        filters={DEFAULT_FILTERS} sources={DEFAULT_SOURCES} radiusKm={5}
+        onFilters={vi.fn()} onSources={vi.fn()} onRadius={vi.fn()}
+        amenityType="parking" amenityRadiusKm={1} onAmenityRadius={vi.fn()}
+      />,
+    )
+    expect(screen.queryByText("Nur jetzt geöffnete Orte")).not.toBeInTheDocument()
+  })
+
+  it("starts unchecked by default", () => {
+    renderToiletPanel(false)
+    expect(screen.getByRole("checkbox", { name: /Nur jetzt geöffnete Orte/ })).not.toBeChecked()
+  })
+
+  it("toggling calls onAmenityOpenNowOnlyChange, never onUpdateSettings — this must not persist to AppSettings", () => {
+    const onAmenityOpenNowOnlyChange = vi.fn()
+    renderToiletPanel(false, onAmenityOpenNowOnlyChange)
+    fireEvent.click(screen.getByRole("checkbox", { name: /Nur jetzt geöffnete Orte/ }))
+    expect(onAmenityOpenNowOnlyChange).toHaveBeenCalledWith(true)
   })
 })

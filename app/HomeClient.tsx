@@ -22,6 +22,7 @@ import { useIsMobile } from "@/hooks/useIsMobile"
 import { useTranslations, useLocale } from "@/lib/i18n"
 import { DEFAULT_RADIUS_KM, RADIUS_MAX_KM, regionForCoordinates, accessTierForCountry } from "@/lib/config"
 import { clampVenueRadiusKm, clampAmenityRadiusKm, snapAmenityRadiusKm, snapVenueRadiusKm, rerunTarget, expandRadiusTarget, canShowResultsRadiusPicker, amenitySpotKey, passesParkingSubFilters, passesToiletSubFilters, type ViewportOrigin } from "@/lib/search-ui"
+import { useAmenityOpeningStatuses } from "@/lib/opening-hours"
 import { SEO_CATEGORY_SLUGS, SEO_CATEGORY_QUERY_TERM } from "@/lib/cities"
 import { haversineMetres } from "@/lib/matching/match"
 import { passesFiltersForSource } from "@/lib/matching/merge"
@@ -338,6 +339,12 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   // (null = normal venue search). `amenitySpots` holds the fetched results, shown
   // both as map markers (via the parking/toilet sources below) and as list cards.
   const [amenitySearch,       setAmenitySearch]       = useState<AmenityType | null>(null)
+  // "Nur jetzt geöffnete Orte" for the WC quick search (review decision ②
+  // on the opening-hours feature) — deliberately local state, NOT AppSettings
+  // or SearchFilters: a time-of-day filter must not persist across sessions
+  // (SearchFilters.openNowOnly has the same rule, same reasoning). Always
+  // starts false; there is no localStorage path for it to leak through.
+  const [amenityOpenNowOnly,  setAmenityOpenNowOnly]  = useState(false)
   // Mirror of amenitySearch readable inside handleAmenitySearch without adding it to
   // the callback's deps: lets the handler tell a fresh ENTRY into amenity mode (was
   // null) from a "search this area" refine (already active), so only the latter keeps
@@ -1810,6 +1817,24 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
     })),
     [settings.publicToiletsOnly, settings.euroKeyOnly, toiletSource])
 
+  // Computed once here (not per-card) — only requested while an actual WC
+  // search is active, so browsing venues or a parking search never pays for
+  // the library load. Passed to ResultsList for the AmenityCard chip AND
+  // used below to drive amenityOpenNowOnly, so the chip and the filter can
+  // never disagree about a spot's status.
+  const toiletOpeningStatuses = useAmenityOpeningStatuses(visibleToiletSpots, amenitySearch === "toilet")
+
+  // "Nur jetzt geöffnete Orte" (review decision ②): applies to every WC with
+  // a computable status — venue-hosted AND standalone alike, not just venue
+  // ones (a standalone WC's own hours are just as authoritative, and
+  // restricting to venues would make this a no-op wherever publicToiletsOnly
+  // is also on). Same pass-through rule as the venue filter: only a
+  // *confirmed* closed spot drops.
+  const openNowFilteredToiletSpots = useMemo(() => {
+    if (!amenityOpenNowOnly || amenitySearch !== "toilet" || toiletOpeningStatuses.size === 0) return visibleToiletSpots
+    return visibleToiletSpots.filter((s) => toiletOpeningStatuses.get(amenitySpotKey(s))?.state !== "closed")
+  }, [visibleToiletSpots, amenityOpenNowOnly, amenitySearch, toiletOpeningStatuses])
+
   // The amenity results shown as LIST cards (and counted in the mobile tab
   // badge). Must be the SAME filtered set the map markers use — passing raw
   // `amenitySpots` here made every WC/parking sub-filter (showWeakParking,
@@ -1818,9 +1843,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
   const visibleAmenityResults: AmenityFeature[] = useMemo(() =>
     amenitySearch === "parking"
       ? amenitySpots.filter((s) => s.amenityType === "parking").filter(passesWeakParking)
-      : amenitySearch === "toilet" ? visibleToiletSpots
+      : amenitySearch === "toilet" ? openNowFilteredToiletSpots
       : amenitySpots,
-    [amenitySearch, amenitySpots, passesWeakParking, visibleToiletSpots])
+    [amenitySearch, amenitySpots, passesWeakParking, openNowFilteredToiletSpots])
 
   // "The area has spots, your filters hid them all" — distinct from "none
   // nearby", because the useful remedy is the opposite one (relax the filter,
@@ -2159,7 +2184,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
       <MobileLayout
         places={places}
         parkingSpots={visibleParkingSpots}
-        toiletSpots={visibleToiletSpots.length > 0 ? visibleToiletSpots : undefined}
+        toiletSpots={openNowFilteredToiletSpots.length > 0 ? openNowFilteredToiletSpots : undefined}
         selectedId={selectedId}
         onSelect={(p) => setSelectedId(p.id)}
         isLoading={isLoading}
@@ -2225,6 +2250,9 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
         onAmenitySearch={handleAmenitySearch}
         onExitAmenity={handleExitAmenity}
         amenityResults={visibleAmenityResults}
+        amenityOpeningStatuses={toiletOpeningStatuses}
+        amenityOpenNowOnly={amenityOpenNowOnly}
+        onAmenityOpenNowOnlyChange={setAmenityOpenNowOnly}
         amenityHint={amenityHint ?? undefined}
         amenityAllFilteredOut={amenityAllFilteredOut}
         amenitySearchCenter={amenityPanned}
@@ -2414,6 +2442,8 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
                 publicToiletsOnly={settings.publicToiletsOnly}
                 euroKeyOnly={settings.euroKeyOnly}
                 onUpdateSettings={handleUpdateSettings}
+                amenityOpenNowOnly={amenityOpenNowOnly}
+                onAmenityOpenNowOnlyChange={setAmenityOpenNowOnly}
               />
               <button
                 onClick={() => setFilterCollapsed(true)}
@@ -2450,6 +2480,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             placeSearchName={placeSearchName}
             amenityType={amenitySearch}
             amenityResults={visibleAmenityResults}
+            amenityOpeningStatuses={toiletOpeningStatuses}
             amenityHint={amenityHint ?? undefined}
             amenityAllFilteredOut={amenityAllFilteredOut}
             onAmenitySelect={handleAmenitySelect}
@@ -2502,7 +2533,7 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
             filters={filters}
             onOpenFilters={() => setFilterCollapsed(false)}
             parkingSpots={visibleParkingSpots}
-            toiletSpots={visibleToiletSpots.length > 0 ? visibleToiletSpots : undefined}
+            toiletSpots={openNowFilteredToiletSpots.length > 0 ? openNowFilteredToiletSpots : undefined}
             center={searchCenter}
             userLocation={gpsCoords ?? undefined}
             selectedId={selectedId}

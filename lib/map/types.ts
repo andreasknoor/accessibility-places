@@ -1,3 +1,4 @@
+import type { OpeningStatus } from "@/lib/opening-hours"
 import type { Place, ParkingSpot, AmenityFeature, AmenityType, SearchFilters } from "@/lib/types"
 
 // Prop contract for MapView.tsx / MapViewGL.tsx (the MapLibre engine adopted
@@ -13,6 +14,12 @@ export interface MapViewProps {
   filters?:      SearchFilters
   parkingSpots?: ParkingSpot[]
   toiletSpots?:  AmenityFeature[]
+  // Keyed by amenitySpotKey (lib/search-ui.ts). Populated by the caller ONLY
+  // during an active WC search (empty/undefined for the passive "always show
+  // toilets" layer, by review decision — a toilet popup outside a real WC
+  // search shows no opening-hours line at all). MapViewGL never computes
+  // this itself; it has no access to the opening_hours library load.
+  toiletOpeningStatuses?: Map<string, OpeningStatus | null>
   center?:       { lat: number; lon: number }
   userLocation?: { lat: number; lon: number }
   selectedId?:   string

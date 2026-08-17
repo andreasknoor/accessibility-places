@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest"
-import { buildVenuePopupHtml } from "@/lib/map/popup-content"
+import { buildVenuePopupHtml, buildToiletPopupHtml } from "@/lib/map/popup-content"
 import { buildAttribute, emptyAttribute } from "@/lib/matching/merge"
 import de from "@/lib/i18n/de"
 import type { PlaceJudgment } from "@/lib/reliability"
-import type { Place } from "@/lib/types"
+import type { Place, AmenityFeature } from "@/lib/types"
 
 // v13/docs/plans/reliability-tiers.md decision 5: the popup header bar now
 // encodes the JUDGEMENT against active filters, not the reliability tier —
@@ -97,5 +97,64 @@ describe("buildVenuePopupHtml — judgement reasoning (Option 3, replaces the re
     expect(html).not.toContain(de.map.judgmentCaveat)
     expect(html).not.toContain(de.map.judgmentUnknown)
     expect(html).not.toContain(de.map.judgmentFail)
+  })
+})
+
+// ─── buildToiletPopupHtml — opening status in the quick-summary line ──────
+
+describe("buildToiletPopupHtml — opening status", () => {
+  function makeSpot(overrides: Partial<AmenityFeature> = {}): AmenityFeature {
+    return { amenityType: "toilet", lat: 52.52, lon: 13.405, tier: "strong", ...overrides }
+  }
+  const REF_NOW = new Date("2026-08-17T10:00:00")
+
+  it("renders nothing extra when no status is supplied (passive layer / not a WC search)", () => {
+    const html = buildToiletPopupHtml(makeSpot(), de, { showResults: false, locale: "de" })
+    expect(html).not.toContain(de.results.openNow)
+  })
+
+  it("leads the quick summary with 'Geöffnet' for an open status", () => {
+    const html = buildToiletPopupHtml(makeSpot(), de, {
+      showResults: false, locale: "de",
+      openingStatus: { state: "open", refNow: REF_NOW },
+    })
+    expect(html).toContain(de.results.openNow)
+    // Quick summary (ap-pop-quick), not buried in the collapsible section.
+    expect(html.indexOf(de.results.openNow)).toBeLessThan(html.indexOf("ap-pop-full"))
+  })
+
+  it("shows the closing-soon countdown", () => {
+    const closesAt = new Date(REF_NOW.getTime() + 12 * 60_000)
+    const html = buildToiletPopupHtml(makeSpot(), de, {
+      showResults: false, locale: "de",
+      openingStatus: { state: "closing_soon", closesAt, refNow: REF_NOW },
+    })
+    expect(html).toContain(de.results.openClosingSoon(12))
+  })
+
+  it("shows the closed label with the next opening time", () => {
+    const opensAt = new Date("2026-08-18T09:00:00")
+    const html = buildToiletPopupHtml(makeSpot(), de, {
+      showResults: false, locale: "de",
+      openingStatus: { state: "closed", opensAt, refNow: REF_NOW },
+    })
+    expect(html).toContain("morgen 09:00")
+  })
+
+  it("falls back to the plain closed label when no next-change time is known", () => {
+    const html = buildToiletPopupHtml(makeSpot(), de, {
+      showResults: false, locale: "de",
+      openingStatus: { state: "closed", refNow: REF_NOW },
+    })
+    expect(html).toContain(de.results.openClosedPlain)
+  })
+
+  it("still shows the euro-key / accessibility summary alongside the status", () => {
+    const html = buildToiletPopupHtml(makeSpot({ euroKey: true }), de, {
+      showResults: false, locale: "de",
+      openingStatus: { state: "open", refNow: REF_NOW },
+    })
+    expect(html).toContain(de.map.toiletEuroKey)
+    expect(html).toContain(de.map.toiletDesignatedValue)
   })
 })

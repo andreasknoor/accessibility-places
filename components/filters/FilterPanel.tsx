@@ -36,6 +36,12 @@ interface Props {
   publicToiletsOnly?: boolean
   euroKeyOnly?:       boolean
   onUpdateSettings?:  (patch: { showWeakParking?: boolean; publicToiletsOnly?: boolean; euroKeyOnly?: boolean }) => void
+  // "Nur jetzt geöffnete Orte" for the WC quick search — deliberately a
+  // separate prop pair, NOT part of onUpdateSettings: this is a time-of-day
+  // filter (like SearchFilters.openNowOnly) and must never persist to
+  // AppSettings/localStorage the way showWeakParking etc. do.
+  amenityOpenNowOnly?: boolean
+  onAmenityOpenNowOnlyChange?: (v: boolean) => void
 }
 
 function SourceIndicator({ state }: { state?: SourceState }) {
@@ -118,7 +124,7 @@ const SOURCE_REGION: Partial<Record<SourceId, string>> = {
 
 const SOURCE_DISABLED: Partial<Record<SourceId, true>> = {}
 
-export default function FilterPanel({ filters, sources, radiusKm, onFilters, onSources, onRadius, sourceStates, onRerun, isLoading, amenityType, amenityRadiusKm, onAmenityRadius, showWeakParking, publicToiletsOnly, euroKeyOnly, onUpdateSettings }: Props) {
+export default function FilterPanel({ filters, sources, radiusKm, onFilters, onSources, onRadius, sourceStates, onRerun, isLoading, amenityType, amenityRadiusKm, onAmenityRadius, showWeakParking, publicToiletsOnly, euroKeyOnly, onUpdateSettings, amenityOpenNowOnly, onAmenityOpenNowOnlyChange }: Props) {
   const t = useTranslations()
   const isMobile = useIsMobile()
   const amenityMode = amenityType != null
@@ -258,6 +264,27 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
                   <span className="text-sm text-muted-foreground leading-snug">
                     {t.settings.euroKeyOnly}
                     <span className="block text-xs text-muted-foreground/70">{t.settings.euroKeyOnlyHint}</span>
+                  </span>
+                </label>
+              )}
+              {/* "Nur jetzt geöffnete Orte" (review decision ②) — applies to
+                  every WC with a computable status, venue-hosted and
+                  standalone alike, not only venue ones (see the prop
+                  comment). Reuses the venue filter's own i18n strings —
+                  same rule ("unknown stays visible"), same wording. Not
+                  wired through onUpdateSettings/AppSettings: a time-of-day
+                  filter must not persist across sessions. */}
+              {amenityType === "toilet" && (
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <Checkbox
+                    checked={!!amenityOpenNowOnly}
+                    onCheckedChange={() => onAmenityOpenNowOnlyChange?.(!amenityOpenNowOnly)}
+                    id="amenity-open-now"
+                    className="mt-0.5"
+                  />
+                  <span className="text-sm text-muted-foreground leading-snug">
+                    {t.results.openNowFilterLabel}
+                    <span className="block text-xs text-muted-foreground/70">{t.results.openNowFilterHint}</span>
                   </span>
                 </label>
               )}

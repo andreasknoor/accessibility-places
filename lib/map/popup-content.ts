@@ -1,6 +1,7 @@
 import { CATEGORY_ICONS } from "@/lib/category-icons"
 import type { useTranslations } from "@/lib/i18n"
 import type { PlaceJudgment, JudgmentStatus, CriterionKey } from "@/lib/reliability"
+import { formatOpeningWhen, closingSoonMinutes, type OpeningStatus } from "@/lib/opening-hours"
 import type { Place, ParkingSpot, AmenityFeature, AmenityTier } from "@/lib/types"
 
 // Unified "D" popup design (map-elements redesign prototype) — one template
@@ -272,7 +273,24 @@ export function buildParkingPopupHtml(spot: ParkingSpot | AmenityFeature, t: T, 
   })
 }
 
-export function buildToiletPopupHtml(spot: AmenityFeature, t: T, opts: { showResults: boolean; wheelmapUrl?: string }): string {
+// Mirrors OpeningStatusChip's colour/text logic as an HTML fragment — that
+// component can't be used here (this module builds plain strings for
+// maplibre's DOM-less popup API, not React). Kept deliberately tiny: no icon,
+// just colour + text, since the popup quick-summary line is already dense.
+function openingStatusQuickHtml(status: OpeningStatus, t: T, locale: "de" | "en"): string {
+  if (status.state === "open") {
+    return `<span style="color:#15803d;font-weight:700">${t.results.openNow}</span>`
+  }
+  if (status.state === "closing_soon") {
+    return `<span style="color:#b45309;font-weight:700">${t.results.openClosingSoon(closingSoonMinutes(status))}</span>`
+  }
+  const label = status.opensAt
+    ? t.results.openClosed(formatOpeningWhen(status.opensAt, status.refNow, locale))
+    : t.results.openClosedPlain
+  return `<span style="color:#b91c1c;font-weight:700">${label}</span>`
+}
+
+export function buildToiletPopupHtml(spot: AmenityFeature, t: T, opts: { showResults: boolean; wheelmapUrl?: string; openingStatus?: OpeningStatus | null; locale: "de" | "en" }): string {
   const tier: AmenityTier = spot.tier === "weak" ? "weak" : "strong"
   const host = spot.host?.kind === "venue" ? "venue" : "standalone"
   // Same accent for both hosts (matches the pre-migration Leaflet marker's
@@ -298,8 +316,14 @@ export function buildToiletPopupHtml(spot: AmenityFeature, t: T, opts: { showRes
   // what the search filters for) — ✓ green regardless of tier. The euro-key
   // requirement is the one thing worth surfacing at a glance even so (issue:
   // arriving without a 🔑 you can't actually use it), so it rides along in
-  // the quick summary rather than being buried a tap away.
-  const quickSummary = `<span style="color:${OVERALL_COLOR.yes}">${OVERALL_GLYPH.yes}</span> ${tier === "strong" ? t.map.toiletDesignatedValue : t.a11y.yes}`
+  // the quick summary rather than being buried a tap away. Opening status
+  // (when the caller supplied one — active WC search only, see the type
+  // comment) leads the line: whether the WC is reachable AT ALL right now
+  // matters more than its accessibility tier, and burying it a tap away
+  // behind "Mehr" defeats the point of surfacing it.
+  const quickSummary =
+    (opts.openingStatus ? `${openingStatusQuickHtml(opts.openingStatus, t, opts.locale)} · ` : "")
+    + `<span style="color:${OVERALL_COLOR.yes}">${OVERALL_GLYPH.yes}</span> ${tier === "strong" ? t.map.toiletDesignatedValue : t.a11y.yes}`
     + (spot.euroKey ? ` · 🔑 ${t.map.toiletEuroKey}` : "")
 
   return popupShellD({

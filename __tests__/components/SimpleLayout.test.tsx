@@ -1559,3 +1559,108 @@ describe("SimpleLayout — mode switcher always reachable", () => {
     expect(handlers.onUpdateSettings).toHaveBeenCalledWith({ simpleView: false })
   })
 })
+
+// ─── WC opening status: label, never filter (review decision ①) ───────────
+describe("SimpleLayout — WC opening status (closed-last sort, never hidden)", () => {
+  // Monday 2026-08-17, 10:00 Europe/Berlin — only Date is faked so the async
+  // opening_hours library load (a real setTimeout/microtask chain) still
+  // resolves normally.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date("2026-08-17T08:00:00Z"))
+  })
+  afterEach(() => { vi.useRealTimers() })
+
+  async function goToToiletResults(handlers?: Partial<Handlers>) {
+    mockGetBestPosition.mockResolvedValue({ lat: 50.9, lon: 6.9 })
+    const utils = renderLayout({}, handlers)
+    fireEvent.click(screen.getByText("In meiner Nähe suchen"))
+    fireEvent.click(screen.getByText("WC"))
+    await waitFor(() => expect(screen.getByText("WC in Deiner Nähe")).toBeInTheDocument())
+    return utils
+  }
+
+  function toiletSpot(overrides: Partial<AmenityFeature>): AmenityFeature {
+    return { amenityType: "toilet", lat: 50.9, lon: 6.9, tier: "strong", host: { kind: "venue" }, ...overrides }
+  }
+
+  it("never hides a confirmed-closed WC — no filter toggle exists in Quickstart", async () => {
+    const { rerender, handlers } = await goToToiletResults()
+    rerender(
+      <LocaleProvider initialLocale="de">
+        <SimpleLayout
+          places={[]} isLoading={false} searchCenter={{ lat: 50.9, lon: 6.9 }}
+          onSelect={handlers.onSelect} onSimpleNearbySearch={handlers.onSimpleNearbySearch}
+          onPlaceSearch={handlers.onPlaceSearch} onAmenitySearch={handlers.onAmenitySearch}
+          amenityResults={[toiletSpot({ host: { kind: "venue", name: "Café Zeitlos" }, openingHours: "Mo-Fr 14:00-18:00" })]}
+          onSearchHere={vi.fn()} onFocusSearchHere={vi.fn()} onGpsResolved={vi.fn()}
+          onExpandRadius={vi.fn()} onAmenityExpandRadius={vi.fn()}
+          radiusKm={5} amenityRadiusKm={4}
+          settings={DEFAULT_APP_SETTINGS} onUpdateSettings={handlers.onUpdateSettings}
+        />
+      </LocaleProvider>,
+    )
+    await waitFor(() => expect(screen.getByText(/Geschlossen/)).toBeInTheDocument())
+    // The card itself — not just the status text — is still on screen.
+    expect(screen.getByText("Café Zeitlos")).toBeInTheDocument()
+    expect(screen.getByText("1 Treffer")).toBeInTheDocument()
+  })
+
+  it("sorts a confirmed-closed WC after every other result, even when it is the nearest", async () => {
+    const { rerender, handlers } = await goToToiletResults()
+    rerender(
+      <LocaleProvider initialLocale="de">
+        <SimpleLayout
+          places={[]} isLoading={false} searchCenter={{ lat: 50.9, lon: 6.9 }}
+          onSelect={handlers.onSelect} onSimpleNearbySearch={handlers.onSimpleNearbySearch}
+          onPlaceSearch={handlers.onPlaceSearch} onAmenitySearch={handlers.onAmenitySearch}
+          amenityResults={[
+            // Exactly at the search centre (nearest possible) but closed.
+            toiletSpot({ host: { kind: "venue", name: "Café Nah Aber Zu" }, lat: 50.9, lon: 6.9, openingHours: "Mo-Fr 14:00-18:00" }),
+            // Further away but open.
+            toiletSpot({ host: { kind: "venue", name: "Café Weiter Aber Offen" }, lat: 50.92, lon: 6.92, openingHours: "08:00-19:00" }),
+          ]}
+          onSearchHere={vi.fn()} onFocusSearchHere={vi.fn()} onGpsResolved={vi.fn()}
+          onExpandRadius={vi.fn()} onAmenityExpandRadius={vi.fn()}
+          radiusKm={5} amenityRadiusKm={4}
+          settings={DEFAULT_APP_SETTINGS} onUpdateSettings={handlers.onUpdateSettings}
+        />
+      </LocaleProvider>,
+    )
+    await waitFor(() => expect(screen.getByText(/Geschlossen/)).toBeInTheDocument())
+    const html = document.body.innerHTML
+    const openIdx   = html.indexOf("Café Weiter Aber Offen")
+    const closedIdx = html.indexOf("Café Nah Aber Zu")
+    expect(openIdx).toBeGreaterThan(-1)
+    expect(closedIdx).toBeGreaterThan(-1)
+    expect(openIdx).toBeLessThan(closedIdx) // open-but-farther renders BEFORE closed-but-nearer
+  })
+
+  it("keeps a WC with no opening-hours data interleaved by distance, not pushed to the end", async () => {
+    const { rerender, handlers } = await goToToiletResults()
+    rerender(
+      <LocaleProvider initialLocale="de">
+        <SimpleLayout
+          places={[]} isLoading={false} searchCenter={{ lat: 50.9, lon: 6.9 }}
+          onSelect={handlers.onSelect} onSimpleNearbySearch={handlers.onSimpleNearbySearch}
+          onPlaceSearch={handlers.onPlaceSearch} onAmenitySearch={handlers.onAmenitySearch}
+          amenityResults={[
+            // Nearest, no hours data at all.
+            toiletSpot({ host: { kind: "venue", name: "Café Ohne Angabe" }, lat: 50.9, lon: 6.9 }),
+            // Further away, confirmed closed.
+            toiletSpot({ host: { kind: "venue", name: "Café Weit Zu" }, lat: 50.92, lon: 6.92, openingHours: "Mo-Fr 14:00-18:00" }),
+          ]}
+          onSearchHere={vi.fn()} onFocusSearchHere={vi.fn()} onGpsResolved={vi.fn()}
+          onExpandRadius={vi.fn()} onAmenityExpandRadius={vi.fn()}
+          radiusKm={5} amenityRadiusKm={4}
+          settings={DEFAULT_APP_SETTINGS} onUpdateSettings={handlers.onUpdateSettings}
+        />
+      </LocaleProvider>,
+    )
+    await waitFor(() => expect(screen.getByText(/Geschlossen/)).toBeInTheDocument())
+    const html = document.body.innerHTML
+    // The unknown-status WC stays nearest-first (distance order), ahead of
+    // the confirmed-closed one — it is NOT treated as equivalent to "closed".
+    expect(html.indexOf("Café Ohne Angabe")).toBeLessThan(html.indexOf("Café Weit Zu"))
+  })
+})

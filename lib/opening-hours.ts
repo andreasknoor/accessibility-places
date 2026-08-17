@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useMemo, useSyncExternalStore } from "react"
 import { DACH_BBOX, INTL_COUNTRIES } from "./config"
-import type { Place, SourceId } from "./types"
+import { amenitySpotKey } from "./search-ui"
+import type { Place, SourceId, AmenityFeature } from "./types"
 
 // ─── Extraction ─────────────────────────────────────────────────────────────
 
@@ -50,6 +51,17 @@ export function extractParsableOpeningHours(place: Place): string | null {
   return str(getMeta(place, "osm")?.opening_hours)
 }
 
+/**
+ * Same rule as extractParsableOpeningHours, for a WC point feature — no
+ * Google-prose fallback exists here (amenity spots are OSM-only), so this
+ * is just the guarded tag read. `toilets:opening_hours` was checked live
+ * against Berlin OSM data (0 hits across 2062 tagged venue WCs) and is
+ * deliberately not read — see the comment on AmenityFeature.openingHours.
+ */
+export function extractAmenityOpeningHours(spot: AmenityFeature): string | null {
+  return str(spot.openingHours)
+}
+
 // ─── Time zone ──────────────────────────────────────────────────────────────
 
 // opening_hours.js evaluates a Date through its *local* getters, so a naive
@@ -80,20 +92,26 @@ function bboxContains(bbox: readonly [number, number, number, number], lat: numb
 }
 
 /**
- * IANA zone for a place, or null when it can't be determined confidently.
- * `addr:country` is frequently absent in OSM (documented on Place.address),
- * so coordinates are the fallback — reusing the same bboxes that already
- * gate every other geo decision in lib/config.ts.
+ * IANA zone for a coordinate (+ optional ISO-2 country for a direct hit), or
+ * null when it can't be determined confidently. The coordinate fallback
+ * reuses the same bboxes that already gate every other geo decision in
+ * lib/config.ts — needed because `addr:country` is frequently absent on a
+ * Place (documented on Place.address) and an AmenityFeature carries no
+ * country at all, only lat/lon.
  */
-export function timeZoneForPlace(place: Pick<Place, "address" | "coordinates">): string | null {
-  const code = place.address.country?.toUpperCase()
-  const { lat, lon } = place.coordinates
+export function timeZoneForCoords(lat: number, lon: number, countryCode?: string): string | null {
+  const code = countryCode?.toUpperCase()
   if (code && ZONE_BY_COUNTRY[code]) return ZONE_BY_COUNTRY[code]
   if (code === "US") return usZoneForLongitude(lon)
   if (bboxContains(DACH_BBOX, lat, lon)) return "Europe/Berlin"
   const intl = INTL_COUNTRIES.find((c) => bboxContains(c.bbox, lat, lon))
   if (intl) return intl.code === "US" ? usZoneForLongitude(lon) : ZONE_BY_COUNTRY[intl.code] ?? null
   return null
+}
+
+/** Place-shaped convenience wrapper around timeZoneForCoords. */
+export function timeZoneForPlace(place: Pick<Place, "address" | "coordinates">): string | null {
+  return timeZoneForCoords(place.coordinates.lat, place.coordinates.lon, place.address.country)
 }
 
 /**
@@ -123,8 +141,42 @@ export type OpeningStatus =
 
 const CLOSING_SOON_MS = 30 * 60 * 1000
 
+// Shared by every renderer of an OpeningStatus: the React chip
+// (OpeningStatusChip.tsx) and the hand-built map-popup HTML
+// (lib/map/popup-content.ts, which has no access to React/hooks). Both dates
+// are in the venue's wall-clock space (see wallClockAt), so they are
+// formatted as plain local time here, with no timeZone option — exactly the
+// clock reading a person standing at the venue would see.
+export function formatOpeningWhen(date: Date, refNow: Date, locale: "de" | "en"): string {
+  const time = new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(date)
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const diffDays = Math.round((startOfDay(date) - startOfDay(refNow)) / 86_400_000)
+  if (diffDays === 0) return locale === "de" ? `heute ${time}` : `today ${time}`
+  if (diffDays === 1) return locale === "de" ? `morgen ${time}` : `tomorrow ${time}`
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: "long" }).format(date)
+  return `${weekday} ${time}`
+}
+
+// Clamped at 1 rather than 0 so the label never reads "in 0 Min"; the caller's
+// minute ticker re-evaluates the whole status, so this cannot get stuck
+// counting down past the actual close (it flips to "closed" instead).
+export function closingSoonMinutes(status: Extract<OpeningStatus, { state: "closing_soon" }>): number {
+  return Math.max(1, Math.round((status.closesAt.getTime() - status.refNow.getTime()) / 60_000))
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type OpeningHoursCtor = any
+
+// Accepts either a Place-shaped pick (venues carry addr:country when OSM has
+// it, worth using for PH resolution) or a bare coordinate (AmenityFeature —
+// a parking/WC point never carries an address at all). Both normalise to the
+// same {lat, lon, country?} the rest of this function operates on.
+type StatusInput = Pick<Place, "address" | "coordinates"> | { lat: number; lon: number; country?: string }
+
+function normalizeStatusInput(input: StatusInput): { lat: number; lon: number; country?: string } {
+  if ("coordinates" in input) return { lat: input.coordinates.lat, lon: input.coordinates.lon, country: input.address.country }
+  return input
+}
 
 /**
  * Synchronous core. Returns null whenever nothing concrete can be said —
@@ -135,20 +187,20 @@ type OpeningHoursCtor = any
 export function computeStatusSync(
   OpeningHours: OpeningHoursCtor,
   hoursString: string,
-  place: Pick<Place, "address" | "coordinates">,
+  input: StatusInput,
   now: Date,
 ): OpeningStatus | null {
   const trimmed = hoursString.trim()
   if (!trimmed) return null
   try {
-    const zone = timeZoneForPlace(place)
+    const { lat, lon, country } = normalizeStatusInput(input)
+    const zone = timeZoneForCoords(lat, lon, country)
     // No confident zone → evaluating in the viewer's zone would be a guess
     // that silently produces a wrong open/closed claim. Say nothing instead.
     if (!zone) return null
     const refNow = wallClockAt(now, zone)
 
-    const { lat, lon } = place.coordinates
-    const code = place.address.country?.toLowerCase()
+    const code = country?.toLowerCase()
     const nominatim = code
       ? { lat, lon, address: { country_code: code, state: "" } }
       : null
@@ -182,13 +234,13 @@ export function computeStatusSync(
 /** Async convenience wrapper — loads the library, then delegates. */
 export async function computeOpeningStatus(
   hoursString: string,
-  place: Pick<Place, "address" | "coordinates">,
+  input: StatusInput,
   now: Date = new Date(),
 ): Promise<OpeningStatus | null> {
   if (!hoursString.trim()) return null
   const lib = await loadOpeningHoursLib()
   if (!lib) return null
-  return computeStatusSync(lib, hoursString, place, now)
+  return computeStatusSync(lib, hoursString, input, now)
 }
 
 // ─── Library loading (one module-level singleton) ───────────────────────────
@@ -305,4 +357,53 @@ export function useOpenNowFilter(places: Place[], enabled: boolean): Place[] {
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [places, enabled, lib, tick])
+}
+
+// ─── Hooks (amenity spots — parking/WC point features) ─────────────────────
+
+/**
+ * Batch status for a list of amenity spots (currently only WCs carry
+ * openingHours; parking never does, so those simply resolve to null).
+ * Keyed by amenitySpotKey() so callers can look a status up per spot without
+ * re-deriving it — used both by AmenityCard (the chip) and by the two
+ * WC-specific behaviours that need the WHOLE list's verdicts at once:
+ * useAmenityOpenNowFilter's filtering and SimpleLayout's closed-last sort.
+ *
+ * Only requests the library when `enabled` and at least one spot actually
+ * has hours to evaluate — an amenity search with only standalone-untagged or
+ * parking spots never pays for it.
+ */
+export function useAmenityOpeningStatuses(spots: AmenityFeature[], enabled: boolean): Map<string, OpeningStatus | null> {
+  const needsLib = enabled && spots.some((s) => extractAmenityOpeningHours(s) !== null)
+  const lib  = useOpeningHoursLib(needsLib)
+  const tick = useMinuteTick()
+
+  return useMemo(() => {
+    const map = new Map<string, OpeningStatus | null>()
+    if (!enabled || !lib) return map
+    const now = new Date()
+    for (const spot of spots) {
+      const hours = extractAmenityOpeningHours(spot)
+      map.set(amenitySpotKey(spot), hours ? computeStatusSync(lib, hours, { lat: spot.lat, lon: spot.lon }, now) : null)
+    }
+    return map
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spots, enabled, lib, tick])
+}
+
+/**
+ * Expert Mode's "Nur jetzt geöffnete Orte" for the WC quick search (per
+ * review decision ②): applies to every WC with a computable status —
+ * standalone public toilets included, not just venue-hosted ones. A
+ * standalone WC's own hours are just as authoritative as a venue's, and
+ * restricting to venues only would make the filter a no-op wherever
+ * publicToiletsOnly is also active. Same pass-through rule as
+ * useOpenNowFilter: only a *confirmed* closed spot is dropped.
+ */
+export function useAmenityOpenNowFilter(spots: AmenityFeature[], enabled: boolean): AmenityFeature[] {
+  const statuses = useAmenityOpeningStatuses(spots, enabled)
+  return useMemo(() => {
+    if (!enabled || statuses.size === 0) return spots
+    return spots.filter((s) => statuses.get(amenitySpotKey(s))?.state !== "closed")
+  }, [spots, enabled, statuses])
 }

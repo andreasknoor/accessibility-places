@@ -8,7 +8,9 @@ import NavigateButton from "@/components/ui/navigate-button"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import CriterionBox, { type CriterionTone } from "@/components/results/CriterionBox"
+import OpeningStatusChip from "@/components/results/OpeningStatusChip"
 import { SOURCE_LABELS } from "@/lib/config"
+import type { OpeningStatus } from "@/lib/opening-hours"
 import type { AmenityFeature, AmenityType } from "@/lib/types"
 
 interface Props {
@@ -17,13 +19,19 @@ interface Props {
   isSelected?: boolean
   onClick?:    () => void
   distanceM?:  number
+  // Precomputed by the list (useAmenityOpeningStatuses) rather than derived
+  // here per-card — a WC search can list 50+ spots, and the whole point of
+  // the batch hook is one shared load/pass instead of N. Parking spots never
+  // have this (AmenityFeature.openingHours is WC-only), so it's always
+  // undefined/null there and the chip renders nothing, same as "no data".
+  openingStatus?: OpeningStatus | null
 }
 
 // Mirrors PlaceCard's layout (header / criteria pill / detail rows / footer
 // with external links + "Zur Karte") so amenity results read consistently
 // with venue results — only the criteria shown differ (point-feature data
 // has no entrance/toilet/seating, just what OSM tags on the node itself).
-export default function AmenityCard({ spot, amenityType, isSelected, onClick, distanceM }: Props) {
+export default function AmenityCard({ spot, amenityType, isSelected, onClick, distanceM, openingStatus }: Props) {
   const t = useTranslations()
   const [reportState, setReportState] = useState<"idle" | "sending" | "done" | "error">("idle")
 
@@ -119,6 +127,12 @@ export default function AmenityCard({ spot, amenityType, isSelected, onClick, di
                   <MapPin className="w-3 h-3 shrink-0" />
                   <span>{t.results.distanceFromHere(Math.round(distanceM))}</span>
                 </p>
+              )}
+              {/* WC-only (parking never carries openingHours — see the prop
+                  comment). Own line, not squeezed onto the host/distance
+                  lines: a venue-hosted WC can already show both of those. */}
+              {!isParking && (
+                <OpeningStatusChip status={openingStatus ?? null} size="sm" className="mt-0.5 text-xs font-medium" />
               )}
             </div>
           </div>

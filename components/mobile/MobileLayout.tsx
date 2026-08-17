@@ -18,6 +18,7 @@ import ResultsList     from "@/components/results/ResultsList"
 import ModeSwitcher     from "@/components/ModeSwitcher"
 import SettingsSheet   from "@/components/settings/SettingsSheet"
 import type { Place, SearchFilters, ActiveSources, SourceId, SourceState, FilterDebug, ParkingSpot, AmenityFeature, AmenityType, Category } from "@/lib/types"
+import type { OpeningStatus } from "@/lib/opening-hours"
 import type { AppSettings } from "@/lib/settings"
 
 const MapView = dynamic(() => import("@/components/map/MapView"), { ssr: false })
@@ -74,6 +75,9 @@ interface Props {
   onAmenitySearch?:     (type: AmenityType, coords?: { lat: number; lon: number }, radiusKm?: number, panned?: { lat: number; lon: number }) => void
   onExitAmenity?:       () => void
   amenityResults?:      AmenityFeature[]
+  amenityOpeningStatuses?: Map<string, OpeningStatus | null>
+  amenityOpenNowOnly?:  boolean
+  onAmenityOpenNowOnlyChange?: (v: boolean) => void
   amenityAllFilteredOut?: boolean
   amenityHint?:         string
   amenitySearchCenter?: { lat: number; lon: number } | null
@@ -117,7 +121,7 @@ export default function MobileLayout({
   settings, onUpdateSettings, sortBy, onSortChange, defaultMobileView,
   onGpsResolved, isFirstVisit, onResetOnboarding, onDismissWelcome, onStartNearby, locateTrigger, mapLocateFix, mapLocateFixKey, exitNearbyTrigger, onSwitchToText,
   chatMode, deferAutoLocate, onChatModeChange, biasCoords, onSearchHere, onLocate, locatePanTrigger, gpsCoords, onCategoryQueryChange, activeSearchCoords,
-  amenityActive, onAmenitySearch, onExitAmenity, amenityResults, amenityAllFilteredOut, amenityHint, amenitySearchCenter, onAmenitySearchHere, onAmenityRadius, amenityRadiusKm, intlNotice, placeSearchName,
+  amenityActive, onAmenitySearch, onExitAmenity, amenityResults, amenityOpeningStatuses, amenityOpenNowOnly, onAmenityOpenNowOnlyChange, amenityAllFilteredOut, amenityHint, amenitySearchCenter, onAmenitySearchHere, onAmenityRadius, amenityRadiusKm, intlNotice, placeSearchName,
   onAmenitySelect, selectedAmenityKey, onAmenityMarkerClick, amenityPanTarget, amenityPanTrigger,
   getViewportOrigin, onViewportChange, panPending,
 }: Props) {
@@ -477,6 +481,7 @@ export default function MobileLayout({
             onStartNearby={onStartNearby}
             amenityType={amenityActive}
             amenityResults={amenityResults}
+            amenityOpeningStatuses={amenityOpeningStatuses}
             amenityAllFilteredOut={amenityAllFilteredOut}
             amenityHint={amenityHint}
             onAmenitySelect={handleAmenitySelect}
@@ -603,6 +608,8 @@ export default function MobileLayout({
             publicToiletsOnly={settings.publicToiletsOnly}
             euroKeyOnly={settings.euroKeyOnly}
             onUpdateSettings={onUpdateSettings}
+            amenityOpenNowOnly={amenityOpenNowOnly}
+            onAmenityOpenNowOnlyChange={onAmenityOpenNowOnlyChange}
           />
         </div>
 

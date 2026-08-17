@@ -7,7 +7,7 @@ import "maplibre-gl/dist/maplibre-gl.css"
 import { Maximize2, Minimize2, Search, LocateFixed, Loader2, Layers, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import PlaceDebugSheet from "@/components/results/PlaceDebugSheet"
-import { useTranslations } from "@/lib/i18n"
+import { useTranslations, useLocale } from "@/lib/i18n"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { openExternalUrl } from "@/lib/native/browser"
 import { startDefaultNavigation } from "@/lib/native/navigation"
@@ -19,6 +19,7 @@ import { ensureMaplibreWorkerConfigured } from "@/lib/map/maplibre-worker"
 import { startSlowTileMonitoring } from "@/lib/map/tile-timing"
 import { drawPlacePin, drawParkingBadge, drawToiletBadge, drawGpsDot, getMarkerPixelRatio } from "@/lib/map/marker-images"
 import { buildVenuePopupHtml, buildParkingPopupHtml, buildToiletPopupHtml } from "@/lib/map/popup-content"
+import { amenitySpotKey } from "@/lib/search-ui"
 import type { MapViewProps } from "@/lib/map/types"
 import type { Place, AmenityFeature, AmenityTier } from "@/lib/types"
 
@@ -322,6 +323,7 @@ export default function MapViewGL({
   filters,
   parkingSpots,
   toiletSpots,
+  toiletOpeningStatuses,
   center,
   userLocation,
   selectedId,
@@ -358,6 +360,7 @@ export default function MapViewGL({
   onPopupOpenChange,
 }: MapViewProps) {
   const t = useTranslations()
+  const { locale } = useLocale()
   const mapRef  = useRef<HTMLDivElement>(null)
   const mapInst = useRef<maplibregl.Map | null>(null)
   const [mapReady, setMapReady] = useState(false)
@@ -407,9 +410,11 @@ export default function MapViewGL({
   // instead keeps popups built after a language switch correct without
   // needing MapView itself to remount.
   const tRef = useRef(t)
+  const localeRef = useRef(locale)
   const placesRef        = useRef(places)
   const parkingSpotsRef  = useRef(parkingSpots)
   const toiletSpotsRef   = useRef(toiletSpots)
+  const toiletOpeningStatusesRef = useRef(toiletOpeningStatuses)
   const userLocationRef  = useRef(userLocation)
   const searchCenterRef  = useRef(center)
   const onSearchHereRef  = useRef(onSearchHere)
@@ -426,10 +431,12 @@ export default function MapViewGL({
   useEffect(() => { onOpenDetailsRef.current = onOpenDetails }, [onOpenDetails])
   useEffect(() => { onShowAmenityInResultsRef.current = onShowAmenityInResults }, [onShowAmenityInResults])
   useEffect(() => { tRef.current = t }, [t])
+  useEffect(() => { localeRef.current = locale }, [locale])
   useEffect(() => { placesRef.current = places }, [places])
   useEffect(() => { filtersRef.current = filters }, [filters])
   useEffect(() => { parkingSpotsRef.current = parkingSpots }, [parkingSpots])
   useEffect(() => { toiletSpotsRef.current = toiletSpots }, [toiletSpots])
+  useEffect(() => { toiletOpeningStatusesRef.current = toiletOpeningStatuses }, [toiletOpeningStatuses])
   useEffect(() => { userLocationRef.current = userLocation }, [userLocation])
   useEffect(() => { searchCenterRef.current = center }, [center])
   useEffect(() => { onSearchHereRef.current = onSearchHere }, [onSearchHere])
@@ -863,7 +870,11 @@ export default function MapViewGL({
     const showResults = !!onShowAmenityInResultsRef.current && amenityTypeRef.current === "toilet"
     const osmNodeId = spot.osmId?.startsWith("node/") ? spot.osmId.slice(5) : undefined
     const wheelmapUrl = osmNodeId ? `https://wheelmap.org/nodes/${osmNodeId}` : undefined
-    const html = buildToiletPopupHtml(spot, tRef.current, { showResults, wheelmapUrl })
+    // Only populated by the caller during an active WC search (review
+    // decision: not for the passive "always show toilets" layer) — a lookup
+    // miss there is expected and simply omits the line, same as no data.
+    const openingStatus = toiletOpeningStatusesRef.current?.get(amenitySpotKey(spot)) ?? null
+    const html = buildToiletPopupHtml(spot, tRef.current, { showResults, wheelmapUrl, openingStatus, locale: localeRef.current })
     openSmartPopup(map, [spot.lon, spot.lat], html, {
       // 80: quick-view height (was 180, full height, before quick view existed).
       maxWidthPx: 260, estimatedHeightPx: 80, offsetPx: 22, lastProgrammaticMoveRef, popupTokenRef,

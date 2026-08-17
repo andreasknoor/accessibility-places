@@ -10,6 +10,7 @@ import RadiusPresetPopover from "@/components/filters/RadiusPresetPopover"
 import { haversineMetres } from "@/lib/matching/match"
 import { amenitySpotKey, formatRadiusKm } from "@/lib/search-ui"
 import { useOpenNowFilter } from "@/lib/opening-hours"
+import type { OpeningStatus } from "@/lib/opening-hours"
 import type { Place, SearchFilters, FilterDebug, AmenityFeature, AmenityType } from "@/lib/types"
 
 interface Props {
@@ -58,6 +59,10 @@ interface Props {
   // (label + distance) instead of place cards; `places` is empty in this mode.
   amenityType?:         AmenityType | null
   amenityResults?:      AmenityFeature[]
+  // Precomputed by HomeClient (useAmenityOpeningStatuses), keyed by
+  // amenitySpotKey — see AmenityCard's own prop comment for why this is a
+  // batch lookup rather than each card deriving its own status.
+  amenityOpeningStatuses?: Map<string, OpeningStatus | null>
   amenityHint?:         string
   // True when the fetch returned amenity spots but the active sub-filters
   // removed every one of them — a different empty state from "none nearby".
@@ -77,7 +82,7 @@ interface Props {
   selectedAmenityKey?: string
 }
 
-export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, scrollTrigger, filterDebug, searchCenter, onAdjustFilters, onOpenFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToText, isFirstVisit, onDismissWelcome, onStartNearby, intlNotice, placeSearchName, amenityType, amenityResults, amenityHint, amenityAllFilteredOut, onAmenityExpandRadius, onAmenitySelect, selectedAmenityKey }: Props) {
+export default function ResultsList({ places, filters, selectedId, onSelect, isLoading, onRerun, hasSourceError, onExpandRadius, radiusKm, onRadiusChange, hasSearched, scrollToId, scrollTrigger, filterDebug, searchCenter, onAdjustFilters, onOpenFilters, parkingSpotCount, sortBy: sortByProp, onSortChange, chatMode, onSwitchToText, isFirstVisit, onDismissWelcome, onStartNearby, intlNotice, placeSearchName, amenityType, amenityResults, amenityOpeningStatuses, amenityHint, amenityAllFilteredOut, onAmenityExpandRadius, onAmenitySelect, selectedAmenityKey }: Props) {
   const t = useTranslations()
   const amenityMode = amenityType != null
   const [mapHintSeen, setMapHintSeen] = useState(() =>
@@ -521,6 +526,7 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
                   isSelected={selKey === selectedAmenityKey}
                   distanceM={distanceM}
                   onClick={onAmenitySelect ? () => onAmenitySelect(spot) : undefined}
+                  openingStatus={amenityOpeningStatuses?.get(selKey)}
                 />
               </div>
             )

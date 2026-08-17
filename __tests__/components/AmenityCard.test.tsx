@@ -63,3 +63,48 @@ describe("AmenityCard — navigate button (docs/plans/native-navigate-here.md, '
     expect(onClick).not.toHaveBeenCalled()
   })
 })
+
+// ─── Opening status chip (WC search — issue #14 review, decisions ①/②) ─────
+describe("AmenityCard — opening status", () => {
+  const REF_NOW = new Date("2026-08-17T10:00:00")
+
+  it("shows nothing when no status is supplied — no data, no 'unknown' hedge", () => {
+    renderWithProvider(<AmenityCard spot={makeSpot({ amenityType: "toilet" })} amenityType="toilet" />)
+    expect(screen.queryByText(/Geöffnet|Geschlossen|Schließt in/)).not.toBeInTheDocument()
+  })
+
+  it("shows the chip for a WC with an open status", () => {
+    renderWithProvider(
+      <AmenityCard
+        spot={makeSpot({ amenityType: "toilet" })}
+        amenityType="toilet"
+        openingStatus={{ state: "open", refNow: REF_NOW }}
+      />,
+    )
+    expect(screen.getByText("Geöffnet")).toBeInTheDocument()
+  })
+
+  it("shows the closed chip with the next opening time", () => {
+    renderWithProvider(
+      <AmenityCard
+        spot={makeSpot({ amenityType: "toilet" })}
+        amenityType="toilet"
+        openingStatus={{ state: "closed", opensAt: new Date("2026-08-18T09:00:00"), refNow: REF_NOW }}
+      />,
+    )
+    expect(screen.getByText("Geschlossen · öffnet morgen 09:00")).toBeInTheDocument()
+  })
+
+  // Parking spots never carry openingHours (AmenityFeature.openingHours is
+  // WC-only) — the chip must not render even if a caller mistakenly passed one.
+  it("never shows the chip for a parking spot", () => {
+    renderWithProvider(
+      <AmenityCard
+        spot={makeSpot({ amenityType: "parking" })}
+        amenityType="parking"
+        openingStatus={{ state: "open", refNow: REF_NOW }}
+      />,
+    )
+    expect(screen.queryByText("Geöffnet")).not.toBeInTheDocument()
+  })
+})

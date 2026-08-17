@@ -298,6 +298,12 @@ export interface AmenityFeature {
   // Toilet-specific
   euroKey?:      boolean  // centralkey=eurokey — EURO key required
   changingTable?: boolean  // changing_table=yes
+  // Raw OSM opening_hours on the toilet node itself. For a venue-hosted WC
+  // this IS the venue's own tag (the node the query matched), so it already
+  // means "when is the venue — and therefore this WC — open"; no separate
+  // reconciliation with a venue Place is needed. Evaluated by
+  // lib/opening-hours.ts, same as Place.opening_hours.
+  openingHours?: string
   // WC host: standalone public toilet vs. toilet inside a venue
   host?: { kind: "standalone" | "venue"; name?: string; access?: string }
 }

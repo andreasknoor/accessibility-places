@@ -8,6 +8,7 @@ import {
   osmDiet,
   fetchOsm,
   fetchOsmDisabledParking,
+  fetchOsmAccessibleAmenities,
   isRecentlyVerified,
 } from "@/lib/adapters/osm"
 import type { SearchParams } from "@/lib/types"
@@ -948,5 +949,58 @@ describe("fetchOsmDisabledParking", () => {
     expect(decoded).toContain(`way(around:`)
     expect(decoded).toContain(`parking_space=disabled`)
     expect(decoded).toContain(`wheelchair=designated`)
+  })
+})
+
+// ─── fetchOsmAccessibleAmenities — opening_hours (WC opening-hours feature) ─
+//
+// Same tag drives both a venue-hosted and a standalone WC's status — see the
+// AmenityFeature.openingHours comment for why toilets:opening_hours (found
+// live to be unused in Berlin OSM data) is deliberately not read.
+describe("fetchOsmAccessibleAmenities — WC opening_hours", () => {
+  function stubToiletResponse(tags: Record<string, string>) {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ elements: [{ type: "node", id: 1, lat: 52.52, lon: 13.405, tags }] }),
+    }))
+  }
+
+  it("extracts opening_hours from a venue-hosted WC", async () => {
+    stubToiletResponse({ "toilets:wheelchair": "yes", access: "customers", name: "Café Zeitlos", opening_hours: "Mo-Fr 09:00-18:00" })
+    const { features } = await fetchOsmAccessibleAmenities({ lat: 52.52, lon: 13.405 }, 1, ["toilet"])
+    expect(features).toHaveLength(1)
+    expect(features[0].host?.kind).toBe("venue")
+    expect(features[0].openingHours).toBe("Mo-Fr 09:00-18:00")
+  })
+
+  it("extracts opening_hours from a standalone public WC", async () => {
+    stubToiletResponse({ amenity: "toilets", wheelchair: "yes", opening_hours: "08:00-19:00" })
+    const { features } = await fetchOsmAccessibleAmenities({ lat: 52.52, lon: 13.405 }, 1, ["toilet"])
+    expect(features).toHaveLength(1)
+    expect(features[0].host?.kind).toBe("standalone")
+    expect(features[0].openingHours).toBe("08:00-19:00")
+  })
+
+  it("omits openingHours entirely (not an empty string) when the tag is absent", async () => {
+    stubToiletResponse({ "toilets:wheelchair": "yes" })
+    const { features } = await fetchOsmAccessibleAmenities({ lat: 52.52, lon: 13.405 }, 1, ["toilet"])
+    expect(features).toHaveLength(1)
+    expect(features[0].openingHours).toBeUndefined()
+  })
+
+  it("ignores toilets:opening_hours (verified unused in live OSM data — see adapter comment)", async () => {
+    stubToiletResponse({ "toilets:wheelchair": "yes", "toilets:opening_hours": "Mo-Fr 09:00-18:00" })
+    const { features } = await fetchOsmAccessibleAmenities({ lat: 52.52, lon: 13.405 }, 1, ["toilet"])
+    expect(features[0].openingHours).toBeUndefined()
+  })
+
+  it("never sets openingHours on a parking feature", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ elements: [{ type: "node", id: 2, lat: 52.52, lon: 13.405, tags: { amenity: "parking_space", parking_space: "disabled", opening_hours: "Mo-Fr 09:00-18:00" } }] }),
+    }))
+    const { features } = await fetchOsmAccessibleAmenities({ lat: 52.52, lon: 13.405 }, 1, ["parking"])
+    expect(features).toHaveLength(1)
+    expect(features[0].openingHours).toBeUndefined()
   })
 })

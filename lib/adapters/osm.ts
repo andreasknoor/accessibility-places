@@ -688,10 +688,18 @@ export async function fetchOsmAccessibleAmenities(
         const host: AmenityFeature["host"] = hasVenueToilet && !isStandaloneToilet
           ? { kind: "venue", name: tags["name"] || undefined, access }
           : { kind: "standalone" }
+        // Same tag for both hosts: for a venue this node IS the venue, so its
+        // own opening_hours already means "when is this place (and thus its
+        // WC) open" — no separate lookup needed. toilets:opening_hours (a
+        // hypothetical "WC has its own hours distinct from the venue" tag)
+        // was checked live against Berlin OSM data and found unused (0 hits
+        // across 2062 tagged venue WCs) — not worth a second extraction path.
+        const openingHours            = tags["opening_hours"] || undefined
 
         out.push({ amenityType: "toilet", lat: featLat, lon: featLon, tier, access, osmId,
           ...(euroKey       ? { euroKey }       : {}),
           ...(changingTable ? { changingTable } : {}),
+          ...(openingHours  ? { openingHours }  : {}),
           host,
         })
       } else if (isParking) {

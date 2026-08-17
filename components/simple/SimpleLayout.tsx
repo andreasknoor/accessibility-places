@@ -17,6 +17,7 @@ import ModeSwitcher from "@/components/ModeSwitcher"
 import SimplePlaceCard from "@/components/simple/SimplePlaceCard"
 import SimpleDetail from "@/components/simple/SimpleDetail"
 import AmenityCard from "@/components/results/AmenityCard"
+import { useAmenityOpeningStatuses } from "@/lib/opening-hours"
 import type { Place, Category, AmenityType, AmenityFeature, ParkingSpot, SearchFilters } from "@/lib/types"
 import type { AppSettings } from "@/lib/settings"
 
@@ -760,14 +761,32 @@ export default function SimpleLayout({
       : places
   ), [places, searchCenter])
 
-  // Amenity results, always distance-sorted (mirrors ResultsList's own
+  // WC opening status (review decision ①): Quickstart never filters by this —
+  // unlike Expert's opt-in toggle, hiding a WC here with no visible cause and
+  // no way to undo it would repeat the exact failure the sub-filter-skip
+  // comment above describes. Instead: label every card (AmenityCard renders
+  // the chip whenever this map has an entry) and sort confirmed-closed WCs
+  // to the end, below. Only requested during an actual WC search.
+  const amenityOpeningStatuses = useAmenityOpeningStatuses(amenityResults ?? [], selectedAmenityType === "toilet")
+
+  // Amenity results, distance-sorted (mirrors ResultsList's own
   // displayedAmenities memo) — the only meaningful order for "nearest
-  // parking/WC". Same by-reference memoization reasoning as sortedPlaces.
+  // parking/WC" — with one exception: a WC confirmed closed right now sorts
+  // after every other result, open or unknown, regardless of distance. The
+  // nearest WC is useless if it's shut; unknown stays interleaved by
+  // distance like today, since nothing contradicts it. Same by-reference
+  // memoization reasoning as sortedPlaces.
   const sortedAmenities = useMemo(() => {
     const list = amenityResults ?? []
-    if (!searchCenter) return list
-    return [...list].sort((a, b) => haversineMetres(searchCenter, a) - haversineMetres(searchCenter, b))
-  }, [amenityResults, searchCenter])
+    const isClosed = (spot: AmenityFeature) => amenityOpeningStatuses.get(amenitySpotKey(spot))?.state === "closed"
+    const byDistance = searchCenter
+      ? [...list].sort((a, b) => haversineMetres(searchCenter, a) - haversineMetres(searchCenter, b))
+      : list
+    if (amenityOpeningStatuses.size === 0) return byDistance
+    const open = byDistance.filter((s) => !isClosed(s))
+    const closed = byDistance.filter(isClosed)
+    return closed.length > 0 ? [...open, ...closed] : byDistance
+  }, [amenityResults, searchCenter, amenityOpeningStatuses])
 
   return (
     <div className="flex flex-col h-svh overflow-hidden bg-background text-foreground">
@@ -1189,6 +1208,7 @@ export default function SimpleLayout({
                             isSelected={key === selectedAmenityKey}
                             distanceM={searchCenter ? haversineMetres(searchCenter, spot) : undefined}
                             onClick={() => selectAndPanAmenity(spot)}
+                            openingStatus={amenityOpeningStatuses.get(key)}
                           />
                         </div>
                       )
