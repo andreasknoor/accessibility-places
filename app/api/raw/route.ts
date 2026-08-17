@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
     filters: {
       entrance: false, toilet: false, parking: false, parkingNearby: true,
       seating: false, onlyVerified: false, acceptUnknown: true,
-      alwaysShowParking: false, alwaysShowToilets: false,
+      alwaysShowParking: false, alwaysShowToilets: false, openNowOnly: false,
     },
     // Only the requested source runs; all others stay off.
     sources: {

@@ -195,6 +195,14 @@ export interface SearchFilters {
   // Only standalone amenity=toilets nodes are shown; venue WCs are omitted to
   // avoid overlapping with the place marker at the same coordinates.
   alwaysShowToilets: boolean
+  // Display option, like the two above: filters client-side only (opening_hours
+  // must be evaluated against the *device's* clock/timezone, so the server
+  // never computes this — see lib/opening-hours.ts). Hardcoded to false in
+  // app/api/search/route.ts's outgoing SearchParams; the request-time value
+  // never reaches the adapters. Only a confirmed "closed" place is hidden —
+  // a place with no computable opening-hours status always stays visible,
+  // mirroring how `acceptUnknown` already treats missing data as pass-through.
+  openNowOnly: boolean
 }
 
 export interface ActiveSources {

@@ -196,7 +196,7 @@ describe("PlaceDebugSheet accessibility section", () => {
   describe("'Gefiltert' column", () => {
     const FILTERS: SearchFilters = {
       entrance: true, toilet: false, parking: false, parkingNearby: true, seating: false,
-      onlyVerified: false, acceptUnknown: false, alwaysShowParking: false, alwaysShowToilets: false,
+      onlyVerified: false, acceptUnknown: false, alwaysShowParking: false, alwaysShowToilets: false, openNowOnly: false,
     }
 
     it("marks a row that is part of the active filters", () => {
@@ -411,7 +411,7 @@ describe("PlaceDebugSheet navigate button", () => {
 describe("PlaceDebugSheet judgement line", () => {
   const FILTERS: SearchFilters = {
     entrance: true, toilet: true, parking: false, parkingNearby: true, seating: false,
-    onlyVerified: false, acceptUnknown: false, alwaysShowParking: false, alwaysShowToilets: false,
+    onlyVerified: false, acceptUnknown: false, alwaysShowParking: false, alwaysShowToilets: false, openNowOnly: false,
   }
 
   it("renders the criteria count as a popover trigger when onOpenFilters is given, calling it only via 'Filter bearbeiten'", () => {

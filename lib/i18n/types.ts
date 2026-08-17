@@ -207,6 +207,15 @@ export interface Translations {
     amenityToiletLabel:   string
     amenityCapacity:      (n: number) => string
     amenityCount:         (n: number) => string
+    // "Jetzt geöffnet" (issue #14). No "unknown" string on purpose — when
+    // lib/opening-hours.ts can't compute a status, the UI shows nothing at
+    // all, so there is no copy for that case to translate.
+    openNow:              string
+    openClosingSoon:      (minutes: number) => string
+    openClosed:           (when: string) => string
+    openClosedPlain:      string
+    openNowFilterLabel:   string
+    openNowFilterHint:    string
     openDetails:          (name: string) => string
     showNearbyParking:    string
     copyLink:             string

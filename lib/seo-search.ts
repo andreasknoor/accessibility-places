@@ -16,7 +16,7 @@ const FETCH_FILTERS: SearchFilters = {
   onlyVerified:      false,
   acceptUnknown:     true,
   alwaysShowParking: false,
-  alwaysShowToilets: false,
+  alwaysShowToilets: false, openNowOnly: false,
 }
 
 // Preferred display filter: entrance + toilet accessible (yes or limited).
@@ -29,7 +29,7 @@ const FILTERS_STRICT: SearchFilters = {
   onlyVerified:      false,
   acceptUnknown:     false,
   alwaysShowParking: false,
-  alwaysShowToilets: false,
+  alwaysShowToilets: false, openNowOnly: false,
 }
 
 const SEO_SOURCES: SearchParams["sources"] = {

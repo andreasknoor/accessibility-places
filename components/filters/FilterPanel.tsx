@@ -320,6 +320,31 @@ export default function FilterPanel({ filters, sources, radiusKm, onFilters, onS
             </span>
           </label>
 
+          {/* "Jetzt geöffnet" (issue #14) — not an accessibility criterion,
+              a client-only display filter (lib/opening-hours.ts, evaluated
+              against the device clock/timezone, never sent to the server —
+              see SearchFilters.openNowOnly's own comment). Sits alongside
+              onlyVerified rather than in a separate section: both narrow the
+              result set by a signal that isn't itself an accessibility
+              attribute. Only a confirmed "closed" place is hidden — one with
+              no computable status always stays, hence the hint line. */}
+          <label className="flex items-start gap-2.5 cursor-pointer">
+            <Checkbox
+              checked={filters.openNowOnly}
+              onCheckedChange={() => toggleFilter("openNowOnly")}
+              id="crit-openNowOnly"
+              className="mt-0.5"
+            />
+            <span className="flex flex-col">
+              <span className="text-sm text-muted-foreground leading-snug">
+                {t.results.openNowFilterLabel}
+              </span>
+              <span className="text-xs text-muted-foreground/70 leading-snug">
+                {t.results.openNowFilterHint}
+              </span>
+            </span>
+          </label>
+
           {/* Seating — optional, dimmed */}
           <label className="flex items-center gap-2.5 cursor-pointer">
             <Checkbox

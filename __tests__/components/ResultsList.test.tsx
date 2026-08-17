@@ -1,5 +1,5 @@
 import React from "react"
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import ResultsList from "@/components/results/ResultsList"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -304,5 +304,67 @@ describe("ResultsList — no-search-yet empty state offers a nearby CTA button, 
       onStartNearby,
     })
     expect(screen.queryByRole("button", { name: /In der Nähe suchen/ })).not.toBeInTheDocument()
+  })
+})
+
+// ─── "Nur jetzt geöffnete Orte" filter (issue #14) ──────────────────────────
+//
+// Reported live: closed places kept showing with the filter on. Root cause was
+// the old async/stateful implementation — the closed-id set stayed empty while
+// the (~144 KB) library loaded and then held the *previous* search's verdicts.
+// The filter is now fully derived, so these assertions are deterministic.
+describe("ResultsList – open-now filter", () => {
+  const FILTERS_BASE = {
+    entrance: false, toilet: false, parking: false, parkingNearby: true, seating: false,
+    onlyVerified: false, acceptUnknown: true, alwaysShowParking: false, alwaysShowToilets: false,
+  }
+
+  function placeWithHours(id: string, opening_hours: string): Place {
+    const p = makePlace(id, 52.52, 13.405)
+    return { ...p, sourceRecords: [{ sourceId: "osm", externalId: id, fetchedAt: "", metadata: { opening_hours } }] }
+  }
+
+  // Monday 2026-08-17, 10:00 Europe/Berlin.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date("2026-08-17T08:00:00Z"))
+  })
+  afterEach(() => { vi.useRealTimers() })
+
+  // "08:00-19:00" is the exact value of the place reported as wrongly shown
+  // (OSM way/265501835, Karls Erlebnis-Dorf Elstal).
+  const openNow   = placeWithHours("open",    "08:00-19:00")
+  const closedNow = placeWithHours("shut",    "Mo-Fr 14:00-18:00")
+  const noHours   = makePlace("nohours", 52.52, 13.405)
+
+  it("keeps every place when the filter is off", async () => {
+    renderList({ places: [openNow, closedNow, noHours], onSelect: vi.fn(), isLoading: false, hasSearched: true,
+      filters: { ...FILTERS_BASE, openNowOnly: false } })
+    await waitFor(() => expect(screen.getByText("Place open")).toBeInTheDocument())
+    expect(screen.getByText("Place shut")).toBeInTheDocument()
+    expect(screen.getByText("Place nohours")).toBeInTheDocument()
+  })
+
+  it("drops a confirmed-closed place when the filter is on", async () => {
+    renderList({ places: [openNow, closedNow, noHours], onSelect: vi.fn(), isLoading: false, hasSearched: true,
+      filters: { ...FILTERS_BASE, openNowOnly: true } })
+    await waitFor(() => expect(screen.queryByText("Place shut")).not.toBeInTheDocument())
+    expect(screen.getByText("Place open")).toBeInTheDocument()
+  })
+
+  // The rule the coverage data forces (Berlin ⌀76 %, Issum ⌀39 %): unknown is
+  // pass-through, never a hard fail — otherwise rural searches empty out.
+  it("keeps places that have no opening-hours data at all", async () => {
+    renderList({ places: [openNow, closedNow, noHours], onSelect: vi.fn(), isLoading: false, hasSearched: true,
+      filters: { ...FILTERS_BASE, openNowOnly: true } })
+    await waitFor(() => expect(screen.queryByText("Place shut")).not.toBeInTheDocument())
+    expect(screen.getByText("Place nohours")).toBeInTheDocument()
+  })
+
+  it("reports the filtered count, not the raw one", async () => {
+    renderList({ places: [openNow, closedNow, noHours], onSelect: vi.fn(), isLoading: false, hasSearched: true,
+      filters: { ...FILTERS_BASE, openNowOnly: true } })
+    await waitFor(() => expect(screen.queryByText("Place shut")).not.toBeInTheDocument())
+    expect(screen.getByText(/^2 Orte/)).toBeInTheDocument()
   })
 })

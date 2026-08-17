@@ -54,6 +54,7 @@ const DEFAULT_FILTERS: SearchFilters = {
   acceptUnknown:    false,
   alwaysShowParking: false,
   alwaysShowToilets: false,
+  openNowOnly:      false,
 }
 
 // Simple View (Variante B) fixed search preset — passed as handleSearch's
@@ -151,7 +152,10 @@ function loadSavedPrefs(): { filters: SearchFilters; sources: ActiveSources; rad
     return {
       // Spread saved values onto defaults so new keys added in future always
       // have a fallback. alwaysShowParking/alwaysShowToilets come from app settings, not prefs.
-      filters:  { ...DEFAULT_FILTERS,  ...(saved.filters  ?? {}), alwaysShowParking: initialParking, alwaysShowToilets: initialToilets },
+      // openNowOnly is pinned off: it is never written anymore (see the persist
+      // effect), but installs that stored it before that change would otherwise
+      // keep restoring a stale time-of-day filter forever.
+      filters:  { ...DEFAULT_FILTERS,  ...(saved.filters  ?? {}), alwaysShowParking: initialParking, alwaysShowToilets: initialToilets, openNowOnly: false },
       sources:  { ...DEFAULT_SOURCES,  ...(saved.sources  ?? {}) },
       radiusKm: typeof saved.radiusKm === "number" ? saved.radiusKm : DEFAULT_RADIUS_KM,
     }
@@ -565,12 +569,16 @@ export default function HomeClient({ initialCity, initialCategory, initialSelect
 
   // Persist filter/source/radius preferences across sessions.
   // alwaysShowParking + alwaysShowToilets are intentionally excluded — persisted via AppSettings.
+  // openNowOnly is excluded too, but for a different reason: it is a
+  // time-of-day filter, so restoring it is actively misleading — a toggle set
+  // on a Tuesday evening would silently keep hiding places on Wednesday
+  // morning, with no visible cause. It always starts off (DEFAULT_FILTERS).
   // Guard: skip until the load effect below has fired so we don't overwrite
   // the user's saved prefs with defaults on the first render.
   useEffect(() => {
     if (!prefsLoadedRef.current) return
     try {
-      const { alwaysShowParking: _ap, alwaysShowToilets: _at, ...persistableFilters } = filters
+      const { alwaysShowParking: _ap, alwaysShowToilets: _at, openNowOnly: _on, ...persistableFilters } = filters
       localStorage.setItem(PREFS_KEY, JSON.stringify({ filters: persistableFilters, sources, radiusKm }))
     } catch { /* ignore — localStorage unavailable (private mode, quota) */ }
   }, [filters, sources, radiusKm])

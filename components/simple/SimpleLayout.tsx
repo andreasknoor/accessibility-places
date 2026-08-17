@@ -48,7 +48,7 @@ const LOW_RESULTS_THRESHOLD = 3
 const SIMPLE_MAP_FILTERS: SearchFilters = {
   entrance: true, toilet: false, parking: false, parkingNearby: true,
   seating: false, onlyVerified: false, acceptUnknown: false,
-  alwaysShowParking: false, alwaysShowToilets: false,
+  alwaysShowParking: false, alwaysShowToilets: false, openNowOnly: false,
 }
 
 type Screen = "start" | "tiles" | "locating" | "results" | "venue" | "city" | "detail"

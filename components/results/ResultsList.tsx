@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 import RadiusPresetPopover from "@/components/filters/RadiusPresetPopover"
 import { haversineMetres } from "@/lib/matching/match"
 import { amenitySpotKey, formatRadiusKm } from "@/lib/search-ui"
+import { useOpenNowFilter } from "@/lib/opening-hours"
 import type { Place, SearchFilters, FilterDebug, AmenityFeature, AmenityType } from "@/lib/types"
 
 interface Props {
@@ -98,15 +99,22 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
     onSortChange?.(next)
   }
 
+  // Client-only "open now" filter (issue #14) — must run here, not on the
+  // server, since opening_hours is evaluated against the device's own
+  // clock/timezone. Only drops a confirmed "closed" place; anything without
+  // a computable status stays, so this is safe to feed straight into the
+  // existing sort below.
+  const openNowFiltered = useOpenNowFilter(places, filters?.openNowOnly ?? false)
+
   const displayedPlaces = useMemo(() => {
     if (sortBy === "distance" && searchCenter) {
-      return [...places].sort((a, b) =>
+      return [...openNowFiltered].sort((a, b) =>
         haversineMetres(searchCenter, a.coordinates) -
         haversineMetres(searchCenter, b.coordinates)
       )
     }
-    return places
-  }, [places, sortBy, searchCenter])
+    return openNowFiltered
+  }, [openNowFiltered, sortBy, searchCenter])
 
   // Amenity results, always sorted by distance (the only meaningful order for
   // "nearest parking / toilet").
@@ -217,7 +225,9 @@ export default function ResultsList({ places, filters, selectedId, onSelect, isL
             )}
             {!isLoading && !amenityMode && places.length > 0 && (
               <span className="text-xs text-muted-foreground">
-                {t.results.count(places.length)}
+                {/* displayedPlaces, not places: matches what's actually
+                    rendered below when the "open now" filter drops some. */}
+                {t.results.count(displayedPlaces.length)}
                 {parkingSpotCount != null && parkingSpotCount > 0 && (
                   <> {t.results.parkingCount(parkingSpotCount)}</>
                 )}

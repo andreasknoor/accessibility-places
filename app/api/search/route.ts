@@ -190,6 +190,9 @@ export async function POST(req: NextRequest) {
     acceptUnknown:     Boolean(rawF.acceptUnknown),
     alwaysShowParking: false,
     alwaysShowToilets: false,
+    // Client-only display filter (see SearchFilters' own comment) — never
+    // acted on server-side, regardless of what the request body sends.
+    openNowOnly:       false,
   }
 
   const req_s = rawSources && typeof rawSources === "object" ? rawSources as Record<string, unknown> : {}

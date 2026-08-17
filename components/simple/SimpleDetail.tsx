@@ -5,7 +5,9 @@ import { NativeLink } from "@/components/ui/native-link"
 import ModeSwitcher from "@/components/ModeSwitcher"
 import NavigateButton from "@/components/ui/navigate-button"
 import CriterionIcon from "@/components/simple/CriterionIcon"
+import OpeningStatusChip from "@/components/results/OpeningStatusChip"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
+import { useOpeningStatus } from "@/lib/opening-hours"
 import { useTranslations } from "@/lib/i18n"
 import { evaluatePlaceJudgment, type JudgmentFilters } from "@/lib/reliability"
 import { criterionSentence, SIMPLE_TOILET_REQUIRED_CATEGORIES } from "@/lib/simple-view"
@@ -41,6 +43,7 @@ function CriterionRow({ label, value }: { label: string; value: A11yValue }) {
 // website, "Hinbringen".
 export default function SimpleDetail({ place, distanceM, onBack, onOpenSettings, onSwitchToExpert }: Props) {
   const t = useTranslations()
+  const openingStatus = useOpeningStatus(place)
   const addr = [place.address.street, place.address.houseNumber, place.address.city]
     .filter(Boolean).join(" ")
 
@@ -106,6 +109,11 @@ export default function SimpleDetail({ place, distanceM, onBack, onOpenSettings,
             {distanceM !== undefined && (
               <p className="text-sm text-muted-foreground">{t.results.distanceFromHere(Math.round(distanceM))}</p>
             )}
+            {/* Opening status (issue #14). Quickstart shows it only here, on
+                the detail screen — not on the result cards, which deliberately
+                carry one accessibility sentence each and nothing else. Renders
+                nothing at all when no status is computable. */}
+            <OpeningStatusChip status={openingStatus} size="sm" className="mt-1 text-sm font-medium" />
           </div>
         </div>
 

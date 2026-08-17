@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 import PlaceCard from "@/components/results/PlaceCard"
 import { startDefaultNavigation } from "@/lib/native/navigation"
@@ -9,7 +9,7 @@ import type { Place, SearchFilters } from "@/lib/types"
 
 const FILTERS: SearchFilters = {
   entrance: true, toilet: true, parking: false, parkingNearby: true, seating: false,
-  onlyVerified: false, acceptUnknown: false, alwaysShowParking: false, alwaysShowToilets: false,
+  onlyVerified: false, acceptUnknown: false, alwaysShowParking: false, alwaysShowToilets: false, openNowOnly: false,
 }
 
 vi.mock("@/lib/native/navigation", () => ({
@@ -322,3 +322,62 @@ describe("PlaceCard — navigate button (docs/plans/native-navigate-here.md, Pla
 // almost exactly what the judgement line above already says. See
 // JudgmentLine.test-equivalent coverage in the "renders the judgement line"
 // tests above and lib/reliability.test.ts for the underlying status logic.
+
+// ─── Opening hours (issue #14) ──────────────────────────────────────────────
+//
+// The status itself is unit-tested in __tests__/lib/opening-hours.test.ts.
+// What matters here is the product rule the user set explicitly: when nothing
+// definite can be said, the card must show NO opening-hours element at all —
+// no "keine Angabe", no greyed-out placeholder.
+describe("PlaceCard — opening hours", () => {
+  // Pinned to Monday 2026-08-17, 10:00 Europe/Berlin (08:00 UTC). Only Date is
+  // faked, so the real setTimeout below still resolves. Without a fixed clock
+  // these assertions flip depending on the wall-clock time the suite runs at —
+  // "Mo-Fr 09:00-18:00 unknown" is only ambiguous *inside* its window.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date("2026-08-17T08:00:00Z"))
+  })
+  afterEach(() => { vi.useRealTimers() })
+
+  const withHours = (opening_hours: string) =>
+    makePlace({ sourceRecords: [{ sourceId: "osm", externalId: "1", fetchedAt: "", metadata: { opening_hours } }] })
+
+  it("shows nothing when the place has no opening_hours tag", async () => {
+    renderWithProvider(<PlaceCard place={makePlace()} />)
+    // Wait a tick so a (hypothetical) async status load would have landed.
+    await new Promise((r) => setTimeout(r, 0))
+    expect(screen.queryByText(/Geöffnet|Geschlossen|Schließt in/)).not.toBeInTheDocument()
+  })
+
+  it("shows nothing when the opening_hours value is unparseable", async () => {
+    renderWithProvider(<PlaceCard place={withHours("nach Vereinbarung, bitte anrufen")} />)
+    await new Promise((r) => setTimeout(r, 50))
+    expect(screen.queryByText(/Geöffnet|Geschlossen|Schließt in/)).not.toBeInTheDocument()
+  })
+
+  it("shows nothing when the value parses but is ambiguous", async () => {
+    renderWithProvider(<PlaceCard place={withHours("Mo-Fr 09:00-18:00 unknown")} />)
+    await new Promise((r) => setTimeout(r, 50))
+    expect(screen.queryByText(/Geöffnet|Geschlossen|Schließt in/)).not.toBeInTheDocument()
+  })
+
+  it("renders a status for a place that is open around the clock", async () => {
+    renderWithProvider(<PlaceCard place={withHours("24/7")} />)
+    expect(await screen.findByText("Geöffnet")).toBeInTheDocument()
+  })
+
+  // Regression for the Google-prose misparse: a Google-only place must show
+  // nothing rather than a confident (and wrong) "Geschlossen".
+  it("shows nothing for a Google-only place whose hours are prose, not syntax", async () => {
+    const place = makePlace({
+      sourceRecords: [{
+        sourceId: "google_places", externalId: "g1", fetchedAt: "",
+        metadata: { regularOpeningHours: { weekdayDescriptions: ["Monday: 9:00 AM – 6:00 PM", "Sunday: Closed"] } },
+      }],
+    })
+    renderWithProvider(<PlaceCard place={place} />)
+    await new Promise((r) => setTimeout(r, 50))
+    expect(screen.queryByText(/Geöffnet|Geschlossen|Schließt in/)).not.toBeInTheDocument()
+  })
+})

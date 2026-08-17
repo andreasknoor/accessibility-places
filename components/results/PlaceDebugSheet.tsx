@@ -21,7 +21,9 @@ import { buildPlaceDeepLink } from "@/lib/place-link"
 import { openTallyPopup } from "@/lib/tally"
 import { track } from "@/lib/analytics"
 import JudgmentLine from "./JudgmentLine"
+import OpeningStatusChip from "./OpeningStatusChip"
 import { criterionTier, attrVerifiedAt, type JudgmentFilters, type ConfidenceTier } from "@/lib/reliability"
+import { useOpeningStatus, extractRawOpeningHours } from "@/lib/opening-hours"
 import { cn } from "@/lib/utils"
 import type { Place, SourceId, ParkingDetails, EntranceDetails, ToiletDetails, SeatingDetails, AccessibilityAttribute, SearchFilters } from "@/lib/types"
 
@@ -150,6 +152,7 @@ export default function PlaceDebugSheet({ place, onClose, filters, onOpenFilters
   // Focus management for the modal info sheet (WCAG 2.1.2 / 2.4.3): focus in on
   // open, trap Tab, close on Escape, restore focus to the trigger on close.
   const panelRef = useFocusTrap<HTMLDivElement>(onClose)
+  const openingStatus = useOpeningStatus(place)
 
   function handleCopyField(text: string, field: "address" | "osm") {
     void navigator.clipboard.writeText(text).then(() => {
@@ -254,12 +257,11 @@ export default function PlaceDebugSheet({ place, onClose, filters, onOpenFilters
   const osm    = getMeta(place, "osm")
   const google = getMeta(place, "google_places")
 
-  // Opening hours: OSM string or Google weekday array
-  const openingHours =
-    str(osm?.opening_hours) ??
-    (Array.isArray(google?.regularOpeningHours?.weekdayDescriptions)
-      ? (google.regularOpeningHours.weekdayDescriptions as string[]).join("\n")
-      : null)
+  // Raw hours for display (OSM syntax or Google's prose list). The computed
+  // status above deliberately uses a *different*, OSM-only extractor — see
+  // extractParsableOpeningHours' comment for why Google prose must never be
+  // fed to the parser.
+  const openingHours = extractRawOpeningHours(place)
 
   const email   = str(osm?.email) ?? str(osm?.["contact:email"])
   const cuisine = str(osm?.cuisine)?.split(";").map((s: string) => s.trim()).join(", ")
@@ -714,7 +716,16 @@ export default function PlaceDebugSheet({ place, onClose, filters, onOpenFilters
             )}
             {openingHours && (
               <InfoRow icon={Clock} label={ti.openingHours}>
-                <span className="whitespace-pre-line">{openingHours}</span>
+                {/* Computed status (issue #14) sits above the raw OSM/Google
+                    string, which stays as-is underneath as evidence/fallback
+                    — renders nothing extra when no status is computable, see
+                    OpeningStatusChip's own comment. flex-col wrapper: InfoRow's
+                    own children slot is a plain (non-flex) span, so without it
+                    the chip and the raw text would just sit inline. */}
+                <span className="flex flex-col gap-1">
+                  <OpeningStatusChip status={openingStatus} size="md" className="font-semibold text-sm" />
+                  <span className="whitespace-pre-line">{openingHours}</span>
+                </span>
               </InfoRow>
             )}
           </Section>

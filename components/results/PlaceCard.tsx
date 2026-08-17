@@ -10,11 +10,13 @@ import { Badge } from "@/components/ui/badge"
 import JudgmentLine     from "./JudgmentLine"
 import A11yAttribute    from "./A11yAttribute"
 import PlaceDebugSheet  from "./PlaceDebugSheet"
+import OpeningStatusChip from "./OpeningStatusChip"
 import { track } from "@/lib/analytics"
 import { useTranslations } from "@/lib/i18n"
 import { SOURCE_LABELS }   from "@/lib/config"
 import { CATEGORY_ICONS }  from "@/lib/category-icons"
 import type { JudgmentFilters } from "@/lib/reliability"
+import { useOpeningStatus } from "@/lib/opening-hours"
 import { cn } from "@/lib/utils"
 import type { Place, SearchFilters } from "@/lib/types"
 
@@ -41,6 +43,7 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM, filte
   const t = useTranslations()
   const [expanded,  setExpanded]  = useState(false)
   const [showDebug, setShowDebug] = useState(false)
+  const openingStatus = useOpeningStatus(place)
 
   const addr = [place.address.street, place.address.houseNumber, place.address.city]
     .filter(Boolean).join(" ")
@@ -133,8 +136,13 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM, filte
             </h3>
             <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 self-start mt-0.5" aria-hidden />
           </div>
-          <p className="text-xs text-muted-foreground">
-            {(t.categories as Record<string, string>)[place.category] ?? place.category}
+          <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
+            <span>{(t.categories as Record<string, string>)[place.category] ?? place.category}</span>
+            {/* Renders nothing when no opening-hours status is computable
+                (lib/opening-hours.ts) — deliberately no "unknown" pill here,
+                see OpeningStatusChip's own comment. */}
+            {openingStatus && <span aria-hidden>·</span>}
+            <OpeningStatusChip status={openingStatus} size="sm" className="font-medium" />
           </p>
           {(addr || distanceM !== undefined) && (
             <p className="text-xs text-muted-foreground flex items-center gap-1">

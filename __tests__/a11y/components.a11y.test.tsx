@@ -42,7 +42,7 @@ vi.mock("@/lib/analytics", () => ({ track: vi.fn(), getPlatform: () => "web" }))
 
 const FILTERS: SearchFilters = {
   entrance: true, toilet: true, parking: true, parkingNearby: true, seating: false,
-  onlyVerified: false, acceptUnknown: false, alwaysShowParking: false, alwaysShowToilets: false,
+  onlyVerified: false, acceptUnknown: false, alwaysShowParking: false, alwaysShowToilets: false, openNowOnly: false,
 }
 const SOURCES: ActiveSources = {
   accessibility_cloud: true, osm: true, reisen_fuer_alle: true, ginto: true, acceslibre: true, google_places: true,

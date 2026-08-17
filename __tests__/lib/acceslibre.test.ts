@@ -26,7 +26,7 @@ function makeParams(lat: number, lon: number): SearchParams {
     filters: {
       entrance: true, toilet: false, parking: false, parkingNearby: true,
       seating: false, onlyVerified: false, acceptUnknown: false,
-      alwaysShowParking: false, alwaysShowToilets: false,
+      alwaysShowParking: false, alwaysShowToilets: false, openNowOnly: false,
     },
     sources: {
       accessibility_cloud: false, osm: false, reisen_fuer_alle: false,

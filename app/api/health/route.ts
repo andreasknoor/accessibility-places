@@ -23,7 +23,7 @@ const SCENARIO = {
   categories: ["cafe"] as SearchParams["categories"],
   filters: {
     entrance: true, toilet: true, parking: false, parkingNearby: true, seating: false,
-    onlyVerified: false, acceptUnknown: true, alwaysShowParking: false, alwaysShowToilets: false,
+    onlyVerified: false, acceptUnknown: true, alwaysShowParking: false, alwaysShowToilets: false, openNowOnly: false,
   },
   minResults:    3,
   minConfidence: 0.30,
