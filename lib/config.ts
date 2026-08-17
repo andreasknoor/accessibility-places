@@ -2,7 +2,7 @@ import type { SourceId, Category } from "./types"
 
 // User-visible app version, shown in the header next to the subtitle.
 // Bump on every meaningful release.
-export const APP_VERSION = "12.14"
+export const APP_VERSION = "12.15"
 
 // Tally form IDs for the per-place "report data error" flow (PlaceDebugSheet).
 // Empty string = feature hidden. Fill in after creating the DE/EN forms in
@@ -33,6 +33,9 @@ export const RELIABILITY_WEIGHTS: Record<SourceId, number> = {
   osm_private:         0,  // stats-only; tracks requests won by private Overpass server
   osm_public:          0,  // stats-only; tracks requests won by public Overpass mirrors
   nominatim:           0,  // stats-only
+  search_total:        0,  // stats-only; whole-search "time to visible results"
+  search_total_allcats:0,  // stats-only; search_total subset with no category filter
+  search_total_filtered:0, // stats-only; search_total subset with a category filter
 }
 
 // Ginto entries get higher weights for stronger approval levels
@@ -69,6 +72,9 @@ export const SOURCE_FAMILY: Record<SourceId, string> = {
   osm_private:         "osm",
   osm_public:          "osm",
   nominatim:           "osm",
+  search_total:        "meta",  // stats-only; not a place-attribution family
+  search_total_allcats:"meta",
+  search_total_filtered:"meta",
 }
 
 // Tier thresholds against the additive family-evidence sum. A conflicting
@@ -109,6 +115,9 @@ export const SOURCE_LABELS: Record<SourceId, string> = {
   osm_private:         "OpenStreetMap (privat)",
   osm_public:          "OpenStreetMap (öffentlich)",
   nominatim:           "Nominatim",
+  search_total:        "Suche gesamt",
+  search_total_allcats:"Suche gesamt (alle Kategorien)",
+  search_total_filtered:"Suche gesamt (Kategorie gewählt)",
 }
 
 // Raced in parallel — the first successful response wins.

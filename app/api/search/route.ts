@@ -8,7 +8,7 @@ import { mergePlaces, passesFilters, finalisePlaceConfidence, computeFilteredCon
 import { fetchOsmDisabledParking, fetchOsmAccessibleAmenities } from "@/lib/adapters/osm"
 import type { AmenityFeature } from "@/lib/types"
 import { enrichWithNearbyParking, haversineMeters, PARKING_DISPLAY_MAX_M, PARKING_STRONG_DISPLAY_CAP, PARKING_WEAK_DISPLAY_CAP, dedupeToiletFeatures, TOILET_DISPLAY_CAP, dedupeParkingFeatures } from "@/lib/matching/nearby-parking"
-import { parseQuery } from "@/lib/llm"
+import { parseQuery, ALL_CATEGORIES } from "@/lib/llm"
 import { NOMINATIM_ENDPOINT, RADIUS_MIN_KM, RADIUS_MAX_KM, PUBLIC_OVERPASS_ENDPOINTS, countryCodesParam, regionForCoordinates, INTL_COUNTRIES } from "@/lib/config"
 import { isRateLimited, isGooglePlacesRateLimited } from "@/lib/search-rate-limit"
 import * as Sentry from "@sentry/nextjs"
@@ -220,6 +220,13 @@ export async function POST(req: NextRequest) {
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
+      // Headline "time to visible results" stat — one attempt per stream, mirrored
+      // in the adapter dashboard between the source table and the top-users table.
+      // trackCall fires for every attempt (success or fatal); trackDuration only on
+      // success (a fatal search never produced a duration worth averaging in); a
+      // fatal path calls trackError separately, so totalCalls - durCnt == fatal count.
+      trackCall("search_total")
+
       const emit = (e: StreamEvent) => {
         if (signal.aborted) return
         controller.enqueue(encoder.encode(JSON.stringify(e) + "\n"))
@@ -253,11 +260,13 @@ export async function POST(req: NextRequest) {
           const geocoded = await geocode(parsed.locationQuery, signal, international)
           if (signal.aborted) { controller.close(); return }
           if (geocoded === "unavailable") {
+            trackError("search_total")
             emit({ type: "fatal", error: "Geocoding temporarily unavailable — please retry", code: "geocoding_unavailable" })
             controller.close()
             return
           }
           if (geocoded === "not_found") {
+            trackError("search_total")
             emit({ type: "fatal", error: `Location not found: "${parsed.locationQuery}"`, code: "location_not_found" })
             controller.close()
             return
@@ -486,11 +495,26 @@ export async function POST(req: NextRequest) {
         const sourceStats = {} as Record<SourceId, number>
         for (const r of adapterResults) sourceStats[r.sourceId] = r.places.length
 
+        const totalMs = Date.now() - t0
+        trackDuration("search_total", totalMs)
+        // Worst-case segment: no category chip matched, so parseQuery() fell back
+        // to querying all categories at once — the single most expensive OSM
+        // shape (see lib/adapters/osm.ts buildOverpassQuery). Tracked separately
+        // so the dashboard can show its cost apart from the (typically much
+        // cheaper) single-category searches.
+        if (parsed.categories.length === ALL_CATEGORIES.length) {
+          trackCall("search_total_allcats")
+          trackDuration("search_total_allcats", totalMs)
+        } else {
+          trackCall("search_total_filtered")
+          trackDuration("search_total_filtered", totalMs)
+        }
+
         emit({
           type: "result",
           payload: {
             places:        stripRaw(filtered),
-            durationMs:    Date.now() - t0,
+            durationMs:    totalMs,
             nameHint:      nameHint || undefined,
             sourceStats,
             location:      { lat: geo.lat, lon: geo.lon },
@@ -543,7 +567,10 @@ export async function POST(req: NextRequest) {
         Sentry.captureException(err, { level: "error", tags: { area: "search-pipeline", kind: "unhandled" } })
         // Only surface a fatal if the result never made it out — otherwise the
         // client already has good data and must not be clobbered (M24).
-        if (!resultEmitted) emit({ type: "fatal", error: "An unexpected error occurred. Please try again." })
+        if (!resultEmitted) {
+          trackError("search_total")
+          emit({ type: "fatal", error: "An unexpected error occurred. Please try again." })
+        }
         await flushAndClose()
       }
     },

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { timingSafeEqual }           from "crypto"
-import { getStats, resetStats }      from "@/lib/stats"
+import { getStats, resetStats, resetSearchTotalStats } from "@/lib/stats"
 import { getTopUsers, getUserTotals, resetUserStats, setUserComment, isStreakActive, COMMENT_MAX_LENGTH } from "@/lib/user-stats"
 import type { StatsResult, StatsResponse, SourceStats } from "@/lib/stats"
 import type { TopUser, UserTotals } from "@/lib/user-stats"
@@ -25,6 +25,10 @@ const SOURCE_ORDER = ["osm_private", "osm_parking_private", "osm_public", "osm_p
 
 function fmt(n: number): string {
   return n.toLocaleString("de-DE")
+}
+
+function fmtMs(v: number | null): string {
+  return v != null ? `${fmt(v)} ms` : "–"
 }
 
 function errorColor(rate: number): string {
@@ -214,6 +218,129 @@ function renderTopUsers(topUsers: TopUser[], totals: UserTotals): string {
 </script>`
 }
 
+// "Time to results" section — server-side time from request start to the
+// final `result` event (the only event HomeClient actually renders places
+// from, see app/HomeClient.tsx). Placed between the per-adapter table and
+// the top-users table: it's the headline outcome metric, the per-adapter
+// table is the "why", and top users is a different axis entirely.
+function renderTimeToResults(stats: StatsResult): string {
+  const total    = stats.search_total
+  const allcats  = stats.search_total_allcats
+  const filtered = stats.search_total_filtered
+
+  if (!total || total.totalCalls === 0) return ""
+
+  const fatalCount = total.totalErrors
+  const fatalRate  = total.totalCalls > 0 ? (fatalCount / total.totalCalls) * 100 : 0
+  const fatalColor = errorColor(fatalRate)
+
+  // Range bar: position of min/max across the 0–max scale, and the avg marker in between.
+  const rangeMax   = total.maxMs ?? 0
+  const rangeMin   = total.minMs ?? 0
+  const rangeSpan  = Math.max(rangeMax - rangeMin, 1)
+  const avgPct     = total.avgMs != null ? Math.min(100, Math.max(0, ((total.avgMs - rangeMin) / rangeSpan) * 100)) : null
+  const fillPct    = rangeMax > 0 ? Math.min(100, (rangeSpan / rangeMax) * 100 + (rangeMin / rangeMax) * 100) : 0
+
+  const successCount = total.totalCalls - fatalCount
+  const pct = (n: number) => successCount > 0 ? ((n / successCount) * 100).toFixed(1) : "0.0"
+
+  const compareRow = (label: string, s: SourceStats | undefined, worst: boolean, scaleMax: number) => {
+    if (!s || s.avgMs == null) {
+      return `
+      <div class="ttr-compare-row${worst ? " worst" : ""}">
+        <div class="ttr-compare-name"><span class="label">${label}</span><span class="desc">no data yet</span></div>
+        <div class="ttr-compare-bar-wrap"><div class="ttr-compare-bar-track"></div></div>
+        <div class="ttr-compare-stats"></div>
+      </div>`
+    }
+    const widthPct = scaleMax > 0 ? Math.max(4, Math.min(100, (s.avgMs / scaleMax) * 100)) : 4
+    return `
+      <div class="ttr-compare-row${worst ? " worst" : ""}">
+        <div class="ttr-compare-name">
+          <span class="label">${label}</span>
+          <span class="desc">${fmt(s.totalCalls)} searches &middot; ${pct(s.totalCalls)}%</span>
+        </div>
+        <div class="ttr-compare-bar-wrap">
+          <div class="ttr-compare-bar-track">
+            <div class="ttr-compare-bar-fill ${worst ? "worst" : "normal"}" style="width:${widthPct}%">${fmtMs(s.avgMs)}</div>
+          </div>
+        </div>
+        <div class="ttr-compare-stats">
+          <div class="ttr-compare-stat"><span class="v">${fmtMs(s.minMs)}</span><span class="k">Min</span></div>
+          <div class="ttr-compare-stat"><span class="v">${fmtMs(s.avgMs)}</span><span class="k">Avg</span></div>
+          <div class="ttr-compare-stat"><span class="v">${fmtMs(s.maxMs)}</span><span class="k">Max</span></div>
+        </div>
+      </div>`
+  }
+
+  const scaleMax = Math.max(filtered?.avgMs ?? 0, allcats?.avgMs ?? 0, 1)
+  const delta = (filtered?.avgMs && allcats?.avgMs && filtered.avgMs > 0)
+    ? `<div class="ttr-delta-badge">⚠ ${(allcats.avgMs / filtered.avgMs).toFixed(1)}&times; slower on average when no category is selected &middot; ${pct(allcats?.totalCalls ?? 0)}% of all searches hit this path</div>`
+    : ""
+
+  return `
+<h2 style="font-size:1rem;font-weight:600;letter-spacing:0.05em;color:#e5e7eb;margin-top:40px;display:flex;align-items:center;gap:10px">
+  <span style="width:10px;height:10px;border-radius:2px;background:#22d3ee;box-shadow:0 0 10px rgba(34,211,238,0.5);display:inline-block"></span>
+  ⏱ Time to Results
+</h2>
+<p class="subtitle">Time from request start to the final result event that HomeClient renders — includes geocoding, all adapters, matching/merging.</p>
+
+<div class="kpis" style="margin-top:20px">
+  <div class="kpi">
+    <div class="kpi-label">Min</div>
+    <div class="kpi-value">${fmtMs(total.minMs)}</div>
+    <div class="ttr-kpi-sub">fastest search in window</div>
+  </div>
+  <div class="kpi ttr-avg">
+    <div class="kpi-label">Avg</div>
+    <div class="kpi-value" style="color:#22d3ee">${fmtMs(total.avgMs)}</div>
+    <div class="ttr-kpi-sub">${fmt(successCount)} successful searches</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Max</div>
+    <div class="kpi-value">${fmtMs(total.maxMs)}</div>
+    <div class="ttr-kpi-sub">slowest search in window</div>
+  </div>
+</div>
+
+<div class="ttr-range-card">
+  <div class="ttr-range-head"><span>0 ms</span><span>Min &ndash; Max range</span><span>${fmtMs(total.maxMs)}</span></div>
+  <div class="ttr-range-track">
+    <div class="ttr-range-fill" style="width:${fillPct}%"></div>
+    ${avgPct != null ? `<div class="ttr-range-marker" style="left:${avgPct}%" title="Avg: ${fmtMs(total.avgMs)}"></div>` : ""}
+  </div>
+  <div class="ttr-range-labels"><span>${fmtMs(total.minMs)}</span><span>${fmtMs(total.maxMs)}</span></div>
+</div>
+
+<h3 style="font-size:0.85rem;font-weight:600;color:#e5e7eb;margin-top:28px">Segmented by Worst Case</h3>
+<p class="subtitle">Tracked separately: a search with a category filter vs. &ldquo;All categories&rdquo; (no chip selected) &mdash; the single most expensive Overpass query shape.</p>
+<div class="ttr-compare">
+  ${compareRow("Category selected", filtered, false, scaleMax)}
+  ${compareRow("All categories — worst case", allcats, true, scaleMax)}
+</div>
+${delta}
+
+<h3 style="font-size:0.85rem;font-weight:600;color:#e5e7eb;margin-top:28px">Failed Searches</h3>
+<p class="subtitle">Previously invisible: searches that never reach a result event (geocoding errors, unhandled exceptions) &mdash; excluded from the timings above.</p>
+<div class="ttr-fatal-strip">
+  <span style="font-size:1.1rem">⚠️</span>
+  <span class="ttr-fatal-text"><b>${fmt(fatalCount)}</b> of <b>${fmt(total.totalCalls)}</b> searches ended fatally before results became visible.</span>
+  <span class="ttr-fatal-pill" style="background:${fatalColor}22;color:${fatalColor};border-color:${fatalColor}66">${fatalRate.toFixed(1)}% fatal rate</span>
+</div>
+
+<div class="section-footer">
+  <div></div>
+  <button class="reset-btn" onclick="
+    if (!confirm('Permanently delete all TIME-TO-RESULTS statistics?\\n\\nAdapter and user stats are kept. This cannot be undone.')) return;
+    const token = new URLSearchParams(location.search).get('token') ?? '';
+    fetch('/api/stats?token=' + encodeURIComponent(token) + '&target=search_total', { method: 'DELETE' })
+      .then(r => r.json())
+      .then(d => { alert(d.deleted + ' keys deleted.'); location.reload(); })
+      .catch(() => alert('Reset failed.'));
+  ">Reset time-to-results stats</button>
+</div>`
+}
+
 function renderHtml({ sources: stats, oldestHour }: StatsResponse, topUsers: TopUser[], userTotals: UserTotals): string {
   const entries = SOURCE_ORDER
     .map(id => ({ id, s: stats[id as keyof StatsResult] }))
@@ -254,6 +381,7 @@ function renderHtml({ sources: stats, oldestHour }: StatsResponse, topUsers: Top
   }).join("")
 
   const kpiColor = errorColor(globalRate)
+  const timeToResults = renderTimeToResults(stats)
 
   return `<!DOCTYPE html>
 <html lang="de">
@@ -303,6 +431,39 @@ function renderHtml({ sources: stats, oldestHour }: StatsResponse, topUsers: Top
   .section-footer .legend { margin-top: 0 }
   .reset-btn { background: #7f1d1d; color: #fca5a5; border: 1px solid #991b1b; border-radius: 6px; padding: 10px 18px; font: inherit; font-size: 0.8rem; cursor: pointer; letter-spacing: 0.03em }
   .reset-btn:hover { background: #991b1b; color: #fee2e2 }
+
+  /* ── Time to Results section ─────────────────────────────────────── */
+  .ttr-kpi-sub { margin-top: 8px; color: #6b7280; font-size: 0.7rem }
+  .ttr-avg .kpi-value { color: #22d3ee }
+  .ttr-range-card { background: #1f2937; border: 1px solid #374151; border-radius: 8px; padding: 18px 22px 20px; margin-top: 16px }
+  .ttr-range-head { display: flex; justify-content: space-between; color: #9ca3af; font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px }
+  .ttr-range-track { position: relative; height: 10px; background: #111827; border-radius: 5px; border: 1px solid #374151 }
+  .ttr-range-fill { position: absolute; top: -1px; bottom: -1px; left: 0; border-radius: 5px; background: linear-gradient(90deg, rgba(34,211,238,0.15), rgba(34,211,238,0.55)) }
+  .ttr-range-marker { position: absolute; top: -5px; width: 2px; height: 20px; background: #f9fafb }
+  .ttr-range-labels { display: flex; justify-content: space-between; margin-top: 10px; color: #6b7280; font-size: 0.68rem }
+  .ttr-compare { margin-top: 14px; display: flex; flex-direction: column; gap: 10px }
+  .ttr-compare-row { background: #1f2937; border: 1px solid #2a3441; border-radius: 8px; padding: 16px 20px; display: grid; grid-template-columns: 220px 1fr auto; align-items: center; gap: 20px }
+  .ttr-compare-row.worst { border-color: rgba(245,158,11,0.35); background: linear-gradient(180deg, rgba(245,158,11,0.05), #1f2937 40%) }
+  .ttr-compare-name { display: flex; flex-direction: column; gap: 4px }
+  .ttr-compare-name .label { color: #e5e7eb; font-size: 0.85rem; font-weight: 600 }
+  .ttr-compare-name .desc { color: #6b7280; font-size: 0.68rem }
+  .ttr-compare-bar-track { height: 22px; background: #111827; border-radius: 5px; border: 1px solid #374151; overflow: hidden }
+  .ttr-compare-bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; font-size: 0.72rem; font-weight: 600; white-space: nowrap }
+  .ttr-compare-bar-fill.normal { background: linear-gradient(90deg, #0e7490, #22d3ee); color: #04222a }
+  .ttr-compare-bar-fill.worst  { background: linear-gradient(90deg, #92400e, #f59e0b); color: #2a1502 }
+  .ttr-compare-stats { display: flex; gap: 18px; text-align: right }
+  .ttr-compare-stat { display: flex; flex-direction: column; gap: 2px; min-width: 58px }
+  .ttr-compare-stat .v { font-size: 0.85rem; color: #e5e7eb; font-weight: 600 }
+  .ttr-compare-stat .k { font-size: 0.62rem; color: #6b7280; letter-spacing: 0.06em; text-transform: uppercase }
+  .ttr-delta-badge { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.4); color: #f59e0b; padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 600 }
+  .ttr-fatal-strip { margin-top: 14px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; background: #1f2937; border: 1px solid #2a3441; border-radius: 8px; padding: 14px 20px }
+  .ttr-fatal-text { color: #9ca3af; font-size: 0.78rem; flex: 1; min-width: 200px }
+  .ttr-fatal-text b { color: #e5e7eb }
+  .ttr-fatal-pill { border: 1px solid; padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600 }
+  @media (max-width: 720px) {
+    .ttr-compare-row { grid-template-columns: 1fr; text-align: left }
+    .ttr-compare-stats { justify-content: flex-start }
+  }
 </style>
 </head>
 <body>
@@ -379,6 +540,8 @@ ${entries.length === 0 ? `
   ">Reset adapter stats</button>
 </div>
 
+${timeToResults}
+
 ${renderTopUsers(topUsers, userTotals)}
 </body>
 </html>`
@@ -436,10 +599,14 @@ export async function DELETE(req: NextRequest): Promise<Response> {
   const token = req.nextUrl.searchParams.get("token") ?? ""
   if (!safeEqual(token, secret)) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 })
   if (!process.env.KV_REST_API_URL) return NextResponse.json({ ok: false, error: "KV not configured" }, { status: 503 })
-  // ?target=users clears only the anonymous user stats; default clears only
-  // the adapter stats — the two datasets are reset independently.
-  const deleted = req.nextUrl.searchParams.get("target") === "users"
+  // ?target=users clears only the anonymous user stats; ?target=search_total
+  // clears only the "time to visible results" section; default clears the
+  // full adapter stats table — the three datasets are reset independently.
+  const target = req.nextUrl.searchParams.get("target")
+  const deleted = target === "users"
     ? await resetUserStats()
-    : await resetStats()
+    : target === "search_total"
+      ? await resetSearchTotalStats()
+      : await resetStats()
   return NextResponse.json({ ok: true, deleted }, { headers: { "Cache-Control": "no-store" } })
 }

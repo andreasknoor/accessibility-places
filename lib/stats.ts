@@ -84,6 +84,7 @@ export interface SourceStats {
 export type StatsResult = Partial<Record<SourceId, SourceStats>>
 
 const ALL_SOURCES: SourceId[] = [
+  "search_total", "search_total_allcats", "search_total_filtered",
   "osm", "osm_private", "osm_public",
   "accessibility_cloud", "reisen_fuer_alle", "ginto", "google_places",
   "osm_parking", "osm_parking_private", "osm_parking_public", "nominatim",
@@ -155,6 +156,26 @@ export async function resetStats(): Promise<number> {
   for (let i = 0; i < keys.length; i += 100)
     await redis.del(...keys.slice(i, i + 100))
   return keys.length
+}
+
+// Clears only the "time to visible results" pseudo-sources (search_total and
+// its two segments), independently of the per-adapter table `resetStats()`
+// wipes. `stats:h:*` above already covers these keys too — this is a
+// narrower reset for when only this section's numbers need a clean slate
+// (e.g. right after a latency-affecting deploy) without losing the
+// unrelated per-adapter history.
+export async function resetSearchTotalStats(): Promise<number> {
+  const redis = getRedis()
+  if (!redis) return 0
+  const patterns = ["stats:h:*:search_total:*", "stats:h:*:search_total_allcats:*", "stats:h:*:search_total_filtered:*"]
+  let total = 0
+  for (const pattern of patterns) {
+    const keys = await scanKeys(redis, pattern)
+    for (let i = 0; i < keys.length; i += 100)
+      await redis.del(...keys.slice(i, i + 100))
+    total += keys.length
+  }
+  return total
 }
 
 export interface StatsResponse {
