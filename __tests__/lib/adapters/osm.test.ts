@@ -194,6 +194,33 @@ describe("buildOverpassQuery — placeSearch branch", () => {
     expect(q).toContain("\\\\(")
     expect(q).toContain("\\\\)")
   })
+
+  // Regression: a double quote is NOT a regex metacharacter — it is the QL
+  // string delimiter, and needs exactly ONE backslash, not the two every
+  // other special character gets. Double-escaping it made QL read `\\` as a
+  // literal backslash and then close the string on the following `"`, so the
+  // query broke apart. Verified live: `["name"~"[aA]\\"[bB]"]` → HTTP 400
+  // (`',' or ']' expected - '[' found`), `["name"~"[aA]\"[bB]"]` → HTTP 200.
+  // 442 objects around Berlin alone have a quote in their name, so this
+  // silently returned zero results for a large slice of ordinary venues.
+  it("single-escapes the double quote so the QL string literal is not terminated early", () => {
+    const q = buildOverpassQuery({ ...PLACE_PARAMS, nameHint: 'Zum "Löwen"' })
+    expect(q).toContain('\\"')
+    expect(q).not.toContain('\\\\"')
+  })
+
+  it("keeps the name clause a single balanced QL string for a quoted name", () => {
+    const q = buildOverpassQuery({ ...PLACE_PARAMS, nameHint: 'a"b' })
+    // Exactly the shape that returned HTTP 200 live: one backslash before the
+    // inner quote, and the clause still closes with `"]`.
+    expect(q).toContain('["name"~"[aA]\\"[bB]"]')
+  })
+
+  it("still double-escapes specials when a quote is present in the same name", () => {
+    const q = buildOverpassQuery({ ...PLACE_PARAMS, nameHint: '"MOT" (Reha)' })
+    expect(q).toContain('\\"')      // quote: one backslash
+    expect(q).toContain("\\\\(")    // paren: two
+  })
 })
 
 // ─── osmWheelchair ────────────────────────────────────────────────────────────

@@ -1,21 +1,36 @@
 import { NextRequest, NextResponse } from "next/server"
+import { ipFromRequest } from "@/lib/rate-limit"
+import { isReportRateLimited } from "@/lib/report-rate-limit"
 
-const RATE_LIMIT_WINDOW_MS = 60_000
-const RATE_LIMIT_MAX       = 5
-const ipWindows = new Map<string, number[]>()
+// This endpoint is unauthenticated and its output is published to a PUBLIC
+// repository under the token owner's own GitHub identity. Everything below
+// that reaches the issue body is therefore attacker-controlled content that
+// we publish as ourselves — it gets hard caps and strict shapes, not just
+// type checks.
 
-function checkRateLimit(ip: string): boolean {
-  const now    = Date.now()
-  const recent = (ipWindows.get(ip) ?? []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS)
-  if (recent.length >= RATE_LIMIT_MAX) return false
-  recent.push(now)
-  ipWindows.set(ip, recent)
-  return true
+const MAX_PLACE_NAME_LEN = 120
+
+// OSM object ids have exactly one shape. Anything else is dropped rather than
+// sanitised: a malformed id has no legitimate use here, and validating by
+// allowlist removes the URL-injection surface in osmUrl/editorUrl entirely
+// (both interpolate this value straight into a link the issue renders).
+const OSM_ID_RE = /^(node|way|relation)\/\d{1,20}$/
+
+// GitHub renders the issue body as Markdown, so a bare place name could carry
+// @mentions (notification spam appearing to come from us), #123 cross-links,
+// images used as tracking pixels, or raw HTML. Wrapping the value in an
+// inline code span neutralises all of it — inside a code span GitHub does not
+// linkify mentions, issue references, or URLs. Backticks and newlines would
+// break out of the span, so they are flattened first, and the whole thing is
+// length-capped so a single report cannot produce an enormous issue.
+function asInlineCode(raw: string): string | null {
+  const flat = raw.replace(/[`\r\n]/g, " ").replace(/\s+/g, " ").trim().slice(0, MAX_PLACE_NAME_LEN)
+  return flat.length > 0 ? `\`${flat}\`` : null
 }
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown"
-  if (!checkRateLimit(ip)) {
+  const ip = ipFromRequest(req)
+  if (await isReportRateLimited(ip)) {
     return NextResponse.json({ error: "rate_limited" }, { status: 429 })
   }
 
@@ -30,25 +45,36 @@ export async function POST(req: NextRequest) {
   }
 
   const { lat, lon, osmId, nearestPlaceName } = body as Record<string, unknown>
-  if (typeof lat !== "number" || typeof lon !== "number") {
+  // Range-checked, not just type-checked: these are interpolated into the
+  // issue title, body, and two OSM links, and the other routes
+  // (search/route.ts, nearby-parking/route.ts) already validate coordinates
+  // this way. Number.isFinite also rejects NaN/Infinity, which JSON.parse
+  // cannot currently produce but which no longer depends on that guarantee.
+  if (!Number.isFinite(lat as number) || !Number.isFinite(lon as number) ||
+      (lat as number) < -90  || (lat as number) > 90 ||
+      (lon as number) < -180 || (lon as number) > 180) {
     return NextResponse.json({ error: "missing_coords" }, { status: 400 })
   }
+  const latNum = lat as number
+  const lonNum = lon as number
 
-  const osmIdStr  = typeof osmId          === "string" ? osmId          : null
-  const placeStr  = typeof nearestPlaceName === "string" ? nearestPlaceName : null
+  const osmIdStr = typeof osmId === "string" && OSM_ID_RE.test(osmId) ? osmId : null
+  const placeStr = typeof nearestPlaceName === "string" ? asInlineCode(nearestPlaceName) : null
 
   const osmUrl = osmIdStr
     ? `https://www.openstreetmap.org/${osmIdStr}`
-    : `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=19/${lat}/${lon}`
+    : `https://www.openstreetmap.org/?mlat=${latNum}&mlon=${lonNum}#map=19/${latNum}/${lonNum}`
 
   const editorUrl = osmIdStr
     ? (() => {
+        // Safe to split blindly: OSM_ID_RE already guarantees exactly one "/"
+        // with a known type on the left and digits on the right.
         const [type, id] = osmIdStr.split("/")
         return `https://www.openstreetmap.org/edit?${type}=${id}`
       })()
-    : `https://www.openstreetmap.org/edit#map=19/${lat}/${lon}`
+    : `https://www.openstreetmap.org/edit#map=19/${latNum}/${lonNum}`
 
-  const issueTitle = `🟡 Parkplatz-Meldung · ${lat.toFixed(5)}, ${lon.toFixed(5)}`
+  const issueTitle = `🟡 Parkplatz-Meldung · ${latNum.toFixed(5)}, ${lonNum.toFixed(5)}`
   const issueBody = [
     "Ein Nutzer hat diesen **gelben** (accessible-tier) Parkplatz-Marker als möglichen **dedizierten Rollstuhlparkplatz** gemeldet.",
     "",
@@ -57,7 +83,7 @@ export async function POST(req: NextRequest) {
     "",
     "---",
     "",
-    `**Koordinaten:** ${lat}, ${lon}`,
+    `**Koordinaten:** ${latNum}, ${lonNum}`,
     osmIdStr ? `**OSM-Objekt:** ${osmUrl}` : `**OSM-Karte:** ${osmUrl}`,
     `**iD-Editor:** ${editorUrl}`,
     placeStr ? `**Nächste Venue:** ${placeStr}` : null,

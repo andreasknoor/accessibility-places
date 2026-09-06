@@ -52,7 +52,31 @@ function buildOverpassNameRegex(hint: string): string {
   // query and place-search silently returns zero results — reproduced with
   // "MOT (Medizinisches Orthopädisches Therapiezentrum)". Two backslashes
   // survive the QL string parser as one, which RE2 then reads as intended.
-  const escaped = hint.replace(/[\\^$.*+?()[\]{}|"]/g, "\\\\$&")
+  //
+  // The double-backslash rule is right for RE2 metacharacters but WRONG for
+  // the double quote, which is not a regex metacharacter at all — it is the
+  // QL string delimiter. Escaped as `\\"`, QL reads `\\` as one literal
+  // backslash and then takes the following `"` as the CLOSING delimiter: the
+  // string ends early and the rest of the regex spills into the query as
+  // stray tokens. Verified live against overpass-api.de —
+  //   ["name"~"[aA]\\"[bB]"]  → HTTP 400, `',' or ']' expected - '[' found`
+  //   ["name"~"[aA]\"[bB]"]   → HTTP 200, clean JSON
+  // — so a quote needs exactly ONE backslash (the QL-level escape); RE2 then
+  // sees a bare `"`, which is already a literal there. This is not an exotic
+  // input: 442 objects in the Berlin area alone carry a quote in their name
+  // (`Gaststätte "Zum Löwen"` and the like), and picking one from the venue
+  // suggest dropdown silently returned zero results via every mirror.
+  //
+  // A breakout could not be escalated into arbitrary QL injection, because
+  // the case-pairing map below rewrites every ASCII letter to `[xX]`, which
+  // is not a valid token outside a string — no `node`/`out`/`way` keyword can
+  // be formed. That mitigation is incidental, though, not designed: if the
+  // case-pairing is ever replaced (e.g. by Overpass' own `,i` flag, see the
+  // note above), it disappears. Keep the quote escaped correctly here rather
+  // than relying on it.
+  const escaped = hint.replace(/[\\^$.*+?()[\]{}|"]/g, (ch) =>
+    ch === '"' ? '\\"' : `\\\\${ch}`,
+  )
   return Array.from(escaped).map((ch) =>
     /[a-zA-Z]/.test(ch) ? `[${ch.toLowerCase()}${ch.toUpperCase()}]` : ch,
   ).join("")
