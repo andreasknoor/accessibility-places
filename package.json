@@ -72,5 +72,10 @@
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.5",
     "vitest-axe": "^0.1.0"
+  },
+  "overrides": {
+    "postcss": "^8.5.28",
+    "browserslist": "^4.28.7",
+    "sharp": "^0.35.0"
   }
 }
