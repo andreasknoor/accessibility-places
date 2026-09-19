@@ -1254,7 +1254,10 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           setAmenityLocateError(t.chat.locationError)
         }
         const msg = (err as { message?: string; code?: number }).message ?? String(err)
-        console.error("[geolocation] error", msg)
+        // Expected outcome (denied / no fix / timeout), already surfaced to the
+        // user via nearbyPhase="error" — warn, so the Next dev overlay (which
+        // only reacts to console.error) does not flag it as an app crash.
+        console.warn("[geolocation] error", msg)
       })
   }
 
