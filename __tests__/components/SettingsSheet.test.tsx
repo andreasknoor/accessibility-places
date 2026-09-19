@@ -57,7 +57,7 @@ describe("SettingsSheet", () => {
     fireEvent.click(screen.getByRole("button", { name: /Einstellungen/i }))
     // Locate the switch by its row label (robust against other toggles being
     // added/reordered) rather than by position among all switches.
-    const label = screen.getByText("Auch nicht reservierte Parkplätze")
+    const label = screen.getByText("Auch allgemeine Parkplätze")
     const row = label.parentElement!.parentElement! // <p> → label wrapper → Row root
     const parkingSwitch = within(row).getByRole("switch")
     fireEvent.click(parkingSwitch)
@@ -116,7 +116,7 @@ describe("SettingsPanel — simple mode (opened from within Simple View)", () =>
     expect(screen.queryByText("Beim Start")).not.toBeInTheDocument()
     expect(screen.queryByText("Standardkategorie")).not.toBeInTheDocument()
     expect(screen.queryByText("Standard-Suchansicht")).not.toBeInTheDocument()
-    expect(screen.queryByText("Auch nicht reservierte Parkplätze")).not.toBeInTheDocument()
+    expect(screen.queryByText("Auch allgemeine Parkplätze")).not.toBeInTheDocument()
     expect(screen.queryByText(/Nur öffentliche/)).not.toBeInTheDocument()
     expect(screen.queryByText("Sortierung")).not.toBeInTheDocument()
   })
@@ -147,7 +147,7 @@ describe("SettingsPanel — simple mode (opened from within Simple View)", () =>
     expect(screen.getByText("Beim Start")).toBeInTheDocument()
     expect(screen.getByText("Standardkategorie")).toBeInTheDocument()
     expect(screen.getByText("Standard-Suchansicht")).toBeInTheDocument()
-    expect(screen.getByText("Auch nicht reservierte Parkplätze")).toBeInTheDocument()
+    expect(screen.getByText("Auch allgemeine Parkplätze")).toBeInTheDocument()
     expect(screen.getByText("Sortierung")).toBeInTheDocument()
   })
 })

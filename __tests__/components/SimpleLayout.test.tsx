@@ -1053,7 +1053,8 @@ describe("SimpleLayout — amenity (parking/WC) flow", () => {
       </LocaleProvider>,
     )
     expect(screen.getByText("1 Treffer")).toBeInTheDocument()
-    expect(screen.getByText("Reserviert")).toBeInTheDocument() // AmenityCard's own reserved badge (tier: "strong")
+    // Title (parkingSpot) and AmenityCard's tier badge (tier: "strong") share this wording.
+    expect(screen.getAllByText("Behindertenparkplatz")).toHaveLength(2)
   })
 
   it("shows the amenity-specific empty-state hint when a search returns nothing", async () => {
