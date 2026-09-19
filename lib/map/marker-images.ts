@@ -12,6 +12,8 @@
 // darkened tone of the marker's own fill, chosen live against 3 alternatives
 // during prototyping) — plus the "D" unified popup design (lib/map/popup-content.ts).
 
+import { buildBadgeScene, type BadgeSpec } from "@/lib/amenities/badge-scene"
+
 // A function, not a module-level const captured once at import time — a
 // captured constant went stale for any icon key first registered after the
 // browser window moved to a display with a different devicePixelRatio
@@ -114,77 +116,64 @@ export function drawPlacePin(fillColor: string, emoji: string, selected: boolean
 // layers in MapViewGL.tsx), which is both simpler and avoids pre-rendering
 // one raster image per possible child count.
 
-// Parking badge — rounded square (strong/reserved tier) or pill (weak tier,
-// same shape-plus-colour encoding as the Leaflet svgParkingMarker so the two
-// tiers stay distinguishable without relying on hue alone, WCAG 1.4.1).
-export function drawParkingBadge(tier: "strong" | "weak"): RasterImage {
-  const fill = tier === "strong" ? "#2979ff" : "#ff9100"
-  const textColor = tier === "strong" ? "#ffffff" : "#1f2937"
-  const rx = tier === "weak" ? 12 : 5
-  const w = 26, h = 26
-  const { canvas, ctx } = makeCanvas(w, h)
-  ctx.save()
-  ctx.shadowColor = "rgba(0,0,0,.3)"
-  ctx.shadowBlur = 3
-  ctx.shadowOffsetY = 1
-  roundRect(ctx, 1.5, 1.5, w - 3, h - 3, rx)
-  ctx.fillStyle = fill
-  ctx.fill()
-  ctx.shadowColor = "transparent"
-  ctx.lineWidth = 1.8
-  ctx.strokeStyle = "#fff"
-  roundRect(ctx, 1.5, 1.5, w - 3, h - 3, rx)
-  ctx.stroke()
-  ctx.restore()
-  ctx.fillStyle = textColor
-  ctx.font = "bold 15px sans-serif"
-  ctx.textAlign = "center"
-  ctx.textBaseline = "middle"
-  ctx.fillText("P", w / 2, h / 2 + 1)
-  return toRasterImage(canvas, w, h)
-}
+// Parking / WC badges — drawn from the shared scene in
+// lib/amenities/badge-scene.ts, the same artwork the result cards render as
+// SVG (components/results/AmenityBadgeIcon.tsx), so marker and list card match.
+export const AMENITY_BADGE_SIZE = 28
 
-// Toilet badge — solid magenta (standalone public WC) vs. light fill with
-// magenta border (WC inside a venue). Euro-key spots get a wider pill with a
-// second 🔑 glyph (form + colour + symbol encoding, matches parking's
-// square-vs-pill distinction).
-export function drawToiletBadge(host: "standalone" | "venue", euroKey: boolean): RasterImage {
-  const fill   = host === "standalone" ? "#be185d" : "#fce7f3"
-  const stroke = host === "standalone" ? "#9d174d" : "#be185d"
-  const strokeW = host === "standalone" ? 3 : 2.5
-  const w = euroKey ? 40 : 28
-  const h = euroKey ? 30 : 28
-  const rx = euroKey ? 14 : 6
-  const { canvas, ctx } = makeCanvas(w, h)
-  ctx.save()
-  ctx.shadowColor = "rgba(0,0,0,.3)"
-  ctx.shadowBlur = 3
-  ctx.shadowOffsetY = 1
-  roundRect(ctx, 1.5, 1.5, w - 3, h - 3, rx)
-  ctx.fillStyle = fill
-  ctx.fill()
-  ctx.shadowColor = "transparent"
-  ctx.lineWidth = strokeW
-  ctx.strokeStyle = stroke
-  roundRect(ctx, 1.5, 1.5, w - 3, h - 3, rx)
-  ctx.stroke()
-  ctx.restore()
-  ctx.font = `${euroKey ? 15 : 16}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`
-  if (euroKey) {
-    fillEmojiCentered(ctx, "🚻", w * 0.31, h / 2)
-    ctx.strokeStyle = stroke
-    ctx.globalAlpha = 0.35
-    ctx.beginPath()
-    ctx.moveTo(w / 2, 6)
-    ctx.lineTo(w / 2, h - 6)
-    ctx.stroke()
-    ctx.globalAlpha = 1
-    ctx.font = "13px sans-serif"
-    fillEmojiCentered(ctx, "🔑", w * 0.73, h / 2)
-  } else {
-    fillEmojiCentered(ctx, "🚻", w / 2, h / 2)
+export function drawAmenityBadge(spec: BadgeSpec, size = AMENITY_BADGE_SIZE): RasterImage {
+  const scene = buildBadgeScene(spec, size)
+  const { canvas, ctx } = makeCanvas(scene.w, scene.h)
+  for (const op of scene.ops) {
+    ctx.save()
+    if (op.t === "rrect") {
+      const inset = op.sw / 2
+      if (op.shadow) {
+        ctx.shadowColor = "rgba(0,0,0,.3)"
+        ctx.shadowBlur = 3
+        ctx.shadowOffsetY = 1
+      }
+      roundRect(ctx, op.x + inset, op.y + inset, op.w - op.sw, op.h - op.sw, Math.max(0, op.rx - inset))
+      ctx.fillStyle = op.fill
+      ctx.fill()
+      ctx.shadowColor = "transparent"
+      ctx.lineWidth = op.sw
+      ctx.strokeStyle = op.stroke
+      ctx.stroke()
+    } else if (op.t === "circle") {
+      ctx.beginPath()
+      ctx.arc(op.cx, op.cy, op.r - op.sw / 2, 0, Math.PI * 2)
+      ctx.fillStyle = op.fill
+      ctx.fill()
+      ctx.lineWidth = op.sw
+      ctx.strokeStyle = op.stroke
+      ctx.stroke()
+    } else if (op.t === "text") {
+      ctx.fillStyle = op.fill
+      ctx.font = `bold ${op.size}px sans-serif`
+      ctx.textAlign = "center"
+      ctx.textBaseline = "middle"
+      ctx.fillText(op.text, op.x, op.y)
+    } else {
+      ctx.translate(op.x, op.y)
+      ctx.scale(op.size / 24, op.size / 24)
+      ctx.lineCap = "round"
+      ctx.lineJoin = "round"
+      for (const f of op.glyph.fills) {
+        ctx.globalAlpha = f.opacity ?? 1
+        ctx.fillStyle = op.color
+        ctx.fill(new Path2D(f.d))
+      }
+      ctx.globalAlpha = 1
+      ctx.strokeStyle = op.color
+      for (const st of op.glyph.strokes) {
+        ctx.lineWidth = st.width
+        ctx.stroke(new Path2D(st.d))
+      }
+    }
+    ctx.restore()
   }
-  return toRasterImage(canvas, w, h)
+  return toRasterImage(canvas, scene.w, scene.h)
 }
 
 // GPS dot — pulsing ring + solid inner dot (static raster; the pulse

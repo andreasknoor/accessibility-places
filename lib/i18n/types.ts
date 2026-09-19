@@ -362,6 +362,7 @@ export interface Translations {
     toiletVenueGeneric:     string
     toiletWheelchairLabel:  string
     toiletDesignatedValue:  string
+    toiletAccessibleValue:  string
     toiletAccessLabel:      string
     searchHere:             string
     locate:                 string

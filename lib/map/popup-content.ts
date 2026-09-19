@@ -1,3 +1,4 @@
+import { PARKING_STRONG, PARKING_WEAK, TOILET_STRONG } from "@/lib/amenities/badge-scene"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
 import type { useTranslations } from "@/lib/i18n"
 import type { PlaceJudgment, JudgmentStatus, CriterionKey } from "@/lib/reliability"
@@ -231,7 +232,7 @@ export function buildVenuePopupHtml(place: Place, t: T, opts: VenuePopupOptions)
 
 export function buildParkingPopupHtml(spot: ParkingSpot | AmenityFeature, t: T, opts: { nearestName?: string; nearestDistM?: number; showResults: boolean }): string {
   const tier: AmenityTier = spot.tier === "weak" ? "weak" : "strong"
-  const barColor = tier === "strong" ? "#2979ff" : "#ff9100"
+  const barColor = tier === "strong" ? PARKING_STRONG : PARKING_WEAK
   const title = tier === "weak"
     ? t.map.parkingAccessible
     : spot.capacity != null ? t.map.parkingSpots(spot.capacity) : t.map.parkingSpot
@@ -296,11 +297,11 @@ export function buildToiletPopupHtml(spot: AmenityFeature, t: T, opts: { showRes
   // Same accent for both hosts (matches the pre-migration Leaflet marker's
   // TOILET_HOST_STYLE comment: the venue fill is too light to serve as a
   // popup bar accent on its own, so both intentionally share the magenta).
-  const barColor = "#be185d"
+  const barColor = TOILET_STRONG
   const title = tier === "strong" ? t.map.toiletDesignated : t.map.toiletAccessible
 
   const parts: string[] = []
-  parts.push(`<span style="color:#15803d;font-weight:700">${tier === "strong" ? t.map.toiletDesignatedValue : t.a11y.yes}</span>`)
+  parts.push(`<span style="color:#15803d;font-weight:700">${tier === "strong" ? t.map.toiletDesignatedValue : t.map.toiletAccessibleValue}</span>`)
   if (spot.euroKey) parts.push(`<span style="color:${dim()}">🔑 ${t.map.toiletEuroKey}</span>`)
   if (spot.changingTable) parts.push(`<span style="color:${dim()}">👶 ${t.map.toiletChangingTable}</span>`)
   const isCustomers = spot.host?.access === "customers" || spot.access === "customers"
@@ -323,7 +324,7 @@ export function buildToiletPopupHtml(spot: AmenityFeature, t: T, opts: { showRes
   // behind "Mehr" defeats the point of surfacing it.
   const quickSummary =
     (opts.openingStatus ? `${openingStatusQuickHtml(opts.openingStatus, t, opts.locale)} · ` : "")
-    + `<span style="color:${OVERALL_COLOR.yes}">${OVERALL_GLYPH.yes}</span> ${tier === "strong" ? t.map.toiletDesignatedValue : t.a11y.yes}`
+    + `<span style="color:${OVERALL_COLOR.yes}">${OVERALL_GLYPH.yes}</span> ${tier === "strong" ? t.map.toiletDesignatedValue : t.map.toiletAccessibleValue}`
     + (spot.euroKey ? ` · 🔑 ${t.map.toiletEuroKey}` : "")
 
   return popupShellD({

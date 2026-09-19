@@ -17,7 +17,8 @@ import { haversineMetres } from "@/lib/matching/match"
 import { popupMaxHeight, isWithinProgrammaticMoveWindow, viewportRadiusKm } from "@/lib/map/geometry"
 import { ensureMaplibreWorkerConfigured } from "@/lib/map/maplibre-worker"
 import { startSlowTileMonitoring } from "@/lib/map/tile-timing"
-import { drawPlacePin, drawParkingBadge, drawToiletBadge, drawGpsDot, getMarkerPixelRatio } from "@/lib/map/marker-images"
+import { badgeKey, type BadgeSpec } from "@/lib/amenities/badge-scene"
+import { drawPlacePin, drawAmenityBadge, drawGpsDot, getMarkerPixelRatio } from "@/lib/map/marker-images"
 import { buildVenuePopupHtml, buildParkingPopupHtml, buildToiletPopupHtml } from "@/lib/map/popup-content"
 import { amenitySpotKey } from "@/lib/search-ui"
 import type { MapViewProps } from "@/lib/map/types"
@@ -913,8 +914,9 @@ export default function MapViewGL({
     const spots = parkingSpots ?? []
     const features = spots.map((spot, idx) => {
       const tier: AmenityTier = spot.tier === "weak" ? "weak" : "strong"
-      const key = `parking__${tier}`
-      ensureImage(key, () => drawParkingBadge(tier))
+      const badge: BadgeSpec = { kind: "parking", tier }
+      const key = badgeKey(badge)
+      ensureImage(key, () => drawAmenityBadge(badge))
       return { type: "Feature" as const, geometry: { type: "Point" as const, coordinates: [spot.lon, spot.lat] }, properties: { idx, iconKey: key } }
     })
     src.setData({ type: "FeatureCollection", features })
@@ -930,8 +932,10 @@ export default function MapViewGL({
     const features = spots.map((spot, idx) => {
       const host = spot.host?.kind === "venue" ? "venue" : "standalone"
       const euroKey = spot.euroKey === true
-      const key = `toilet__${host}__${euroKey ? "euro" : "plain"}`
-      ensureImage(key, () => drawToiletBadge(host, euroKey))
+      const tier: AmenityTier = spot.tier === "weak" ? "weak" : "strong"
+      const badge: BadgeSpec = { kind: "toilet", tier, host, euroKey }
+      const key = badgeKey(badge)
+      ensureImage(key, () => drawAmenityBadge(badge))
       return { type: "Feature" as const, geometry: { type: "Point" as const, coordinates: [spot.lon, spot.lat] }, properties: { idx, iconKey: key } }
     })
     src.setData({ type: "FeatureCollection", features })

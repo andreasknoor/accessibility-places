@@ -7,6 +7,8 @@ import { NativeLink } from "@/components/ui/native-link"
 import NavigateButton from "@/components/ui/navigate-button"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
+import AmenityBadgeIcon from "@/components/results/AmenityBadgeIcon"
+import type { BadgeSpec } from "@/lib/amenities/badge-scene"
 import CriterionBox, { type CriterionTone } from "@/components/results/CriterionBox"
 import OpeningStatusChip from "@/components/results/OpeningStatusChip"
 import { SOURCE_LABELS } from "@/lib/config"
@@ -37,6 +39,10 @@ export default function AmenityCard({ spot, amenityType, isSelected, onClick, di
 
   const isParking = amenityType === "parking"
   const tier = spot.tier === "weak" ? "weak" : "strong"
+  // Same artwork as the map marker (shared scene in lib/amenities/badge-scene.ts).
+  const badgeSpec: BadgeSpec = isParking
+    ? { kind: "parking", tier }
+    : { kind: "toilet", tier, host: spot.host?.kind === "venue" ? "venue" : "standalone", euroKey: spot.euroKey === true }
 
   const title = isParking
     ? (tier === "weak"
@@ -64,7 +70,7 @@ export default function AmenityCard({ spot, amenityType, isSelected, onClick, di
   const tone: CriterionTone = tier === "strong" ? "yes" : "limited"
   const boxValue = isParking
     ? t.a11y.yes
-    : (tier === "strong" ? t.map.toiletDesignatedValue : t.a11y.yes)
+    : (tier === "strong" ? t.map.toiletDesignatedValue : t.map.toiletAccessibleValue)
   const boxRows: { label: string; value: string; tone?: CriterionTone }[] = []
   if (isParking) {
     // The decisive parking distinction: reserved/dedicated bays (strong) vs a
@@ -110,7 +116,7 @@ export default function AmenityCard({ spot, amenityType, isSelected, onClick, di
         {/* ── Header ── */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-2 min-w-0 flex-1">
-            <span className="text-base shrink-0" aria-hidden>{isParking ? "🅿" : "🚻"}</span>
+            <AmenityBadgeIcon spec={badgeSpec} />
             <div className="min-w-0 flex-1">
               <h3 className="font-semibold text-sm leading-snug break-words">
                 {hostName ?? title}
