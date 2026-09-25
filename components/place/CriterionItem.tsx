@@ -1,5 +1,6 @@
 "use client"
 
+import { AlertTriangle } from "lucide-react"
 import CriterionGlyph, { type CriterionKind } from "@/components/place/CriterionGlyph"
 import { useTranslations } from "@/lib/i18n"
 import { criterionTier } from "@/lib/reliability"
@@ -73,7 +74,12 @@ export default function CriterionItem({ kind, attr, variant, className }: Props)
     <div className={cn("flex items-center gap-2.5 min-w-0", className)}>
       <CriterionGlyph kind={kind} value={attr.value} />
       <span className="flex flex-col min-w-0 leading-tight">
-        <span className="text-[13px] text-foreground truncate">{name}</span>
+        <span className="flex items-center gap-1 text-[13px] text-foreground min-w-0">
+          <span className="truncate">{name}</span>
+          {/* Sources disagree on this criterion — the per-source values are
+              listed in the detail view. */}
+          {attr.conflict && <AlertTriangle className="w-3 h-3 shrink-0 text-amber-600" role="img" aria-label={t.results.conflict} />}
+        </span>
         <span className={cn("text-xs font-semibold truncate", VALUE_TEXT[attr.value])}>{value}</span>
         {weak && (
           <span className="flex items-center gap-1 text-[11px] text-amber-700">

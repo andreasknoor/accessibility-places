@@ -1,12 +1,12 @@
 "use client"
 
-import { ChevronRight, MapPin } from "lucide-react"
-import { CRITERION_STYLES } from "@/components/results/CriterionBox"
-import CriterionIcon from "@/components/simple/CriterionIcon"
+import { MapPin } from "lucide-react"
+import CriterionItem from "@/components/place/CriterionItem"
+import { ACTION_PRIMARY, ACTION_SECONDARY } from "@/components/place/action-styles"
 import NavigateButton from "@/components/ui/navigate-button"
 import { CATEGORY_ICONS } from "@/lib/category-icons"
 import { useTranslations } from "@/lib/i18n"
-import { criterionSentence, SIMPLE_TOILET_REQUIRED_CATEGORIES } from "@/lib/simple-view"
+import { SIMPLE_TOILET_REQUIRED_CATEGORIES } from "@/lib/simple-view"
 import { cn } from "@/lib/utils"
 import type { Place } from "@/lib/types"
 
@@ -16,94 +16,69 @@ interface Props {
   isSelected?: boolean
   onOpen:     () => void
   // Highlights (pans/zooms to + opens the popup of) this place's marker on
-  // the map, without opening the detail screen — mirrors PlaceCard's own
-  // separate map-pin button. Only rendered when a map is actually showing
-  // alongside the list (the results screen's hybrid split); undefined
-  // elsewhere (e.g. a future list-only surface) simply omits the button.
+  // the map, without opening the detail screen. Only rendered when a map is
+  // actually showing alongside the list (the results screen's hybrid split).
   onShowOnMap?: () => void
 }
 
-// Reduced result card for Simple View (Variante B): name + distance + ONE
-// plain-language line (entrance only — the criterion most people ask "can I
-// even get in?" first) + a single "navigate there" action. Everything else
-// PlaceCard shows (source badges, dog/veg icons, seating, expand/collapse,
-// website/phone/wheelmap/Google-Maps links) lives one tap away in
-// SimpleDetail — this card's whole point is to not need a decision here.
+// Quickstart result card — "V1+" of the unified place UI
+// (docs/plans/unified-results-detail-popup-redesign.md): name, category ·
+// distance, one plain-language sentence per shown criterion (entrance, plus
+// toilet for the categories where Quickstart requires it), and an action row.
 //
-// The "open detail" tap target is a framed box holding only non-interactive
-// content (name/distance/entrance line) — mirroring PlaceCard's own
-// documented convention (v9.67) of never nesting another interactive control
-// inside a role="button" box. NavigateButton sits OUTSIDE it as a sibling.
+// Tap targets: the whole card opens the detail screen as a pointer-only
+// convenience (a plain div click handler, no role — it is redundant for
+// keyboard/AT users), while the labelled "Details" button is the real,
+// focusable control. The action buttons stop propagation, so there is never a
+// nested interactive element and every action does exactly one thing.
+//
+// Default action (filled blue) is "Zur Karte"; "Route" leaves the app and is
+// never the default (see components/place/action-styles.ts).
 export default function SimplePlaceCard({ place, distanceM, isSelected, onOpen, onShowOnMap }: Props) {
   const t = useTranslations()
-  const entrance = place.accessibility.entrance.value
-  const style = CRITERION_STYLES[entrance]
-  // Toilet line, only for categories where Simple View's search already
-  // requires a wheelchair toilet (a hard "yes") on top of entrance — showing
-  // this line only there keeps it meaningful: since HomeClient's post-filter
-  // already excludes anything but "yes" for these categories, the value here
-  // is always "yes" in practice, but rendering it explicitly (rather than
-  // silently relying on the filter) mirrors the entrance line's own honesty
-  // and matches what was asked: toilet info "analog zum Eingang" for these
-  // three categories specifically.
   const showToilet = SIMPLE_TOILET_REQUIRED_CATEGORIES.has(place.category)
-  const toilet = place.accessibility.toilet.value
-  const toiletStyle = CRITERION_STYLES[toilet]
+  const category = (t.categories as Record<string, string>)[place.category] ?? place.category
 
   return (
-    <div className={cn(
-      "rounded-xl border bg-card px-3.5 py-3 flex flex-col gap-2 transition-colors",
-      isSelected ? "border-primary ring-1 ring-primary" : "border-card-border",
-    )}>
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={onOpen}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen() } }}
-        aria-label={t.results.openDetails(place.name)}
-        // A persistent (not just :hover) tinted background + border — same
-        // fix PlaceCard already has for this exact "doesn't read as
-        // clickable" problem (its own framed-box convention, v9.67). Without
-        // it the box was visually identical to the rest of the card at rest,
-        // giving no permanent affordance that tapping it opens details.
-        className="flex flex-col gap-2 rounded-lg border border-border bg-muted/40 -m-1 p-1 cursor-pointer hover:bg-muted/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <div className="flex items-start gap-2">
-          <span className="text-lg shrink-0 mt-0.5" aria-hidden>{CATEGORY_ICONS[place.category] ?? "📍"}</span>
-          <div className="min-w-0 flex-1">
-            {/* Underlined like a link — an extra affordance beyond the boxed
-                background above, specifically on the name itself. */}
-            <h2 className="font-semibold text-sm leading-snug line-clamp-2 break-words underline underline-offset-2">{place.name}</h2>
-          </div>
-          {distanceM !== undefined && (
-            <span className="text-xs text-muted-foreground shrink-0 mt-0.5">{t.results.distanceShort(Math.round(distanceM))}</span>
-          )}
-          <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 self-start mt-0.5" aria-hidden />
-        </div>
-        <p className={cn("text-xs flex items-center gap-1.5 pl-7", style.color)}>
-          <CriterionIcon value={entrance} className="w-3.5 h-3.5" />
-          {criterionSentence(t, "entrance", entrance)}
+    <div
+      onClick={onOpen}
+      className={cn(
+        "rounded-2xl bg-card shadow-card cursor-pointer transition-shadow hover:shadow-md",
+        isSelected && "ring-2 ring-primary",
+      )}
+    >
+      <div className="px-3.5 pt-3 pb-2.5 flex flex-col gap-0.5">
+        <h2 className="text-base font-bold leading-snug tracking-tight line-clamp-2 break-words">{place.name}</h2>
+        <p className="text-[13px] text-muted-foreground">
+          <span aria-hidden>{CATEGORY_ICONS[place.category] ?? "📍"} </span>
+          {category}
+          {distanceM !== undefined && <> · {t.results.distanceShort(Math.round(distanceM))}</>}
         </p>
-        {showToilet && (
-          <p className={cn("text-xs flex items-center gap-1.5 pl-7", toiletStyle.color)}>
-            <CriterionIcon value={toilet} className="w-3.5 h-3.5" />
-            {criterionSentence(t, "toilet", toilet)}
-          </p>
-        )}
+        <div className="flex flex-col gap-2 mt-2.5">
+          <CriterionItem kind="entrance" attr={place.accessibility.entrance} variant="sentence" />
+          {showToilet && <CriterionItem kind="toilet" attr={place.accessibility.toilet} variant="sentence" />}
+        </div>
       </div>
-      <div className="pl-7 flex items-center gap-2">
-        <NavigateButton coords={place.coordinates} variant="labeled" />
+      <div className="flex gap-2 px-3.5 pb-3">
         {onShowOnMap && (
           <button
-            onClick={onShowOnMap}
-            aria-label={t.results.showOnMap}
-            title={t.results.showOnMap}
-            className="flex items-center gap-1 text-xs text-primary bg-primary/10 hover:bg-primary/20 transition-colors rounded-full px-2.5 py-1"
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onShowOnMap() }}
+            className={ACTION_PRIMARY}
           >
-            <MapPin className="w-3.5 h-3.5 shrink-0" aria-hidden />
+            <MapPin className="w-4 h-4 shrink-0" aria-hidden />
             {t.results.showOnMap}
           </button>
         )}
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onOpen() }}
+          aria-label={t.results.openDetails(place.name)}
+          className={ACTION_SECONDARY}
+        >
+          {t.place.details}
+        </button>
+        <NavigateButton coords={place.coordinates} variant="action" />
       </div>
     </div>
   )
