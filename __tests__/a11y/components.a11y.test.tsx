@@ -22,6 +22,7 @@ import ResultsList from "@/components/results/ResultsList"
 import SettingsSheet from "@/components/settings/SettingsSheet"
 import SimpleLayout from "@/components/simple/SimpleLayout"
 import SimpleDetail from "@/components/simple/SimpleDetail"
+import PlaceDebugSheet from "@/components/results/PlaceDebugSheet"
 import SimplePlaceCard from "@/components/simple/SimplePlaceCard"
 import CriterionItem from "@/components/place/CriterionItem"
 import QuickstartVerdict from "@/components/place/QuickstartVerdict"
@@ -107,6 +108,14 @@ describe("a11y baseline — unified place building blocks", () => {
         <NavigateButton coords={place.coordinates} variant="labeled" />
       </div>,
     )
+    expect(await axe(container)).toHaveNoViolations()
+  })
+})
+
+describe("a11y baseline — PlaceDebugSheet (unified detail view, Expert)", () => {
+  it("has no structural axe violations", async () => {
+    const place = makePlace({ phone: "+4930123", website: "https://example.com", isVeganFriendly: true })
+    const { container } = renderWithProviders(<PlaceDebugSheet place={place} onClose={() => {}} filters={FILTERS} onOpenFilters={() => {}} />)
     expect(await axe(container)).toHaveNoViolations()
   })
 })

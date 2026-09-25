@@ -19,3 +19,13 @@ export const ACTION_TILE =
   `flex flex-col items-center justify-center gap-1 min-h-[64px] rounded-2xl bg-card shadow-card px-1 py-2 text-xs font-semibold text-primary-strong hover:bg-muted transition-colors ${FOCUS}`
 export const ACTION_TILE_DISABLED =
   "flex flex-col items-center justify-center gap-1 min-h-[64px] rounded-2xl bg-card/60 px-1 py-2 text-xs font-semibold text-muted-foreground/60"
+
+// Controls floating on the detail view's hero (photo or tinted tile): a
+// labelled "‹ Zurück" pill and round icon buttons, on a near-opaque white
+// backing so they stay legible over any photo.
+export const HERO_PILL =
+  `inline-flex items-center gap-0.5 h-9 rounded-full bg-white/95 shadow-md pl-2 pr-3.5 text-sm font-semibold text-primary-strong hover:bg-white ${FOCUS}`
+// Shell without a text colour, for buttons that bring their own (ModeSwitcher).
+export const HERO_ICON_SHELL =
+  `inline-grid place-items-center w-9 h-9 rounded-full bg-white/95 shadow-md hover:bg-white ${FOCUS}`
+export const HERO_ICON = `${HERO_ICON_SHELL} text-slate-700`
