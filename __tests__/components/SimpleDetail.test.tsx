@@ -45,6 +45,12 @@ describe("SimpleDetail", () => {
     expect(screen.getByText("410 m entfernt")).toBeInTheDocument()
   })
 
+  it("spells out the place type as text right after the name — the emoji alone is aria-hidden", () => {
+    renderWithProvider(<SimpleDetail place={makePlace({ category: "doctors", name: "Dr. Weber" })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToExpert={vi.fn()} />)
+    const label = screen.getByText("Arztpraxis")
+    expect(screen.getByRole("heading", { level: 1 }).nextElementSibling).toBe(label)
+  })
+
   it("renders all three criteria as plain sentences matching their values", () => {
     renderWithProvider(<SimpleDetail place={makePlace()} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToExpert={vi.fn()} />)
     expect(screen.getByText("Eingang stufenlos erreichbar")).toBeInTheDocument()
