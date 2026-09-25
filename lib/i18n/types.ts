@@ -605,4 +605,28 @@ export interface Translations {
     notAccessibleHeadline:    string
     unverifiedHeadline:       string
   }
+  // Shared place UI (unified results card / detail view / map popup —
+  // docs/plans/unified-results-detail-popup-redesign.md).
+  place: {
+    route:            string
+    // Appended to every "Route"/navigation trigger's accessible name: the
+    // action leaves this app for a maps app.
+    opensExternalApp: string
+    details:          string
+    website:          string
+    // "Toilette: Ja" — accessible name of a criterion glyph + value pair.
+    criterionValue:   (name: string, value: string) => string
+    reliabilityShort: (tier: string) => string
+    detailsCount:     (n: number) => string
+    filterTag:        string
+    filterTagLabel:   string
+    noSource:         string
+    sectionAccessibility: string
+    sectionContact:   string
+    sectionSources:   string
+    sectionTechnical: string
+    technicalHint:    string
+    photoAlt:         (name: string) => string
+    certifiedEntry:   string
+  }
 }

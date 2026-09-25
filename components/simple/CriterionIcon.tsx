@@ -33,16 +33,27 @@ const GLYPHS: Record<A11yValue, ReactNode> = {
   ),
 }
 
+// Solid variant: white glyph on a saturated disc. Used where the icon sits
+// as a small status badge on top of another glyph (CriterionGlyph) or as the
+// verdict icon — the pale default tint disappears at badge size.
+const FILLED_BG: Record<A11yValue, string> = {
+  yes:     "bg-green-600",
+  limited: "bg-amber-600",
+  no:      "bg-red-600",
+  unknown: "bg-slate-400",
+}
+
 interface Props {
   value:     A11yValue
   className?: string
+  filled?:   boolean
 }
 
-export default function CriterionIcon({ value, className }: Props) {
+export default function CriterionIcon({ value, className, filled }: Props) {
   const style = CRITERION_STYLES[value]
   return (
     <span
-      className={cn("inline-flex items-center justify-center rounded-full shrink-0", style.bg, className)}
+      className={cn("inline-flex items-center justify-center rounded-full shrink-0", filled ? FILLED_BG[value] : style.bg, className)}
       aria-hidden
     >
       <svg
@@ -52,7 +63,7 @@ export default function CriterionIcon({ value, className }: Props) {
         strokeWidth={value === "unknown" ? 2.2 : 3}
         strokeLinecap="round"
         strokeLinejoin="round"
-        className={cn("w-3/5 h-3/5", style.color)}
+        className={cn("w-3/5 h-3/5", filled ? "text-white" : style.color)}
       >
         {GLYPHS[value]}
       </svg>

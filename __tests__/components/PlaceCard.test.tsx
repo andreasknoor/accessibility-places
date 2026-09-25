@@ -302,7 +302,7 @@ describe("PlaceCard — nearby parking label", () => {
 describe("PlaceCard — navigate button (docs/plans/native-navigate-here.md, Placement 1)", () => {
   it("renders a distinct navigate icon in the footer, separate from the Google Maps search icon", () => {
     renderWithProvider(<PlaceCard place={makePlace()} />)
-    expect(screen.getByRole("button", { name: "Navigation starten" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Navigation starten (öffnet eine andere App)" })).toBeInTheDocument()
     // The pre-existing Google Maps search link stays an <a>, not a <button> —
     // confirms the two controls are genuinely separate elements, not the
     // same icon relabelled.
@@ -311,7 +311,7 @@ describe("PlaceCard — navigate button (docs/plans/native-navigate-here.md, Pla
 
   it("clicking the navigate icon starts navigation at the place's own coordinates and does not open the info sheet", () => {
     renderWithProvider(<PlaceCard place={makePlace()} onClick={vi.fn()} />)
-    fireEvent.click(screen.getByRole("button", { name: "Navigation starten" }))
+    fireEvent.click(screen.getByRole("button", { name: "Navigation starten (öffnet eine andere App)" }))
     expect(startDefaultNavigation).toHaveBeenCalledWith({ lat: 52.52, lon: 13.405 })
     expect(screen.queryByText(/Grunddaten|Basic information/i)).not.toBeInTheDocument()
   })

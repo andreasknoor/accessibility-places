@@ -71,6 +71,9 @@ const pairs = [
   ["simple-city", "background", UI, "city-tile icon on bg"],
   ["simple-venue", "background", UI, "venue-tile icon on bg"],
   ["simple-expert", "background", UI, "expert-mode switcher icon on bg"],
+  // Unified place UI canvas (list/detail background behind white cards).
+  ["muted-foreground", "canvas", TEXT, "muted text on tinted canvas"],
+  ["foreground", "canvas", TEXT, "body text on tinted canvas"],
 ]
 
 // Informational only — NOT gating. The default border is a light divider used

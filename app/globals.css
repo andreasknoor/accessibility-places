@@ -131,6 +131,12 @@
      otherwise ship with no CI signal (found in the 2026-07-25 Quickstart
      Mode WCAG audit, docs/wcag-quickstart-mode-audit.md, finding P1). */
   --simple-expert: 32.1 94.6% 43.7%;
+
+  /* Tinted canvas behind the unified place cards (result lists, detail view —
+     docs/plans/unified-results-detail-popup-redesign.md). The cards themselves
+     are white with a soft shadow (--shadow-card below); the tint is what lets
+     them read as separate surfaces without a hard border. */
+  --canvas: 214 30% 96.5%;
 }
 
 @theme inline {
@@ -157,6 +163,8 @@
   --color-simple-city: hsl(var(--simple-city));
   --color-simple-venue: hsl(var(--simple-venue));
   --color-simple-expert: hsl(var(--simple-expert));
+  --color-canvas: hsl(var(--canvas));
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.06), 0 4px 14px rgb(15 23 42 / 0.06);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --radius: var(--radius);

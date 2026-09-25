@@ -606,6 +606,25 @@ const de: Translations = {
     notAccessibleHeadline:    "Nicht barrierefrei",
     unverifiedHeadline:       "Keine gesicherte Angabe",
   },
+  place: {
+    route:            "Route",
+    opensExternalApp: "öffnet eine andere App",
+    details:          "Details",
+    website:          "Website",
+    criterionValue:   (name: string, value: string) => `${name}: ${value}`,
+    reliabilityShort: (tier: string) => `Verlässlichkeit ${tier}`,
+    detailsCount:     (n: number) => n === 1 ? "1 Detail" : `${n} Details`,
+    filterTag:        "Filter",
+    filterTagLabel:   "Teil deiner Filter",
+    noSource:         "Keine Quelle hat eine Angabe",
+    sectionAccessibility: "Barrierefreiheit",
+    sectionContact:   "Kontakt & Öffnungszeiten",
+    sectionSources:   "Quellen & andere Plattformen",
+    sectionTechnical: "Technische Details",
+    technicalHint:    "Rohdaten je Quelle",
+    photoAlt:         (name: string) => `Foto von ${name}`,
+    certifiedEntry:   "Zertifizierter Eintrag",
+  },
 }
 
 export default de

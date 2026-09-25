@@ -1,10 +1,11 @@
 "use client"
 
-import { Navigation } from "lucide-react"
+import { ArrowUpRight, Navigation } from "lucide-react"
 import { Popover, PopoverTrigger, PopoverContent, PopoverClose } from "@/components/ui/popover"
 import { useTranslations } from "@/lib/i18n"
 import { getPlatform, track } from "@/lib/analytics"
 import { startDefaultNavigation, startNavigationWithApp, shouldShowChooser, type NavCoords } from "@/lib/native/navigation"
+import { ACTION_PRIMARY, ACTION_SECONDARY, ACTION_TILE } from "@/components/place/action-styles"
 import { cn } from "@/lib/utils"
 
 interface Props {
@@ -18,7 +19,13 @@ interface Props {
   //             from it (see docs/plans/native-navigate-here.md, Placement 1).
   // "labeled" — pill button with icon + text (AmenityCard footer, which has no
   //             detail sheet to host a "sticky" variant instead).
-  variant: "sticky" | "icon" | "labeled"
+  // "action"  — result-card action row button ("Route"), styled by `emphasis`.
+  // "tile"    — detail-view action bar tile (never emphasised: the detail view
+  //             has no default action).
+  variant: "sticky" | "icon" | "labeled" | "action" | "tile"
+  // Only for "action". Navigation leaves the app, so it is "secondary" unless
+  // a surface deliberately makes it its default (see action-styles.ts).
+  emphasis?: "primary" | "secondary"
   className?: string
 }
 
@@ -29,12 +36,15 @@ interface Props {
 // action instead of one option among several (accessibility details being
 // the sheet's actual purpose). Neutral surface, same tier as the close
 // button below it — only the icon keeps a primary tint as a quiet hint.
-const TRIGGER_CLASS: Record<Props["variant"], string> = {
+const TRIGGER_CLASS: Record<Exclude<Props["variant"], "action">, string> = {
+  tile:    ACTION_TILE,
   sticky:  "flex items-center justify-center gap-2 w-full rounded-lg bg-muted text-foreground border border-border px-4 py-2.5 text-sm font-medium hover:bg-muted/70 transition-colors",
   labeled: "flex items-center gap-1 text-xs text-primary-foreground bg-primary hover:bg-primary/90 transition-colors rounded-full px-2.5 py-1 shadow-sm",
   icon:    "p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors",
 }
 const ICON_CLASS: Record<Props["variant"], string> = {
+  action:  "w-4 h-4 shrink-0",
+  tile:    "w-5 h-5 shrink-0",
   sticky:  "w-4 h-4 shrink-0 text-primary",
   labeled: "w-[1.1rem] h-[1.1rem] shrink-0",
   icon:    "w-[1.1rem] h-[1.1rem]",
@@ -46,7 +56,7 @@ const ICON_CLASS: Record<Props["variant"], string> = {
 // chooser via a generic geo: URI) — iOS and any non-native context (desktop
 // browser, mobile browser/PWA) trigger startDefaultNavigation() directly with
 // no chooser step, since there is only one meaningful outcome there.
-export default function NavigateButton({ coords, variant, className }: Props) {
+export default function NavigateButton({ coords, variant, emphasis = "secondary", className }: Props) {
   const t = useTranslations()
   const platform = getPlatform()
   const showChooser = shouldShowChooser(platform)
@@ -69,16 +79,28 @@ export default function NavigateButton({ coords, variant, className }: Props) {
   // navigation directly, the chooser path only needs to stop the click from
   // bubbling to an ancestor's own handler (e.g. PlaceCard's "open details")
   // — Radix's Popover already handles the actual open-toggle.
+  // Short "Route" where space is tight (card row, action tile), the full
+  // "Navigation starten" elsewhere. Every variant carries the ↗ "opens
+  // another app" indicator, and its accessible name says so in words.
+  const short = variant === "action" || variant === "tile"
+  const label = short ? t.place.route : t.results.navigateHere
+  const triggerClass = variant === "action"
+    ? (emphasis === "primary" ? ACTION_PRIMARY : ACTION_SECONDARY)
+    : TRIGGER_CLASS[variant]
   const trigger = (
     <button
       type="button"
       onClick={showChooser ? (e) => e.stopPropagation() : fireDefault}
-      aria-label={t.results.navigateHere}
+      aria-label={`${t.results.navigateHere} (${t.place.opensExternalApp})`}
       title={variant === "icon" ? t.results.navigateHere : undefined}
-      className={cn(TRIGGER_CLASS[variant], className)}
+      className={cn(triggerClass, className)}
     >
       <Navigation className={ICON_CLASS[variant]} aria-hidden />
-      {variant !== "icon" && t.results.navigateHere}
+      {variant === "tile" ? (
+        <span className="inline-flex items-center gap-0.5">{label}<ArrowUpRight className="w-3 h-3 shrink-0" aria-hidden /></span>
+      ) : variant !== "icon" && (
+        <>{label}<ArrowUpRight className="w-3.5 h-3.5 shrink-0 -ml-0.5" aria-hidden /></>
+      )}
     </button>
   )
 

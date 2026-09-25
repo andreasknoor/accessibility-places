@@ -34,12 +34,12 @@ function makeSpot(overrides: Partial<AmenityFeature> = {}): AmenityFeature {
 describe("AmenityCard — navigate button (docs/plans/native-navigate-here.md, 'AmenityCard (list) placement')", () => {
   it("renders a labelled 'Navigation starten' button in the footer (no detail sheet exists to host a sticky button instead)", () => {
     renderWithProvider(<AmenityCard spot={makeSpot()} amenityType="parking" />)
-    expect(screen.getByRole("button", { name: "Navigation starten" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Navigation starten (öffnet eine andere App)" })).toBeInTheDocument()
   })
 
   it("clicking it starts navigation at the amenity spot's own lat/lon, not any nearby venue's coordinates", () => {
     renderWithProvider(<AmenityCard spot={makeSpot({ lat: 48.137, lon: 11.576 })} amenityType="parking" />)
-    fireEvent.click(screen.getByRole("button", { name: "Navigation starten" }))
+    fireEvent.click(screen.getByRole("button", { name: "Navigation starten (öffnet eine andere App)" }))
     expect(startDefaultNavigation).toHaveBeenCalledWith({ lat: 48.137, lon: 11.576 })
   })
 
@@ -52,14 +52,14 @@ describe("AmenityCard — navigate button (docs/plans/native-navigate-here.md, '
       host: { kind: "venue", name: "Café Solidarität" },
     })
     renderWithProvider(<AmenityCard spot={spot} amenityType="toilet" />)
-    fireEvent.click(screen.getByRole("button", { name: "Navigation starten" }))
+    fireEvent.click(screen.getByRole("button", { name: "Navigation starten (öffnet eine andere App)" }))
     expect(startDefaultNavigation).toHaveBeenCalledWith({ lat: 52.5301, lon: 13.4102 })
   })
 
   it("does not trigger the card's onClick ('Zur Karte' selection) when the navigate button is clicked", () => {
     const onClick = vi.fn()
     renderWithProvider(<AmenityCard spot={makeSpot()} amenityType="parking" onClick={onClick} />)
-    fireEvent.click(screen.getByRole("button", { name: "Navigation starten" }))
+    fireEvent.click(screen.getByRole("button", { name: "Navigation starten (öffnet eine andere App)" }))
     expect(onClick).not.toHaveBeenCalled()
   })
 })

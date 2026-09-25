@@ -605,6 +605,25 @@ const en: Translations = {
     notAccessibleHeadline:    "Not accessible",
     unverifiedHeadline:       "No confirmed data",
   },
+  place: {
+    route:            "Route",
+    opensExternalApp: "opens another app",
+    details:          "Details",
+    website:          "Website",
+    criterionValue:   (name: string, value: string) => `${name}: ${value}`,
+    reliabilityShort: (tier: string) => `Reliability ${tier}`,
+    detailsCount:     (n: number) => n === 1 ? "1 detail" : `${n} details`,
+    filterTag:        "Filter",
+    filterTagLabel:   "Part of your filters",
+    noSource:         "No source has data",
+    sectionAccessibility: "Accessibility",
+    sectionContact:   "Contact & opening hours",
+    sectionSources:   "Sources & other platforms",
+    sectionTechnical: "Technical details",
+    technicalHint:    "Raw data per source",
+    photoAlt:         (name: string) => `Photo of ${name}`,
+    certifiedEntry:   "Certified entry",
+  },
 } as const
 
 export default en

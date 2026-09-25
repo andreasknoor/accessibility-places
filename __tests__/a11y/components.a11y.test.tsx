@@ -23,6 +23,9 @@ import SettingsSheet from "@/components/settings/SettingsSheet"
 import SimpleLayout from "@/components/simple/SimpleLayout"
 import SimpleDetail from "@/components/simple/SimpleDetail"
 import SimplePlaceCard from "@/components/simple/SimplePlaceCard"
+import CriterionItem from "@/components/place/CriterionItem"
+import QuickstartVerdict from "@/components/place/QuickstartVerdict"
+import NavigateButton from "@/components/ui/navigate-button"
 import { DEFAULT_APP_SETTINGS } from "@/lib/settings"
 import { buildAttribute } from "@/lib/matching/merge"
 import type { Place, SearchFilters, ActiveSources } from "@/lib/types"
@@ -86,6 +89,23 @@ describe("a11y baseline — JudgmentLine", () => {
   it("has no structural axe violations", async () => {
     const { container } = renderWithProviders(
       <JudgmentLine place={makePlace()} filters={FILTERS} />,
+    )
+    expect(await axe(container)).toHaveNoViolations()
+  })
+})
+
+describe("a11y baseline — unified place building blocks", () => {
+  it("CriterionItem (compact + sentence), QuickstartVerdict and NavigateButton variants have no structural axe violations", async () => {
+    const place = makePlace()
+    const { container } = renderSimple(
+      <div>
+        <CriterionItem kind="entrance" attr={place.accessibility.entrance} variant="compact" />
+        <CriterionItem kind="toilet" attr={place.accessibility.toilet} variant="sentence" />
+        <QuickstartVerdict place={place} />
+        <NavigateButton coords={place.coordinates} variant="action" />
+        <NavigateButton coords={place.coordinates} variant="tile" />
+        <NavigateButton coords={place.coordinates} variant="labeled" />
+      </div>,
     )
     expect(await axe(container)).toHaveNoViolations()
   })

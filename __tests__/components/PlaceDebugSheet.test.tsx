@@ -397,7 +397,7 @@ describe("PlaceDebugSheet navigate button", () => {
   it("renders a sticky 'Navigation starten' button in the footer, above the close button", async () => {
     const { startDefaultNavigation } = await import("@/lib/native/navigation")
     renderSheet()
-    const navigateBtn = screen.getByRole("button", { name: "Navigation starten" })
+    const navigateBtn = screen.getByRole("button", { name: "Navigation starten (öffnet eine andere App)" })
     expect(navigateBtn).toBeInTheDocument()
     fireEvent.click(navigateBtn)
     expect(startDefaultNavigation).toHaveBeenCalledWith({ lat: 52.52, lon: 13.405 })
