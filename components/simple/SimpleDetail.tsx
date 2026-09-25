@@ -107,8 +107,7 @@ export default function SimpleDetail({ place, distanceM, onBack, onOpenSettings,
             <h1 className="text-lg font-bold leading-snug break-words">{place.name}</h1>
             {/* The emoji above is aria-hidden and ambiguous on its own, so the
                 place type is also spelled out — right after the h1, so a
-                screen reader reads it straight after the name. Prototype:
-                docs/prototypes/quickstart-detail-category-label.html, var. A. */}
+                screen reader reads it straight after the name. */}
             <p className="text-sm font-medium mt-0.5">{t.categories[place.category]}</p>
             {addr && <p className="text-sm text-muted-foreground mt-0.5">{addr}</p>}
             {distanceM !== undefined && (
