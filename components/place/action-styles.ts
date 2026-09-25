@@ -16,7 +16,7 @@ export const ACTION_SECONDARY = `${ACTION_BASE} bg-primary/10 text-primary-stron
 
 // Detail view action bar: equal tiles, none emphasised (no default action).
 export const ACTION_TILE =
-  `flex flex-col items-center justify-center gap-1 min-h-[64px] rounded-2xl bg-card shadow-card px-1 py-2 text-xs font-semibold text-primary-strong hover:bg-muted transition-colors ${FOCUS}`
+  `flex flex-col items-center justify-center gap-1 min-h-[64px] rounded-2xl bg-card shadow-place px-1 py-2 text-xs font-semibold text-primary-strong hover:bg-muted transition-colors ${FOCUS}`
 export const ACTION_TILE_DISABLED =
   "flex flex-col items-center justify-center gap-1 min-h-[64px] rounded-2xl bg-card/60 px-1 py-2 text-xs font-semibold text-muted-foreground/60"
 

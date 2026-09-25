@@ -74,7 +74,7 @@ describe("buildVenuePopupHtml — header", () => {
   it("has no more/less toggle any more", () => {
     const html = buildVenuePopupHtml(makePlace(), de, { showResults: false, judgment: makeJudgment({}) })
     expect(html).not.toContain("data-toggle")
-    expect(html).not.toContain(de.map.popupMore)
+    expect(html).not.toContain("Mehr")
   })
 })
 
@@ -83,7 +83,7 @@ describe("buildVenuePopupHtml — verdict wording per mode", () => {
     const html = buildVenuePopupHtml(makePlace(), de, { showResults: false, mode: "expert", activeCount: 2, judgment: makeJudgment({ status: "pass_limited", limited: ["toilet"] }) })
     expect(html).toContain("Erfüllt deine 2 Kriterien")
     expect(html).toContain("Mit Einschränkung: Toilette.")
-    expect(html).not.toContain(de.map.judgmentCaveat)
+    expect(html).not.toContain("Passt mit Vorbehalt")
   })
 
   it("Expert: 'Nicht gesichert' naming the missing criterion", () => {

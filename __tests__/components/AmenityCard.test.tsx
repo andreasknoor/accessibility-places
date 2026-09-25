@@ -37,6 +37,16 @@ describe("AmenityCard — navigate button (docs/plans/native-navigate-here.md, '
     expect(screen.getByRole("button", { name: "Navigation starten (öffnet eine andere App)" })).toBeInTheDocument()
   })
 
+  // Unified place UI: Route stays this card's default (filled) action — a
+  // parking/WC result has no detail view, getting there is its purpose — and
+  // carries the ↗ "opens another app" arrow like every other Route trigger.
+  it("keeps Route as the filled default action, with the external-app arrow", () => {
+    renderWithProvider(<AmenityCard spot={makeSpot()} amenityType="parking" />)
+    const btn = screen.getByRole("button", { name: "Navigation starten (öffnet eine andere App)" })
+    expect(btn.className).toMatch(/(^|\s)bg-primary(\s|$)/)
+    expect(btn.querySelectorAll("svg")).toHaveLength(2)
+  })
+
   it("clicking it starts navigation at the amenity spot's own lat/lon, not any nearby venue's coordinates", () => {
     renderWithProvider(<AmenityCard spot={makeSpot({ lat: 48.137, lon: 11.576 })} amenityType="parking" />)
     fireEvent.click(screen.getByRole("button", { name: "Navigation starten (öffnet eine andere App)" }))

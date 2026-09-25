@@ -134,7 +134,7 @@
 
   /* Tinted canvas behind the unified place cards (result lists, detail view —
      docs/plans/unified-results-detail-popup-redesign.md). The cards themselves
-     are white with a soft shadow (--shadow-card below); the tint is what lets
+     are white with a soft shadow (the shadow-place utility below); the tint is what lets
      them read as separate surfaces without a hard border. */
   --canvas: 214 30% 96.5%;
 }
@@ -164,10 +164,17 @@
   --color-simple-venue: hsl(var(--simple-venue));
   --color-simple-expert: hsl(var(--simple-expert));
   --color-canvas: hsl(var(--canvas));
-  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.06), 0 4px 14px rgb(15 23 42 / 0.06);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --radius: var(--radius);
+}
+
+/* Soft resting shadow of the unified place cards (result cards, detail-view
+   cards, action tiles). A named utility rather than a theme token: "shadow-card"
+   would collide with the `card` colour token (Tailwind reads it as a shadow
+   colour). */
+@utility shadow-place {
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.06), 0 4px 14px rgb(15 23 42 / 0.06);
 }
 
 html {

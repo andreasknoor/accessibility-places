@@ -20,9 +20,9 @@ Chosen over HTML markers + manual cluster sync (the other option considered in t
 - Clusters are **not** rasterised — a plain `circle` layer (white fill, ring coloured by `clusterProperties: { maxConf: ["max", ["get", "confRank"]] }`) plus a `symbol` layer for the count text. This matches the Leaflet cluster's behaviour of colouring by the **best** (max) child confidence, not majority.
 - Parking/WC spots are separate, non-clustered GeoJSON sources (`ap-parking`, `ap-toilets`) — matches Leaflet, which never clusters amenity markers either.
 
-## Popups — unified "D" template + conditional recentring
+## Popups — single-state cards + conditional recentring
 
-`lib/map/popup-content.ts` builds one popup template (`buildVenuePopupHtml` / `buildParkingPopupHtml` / `buildToiletPopupHtml`) shared by venue/parking/WC popups, replacing the pre-migration full/reduced split. Ported from the local redesign prototype (`popupShellD`/`chipD`/`ctaD`), with plain Unicode glyphs (✓ ✗ ± ?) for criterion values instead of fabricated lucide SVG path data — the prototype used a runtime icon lookup unavailable here.
+`lib/map/popup-content.ts` builds the venue / parking / WC popups (`buildVenuePopupHtml` / `buildParkingPopupHtml` / `buildToiletPopupHtml`). Since v12.34 (unified place UI, `docs/plans/unified-results-detail-popup-redesign.md`) they are single-state cards in the app palette — the earlier quick/full accordion ("D" template with `popupShellD`, the beige chips and the "Mehr/Weniger" toggle wired by `wirePopupToggle`) is gone. They reuse the result card's vocabulary as inline HTML: filled status discs (✓ ! ✕ ?), criterion glyphs (the restroom pictogram comes from `RESTROOM_GLYPH` via `lib/amenities/glyph-svg.ts`), the active mode's verdict wording (`MapView`'s `quickstart` prop), and the same button tiers (place: "Details" default, Route ↗ secondary; parking/WC: Route ↗ default).
 
 **Popup positioning** (`openSmartPopup()` in `MapViewGL.tsx`): the popup's `anchor` is fixed to `"bottom"` (always above the point, horizontally centred) instead of MapLibre's default `"auto"`, which picks whichever side has room and is what made popups feel like they appeared "somewhere" during prototyping. Before opening, `map.project(lngLat)` is checked against the container edges; **only if** the popup would be clipped does the map `easeTo` the point first — a marker already comfortably in view is not panned. This mirrors the same discussion that led to it for the local prototype, and is deliberately the "recentre only when necessary" variant, not "always recentre."
 
@@ -36,7 +36,7 @@ When a recentre does happen, the target is pushed as close to the **bottom** of 
 
 **If touching this code, re-verify with logged `map.project()` coordinates before/after, in both a full-size desktop map and the Quickstart mini-map** — both bugs above were invisible in casual visual testing and only showed up as exact numbers that didn't move where they should have.
 
-**Popup `maxHeight`** (R2 — MapLibre's `PopupOptions` has no native equivalent): reimplemented via a direct style write on the popup's own `.maplibregl-popup-content` element (`applyPopupMaxHeight()`), using the exact same `popupMaxHeight()` formula from `lib/map/geometry.ts` that Leaflet uses — re-applied on the same triggers Leaflet's `applyFreshPopupMaxHeight` was (visibility/fullscreen reveal, continuous resize).
+**Popup `maxHeight`** (R2 — MapLibre's `PopupOptions` has no native equivalent): a direct style write on the popup's own `.maplibregl-popup-content` element (`applyPopupMaxHeight()`), capped at the map container's height minus ~40px for the tip — the compact single-state popups normally fit, `openSmartPopup` recentres to make room, and the cap only guards content taller than the container itself (large font scaling, Quickstart's resizable mini-map, issue #43). `popupMaxHeight()` in `lib/map/geometry.ts` is the older ~55% formula from the always-full popup era and is no longer used here.
 
 ## "Show on map" selection — a deliberate simplification of `zoomToShowLayer` (R3)
 

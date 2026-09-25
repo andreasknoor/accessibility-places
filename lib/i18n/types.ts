@@ -153,10 +153,7 @@ export interface Translations {
     conflict:          string
     primarySource:     string
     noData:            string
-    websiteLink:       string
-    phoneLink:         string
     wheelmapLink:      string
-    gintoLink:         string
     acceslibreLink:    string
     googleMapsLink:    string
     navigateHere:       string
@@ -167,27 +164,12 @@ export interface Translations {
     verifiedAt:        (date: string, sources: string[]) => string
     verifiedAge:       (date: string) => string
     allowsDogs:        string
-    noDogs:            string
     vegetarian:        string
     vegan:             string
     showOnMap:         string
     mapHint:           string
     placeSearchBanner: (name: string) => string
-    // Reliability table (Info-Sheet "Barrierefreiheit" section, 2026-08-03
-    // redesign) — Kriterium | Wert | Gefiltert | Verlässl. | Quelle.
-    scoreCriterionCol:    string
-    tableValueCol:        string
-    tableFilteredCol:     string
-    tableReliabilityCol:  string
-    tableSourceCol:       string
-    // aria-labels for the "Gefiltert" column's checkmark/dot (no visible
-    // text in the cell itself, so the accessible name must state the yes/no
-    // both ways rather than only labelling the positive case).
-    tableFilteredYes:     string
-    tableFilteredNo:      string
     showRawData:          string
-    detailsExpand:        string
-    detailsCollapse:      string
     noResultsArea:        string
     networkError:         string
     sourceRateLimited:    string
@@ -282,39 +264,12 @@ export interface Translations {
     fullscreen:             string
     exitFullscreen:         string
     source:                 string
-    judgmentPass:           string
-    judgmentCaveat:         string
-    judgmentUnknown:        string
-    // Distinct from judgmentUnknown (used for "no active filter"/"unverified")
-    // — this is specifically the confirmed-violation case, only reachable via
-    // a deep-linked place that bypassed the normal filter.
-    judgmentFail:           string
     showInResults:          string
     showDetails:            string
-    // Short chip labels for the map marker popup footers (parking/WC/venue —
-    // MapView.tsx's POPUP_CHIP row). Deliberately shorter than the sentence-
-    // style results.navigateHere/googleMapsLink/wheelmapLink and map.showDetails/
-    // showInResults/parkingReportButton used as aria-label/title/button text
-    // elsewhere: the popup's max-width (250px) doesn't fit two full-sentence
-    // chips side by side, which defeated the point of the pill-chip footer
-    // redesign (docs/prototypes/navigate-here-popup-footer-variants.html).
-    popupChipNavigate:      string
+    // Short button labels in the map popups (lib/map/popup-content.ts).
     popupChipGoogleMaps:    string
     popupChipWheelmap:      string
     popupChipResults:       string
-    popupChipDetails:       string
-    popupChipReport:        string
-    // Footer toggle label on the map popup's quick view (issue: popup covered
-    // 40–90% of the map on small phones) — visible text doubles as the
-    // accessible name, swapped on expand/collapse (see popupLess).
-    popupMore:              string
-    popupLess:              string
-    // Shortened criteria labels for the venue popup's entrance/toilet/parking
-    // pills (lib/map/popup-content.ts chipD) — the pills are packed inline
-    // (not one-third-width columns), so the sentence-style criteria.toilet
-    // ("Toilette") / criteria.parking ("Parkplatz") no longer fit three abreast.
-    criteriaShortToilet:    string
-    criteriaShortParking:   string
     parkingSpot:            string
     parkingSpots:           (n: number) => string
     parkingAccessible:      string
@@ -429,7 +384,6 @@ export interface Translations {
   // index it directly with any Category — no `as keyof typeof` cast needed.
   chipLabels: Partial<Record<Category, string>>
   info: {
-    basicInfo:      string
     address:        string
     phone:          string
     website:        string
@@ -442,7 +396,6 @@ export interface Translations {
     rating:         string
     reviews:        string
     priceLevel:     string
-    diet:           string
     vegetarian:     string
     vegan:          string
     dogs:           string
@@ -458,7 +411,6 @@ export interface Translations {
     accessibility:  string
     reliability:    string
     description:    string
-    externalLinks:  string
     showRawData:    string
     hideRawData:    string
     rawDataLoading:     string

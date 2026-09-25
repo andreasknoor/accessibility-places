@@ -1,6 +1,6 @@
 # Unified results list, detail view and map popups (Quickstart + Expert)
 
-Status: **planned, not started** (2026-09-25)
+Status: **implemented** (2026-09-25, v12.31–v12.35, branch `feat/unified-place-ui`)
 
 ## Goal
 

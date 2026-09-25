@@ -91,7 +91,7 @@ function criterionDetailRows(t: T, kind: CriterionKind, attr: AccessibilityAttri
 // ─── building blocks ────────────────────────────────────────────────────────
 
 function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("rounded-2xl bg-card shadow-card", className)}>{children}</div>
+  return <div className={cn("rounded-2xl bg-card shadow-place", className)}>{children}</div>
 }
 
 function GroupTitle({ children }: { children: ReactNode }) {

@@ -69,7 +69,7 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM, filte
     <div
       onClick={openDetails}
       className={cn(
-        "rounded-2xl bg-card shadow-card cursor-pointer transition-shadow hover:shadow-md",
+        "rounded-2xl bg-card shadow-place cursor-pointer transition-shadow hover:shadow-md",
         isSelected && "ring-2 ring-primary",
       )}
     >
