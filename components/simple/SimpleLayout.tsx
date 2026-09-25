@@ -1049,6 +1049,7 @@ export default function SimpleLayout({
                 <MapView
                   places={sortedPlaces}
                   filters={SIMPLE_MAP_FILTERS}
+                  quickstart
                   // Always passed through — HomeClient's simpleParkingSpots/
                   // simpleToiletSpots are already `undefined` outside Simple
                   // View's OWN active parking/WC search (never the full UI's
