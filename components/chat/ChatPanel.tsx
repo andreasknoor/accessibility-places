@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 import { extractQuotedName, extractLocationFallback, inferAmenityType, parseQuery } from "@/lib/llm"
 import { loadSettings, legacyChipIdxToCat } from "@/lib/settings"
 import { isReturningNow, loadSearchRun, loadActiveMode, saveNearbyLocation, loadNearbyLocation, saveSearchInput, loadSearchInput, clearSearchInput } from "@/lib/session-restore"
-import { getCurrentPosition, isGeolocationAvailable, watchPosition, clearWatchPosition, type GeoWatchId } from "@/lib/native/geolocation"
+import { getCurrentPositionWithFallback, geoErrorCode, isGeolocationAvailable, watchPosition, clearWatchPosition, type GeoWatchId } from "@/lib/native/geolocation"
 import DevConsole from "@/components/easter-eggs/DevConsole"
 import type { AmenityType, Category } from "@/lib/types"
 import { venueViewportOrigin, amenityViewportOrigin, type ViewportOrigin } from "@/lib/search-ui"
@@ -836,14 +836,15 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       return
     }
     setAmenityLocating(type)
-    getCurrentPosition({ timeout: 30_000, enableHighAccuracy: false, maximumAge: 60_000 })
+    getCurrentPositionWithFallback()
       .then(({ lat, lon }) => {
         setAmenityLocating(null)
         onAmenitySearch?.(type, { lat, lon })
       })
-      .catch(() => {
+      .catch((err) => {
         setAmenityLocating(null)
         setAmenityLocateError(t.chat.locationError)
+        console.warn("[geolocation] error (code", geoErrorCode(err), ")", err)
       })
   }
 
@@ -1188,7 +1189,7 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
     // exitNearbyState so this one is allowed to fire its search.
     locateCancelledRef.current = false
     setNearbyPhase("locating")
-    getCurrentPosition({ timeout: 30_000, enableHighAccuracy: false, maximumAge: 60_000 })
+    getCurrentPositionWithFallback()
       .then(async ({ lat, lon }) => {
         locatingRef.current = false
         // This fix was aborted while in flight (e.g. a place deep-link took over
@@ -1253,11 +1254,10 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
           setAmenityLocating(null)
           setAmenityLocateError(t.chat.locationError)
         }
-        const msg = (err as { message?: string; code?: number }).message ?? String(err)
         // Expected outcome (denied / no fix / timeout), already surfaced to the
         // user via nearbyPhase="error" — warn, so the Next dev overlay (which
         // only reacts to console.error) does not flag it as an app crash.
-        console.warn("[geolocation] error", msg)
+        console.warn("[geolocation] error (code", geoErrorCode(err), ")", err)
       })
   }
 

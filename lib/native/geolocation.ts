@@ -59,6 +59,30 @@ export async function getCurrentPosition(opts?: GeoOptions): Promise<GeoPosition
   })
 }
 
+// Coarse, one-shot fix with a relaxed second attempt. Desktop browsers get
+// their position from the OS's network-based location (macOS Location
+// Services via Wi-Fi), which intermittently delivers nothing at all until the
+// request times out. Rather than failing outright, retry once accepting a
+// position up to 10 minutes old — the same fallback HomeClient.handleLocate
+// (the map's locate button) already uses. The first attempt is capped at
+// 15 s: with a fallback behind it, waiting the full 30 s before anything
+// happens only makes the app look hung.
+export async function getCurrentPositionWithFallback(): Promise<GeoPosition> {
+  try {
+    return await getCurrentPosition({ timeout: 15_000, enableHighAccuracy: false, maximumAge: 60_000 })
+  } catch (primaryErr) {
+    // Denied permission can't be fixed by retrying — surface it immediately.
+    if (primaryErr instanceof GeolocationPermissionError || geoErrorCode(primaryErr) === 1) throw primaryErr
+    console.warn("[geolocation] first fix failed (code", geoErrorCode(primaryErr), "), retrying with a cached position", primaryErr)
+    return getCurrentPosition({ timeout: 10_000, enableHighAccuracy: false, maximumAge: 600_000 })
+  }
+}
+
+/** GeolocationPositionError code (1 denied, 2 unavailable, 3 timeout), if any. */
+export function geoErrorCode(err: unknown): number | undefined {
+  return (err as { code?: number } | undefined)?.code
+}
+
 export interface BestPositionOptions {
   /** Max time to wait for the FIRST fix before giving up. Default 20 s. */
   timeout?: number
