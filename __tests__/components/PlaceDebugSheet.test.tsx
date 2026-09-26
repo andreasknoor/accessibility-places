@@ -261,7 +261,7 @@ describe("PlaceDebugSheet external links", () => {
   it("renders a Google Maps link", () => {
     renderSheet()
     // "Google Maps" appears as both row label and link text — target the <a> directly
-    const gmLink = screen.getByRole("link", { name: "Google Maps" })
+    const gmLink = screen.getByRole("link", { name: "Google Maps (öffnet im Browser)" })
     expect((gmLink as HTMLAnchorElement).href).toContain("google.com/maps")
   })
 
@@ -500,5 +500,24 @@ describe("PlaceDebugSheet judgement line", () => {
     render(<PlaceDebugSheet place={makePlace()} onClose={vi.fn()} filters={FILTERS} />)
     expect(screen.queryByRole("button", { name: "Aktive Kriterien anzeigen" })).not.toBeInTheDocument()
     expect(screen.getByText("deine 2 Kriterien")).toBeInTheDocument()
+  })
+})
+
+// ─── External-link marker (↗) ───────────────────────────────────────────────
+// Every link that opens a website carries ExternalMark (arrow + screen-reader
+// suffix); tel: and mailto: links deliberately don't.
+describe("PlaceDebugSheet external-link marker", () => {
+  it("marks website and platform links as opening in the browser", () => {
+    renderSheet(makePlace({ website: "https://example.com", gintoUrl: "https://ginto.guide/x" }))
+    for (const name of ["Website (öffnet im Browser)", "example.com (öffnet im Browser)", "OpenStreetMap (öffnet im Browser)", "Wheelmap.org (öffnet im Browser)", "Ginto.guide (öffnet im Browser)", "Google Maps (öffnet im Browser)"]) {
+      expect(screen.getByRole("link", { name })).toBeInTheDocument()
+    }
+  })
+
+  it("does not mark phone or e-mail links", () => {
+    renderSheet(makePlace({ phone: "+49 30 12345" }))
+    const tel = screen.getByRole("link", { name: "+49 30 12345" })
+    expect(tel.querySelector("svg")).toBeNull()
+    expect(screen.getByRole("link", { name: "Anrufen" })).toBeInTheDocument()
   })
 })

@@ -176,6 +176,13 @@ describe("buildToiletPopupHtml", () => {
   }
   const REF_NOW = new Date("2026-08-17T10:00:00")
 
+  it("marks the Wheelmap button as opening in the browser (↗ + accessible name)", () => {
+    const html = buildToiletPopupHtml(makeSpot(), de, { showResults: false, locale: "de", wheelmapUrl: "https://wheelmap.org/nodes/1" })
+    const btn = doc(html).querySelector("[data-wheelmap]")!
+    expect(btn.getAttribute("aria-label")).toBe("Wheelmap (öffnet im Browser)")
+    expect(btn.querySelectorAll("svg")).toHaveLength(2)
+  })
+
   it("makes Route the default action (deliberate exception) and keeps Wheelmap secondary", () => {
     const html = buildToiletPopupHtml(makeSpot(), de, { showResults: false, locale: "de", wheelmapUrl: "https://wheelmap.org/nodes/1" })
     const primary = primaryButtons(html)

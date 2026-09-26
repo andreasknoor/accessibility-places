@@ -13,6 +13,7 @@ import JudgmentLine from "@/components/results/JudgmentLine"
 import OpeningStatusChip from "@/components/results/OpeningStatusChip"
 import { NativeLink } from "@/components/ui/native-link"
 import NavigateButton from "@/components/ui/navigate-button"
+import ExternalMark from "@/components/ui/external-mark"
 import { usePlaceImage } from "@/hooks/usePlaceImage"
 import { useResolvedAddress } from "@/hooks/useResolvedAddress"
 import { track } from "@/lib/analytics"
@@ -424,7 +425,7 @@ export default function PlaceDetailView({ place, mode, distanceM, titleId, headi
             <button type="button" disabled className={ACTION_TILE_DISABLED}><Phone className="w-5 h-5" aria-hidden />{t.simple.call}</button>
           )}
           {place.website ? (
-            <NativeLink href={place.website} className={ACTION_TILE}><Globe className="w-5 h-5" aria-hidden />{t.place.website}</NativeLink>
+            <NativeLink href={place.website} className={ACTION_TILE}><Globe className="w-5 h-5" aria-hidden /><span className="inline-flex items-center gap-0.5">{t.place.website}<ExternalMark srLabel={t.place.opensInBrowser} /></span></NativeLink>
           ) : (
             <button type="button" disabled className={ACTION_TILE_DISABLED}><Globe className="w-5 h-5" aria-hidden />{t.place.website}</button>
           )}
@@ -489,7 +490,7 @@ export default function PlaceDetailView({ place, mode, distanceM, titleId, headi
               <ListRow icon={Phone} tone="green"><span className="sr-only">{ti.phone}: </span><a href={`tel:${place.phone}`} className="text-primary-strong hover:underline">{place.phone}</a></ListRow>
             )}
             {expert && place.website && (
-              <ListRow icon={Globe} tone="blue"><span className="sr-only">{ti.website}: </span><NativeLink href={place.website} className="text-primary-strong hover:underline break-all">{place.website.replace(/^https?:\/\//, "")}</NativeLink></ListRow>
+              <ListRow icon={Globe} tone="blue"><span className="sr-only">{ti.website}: </span><NativeLink href={place.website} className="text-primary-strong hover:underline break-all">{place.website.replace(/^https?:\/\//, "")}<ExternalMark srLabel={t.place.opensInBrowser} /></NativeLink></ListRow>
             )}
             {expert && email && (
               <ListRow icon={Mail} tone="violet"><span className="sr-only">{ti.email}: </span><a href={`mailto:${email}`} className="text-primary-strong hover:underline break-all">{email}</a></ListRow>
@@ -528,17 +529,17 @@ export default function PlaceDetailView({ place, mode, distanceM, titleId, headi
                     ? <span className="text-xs text-green-700">{t.common.copied}</span>
                     : <button type="button" onClick={() => handleCopy(osmRecord!.externalId.replace(/^\w+\//, ""), "osm")} aria-label={`OpenStreetMap ID: ${t.common.copied}`} className="p-1.5 -m-1.5 text-muted-foreground hover:text-foreground rounded-md"><Copy className="w-4 h-4" aria-hidden /></button>}
                 >
-                  <NativeLink href={osmLink} className="text-primary-strong hover:underline">OpenStreetMap</NativeLink>
+                  <NativeLink href={osmLink} className="text-primary-strong hover:underline">OpenStreetMap<ExternalMark srLabel={t.place.opensInBrowser} /></NativeLink>
                   <span className="block text-xs text-muted-foreground">{osmRecord!.externalId}</span>
                 </ListRow>
               )}
-              <ListRow icon={Accessibility} tone="violet"><NativeLink href={wheelmapLink} className="text-primary-strong hover:underline">Wheelmap.org</NativeLink></ListRow>
-              {place.gintoUrl && <ListRow icon={ShieldCheck} tone="green"><NativeLink href={place.gintoUrl} className="text-primary-strong hover:underline">Ginto.guide</NativeLink></ListRow>}
-              {place.acceslibreUrl && <ListRow icon={ExternalLink} tone="blue"><NativeLink href={place.acceslibreUrl} className="text-primary-strong hover:underline">AccèsLibre</NativeLink></ListRow>}
+              <ListRow icon={Accessibility} tone="violet"><NativeLink href={wheelmapLink} className="text-primary-strong hover:underline">Wheelmap.org<ExternalMark srLabel={t.place.opensInBrowser} /></NativeLink></ListRow>
+              {place.gintoUrl && <ListRow icon={ShieldCheck} tone="green"><NativeLink href={place.gintoUrl} className="text-primary-strong hover:underline">Ginto.guide<ExternalMark srLabel={t.place.opensInBrowser} /></NativeLink></ListRow>}
+              {place.acceslibreUrl && <ListRow icon={ExternalLink} tone="blue"><NativeLink href={place.acceslibreUrl} className="text-primary-strong hover:underline">AccèsLibre<ExternalMark srLabel={t.place.opensInBrowser} /></NativeLink></ListRow>}
               {place.sourceRecords.some((r) => r.sourceId === "reisen_fuer_alle") && (
                 <ListRow icon={Award} tone="orange">Reisen für Alle<span className="block text-xs text-muted-foreground">{t.place.certifiedEntry}</span></ListRow>
               )}
-              <ListRow icon={MapIcon} tone="blue"><NativeLink href={googleMapsLink} className="text-primary-strong hover:underline">Google Maps</NativeLink></ListRow>
+              <ListRow icon={MapIcon} tone="blue"><NativeLink href={googleMapsLink} className="text-primary-strong hover:underline">Google Maps<ExternalMark srLabel={t.place.opensInBrowser} /></NativeLink></ListRow>
             </Card>
 
             {/* ── Technical details (raw data) ── */}

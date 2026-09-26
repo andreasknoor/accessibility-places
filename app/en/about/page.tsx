@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
+import ExternalMark from "@/components/ui/external-mark"
 
 const BASE = "https://accessible-places.org"
 
@@ -149,21 +150,21 @@ export default function AboutPage() {
                 <p className="font-semibold text-foreground">OpenStreetMap</p>
                 <p className="text-muted-foreground mt-0.5">
                   The "Wikipedia of World Maps". It not only forms the visual foundation for all the map content, but also contributes valuable geographic base data and important first accessibility markers (e.g. for step-free entrances) through a worldwide community.{" "}
-                  <a href="https://www.openstreetmap.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">openstreetmap.org</a>
+                  <a href="https://www.openstreetmap.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">openstreetmap.org<ExternalMark srLabel="(opens in browser)" /></a>
                 </p>
               </li>
               <li>
                 <p className="font-semibold text-foreground">Accessibility-Cloud</p>
                 <p className="text-muted-foreground mt-0.5">
                   A global network by Sozialhelden e.V. that consolidates accessibility data worldwide. Through this cloud, the countless manually verified entries from the well-known platform Wheelmap.org flow into the app in real time. Particularly sustainable: many of the records captured there ultimately flow back directly into OpenStreetMap, continuously improving the free world map project for everyone.{" "}
-                  <a href="https://accessibility.cloud" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">accessibility.cloud</a>
+                  <a href="https://accessibility.cloud" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">accessibility.cloud<ExternalMark srLabel="(opens in browser)" /></a>
                 </p>
               </li>
               <li>
                 <p className="font-semibold text-foreground">Ginto</p>
                 <p className="text-muted-foreground mt-0.5">
                   The absolute specialist in accessibility, with a strong focus on Switzerland and Austria. Ginto enables institutions and communities to capture and publish detailed accessibility information (such as exact door widths or gradients), which massively improves data quality across the DACH region.{" "}
-                  <a href="https://about.ginto.guide/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">about.ginto.guide</a>
+                  <a href="https://about.ginto.guide/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">about.ginto.guide<ExternalMark srLabel="(opens in browser)" /></a>
                 </p>
               </li>
             </ul>

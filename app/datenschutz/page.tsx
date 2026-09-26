@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
+import ExternalMark from "@/components/ui/external-mark"
 
 const BASE = "https://accessible-places.org"
 
@@ -94,33 +95,33 @@ export default function DatenschutzPage() {
                 <strong className="text-foreground">OpenStreetMap / Overpass API</strong> —
                 Abfrage von Barrierefreiheitsdaten.
                 Betreiber: OpenStreetMap Foundation, UK.{" "}
-                <a href="https://wiki.osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Datenschutzerklärung</a>
+                <a href="https://wiki.osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Datenschutzerklärung<ExternalMark srLabel="(öffnet im Browser)" /></a>
               </li>
               <li>
                 <strong className="text-foreground">Nominatim / Photon (Komoot)</strong> —
                 Ortssuche und Adressvorschläge.
                 Betreiber: OpenStreetMap Foundation bzw. Komoot GmbH, Berlin.{" "}
-                <a href="https://www.komoot.com/de-de/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Datenschutzerklärung Komoot</a>
+                <a href="https://www.komoot.com/de-de/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Datenschutzerklärung Komoot<ExternalMark srLabel="(öffnet im Browser)" /></a>
               </li>
               <li>
                 <strong className="text-foreground">accessibility.cloud</strong> —
                 Barrierefreiheitsdaten (inkl. Wheelmap.org). Betreiber: Sozialhelden e.V., Berlin.{" "}
-                <a href="https://www.accessibility.cloud/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Datenschutzerklärung</a>
+                <a href="https://www.accessibility.cloud/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Datenschutzerklärung<ExternalMark srLabel="(öffnet im Browser)" /></a>
               </li>
               <li>
                 <strong className="text-foreground">Ginto</strong> —
                 Barrierefreiheitsdaten Schweiz. Betreiber: Ginto AG, Schweiz.{" "}
-                <a href="https://ginto.guide" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">ginto.guide</a>
+                <a href="https://ginto.guide" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">ginto.guide<ExternalMark srLabel="(öffnet im Browser)" /></a>
               </li>
               <li>
                 <strong className="text-foreground">Google Places API</strong> —
                 Ergänzende Ortsdaten. Betreiber: Google Ireland Ltd., Dublin.{" "}
-                <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Datenschutzerklärung</a>
+                <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Datenschutzerklärung<ExternalMark srLabel="(öffnet im Browser)" /></a>
               </li>
               <li>
                 <strong className="text-foreground">Vercel</strong> —
                 Hosting und Infrastruktur. Betreiber: Vercel Inc., San Francisco.{" "}
-                <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Datenschutzerklärung</a>
+                <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Datenschutzerklärung<ExternalMark srLabel="(öffnet im Browser)" /></a>
               </li>
               <li>
                 <strong className="text-foreground">Vercel Analytics / Speed Insights</strong> —
@@ -134,12 +135,12 @@ export default function DatenschutzPage() {
                 Wiedererkennung wird ein täglich wechselnder Hash verwendet, eine
                 IP-Adresse wird nicht dauerhaft gespeichert. Betreiber: Umami
                 Software, Inc.{" "}
-                <a href="https://umami.is/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Datenschutzerklärung</a>
+                <a href="https://umami.is/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Datenschutzerklärung<ExternalMark srLabel="(öffnet im Browser)" /></a>
               </li>
               <li>
                 <strong className="text-foreground">Tally</strong> —
                 Feedback-Formular. Betreiber: Tally BV, Belgien.{" "}
-                <a href="https://tally.so/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Datenschutzerklärung</a>
+                <a href="https://tally.so/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Datenschutzerklärung<ExternalMark srLabel="(öffnet im Browser)" /></a>
               </li>
             </ul>
           </section>

@@ -128,3 +128,11 @@ describe("AmenityCard — no report action on the card", () => {
     expect(screen.queryByText("Als Behindertenparkplatz melden")).not.toBeInTheDocument()
   })
 })
+
+describe("AmenityCard — external-link marker", () => {
+  it("marks the Google Maps and Wheelmap icon links as opening in the browser", () => {
+    renderWithProvider(<AmenityCard spot={makeSpot({ osmId: "node/42" })} amenityType="parking" />)
+    expect(screen.getByRole("link", { name: "In Google Maps öffnen (öffnet im Browser)" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Auf Wheelmap.org prüfen (öffnet im Browser)" })).toBeInTheDocument()
+  })
+})

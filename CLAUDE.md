@@ -246,6 +246,17 @@ the action leaves the app:
   card (its long label crowded out Route/Zur Karte) — only in the parking
   marker's map popup.
 
+**External links** follow the same rule: every link that opens a website
+(browser / Custom Tab via `NativeLink`, or a plain `target="_blank"` link on
+the static and SEO pages) carries the ↗ via `components/ui/external-mark.tsx`
+(`ExternalMark`, hook-free so server pages can use it): inline after the link
+text with a screen-reader suffix `t.place.opensInBrowser` ("(öffnet im
+Browser)"), or `badge` pinned to an icon-only link, whose `aria-label` then
+carries the suffix. Deliberately **no** arrow on `tel:`/`mailto:` links
+(Anrufen, E-Mail), the share sheet, the in-app Tally overlays (report data
+error, feedback) or internal links. The map popups' Wheelmap button uses the
+same arrow SVG. A new external link should use `ExternalMark` too.
+
 The map popups (`lib/map/popup-content.ts`'s hand-built HTML, wired up via
 plain `addEventListener` in `MapViewGL.tsx` — **not** React, `NavigateButton`
 cannot be reused there) render the same Route button (`data-navigate`, ↗,

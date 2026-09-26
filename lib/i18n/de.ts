@@ -575,6 +575,9 @@ const de: Translations = {
   place: {
     route:            "Route",
     opensExternalApp: "öffnet eine andere App",
+    // Screen-reader suffix of links marked with ExternalMark (↗): a website
+    // opens in the browser.
+    opensInBrowser:   "(öffnet im Browser)",
     details:          "Details",
     website:          "Website",
     criterionValue:   (name: string, value: string) => `${name}: ${value}`,

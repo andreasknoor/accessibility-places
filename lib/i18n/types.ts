@@ -563,6 +563,9 @@ export interface Translations {
     // Appended to every "Route"/navigation trigger's accessible name: the
     // action leaves this app for a maps app.
     opensExternalApp: string
+    // Screen-reader suffix of links marked with ExternalMark (↗): a website
+    // opens in the browser.
+    opensInBrowser:   string
     details:          string
     website:          string
     // "Toilette: Ja" — accessible name of a criterion glyph + value pair.

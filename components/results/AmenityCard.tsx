@@ -4,6 +4,7 @@ import { MapPin, Map, Accessibility } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { NativeLink } from "@/components/ui/native-link"
 import NavigateButton from "@/components/ui/navigate-button"
+import ExternalMark from "@/components/ui/external-mark"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import AmenityBadgeIcon from "@/components/results/AmenityBadgeIcon"
@@ -166,22 +167,24 @@ export default function AmenityCard({ spot, amenityType, isSelected, onClick, di
           <div className="flex items-center gap-3">
             <NativeLink
               href={googleMapsHref}
-              aria-label={t.results.googleMapsLink}
+              aria-label={`${t.results.googleMapsLink} ${t.place.opensInBrowser}`}
               title={t.results.googleMapsLink}
               onClick={(e) => e.stopPropagation()}
-              className="p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
+              className="relative p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
             >
               <Map className="w-[1.1rem] h-[1.1rem]" />
+              <ExternalMark badge className="-top-0.5 -right-1" />
             </NativeLink>
             {wheelmapUrl && (
               <NativeLink
                 href={wheelmapUrl}
-                aria-label={t.results.wheelmapLink}
+                aria-label={`${t.results.wheelmapLink} ${t.place.opensInBrowser}`}
                 title={t.results.wheelmapLink}
                 onClick={(e) => e.stopPropagation()}
-                className="p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
+                className="relative p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Accessibility className="w-[1.1rem] h-[1.1rem]" />
+                <ExternalMark badge className="-top-0.5 -right-1" />
               </NativeLink>
             )}
             {/* The weak-tier "Als Behindertenparkplatz melden" report lives only in

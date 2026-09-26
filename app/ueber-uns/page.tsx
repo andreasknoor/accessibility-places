@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
+import ExternalMark from "@/components/ui/external-mark"
 
 const BASE = "https://accessible-places.org"
 
@@ -149,21 +150,21 @@ export default function UeberUnsPage() {
                 <p className="font-semibold text-foreground">OpenStreetMap</p>
                 <p className="text-muted-foreground mt-0.5">
                   Das „Wikipedia der Weltkarten". Es bildet nicht nur die visuelle Grundlage für das gesamte Kartenmaterial, sondern steuert über eine weltweite Community auch wertvolle geografische Basisdaten sowie erste wichtige Barrierefreiheits-Markierungen (z.&nbsp;B. zu stufenlosen Eingängen) bei.{" "}
-                  <a href="https://www.openstreetmap.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">openstreetmap.org</a>
+                  <a href="https://www.openstreetmap.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">openstreetmap.org<ExternalMark srLabel="(öffnet im Browser)" /></a>
                 </p>
               </li>
               <li>
                 <p className="font-semibold text-foreground">Accessibility-Cloud</p>
                 <p className="text-muted-foreground mt-0.5">
                   Ein globales Netzwerk der Sozialhelden e.V., das Daten zur Barrierefreiheit weltweit bündelt. Über diese Cloud fließen unter anderem die unzähligen, von Nutzern manuell geprüften Daten der bekannten Plattform Wheelmap.org in Echtzeit in die App ein. Besonders nachhaltig: Viele der dort erfassten Daten fließen am Ende auch wieder direkt zurück in OpenStreetMap, um das freie Weltkarten-Projekt kontinuierlich für alle zu verbessern.{" "}
-                  <a href="https://accessibility.cloud" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">accessibility.cloud</a>
+                  <a href="https://accessibility.cloud" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">accessibility.cloud<ExternalMark srLabel="(öffnet im Browser)" /></a>
                 </p>
               </li>
               <li>
                 <p className="font-semibold text-foreground">Ginto</p>
                 <p className="text-muted-foreground mt-0.5">
                   Der absolute Spezialist für Barrierefreiheit, mit einem starken Fokus auf die Schweiz und Österreich. Ginto ermöglicht es Institutionen und Communities, detaillierte Zugänglichkeitsinformationen (wie exakte Türbreiten oder Steigungen) zu erfassen und bereitzustellen, was die Datenqualität in der DACH-Region massiv aufwertet.{" "}
-                  <a href="https://about.ginto.guide/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">about.ginto.guide</a>
+                  <a href="https://about.ginto.guide/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">about.ginto.guide<ExternalMark srLabel="(öffnet im Browser)" /></a>
                 </p>
               </li>
             </ul>

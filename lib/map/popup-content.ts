@@ -19,7 +19,8 @@ import type { A11yValue, Place, ParkingSpot, AmenityFeature, AmenityTier } from 
 //
 // Default (filled blue) action per popup: place → "Details"; parking and WC →
 // "Route" (deliberate exceptions: they have no detail view, getting there is
-// their whole point). Route always carries the ↗ "opens another app" arrow.
+// their whole point). Route and every link to an external website (Wheelmap)
+// carry the ↗ arrow, like the React surfaces (components/ui/external-mark.tsx).
 
 type T = ReturnType<typeof useTranslations>
 
@@ -272,7 +273,13 @@ export function buildToiletPopupHtml(spot: AmenityFeature, t: T, opts: { showRes
     ${tagHtml}
     ${actions(
       routeButton(t, true)
-      + (opts.wheelmapUrl ? button({ label: t.map.popupChipWheelmap, html: `${SVG_WHEELMAP}${esc(t.map.popupChipWheelmap)}`, dataAttr: "data-wheelmap", primary: false }) : "")
+      + (opts.wheelmapUrl ? button({
+        label: t.map.popupChipWheelmap,
+        html: `${SVG_WHEELMAP}${esc(t.map.popupChipWheelmap)}${SVG_ARROW}`,
+        dataAttr: "data-wheelmap",
+        primary: false,
+        ariaLabel: `${t.map.popupChipWheelmap} ${t.place.opensInBrowser}`,
+      }) : "")
       + (opts.showResults ? listButton(t, "data-show-results") : ""),
     )}
   `)
