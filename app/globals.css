@@ -172,9 +172,13 @@
 /* Soft resting shadow of the unified place cards (result cards, detail-view
    cards, action tiles). A named utility rather than a theme token: "shadow-card"
    would collide with the `card` colour token (Tailwind reads it as a shadow
-   colour). */
+   colour). It sets --tw-shadow and composes box-shadow from Tailwind's own
+   ring/shadow variables — exactly like the built-in shadow-* utilities — so a
+   `ring-*` on the same element (the selected result card's blue frame) still
+   renders instead of being overwritten by a plain box-shadow. */
 @utility shadow-place {
-  box-shadow: 0 1px 2px rgb(15 23 42 / 0.06), 0 4px 14px rgb(15 23 42 / 0.06);
+  --tw-shadow: 0 1px 2px rgb(15 23 42 / 0.06), 0 4px 14px rgb(15 23 42 / 0.06);
+  box-shadow: var(--tw-inset-shadow, 0 0 #0000), var(--tw-inset-ring-shadow, 0 0 #0000), var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
 html {
