@@ -132,8 +132,8 @@
      Mode WCAG audit, docs/wcag-quickstart-mode-audit.md, finding P1). */
   --simple-expert: 32.1 94.6% 43.7%;
 
-  /* Tinted canvas behind the unified place cards (result lists, detail view —
-     docs/plans/unified-results-detail-popup-redesign.md). The cards themselves
+  /* Tinted canvas behind the unified place cards (result lists, detail view;
+     see CLAUDE.md, "Unified place UI"). The cards themselves
      are white with a soft shadow (the shadow-place utility below); the tint is what lets
      them read as separate surfaces without a hard border. */
   --canvas: 214 30% 96.5%;
@@ -191,7 +191,7 @@ body {
 }
 
 /* MapLibre popups (class "ap-popup-gl"; templates in lib/map/popup-content.ts,
-   unified place UI — docs/plans/unified-results-detail-popup-redesign.md).
+   unified place UI, see CLAUDE.md).
    The popup has a single state (no quick/full accordion any more). MapLibre's
    own default close button is flush to the corner with no explicit size, so
    it renders tiny and edge-to-edge with the rounded popup corner: give it a

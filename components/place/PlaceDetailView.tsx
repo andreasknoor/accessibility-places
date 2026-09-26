@@ -213,8 +213,7 @@ interface Props {
   onBeforeReport?: () => void
 }
 
-// The shared detail layout of the unified place UI (docs/plans/unified-
-// results-detail-popup-redesign.md, "Detail V2"): hero (photo, else a tinted
+// The shared detail layout of the unified place UI (see CLAUDE.md): hero (photo, else a tinted
 // category tile), title block, verdict card, action bar, criteria card. Expert
 // Mode appends a report action and grouped cards (contact & hours, offer,
 // sources & platforms, technical details). Wrapped by SimpleDetail

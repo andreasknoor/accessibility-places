@@ -22,7 +22,7 @@ interface Props {
 }
 
 // Quickstart result card — "V1+" of the unified place UI
-// (docs/plans/unified-results-detail-popup-redesign.md): name, category ·
+// (see CLAUDE.md): name, category ·
 // distance, one plain-language sentence per shown criterion (entrance, plus
 // toilet for the categories where Quickstart requires it), and an action row.
 //

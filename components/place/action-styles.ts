@@ -1,5 +1,5 @@
 // Shared button styles for the unified place UI (result card action row,
-// detail view action bar) — docs/plans/unified-results-detail-popup-redesign.md.
+// detail view action bar) — unified place UI, see CLAUDE.md.
 //
 // Emphasis rule: filled blue marks the surface's one default action. "Route"
 // (start navigation) leaves the app for another one and is therefore never

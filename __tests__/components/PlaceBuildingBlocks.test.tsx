@@ -14,7 +14,7 @@ import { quickstartHeadline, quickstartJudgmentFilters } from "@/lib/simple-view
 import type { Place } from "@/lib/types"
 
 // Shared building blocks of the unified place UI
-// (docs/plans/unified-results-detail-popup-redesign.md, phase 0).
+// (see CLAUDE.md, "Unified place UI").
 
 function r(ui: React.ReactElement, locale: "de" | "en" = "de") {
   return render(<LocaleProvider initialLocale={locale}>{ui}</LocaleProvider>)

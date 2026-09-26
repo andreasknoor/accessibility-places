@@ -22,8 +22,7 @@ interface Props {
 const NO_FILTERS: JudgmentFilters = { entrance: false, toilet: false, parking: false, seating: false, acceptUnknown: false }
 
 // Expert Mode place info sheet: a modal dialog around the shared
-// PlaceDetailView in "expert" mode (docs/plans/unified-results-detail-popup-
-// redesign.md, "Detail V2"). On a phone the panel fills the screen, so it
+// PlaceDetailView in "expert" mode (unified place UI, see CLAUDE.md). On a phone the panel fills the screen, so it
 // behaves like a screen: "‹ Zurück" top-left, no footer close button. On a
 // desktop it is a 520 px side panel over the app, where "back" has no
 // meaning — it keeps a "✕". Escape and a backdrop tap close it either way.

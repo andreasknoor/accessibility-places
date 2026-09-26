@@ -49,7 +49,7 @@ function makePlace(overrides: Partial<Place> = {}): Place {
   }
 }
 
-// Unified place UI "V1+" (docs/plans/unified-results-detail-popup-redesign.md).
+// Unified place UI result card (see CLAUDE.md).
 // The detail sheet is detected by its dialog role — its section titles are
 // covered by PlaceDebugSheet's own tests.
 describe("PlaceCard — content", () => {

@@ -34,7 +34,7 @@ function makePlace(overrides: Partial<Place> = {}): Place {
   }
 }
 
-// Unified place UI "V1+" (docs/plans/unified-results-detail-popup-redesign.md).
+// Unified place UI result card (see CLAUDE.md).
 describe("SimplePlaceCard", () => {
   it("renders the place name, category and distance", () => {
     renderWithProvider(<SimplePlaceCard place={makePlace()} distanceM={250} onOpen={vi.fn()} />)

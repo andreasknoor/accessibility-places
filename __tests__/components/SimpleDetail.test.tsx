@@ -52,7 +52,7 @@ describe("SimpleDetail", () => {
     expect(heading.nextElementSibling).toHaveTextContent("Arztpraxis")
   })
 
-  // Unified place UI "Detail V2" (docs/plans/unified-results-detail-popup-redesign.md).
+  // Unified place UI detail view (see CLAUDE.md).
   it("offers the same four actions as the Expert sheet, none of them emphasised", () => {
     renderWithProvider(<SimpleDetail place={makePlace({ phone: "+49123", website: "https://example.com" })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToExpert={vi.fn()} />)
     const route = screen.getByRole("button", { name: "Route (öffnet eine andere App)" })

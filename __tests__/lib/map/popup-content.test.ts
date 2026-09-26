@@ -6,8 +6,7 @@ import en from "@/lib/i18n/en"
 import type { PlaceJudgment } from "@/lib/reliability"
 import type { Place, AmenityFeature } from "@/lib/types"
 
-// Unified place UI (docs/plans/unified-results-detail-popup-redesign.md,
-// phase 3): single-state popups with the same verdict wording, criterion
+// Unified place UI (see CLAUDE.md): single-state popups with the same verdict wording, criterion
 // glyphs and default-action rules as the result cards and detail view.
 
 function makePlace(overrides: Partial<Place> = {}): Place {

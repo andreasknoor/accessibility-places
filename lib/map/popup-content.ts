@@ -9,7 +9,7 @@ import type { A11yValue, Place, ParkingSpot, AmenityFeature, AmenityTier } from 
 
 // Map popup templates — plain HTML strings (MapLibre popups are not React),
 // wired up in MapViewGL.tsx via data-* attributes. Unified place UI
-// (docs/plans/unified-results-detail-popup-redesign.md, phase 3): same
+// (see CLAUDE.md): same
 // palette, status discs, criterion glyphs, verdict wording and button styles
 // as the result cards and the detail view; one state, no more/less toggle.
 //

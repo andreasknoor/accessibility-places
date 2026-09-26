@@ -557,7 +557,7 @@ export interface Translations {
     unverifiedHeadline:       string
   }
   // Shared place UI (unified results card / detail view / map popup —
-  // docs/plans/unified-results-detail-popup-redesign.md).
+  // see CLAUDE.md).
   place: {
     route:            string
     // Appended to every "Route"/navigation trigger's accessible name: the

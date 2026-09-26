@@ -235,8 +235,7 @@ function openSmartPopup(
   return popup
 }
 
-// Single-state popups (unified place UI, docs/plans/unified-results-detail-
-// popup-redesign.md) are compact, and openSmartPopup already recentres the
+// Single-state popups (unified place UI, see CLAUDE.md) are compact, and openSmartPopup already recentres the
 // camera so the whole popup fits — this cap only guards the pathological case
 // of content taller than the map container itself (issue #43: very large
 // font scaling, or Quickstart's resizable mini-map, whose ancestor would

@@ -22,7 +22,7 @@ interface Props {
 // Quickstart detail screen: a full screen (not a portal sheet like
 // PlaceDebugSheet) around the shared PlaceDetailView in "quickstart" mode —
 // the same layout Expert Mode's sheet uses, minus the Expert-only cards
-// (docs/plans/unified-results-detail-popup-redesign.md, "Detail V2").
+// (unified place UI, see CLAUDE.md).
 export default function SimpleDetail({ place, distanceM, onBack, onOpenSettings, onSwitchToExpert }: Props) {
   const t = useTranslations()
   return (

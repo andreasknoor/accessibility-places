@@ -35,7 +35,7 @@ interface Props {
 }
 
 // Expert Mode result card — "V1+" of the unified place UI
-// (docs/plans/unified-results-detail-popup-redesign.md): name, category ·
+// (see CLAUDE.md): name, category ·
 // opening status · distance, the judgement against the active filters, a
 // compact criteria grid (glyph + name + value word) and an action row.
 //

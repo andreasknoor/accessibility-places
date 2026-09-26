@@ -6,7 +6,7 @@ import { emptyAttribute } from "@/lib/matching/merge"
 import type { Place } from "@/lib/types"
 
 // Hooks extracted from PlaceDebugSheet for the shared detail view
-// (docs/plans/unified-results-detail-popup-redesign.md, phase 2).
+// (see CLAUDE.md, "Detail view").
 
 function makePlace(overrides: Partial<Place> = {}): Place {
   return {
