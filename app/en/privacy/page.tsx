@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
+import ExternalMark from "@/components/ui/external-mark"
 
 const BASE = "https://accessible-places.org"
 
@@ -94,33 +95,33 @@ export default function PrivacyPage() {
                 <strong className="text-foreground">OpenStreetMap / Overpass API</strong> —
                 querying accessibility data.
                 Operator: OpenStreetMap Foundation, UK.{" "}
-                <a href="https://wiki.osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Privacy policy</a>
+                <a href="https://wiki.osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Privacy policy<ExternalMark srLabel="(opens in browser)" /></a>
               </li>
               <li>
                 <strong className="text-foreground">Nominatim / Photon (Komoot)</strong> —
                 place search and address suggestions.
                 Operators: OpenStreetMap Foundation and Komoot GmbH, Berlin.{" "}
-                <a href="https://www.komoot.com/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Komoot privacy policy</a>
+                <a href="https://www.komoot.com/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Komoot privacy policy<ExternalMark srLabel="(opens in browser)" /></a>
               </li>
               <li>
                 <strong className="text-foreground">accessibility.cloud</strong> —
                 accessibility data (incl. Wheelmap.org). Operator: Sozialhelden e.V., Berlin.{" "}
-                <a href="https://www.accessibility.cloud/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Privacy policy</a>
+                <a href="https://www.accessibility.cloud/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Privacy policy<ExternalMark srLabel="(opens in browser)" /></a>
               </li>
               <li>
                 <strong className="text-foreground">Ginto</strong> —
                 accessibility data for Switzerland. Operator: Ginto AG, Switzerland.{" "}
-                <a href="https://ginto.guide" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">ginto.guide</a>
+                <a href="https://ginto.guide" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">ginto.guide<ExternalMark srLabel="(opens in browser)" /></a>
               </li>
               <li>
                 <strong className="text-foreground">Google Places API</strong> —
                 supplementary venue data. Operator: Google Ireland Ltd., Dublin.{" "}
-                <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Privacy policy</a>
+                <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Privacy policy<ExternalMark srLabel="(opens in browser)" /></a>
               </li>
               <li>
                 <strong className="text-foreground">Vercel</strong> —
                 hosting and infrastructure. Operator: Vercel Inc., San Francisco.{" "}
-                <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Privacy policy</a>
+                <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Privacy policy<ExternalMark srLabel="(opens in browser)" /></a>
               </li>
               <li>
                 <strong className="text-foreground">Vercel Analytics / Speed Insights</strong> —
@@ -133,12 +134,12 @@ export default function PrivacyPage() {
                 personal data is stored; visitors are recognised via a hash that
                 rotates daily, and IP addresses are not stored permanently.
                 Operator: Umami Software, Inc.{" "}
-                <a href="https://umami.is/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Privacy policy</a>
+                <a href="https://umami.is/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Privacy policy<ExternalMark srLabel="(opens in browser)" /></a>
               </li>
               <li>
                 <strong className="text-foreground">Tally</strong> —
                 feedback form. Operator: Tally BV, Belgium.{" "}
-                <a href="https://tally.so/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Privacy policy</a>
+                <a href="https://tally.so/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">Privacy policy<ExternalMark srLabel="(opens in browser)" /></a>
               </li>
             </ul>
           </section>

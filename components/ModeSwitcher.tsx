@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils"
 // bare icon on the same screen would just be the same switch twice. That
 // screen still gets the gear, so settings (and the language switcher inside
 // them) stay reachable from every screen.
-export default function ModeSwitcher({ mode, onSwitch }: { mode: "quickstart" | "expert"; onSwitch: () => void }) {
+export default function ModeSwitcher({ mode, onSwitch, className }: { mode: "quickstart" | "expert"; onSwitch: () => void; className?: string }) {
   const t = useTranslations()
   const target = mode === "expert" ? "quickstart" : "expert"
   const Icon = target === "quickstart" ? Sparkles : GraduationCap
@@ -46,6 +46,7 @@ export default function ModeSwitcher({ mode, onSwitch }: { mode: "quickstart" | 
           // A named design token, not a hardcoded Tailwind colour — see
           // --simple-expert's comment in app/globals.css.
           : "text-simple-expert hover:bg-simple-expert/10",
+        className,
       )}
     >
       <Icon className="w-4 h-4" />

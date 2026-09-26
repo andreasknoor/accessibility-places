@@ -133,13 +133,13 @@ Both the locale and `<html lang>` are applied in a **`useLayoutEffect`, not a pa
 
 **Empty state actions** — `ResultsList` accepts an optional `onAdjustFilters?: () => void` prop. When present (mobile only), a primary "Filter anpassen" button is rendered alongside the expand-radius button; clicking it calls the callback. `MobileLayout` passes `() => setActiveTab("filter")`. When absent (desktop), a text hint is shown instead — the filter panel is already visible.
 
-**PlaceCard interaction** — Since v9.67, only the framed header box (icon + name + category + address + confidence badge + trailing chevron) opens `PlaceDebugSheet` (the place info sheet) via `createPortal` — not the whole card body, which read as an unlabelled "click anywhere" surface with no visible affordance. The box is `role="button"` on a `<div>` (not a real `<button>`, whose content model forbids the nested `<h3>`), with manual Enter/Space handling and `aria-label={t.results.openDetails(name)}`; it's visually inset from the card's own edges/corners (a smaller-radius bordered/tinted box) so it doesn't read as a second stacked card. The confidence badge sits inside this box as a plain child with no `stopPropagation` — tapping it opens the same detail sheet (decision D2c) instead of its own quick-view popup; the score-calculation breakdown it used to show now lives inside `PlaceDebugSheet`'s "Barrierefreiheit" section chip, which is itself a click-to-expand toggle (`ScoreContent`, exported from `ConfidenceBadge.tsx`). Everything else on the card — source badges, accessibility rows, footer links/expand/map-pin — sits outside the box and keeps its own `stopPropagation`'d actions. A separate map-pin button on the card (`onClick` prop) selects the place on the map without opening the sheet.
+**Unified place UI (result card, detail view, map popup)** — since v12.31–v12.37 Quickstart and Expert render the same place in one shared visual language, built from `components/place/`: `CriterionGlyph` (door / restroom pictogram / "P" / seat, with a filled status badge ✓ ! ✕ ?; the restroom pictogram is rendered from `RESTROOM_GLYPH` in `lib/amenities/badge-scene.ts`, the same definition the map's WC markers use — never the text "WC", which only reads in German), `CriterionItem` (`compact`: glyph + criterion name + coloured value word; `sentence`: glyph + Quickstart sentence), `QuickstartVerdict` / `JudgmentLine` (same disc + headline layout; Quickstart's fixed wording vs. Expert's filter-relative one — `quickstartJudgmentFilters`/`quickstartHeadline` in `lib/simple-view.ts` are the single source for Quickstart's verdict on card, detail and popup), `action-styles.ts` (button tiers) and `PlaceDetailView`. **Result cards** (`SimplePlaceCard`, `PlaceCard`): name, category · (opening status ·) distance, verdict (Expert; the pass note is hidden via `hideNoteOnPass`), criteria (Expert: 2-column `compact` grid incl. a conflict triangle and a "gering" reliability marker as the only reliability shown on the card; Quickstart: entrance + toilet-for-required-categories sentences), and an action row **Zur Karte (primary) · Details · Route ↗**. The whole card is a pointer-only click target that opens the details (plain `onClick` on a `div`, no role — redundant for keyboard/AT); the labelled "Details" button (`aria-label={t.results.openDetails(name)}`) is the real control, and every action button `stopPropagation`s, so there are no nested interactive elements. The Expert card deliberately no longer carries the source row, dog/diet badges, link icons, in-card expand or per-criterion reliability sentences (all in the detail view), and shows the address only when no distance is known. Lists sit on the `--canvas` token (`bg-canvas`) behind `shadow-place` cards. **Default-action rule:** filled blue marks a surface's one default action, and "Route" (leaves the app) is never it — except the parking/WC map popups and `AmenityCard`, whose sole purpose is getting there.
 
-**PlaceDebugSheet detail rows** — For each accessibility criterion (entrance, toilet, seating) the sheet renders a header row then wraps sub-detail rows in `ml-6 pl-3 border-l border-border` so the parent is unambiguous. The structured detail types are `EntranceDetails`, `ToiletDetails`, `ParkingDetails`, `SeatingDetails` (all in `lib/types.ts`); they are carried in `AccessibilityAttribute.details` (merged) and `SourceAttribution.details` (per-source). AccèsLibre's free-text `commentaire` is read from `getMeta(place, "acceslibre")?.commentaire` and rendered at the bottom of the accessibility section.
+**Detail view (`PlaceDetailView`)** — one layout for both modes: hero (OSM/Wikidata photo via `hooks/usePlaceImage`, else a verdict-tinted gradient with the category emoji; floating `HERO_PILL`/`HERO_ICON` controls from the wrapper), title block (h1 on Quickstart's full screen, h2 in the Expert dialog), verdict card, an action bar of four equal tiles with **no** default (Route ↗ · Anrufen · Website · Teilen; missing phone/website render as disabled tiles), and the criteria card. Expert appends per-criterion rows (value word, `Verlässlichkeit <tier> · <sources> · verified`, a "Filter" tag for active filter criteria, per-source values on conflict, reliability dots, and the structured `EntranceDetails`/`ToiletDetails`/`ParkingDetails`/`SeatingDetails` sub-details behind a collapsed "N Details" disclosure — this replaced the old horizontally scrolling 5-column table), OSM `wheelchair:description` and AccèsLibre `commentaire` notes, the report/contribute button, and grouped cards: contact & opening hours (address with copy, reverse-geocoded via `hooks/useResolvedAddress` when missing), offer chips, sources & platforms (OSM id with copy, Wheelmap, Ginto, AccèsLibre, RfA, Google Maps) and technical details (raw data, lazily fetched from `/api/raw`). `SimpleDetail` (Quickstart full screen: back pill, `ModeSwitcher`, settings) and `PlaceDebugSheet` (Expert modal dialog, `useFocusTrap`; phone: full screen with "‹ Zurück", desktop: 520 px side panel with ✕; no footer close button) are thin wrappers around it.
 
 **Distance display** — `PlaceCard` shows inline distance (`t.results.distanceFromHere`) when `distanceM` prop is provided. `searchCenter` reaches `ResultsList` **only when `chatMode === "nearby"` or an amenity search is active** — distance is intentionally not shown for text-search or panned-area results. This gate is applied independently on desktop (`HomeClient.tsx`) and mobile (`MobileLayout.tsx`, which receives its own `searchCenter` prop and must re-gate it locally — a v9.72 fix, mobile previously passed it through ungated).
 
-`MapView` (`components/map/MapView.tsx`) renders `MapViewGL.tsx`, loaded via `dynamic(..., { ssr: false })` — MapLibre GL JS + OpenFreeMap vector tiles, the sole map engine since the v12.0 cutover (issue #48; the pre-migration Leaflet implementation was removed). Teardrop pins coloured by confidence with the category emoji, native GPU-side clustering, the "Hier suchen" pan-detection time-window invariant, the effect-ordering + first-mount resize invariants, and the popup positioning/recentring logic → **[docs/architecture/mapview-gl.md](docs/architecture/mapview-gl.md)**.
+`MapView` (`components/map/MapView.tsx`) renders `MapViewGL.tsx`, loaded via `dynamic(..., { ssr: false })` — MapLibre GL JS + OpenFreeMap vector tiles, the sole map engine since the v12.0 cutover (issue #48; the pre-migration Leaflet implementation was removed). Teardrop pins coloured by confidence with the category emoji, native GPU-side clustering, the "Hier suchen" pan-detection time-window invariant, the effect-ordering + first-mount resize invariants, and the popup positioning/recentring logic → **[docs/architecture/mapview-gl.md](docs/architecture/mapview-gl.md)**. The popups themselves are single-state cards (no quick/full toggle since v12.34): header tile tinted like the pin + name (2-line clamp) + category, the mode's verdict wording (`MapView`'s `quickstart` prop switches to Quickstart's fixed preset and headline), criterion glyphs + names, and the action row; both the header and the "Details" button carry `data-show-details`, so `wireVenuePopupButtons` wires *all* matches. `applyPopupMaxHeight` only caps at the map container height minus the tip.
 
 **Filter/source/radius persistence** — `HomeClient.tsx` persists the active filter criteria, source toggles, and radius to `localStorage` via a `useEffect` (guarded by `prefsLoadedRef` so the initial load effect fires first and the persist effect never overwrites saved prefs with defaults). `alwaysShowParking` and `alwaysShowToilets` are intentionally excluded from the filter-prefs key — they are persisted separately via `AppSettings`. `handleReset` restores defaults and writes them back, so the stored value self-heals on reset.
 
@@ -228,30 +228,42 @@ generic `geo:` URI (`NavApp = "geo"`) — letting a non-Google app (Waze etc.)
 stay reachable without enumerating installed apps ourselves.
 
 **UI:** `components/ui/navigate-button.tsx` (`NavigateButton`) is the single
-shared trigger + popover, in three variants:
-- `"sticky"` — full-width primary button in `PlaceDebugSheet`'s footer,
-  above the existing close button. The main placement: reachable regardless
-  of scroll position, given more visual weight than the Website/Phone icons
-  since "can I get there" is central to this app's purpose.
-- `"icon"` — small icon in `PlaceCard`'s existing footer link row.
-  Deliberately the lucide `Navigation` compass glyph, **never** `Map`/pin —
-  that shape is already used one icon over by the Google-Maps-*search* link
-  (`googleMapsHref`, opens a search, not directions); a second pin-like icon
-  there would be indistinguishable from it.
-- `"labeled"` — pill button with icon + text, `AmenityCard`'s footer (the
-  🅿/🚻 quick-search results). `AmenityCard` has no detail sheet at all, so
-  there's no sticky-footer surface to push this into instead — the footer
-  row is the only placement candidate, hence the heavier labelled treatment
-  there instead of a bare icon.
+shared trigger + popover, in three variants — always the lucide `Navigation`
+compass glyph (never a map/pin shape, which reads as "show on map"), always
+followed by a small ↗ (`ArrowUpRight`), always labelled **"Route"** (one
+name on every surface, map popups included — no "Navigation starten" any
+more), and always with the accessible name "Route (öffnet eine andere App)":
+it starts with the visible label (WCAG 2.5.3, speech input) and says that
+the action leaves the app:
+- `"action"` — result-card action row, secondary by default
+  (`emphasis="primary"` exists but no in-app surface uses it: Route is never
+  a default action — see the unified place UI paragraph above).
+- `"tile"` — one of the four equal tiles in `PlaceDetailView`'s action bar.
+- `"labeled"` — filled pill, `AmenityCard`'s footer (the 🅿/🚻 quick-search
+  results) — the one list surface where Route stays the default, since the
+  card has no detail view and getting there is its point. The weak-parking
+  "Als Behindertenparkplatz melden" report is deliberately **not** on this
+  card (its long label crowded out Route/Zur Karte) — only in the parking
+  marker's map popup.
 
-The map's parking/toilet marker popups (`lib/map/popup-content.ts`'s hand-
-built HTML, wired up via plain `addEventListener` in `MapViewGL.tsx` —
-**not** React, `NavigateButton` cannot be reused there) get their own,
-simpler treatment: "Navigate here" is the first, primary CTA in the unified
-popup template (`ctaD(...)`, `data-navigate`), ahead of the secondary
-Wheelmap / "show in results" chips. No in-popup chooser here even on
-Android — the popup is short-lived (closes on pan/zoom) and too narrow for
-a picker, so it always calls `startDefaultNavigation` directly.
+**External links** follow the same rule: every link that opens a website
+(browser / Custom Tab via `NativeLink`, or a plain `target="_blank"` link on
+the static and SEO pages) carries the ↗ via `components/ui/external-mark.tsx`
+(`ExternalMark`, hook-free so server pages can use it): inline after the link
+text with a screen-reader suffix `t.place.opensInBrowser` ("(öffnet im
+Browser)"), or `badge` pinned to an icon-only link, whose `aria-label` then
+carries the suffix. Deliberately **no** arrow on `tel:`/`mailto:` links
+(Anrufen, E-Mail), the share sheet, the in-app Tally overlays (report data
+error, feedback) or internal links. The map popups' Wheelmap button uses the
+same arrow SVG. A new external link should use `ExternalMark` too.
+
+The map popups (`lib/map/popup-content.ts`'s hand-built HTML, wired up via
+plain `addEventListener` in `MapViewGL.tsx` — **not** React, `NavigateButton`
+cannot be reused there) render the same Route button (`data-navigate`, ↗,
+same accessible name): secondary in the place popup (whose default is
+"Details"), primary in the parking and WC popups. No in-popup chooser even
+on Android — the popup is short-lived and too narrow for a picker, so it
+always calls `startDefaultNavigation` directly.
 
 Every surface targets the coordinate of the specific thing being navigated
 to — a `Place`'s own `coordinates`, or an `AmenityFeature`'s own `lat`/`lon`

@@ -49,32 +49,40 @@ function makePlace(overrides: Partial<Place> = {}): Place {
   }
 }
 
-describe("PlaceCard", () => {
-  it("renders the place name", () => {
+// Unified place UI result card (see CLAUDE.md).
+// The detail sheet is detected by its dialog role — its section titles are
+// covered by PlaceDebugSheet's own tests.
+describe("PlaceCard — content", () => {
+  it("renders the place name and category", () => {
     renderWithProvider(<PlaceCard place={makePlace()} />)
-    expect(screen.getByText("Café Barrierefrei")).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Café Barrierefrei" })).toBeInTheDocument()
+    expect(screen.getByText("Restaurant")).toBeInTheDocument()
   })
 
-  it("renders address", () => {
-    renderWithProvider(<PlaceCard place={makePlace()} />)
-    expect(screen.getByText(/Hauptstraße/)).toBeInTheDocument()
+  it("shows the distance instead of the address when a distance is known", () => {
+    renderWithProvider(<PlaceCard place={makePlace()} distanceM={420} />)
+    expect(screen.getByText("420 m")).toBeInTheDocument()
+    expect(screen.queryByText(/Hauptstraße/)).not.toBeInTheDocument()
   })
 
-  // v13/docs/plans/reliability-tiers.md: the old place-wide percentage badge
-  // was replaced by a JudgmentLine against the active filters — entrance
-  // passes cleanly, toilet is "limited" → the caveat wording names it.
+  it("falls back to the address when no distance is known (text/city search)", () => {
+    renderWithProvider(<PlaceCard place={makePlace()} />)
+    expect(screen.getByText(/Hauptstraße 5 Berlin/)).toBeInTheDocument()
+  })
+
   it("renders the judgement line against the active filters, naming the count", () => {
     renderWithProvider(<PlaceCard place={makePlace()} filters={FILTERS} />)
-    // FILTERS has 2 active criteria (entrance, toilet) — the count is now
-    // part of the headline text itself (2026-08-02).
-    expect(screen.getByText("Erfüllt")).toBeInTheDocument()
     expect(screen.getByText("deine 2 Kriterien")).toBeInTheDocument()
     expect(screen.getByText("Mit Einschränkung: Toilette.")).toBeInTheDocument()
   })
 
+  it("drops the judgement note when it would only repeat a clean pass", () => {
+    const place = makePlace({ accessibility: { entrance: buildAttribute("osm", "yes", "yes", {}), toilet: buildAttribute("osm", "yes", "yes", {}), parking: emptyAttribute() } })
+    renderWithProvider(<PlaceCard place={place} filters={FILTERS} />)
+    expect(screen.queryByText("Alle geprüften Kriterien uneingeschränkt.")).not.toBeInTheDocument()
+  })
+
   it("renders the criteria count as plain text, not a link, on the card itself", () => {
-    // Only the Info-Sheet's JudgmentLine gets a real link (see
-    // JudgmentLine.tsx) — the card's own copy never receives onOpenFilters.
     renderWithProvider(<PlaceCard place={makePlace()} filters={FILTERS} />)
     expect(screen.queryByRole("button", { name: "Aktive Kriterien anzeigen" })).not.toBeInTheDocument()
   })
@@ -84,244 +92,116 @@ describe("PlaceCard", () => {
     expect(screen.getByText("Keine Kriterien aktiv")).toBeInTheDocument()
   })
 
-  it("renders all three accessibility attributes", () => {
+  it("renders each criterion as its name with the value word below it", () => {
     renderWithProvider(<PlaceCard place={makePlace()} />)
-    // Uses German labels by default (de SSR default)
-    expect(screen.getByText(/Eingang|Entrance/i)).toBeInTheDocument()
-    expect(screen.getByText(/Toilette|Toilet/i)).toBeInTheDocument()
-    expect(screen.getByText(/Parkplatz|Parking/i)).toBeInTheDocument()
+    expect(screen.getByText("Eingang")).toBeInTheDocument()
+    expect(screen.getByText("Toilette")).toBeInTheDocument()
+    expect(screen.getByText("Parkplatz")).toBeInTheDocument()
+    expect(screen.getByText("Ja")).toBeInTheDocument()
+    expect(screen.getByText("Eingeschränkt")).toBeInTheDocument()
+    expect(screen.getByText("Nein")).toBeInTheDocument()
   })
 
-  it("renders website link", () => {
-    renderWithProvider(<PlaceCard place={makePlace()} />)
-    const link = screen.getByRole("link", { name: /website/i })
-    expect(link).toHaveAttribute("href", "https://example.com")
+  it("adds the seating criterion only when the place has one", () => {
+    const { unmount } = renderWithProvider(<PlaceCard place={makePlace()} />)
+    expect(screen.queryByText("Sitzplätze")).not.toBeInTheDocument()
+    unmount()
+    const place = makePlace()
+    place.accessibility.seating = buildAttribute("osm", "yes", "yes", {})
+    renderWithProvider(<PlaceCard place={place} />)
+    expect(screen.getByText("Sitzplätze")).toBeInTheDocument()
   })
 
-  it("opens info sheet when card is clicked", async () => {
-    renderWithProvider(<PlaceCard place={makePlace()} onClick={vi.fn()} />)
-    fireEvent.click(screen.getByText("Café Barrierefrei"))
-    expect(await screen.findByText(/Grunddaten|Basic information/i)).toBeInTheDocument()
-  })
-
-  it("exposes the header as a keyboard-operable custom button that opens the info sheet (WCAG 2.1.1)", async () => {
-    renderWithProvider(<PlaceCard place={makePlace()} onClick={vi.fn()} />)
-    // Header is a role="button" div (not a real <button> — its content model
-    // forbids the nested <h3>), so Enter/Space must be handled manually; this
-    // locks that in instead of relying on native button behaviour.
-    const header = screen.getByRole("button", { name: /Details (zu|for).*Café Barrierefrei/i })
-    fireEvent.click(header)
-    expect(await screen.findByText(/Grunddaten|Basic information/i)).toBeInTheDocument()
-  })
-
-  it("opens the info sheet on Enter and on Space when the header is focused (WCAG 2.1.1)", async () => {
-    renderWithProvider(<PlaceCard place={makePlace()} onClick={vi.fn()} />)
-    const header = screen.getByRole("button", { name: /Details (zu|for).*Café Barrierefrei/i })
-    fireEvent.keyDown(header, { key: "Enter" })
-    expect(await screen.findByText(/Grunddaten|Basic information/i)).toBeInTheDocument()
-  })
-
-  it("tapping the judgement line opens the info sheet instead of its own quick view (decision D2c)", async () => {
-    // Regression test for the "tapping the score badge does nothing, unexpectedly"
-    // usability finding: the judgement line must NOT stopPropagation — a tap
-    // on it is just another tap inside the single header tap target.
-    renderWithProvider(<PlaceCard place={makePlace()} filters={FILTERS} onClick={vi.fn()} />)
-    fireEvent.click(screen.getByText("deine 2 Kriterien"))
-    expect(await screen.findByText(/Grunddaten|Basic information/i)).toBeInTheDocument()
-  })
-
-  it("calls onClick when map button is clicked", () => {
-    const onClick = vi.fn()
-    renderWithProvider(<PlaceCard place={makePlace()} onClick={onClick} />)
-    fireEvent.click(screen.getByRole("button", { name: /Zur Karte|To map/i }))
-    expect(onClick).toHaveBeenCalledOnce()
-  })
-
-  it("applies selected styling when isSelected", () => {
-    const { container } = renderWithProvider(<PlaceCard place={makePlace()} isSelected />)
-    expect(container.firstChild).toHaveClass("border-primary")
-  })
-
-  it("shows conflict warning icon when sources disagree", () => {
+  it("marks a criterion whose sources disagree", () => {
     const conflicted = buildAttribute("osm", "yes", "yes", {})
     conflicted.conflict = true
-    conflicted.sources.push({
-      sourceId: "google_places",
-      value: "no",
-      rawValue: "false",
-      reliabilityWeight: 0.35,
-    })
     const place = makePlace({ accessibility: { entrance: conflicted, toilet: emptyAttribute(), parking: emptyAttribute() } })
     renderWithProvider(<PlaceCard place={place} />)
-    // Conflict source values should appear
-    expect(screen.getByText(/Google Places/i)).toBeInTheDocument()
+    expect(screen.getByRole("img", { name: "Quellen widersprechen sich" })).toBeInTheDocument()
   })
 
-  it("expanding details shows hasGrabBars + isDesignated for OSM designated toilet", () => {
-    // Mirror lib/adapters/osm.ts:osmToiletDetails for toilets:wheelchair=designated
-    const toilet = buildAttribute("osm", "yes", "designated", {
-      isDesignated: true,
-      hasGrabBars:  true,
-      isInside:     true,
-    })
-    const place = makePlace({ accessibility: { entrance: emptyAttribute(), toilet, parking: emptyAttribute() } })
-
+  it("flags a weak ('gering') reliability tier as an exception", () => {
+    const place = makePlace({ accessibility: { entrance: buildAttribute("osm", "yes", "yes", {}), toilet: buildAttribute("google_places", "yes", "yes", {}), parking: emptyAttribute() } })
     renderWithProvider(<PlaceCard place={place} />)
-    fireEvent.click(screen.getByText(/Details/))
-
-    expect(screen.getByText(/Haltegriffe|Grab bars/i)).toBeInTheDocument()
-    expect(screen.getByText(/Ausgewiesene Rollstuhl-Toilette|Designated wheelchair toilet/i)).toBeInTheDocument()
+    expect(screen.getAllByText("Verlässlichkeit gering")).toHaveLength(1)
   })
 
-  it("hides isInside (`WC im Betrieb vorhanden`) from the toilet detail list", () => {
-    // isInside is the sole reason for expanding details — but we hide it.
-    // Adding another field so the details panel renders at all.
-    const toilet = buildAttribute("osm", "yes", "designated", {
-      isDesignated: true,
-      isInside:     true,
-    })
-    const place = makePlace({ accessibility: { entrance: emptyAttribute(), toilet, parking: emptyAttribute() } })
-
-    renderWithProvider(<PlaceCard place={place} />)
-    fireEvent.click(screen.getByText(/Details/))
-
-    expect(screen.queryByText(/WC im Betrieb vorhanden|On-site accessible toilet/i)).not.toBeInTheDocument()
-    expect(screen.getByText(/Ausgewiesene Rollstuhl-Toilette|Designated wheelchair toilet/i)).toBeInTheDocument()
-  })
-
-  it("expanding details shows hasGrabBars when A.Cloud reports grabBars present", () => {
-    // Mirror lib/adapters/accessibility-cloud.ts:toiletDetails when restrooms[0].grabBars exists
-    const toilet = buildAttribute("accessibility_cloud", "yes", "a11y-cloud", {
-      hasGrabBars:         true,
-      grabBarsOnBothSides: true,
-      grabBarsFoldable:    false,
-      isInside:            true,
-    })
-    const place = makePlace({ accessibility: { entrance: emptyAttribute(), toilet, parking: emptyAttribute() } })
-
-    renderWithProvider(<PlaceCard place={place} />)
-    fireEvent.click(screen.getByText(/Details/))
-
-    expect(screen.getByText(/^Haltegriffe$|^Grab bars$/i)).toBeInTheDocument()
-    expect(screen.getByText(/Beidseitige Haltegriffe|Grab bars on both sides/i)).toBeInTheDocument()
-  })
-
-  it("renders Wheelmap deep-link to the OSM node when sourceRecord is OSM", () => {
-    const place = makePlace({
-      sourceRecords: [{ sourceId: "osm", externalId: "node/12345", fetchedAt: "", raw: {} }],
-    })
-    renderWithProvider(<PlaceCard place={place} />)
-    const link = screen.getByRole("link", { name: /Wheelmap/i })
-    expect(link).toHaveAttribute("href", "https://wheelmap.org/nodes/12345")
-  })
-
-  it("prefers place.wheelmapUrl over OSM-id constructed URL when present", () => {
-    const place = makePlace({
-      wheelmapUrl: "https://wheelmap.org/nodes/777?from=acloud",
-      sourceRecords: [{ sourceId: "osm", externalId: "node/12345", fetchedAt: "", raw: {} }],
-    })
-    renderWithProvider(<PlaceCard place={place} />)
-    const link = screen.getByRole("link", { name: /Wheelmap/i })
-    expect(link).toHaveAttribute("href", "https://wheelmap.org/nodes/777?from=acloud")
-  })
-
-  it("falls back to coordinate-based Wheelmap link when no OSM node id", () => {
-    const place = makePlace({
-      sourceRecords: [{ sourceId: "google_places", externalId: "ChIJ123", fetchedAt: "", raw: {} }],
-      coordinates:   { lat: 52.52, lon: 13.405 },
-    })
-    renderWithProvider(<PlaceCard place={place} />)
-    const link = screen.getByRole("link", { name: /Wheelmap/i })
-    expect(link.getAttribute("href")).toMatch(/lat=52\.52/)
-    expect(link.getAttribute("href")).toMatch(/lon=13\.405/)
-  })
-
-  it("shows dog-friendly badge when allowsDogs is true", () => {
-    renderWithProvider(<PlaceCard place={makePlace({ allowsDogs: true })} />)
-    expect(screen.getByLabelText(/Hunde willkommen|Dogs welcome/i)).toBeInTheDocument()
-  })
-
-  it("shows no-dogs indicator when allowsDogs is false", () => {
-    renderWithProvider(<PlaceCard place={makePlace({ allowsDogs: false })} />)
-    expect(screen.getByLabelText(/Keine Hunde|No dogs/i)).toBeInTheDocument()
-  })
-
-  it("renders nothing dog-related when allowsDogs is undefined", () => {
-    renderWithProvider(<PlaceCard place={makePlace()} />)
-    expect(screen.queryByLabelText(/Hunde|Dogs/i)).not.toBeInTheDocument()
-  })
-
-  it("shows vegetarian badge when isVegetarianFriendly=true", () => {
-    renderWithProvider(<PlaceCard place={makePlace({ isVegetarianFriendly: true })} />)
-    expect(screen.getByLabelText(/Vegetarisch|Vegetarian/i)).toBeInTheDocument()
-  })
-
-  it("shows vegan badge when isVeganFriendly=true", () => {
-    renderWithProvider(<PlaceCard place={makePlace({ isVeganFriendly: true, isVegetarianFriendly: true })} />)
-    expect(screen.getByLabelText(/Vegan/i)).toBeInTheDocument()
-  })
-
-  it("renders no diet badges when both flags are undefined", () => {
-    renderWithProvider(<PlaceCard place={makePlace()} />)
-    expect(screen.queryByLabelText(/Vegetarisch|Vegetarian/i)).not.toBeInTheDocument()
-    expect(screen.queryByLabelText(/^Vegan$/i)).not.toBeInTheDocument()
-  })
-
-  it("shows source count badge when multiple sources", () => {
-    const place = makePlace({
-      sourceRecords: [
-        { sourceId: "osm",                externalId: "1", fetchedAt: "", raw: {} },
-        { sourceId: "accessibility_cloud", externalId: "2", fetchedAt: "", raw: {} },
-      ],
-    })
-    renderWithProvider(<PlaceCard place={place} />)
-    expect(screen.getByText("+1")).toBeInTheDocument()
-  })
-})
-
-describe("PlaceCard — nearby parking label", () => {
-  it("shows 'Ja, in der Nähe' label for nearbyOnly parking in A11yAttribute", () => {
+  it("words nearby-only parking with its distance", () => {
     const place = makePlace({
       accessibility: {
         entrance: buildAttribute("osm", "yes", "yes", {}),
         toilet:   buildAttribute("osm", "yes", "yes", {}),
-        parking:  {
-          value:      "yes",
-          confidence: 0.5,
-          conflict:   false,
-          sources:    [],
-          details:    { nearbyOnly: true, nearbyParkingDistanceM: 80 } as Record<string, unknown>,
-        },
+        parking:  { value: "yes", confidence: 0.5, conflict: false, sources: [], details: { nearbyOnly: true, nearbyParkingDistanceM: 80 } as Record<string, unknown> },
       },
     })
-    renderWithProvider(<PlaceCard place={place} onClick={vi.fn()} />)
-    expect(screen.getByText(/in der Nähe|nearby/i)).toBeInTheDocument()
+    renderWithProvider(<PlaceCard place={place} />)
+    expect(screen.getByText("Ja, in der Nähe (80 m)")).toBeInTheDocument()
+  })
+
+  // Moved to the detail sheet by the redesign (functional change 2).
+  it("no longer carries the source row, diet/dog badges or external link icons", () => {
+    const place = makePlace({ allowsDogs: true, isVeganFriendly: true, gintoUrl: "https://ginto.guide/x" })
+    renderWithProvider(<PlaceCard place={place} />)
+    expect(screen.queryByText(/Beste Quelle/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Hunde willkommen/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Vegan/)).not.toBeInTheDocument()
+    expect(screen.queryByRole("link")).not.toBeInTheDocument()
   })
 })
 
-describe("PlaceCard — navigate button (docs/plans/native-navigate-here.md, Placement 1)", () => {
-  it("renders a distinct navigate icon in the footer, separate from the Google Maps search icon", () => {
-    renderWithProvider(<PlaceCard place={makePlace()} />)
-    expect(screen.getByRole("button", { name: "Navigation starten" })).toBeInTheDocument()
-    // The pre-existing Google Maps search link stays an <a>, not a <button> —
-    // confirms the two controls are genuinely separate elements, not the
-    // same icon relabelled.
-    expect(screen.getByRole("link", { name: /google maps/i })).toBeInTheDocument()
-  })
-
-  it("clicking the navigate icon starts navigation at the place's own coordinates and does not open the info sheet", () => {
+describe("PlaceCard — actions", () => {
+  it("offers Zur Karte (primary), Details and Route (secondary)", () => {
     renderWithProvider(<PlaceCard place={makePlace()} onClick={vi.fn()} />)
-    fireEvent.click(screen.getByRole("button", { name: "Navigation starten" }))
+    const map = screen.getByRole("button", { name: "Zur Karte" })
+    const details = screen.getByRole("button", { name: "Details zu Café Barrierefrei öffnen" })
+    const route = screen.getByRole("button", { name: "Route (öffnet eine andere App)" })
+    expect(map.className).toMatch(/(^|\s)bg-primary(\s|$)/)
+    expect(details.className).not.toMatch(/(^|\s)bg-primary(\s|$)/)
+    expect(route.className).not.toMatch(/(^|\s)bg-primary(\s|$)/)
+  })
+
+  it("omits Zur Karte when no map handler is given", () => {
+    renderWithProvider(<PlaceCard place={makePlace()} />)
+    expect(screen.queryByRole("button", { name: "Zur Karte" })).not.toBeInTheDocument()
+  })
+
+  it("Zur Karte calls onClick without opening the detail sheet", () => {
+    const onClick = vi.fn()
+    renderWithProvider(<PlaceCard place={makePlace()} onClick={onClick} />)
+    fireEvent.click(screen.getByRole("button", { name: "Zur Karte" }))
+    expect(onClick).toHaveBeenCalledOnce()
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
+
+  it("the Details button opens the detail sheet", async () => {
+    renderWithProvider(<PlaceCard place={makePlace()} onClick={vi.fn()} />)
+    fireEvent.click(screen.getByRole("button", { name: "Details zu Café Barrierefrei öffnen" }))
+    expect(await screen.findByRole("dialog")).toBeInTheDocument()
+  })
+
+  it("a tap anywhere on the card (e.g. its name) opens the detail sheet", async () => {
+    renderWithProvider(<PlaceCard place={makePlace()} onClick={vi.fn()} />)
+    fireEvent.click(screen.getByText("Café Barrierefrei"))
+    expect(await screen.findByRole("dialog")).toBeInTheDocument()
+  })
+
+  it("has exactly one control labelled to open the details (no nested duplicate)", () => {
+    renderWithProvider(<PlaceCard place={makePlace()} onClick={vi.fn()} />)
+    expect(screen.getAllByRole("button", { name: /Details zu/ })).toHaveLength(1)
+  })
+
+  it("Route starts navigation at the place's coordinates and does not open the sheet", () => {
+    renderWithProvider(<PlaceCard place={makePlace()} onClick={vi.fn()} />)
+    fireEvent.click(screen.getByRole("button", { name: "Route (öffnet eine andere App)" }))
     expect(startDefaultNavigation).toHaveBeenCalledWith({ lat: 52.52, lon: 13.405 })
-    expect(screen.queryByText(/Grunddaten|Basic information/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
+
+  it("applies selected styling when isSelected", () => {
+    const { container } = renderWithProvider(<PlaceCard place={makePlace()} isSelected />)
+    expect(container.firstChild).toHaveClass("ring-primary")
   })
 })
-
-// The separate "Achtung: evtl. nicht barrierefrei" warning box and its
-// per-criterion "!" toggle were retired 2026-08-02 (Option 3) — they said
-// almost exactly what the judgement line above already says. See
-// JudgmentLine.test-equivalent coverage in the "renders the judgement line"
-// tests above and lib/reliability.test.ts for the underlying status logic.
 
 // ─── Opening hours (issue #14) ──────────────────────────────────────────────
 //

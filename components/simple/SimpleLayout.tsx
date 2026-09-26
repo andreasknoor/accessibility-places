@@ -1049,6 +1049,7 @@ export default function SimpleLayout({
                 <MapView
                   places={sortedPlaces}
                   filters={SIMPLE_MAP_FILTERS}
+                  quickstart
                   // Always passed through — HomeClient's simpleParkingSpots/
                   // simpleToiletSpots are already `undefined` outside Simple
                   // View's OWN active parking/WC search (never the full UI's
@@ -1126,7 +1127,7 @@ export default function SimpleLayout({
                 <span className="w-10 h-1.5 rounded-full bg-border" aria-hidden />
               </div>
 
-              <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-4 pt-1 flex flex-col gap-2.5">
+              <div className="flex-1 min-h-0 overflow-y-auto bg-canvas px-3 pb-4 pt-1 flex flex-col gap-2.5">
                 {isLoading && (
                   <div className="flex-1 flex items-center justify-center py-10">
                     <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" aria-hidden />

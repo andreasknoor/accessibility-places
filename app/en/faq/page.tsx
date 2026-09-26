@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { FaqAccordion, type FaqCategory } from "@/components/faq/FaqAccordion"
+import ExternalMark from "@/components/ui/external-mark"
 
 const BASE = "https://accessible-places.org"
 
@@ -237,7 +238,7 @@ const FAQ_CATEGORIES_EN: FaqCategory[] = [
               rel="noopener noreferrer"
               className="text-primary underline hover:opacity-80"
             >
-              iPhone/iPad on the App Store
+              iPhone/iPad on the App Store<ExternalMark srLabel="(opens in browser)" />
             </a>{" "}
             and for{" "}
             <a
@@ -246,7 +247,7 @@ const FAQ_CATEGORIES_EN: FaqCategory[] = [
               rel="noopener noreferrer"
               className="text-primary underline hover:opacity-80"
             >
-              Android on Google Play
+              Android on Google Play<ExternalMark srLabel="(opens in browser)" />
             </a>
             . Once installed, it opens straight into{" "}
             <a href="#quickstart-vs-expert" className="text-primary underline hover:opacity-80">
@@ -277,7 +278,7 @@ const FAQ_CATEGORIES_EN: FaqCategory[] = [
               rel="noopener noreferrer"
               className="text-primary underline hover:opacity-80"
             >
-              Wheelmap FAQ
+              Wheelmap FAQ<ExternalMark srLabel="(opens in browser)" />
             </a>{" "}
             explains how to do this step by step. Since Wheelmap edits flow directly into OpenStreetMap
             and Accessible Places fetches that data live on every search, new or corrected entries

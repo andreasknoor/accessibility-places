@@ -15,6 +15,9 @@ vi.mock("@/lib/config", async (importOriginal) => {
   return { ...actual, TALLY_DATA_ERROR_FORMS: { de: "testFormDe", en: "testFormEn" } }
 })
 
+const mockIsMobile = vi.fn(() => false)
+vi.mock("@/hooks/useIsMobile", () => ({ useIsMobile: () => mockIsMobile() }))
+
 vi.mock("@/lib/i18n", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/i18n")>()
   const de = (await import("@/lib/i18n/de")).default
@@ -72,11 +75,23 @@ describe("PlaceDebugSheet header", () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 
-  it("calls onClose when sticky close button at bottom is clicked", () => {
+  // Unified place UI "Detail V2": no footer close button any more — the ✕
+  // (desktop) or "‹ Zurück" (phone, where the panel is a full screen),
+  // Escape and the backdrop close the sheet.
+  it("has no footer close button", () => {
+    renderSheet()
+    expect(screen.queryByText("Schließen")).not.toBeInTheDocument()
+    expect(screen.getAllByRole("button", { name: "Schließen" })).toHaveLength(1)
+  })
+
+  it("on a phone shows '‹ Zurück' instead of ✕, which closes the sheet", () => {
+    mockIsMobile.mockReturnValue(true)
     const onClose = vi.fn()
     renderSheet(makePlace(), onClose)
-    fireEvent.click(screen.getByText(/Schließen/))
-    expect(onClose).toHaveBeenCalled()
+    expect(screen.queryByRole("button", { name: "Schließen" })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: "Zurück" }))
+    expect(onClose).toHaveBeenCalledOnce()
+    mockIsMobile.mockReturnValue(false)
   })
 
   it("is a labelled modal dialog and moves focus inside on open (WCAG 2.4.3)", () => {
@@ -119,7 +134,7 @@ describe("PlaceDebugSheet copy link", () => {
   // "Teilen" (native share sheet on mobile, clipboard copy on desktop).
   it("copies a URL containing selectLat, selectLon, selectName, cat", async () => {
     renderSheet()
-    fireEvent.click(screen.getByLabelText(/Teilen/i))
+    fireEvent.click(screen.getByRole("button", { name: /Teilen/ }))
     await vi.waitFor(() =>
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
         expect.stringContaining("selectLat=52.52"),
@@ -133,7 +148,7 @@ describe("PlaceDebugSheet copy link", () => {
 
   it("shows 'Link kopiert' feedback after copying", async () => {
     renderSheet()
-    fireEvent.click(screen.getByLabelText(/Teilen/i))
+    fireEvent.click(screen.getByRole("button", { name: /Teilen/ }))
     await vi.waitFor(() => expect(screen.getByText("Link kopiert")).toBeInTheDocument())
   })
 })
@@ -155,9 +170,8 @@ describe("PlaceDebugSheet accessibility section", () => {
   // it duplicated exactly what the table's own row already says).
   it("shows a neutral section heading, no percentage", () => {
     renderSheet()
-    expect(screen.getByText("Verlässlichkeit")).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Barrierefreiheit" })).toBeInTheDocument()
     expect(screen.queryByText(/75%/)).not.toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Verlässlichkeit" })).not.toBeInTheDocument()
   })
 
   // ReliabilityBars renders the tier as an accessible name (role="img"
@@ -173,8 +187,9 @@ describe("PlaceDebugSheet accessibility section", () => {
         parking:  { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
       },
     }))
-    expect(screen.getByRole("img", { name: "gut" })).toBeInTheDocument()
-    expect(screen.getByRole("img", { name: "gering" })).toBeInTheDocument()
+    expect(screen.getByText(/Verlässlichkeit gut · OpenStreetMap/)).toBeInTheDocument()
+    expect(screen.getByText(/Verlässlichkeit gering · Google Places/)).toBeInTheDocument()
+    expect(screen.getByText("Keine Quelle hat eine Angabe")).toBeInTheDocument()
   })
 
   it("shows no reliability tier when every criterion is unknown", () => {
@@ -185,15 +200,14 @@ describe("PlaceDebugSheet accessibility section", () => {
         parking:  { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
       },
     }))
-    expect(screen.queryByRole("img", { name: "sehr hoch" })).toBeNull()
-    expect(screen.queryByRole("img", { name: "gut" })).toBeNull()
-    expect(screen.queryByRole("img", { name: "gering" })).toBeNull()
+    expect(screen.queryByText(/Verlässlichkeit/)).toBeNull()
+    expect(screen.getAllByText("Keine Quelle hat eine Angabe")).toHaveLength(3)
   })
 
   // 2026-08-03 table redesign, Fix #1: which criteria count toward the
   // judgement headline's "deine N Kriterien" is no longer only implicit —
   // the table marks each row that's part of the active filters.
-  describe("'Gefiltert' column", () => {
+  describe("'Filter' tag (formerly the 'Gefiltert' column)", () => {
     const FILTERS: SearchFilters = {
       entrance: true, toilet: false, parking: false, parkingNearby: true, seating: false,
       onlyVerified: false, acceptUnknown: false, alwaysShowParking: false, alwaysShowToilets: false, openNowOnly: false,
@@ -201,19 +215,13 @@ describe("PlaceDebugSheet accessibility section", () => {
 
     it("marks a row that is part of the active filters", () => {
       render(<PlaceDebugSheet place={makePlace()} onClose={vi.fn()} filters={FILTERS} />)
-      expect(screen.getAllByLabelText("Gehört zu deinen Filtern").length).toBeGreaterThan(0)
+      // Only entrance is an active filter in FILTERS.
+      expect(screen.getAllByText("(Teil deiner Filter)")).toHaveLength(1)
     })
 
-    it("marks a row that is NOT part of the active filters as info-only", () => {
-      render(<PlaceDebugSheet place={makePlace()} onClose={vi.fn()} filters={FILTERS} />)
-      // toilet/parking are both inactive filters in FILTERS above
-      expect(screen.getAllByLabelText("Nur zur Info gezeigt").length).toBeGreaterThan(0)
-    })
-
-    it("marks every row as info-only when no filters prop is given", () => {
+    it("tags no row when no filters prop is given", () => {
       renderSheet()
-      expect(screen.queryByLabelText("Gehört zu deinen Filtern")).not.toBeInTheDocument()
-      expect(screen.getAllByLabelText("Nur zur Info gezeigt").length).toBeGreaterThan(0)
+      expect(screen.queryByText("(Teil deiner Filter)")).not.toBeInTheDocument()
     })
   })
 
@@ -244,7 +252,8 @@ describe("PlaceDebugSheet external links", () => {
 
   it("renders an OSM link when place has an OSM source record", () => {
     renderSheet()
-    const osmLink = screen.getByText("node/12345678").closest("a") as HTMLAnchorElement
+    expect(screen.getByText("node/12345678")).toBeInTheDocument()
+    const osmLink = screen.getByText("OpenStreetMap").closest("a") as HTMLAnchorElement
     expect(osmLink.href).toContain("openstreetmap.org")
     expect(osmLink.href).toContain("node/12345678")
   })
@@ -252,7 +261,7 @@ describe("PlaceDebugSheet external links", () => {
   it("renders a Google Maps link", () => {
     renderSheet()
     // "Google Maps" appears as both row label and link text — target the <a> directly
-    const gmLink = screen.getByRole("link", { name: "Google Maps" })
+    const gmLink = screen.getByRole("link", { name: "Google Maps (öffnet im Browser)" })
     expect((gmLink as HTMLAnchorElement).href).toContain("google.com/maps")
   })
 
@@ -394,13 +403,64 @@ describe("PlaceDebugSheet optional fields", () => {
 // ─── Navigate button (docs/plans/native-navigate-here.md, Placement 3) ───────
 
 describe("PlaceDebugSheet navigate button", () => {
-  it("renders a sticky 'Navigation starten' button in the footer, above the close button", async () => {
+  it("renders 'Route' as a secondary action-bar tile that starts navigation", async () => {
     const { startDefaultNavigation } = await import("@/lib/native/navigation")
     renderSheet()
-    const navigateBtn = screen.getByRole("button", { name: "Navigation starten" })
+    const navigateBtn = screen.getByRole("button", { name: "Route (öffnet eine andere App)" })
     expect(navigateBtn).toBeInTheDocument()
     fireEvent.click(navigateBtn)
     expect(startDefaultNavigation).toHaveBeenCalledWith({ lat: 52.52, lon: 13.405 })
+    expect(navigateBtn.className).not.toMatch(/(^|\s)bg-primary(\s|$)/)
+  })
+})
+
+// ─── Unified place UI "Detail V2" specifics ────────────────────────────────
+
+describe("PlaceDebugSheet criterion details (collapsed by default)", () => {
+  const withDetails = () => makePlace({
+    accessibility: {
+      entrance: { value: "limited", confidence: 0.75, conflict: false, sources: [{ sourceId: "osm", value: "limited", rawValue: "limited", reliabilityWeight: 0.75 }], details: { stepCount: 1, stepHeightCm: 3, hasRamp: false } },
+      toilet:   { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
+      parking:  { value: "no", confidence: 0.75, conflict: false, sources: [], details: {} },
+    },
+  })
+
+  it("hides the sub-details behind an '3 Details' disclosure", () => {
+    renderSheet(withDetails())
+    const toggle = screen.getByRole("button", { name: "3 Details" })
+    expect(toggle).toHaveAttribute("aria-expanded", "false")
+    expect(screen.queryByText("3 cm")).not.toBeInTheDocument()
+  })
+
+  it("expands the sub-details on click, with words instead of ✓/✗", () => {
+    renderSheet(withDetails())
+    fireEvent.click(screen.getByRole("button", { name: "3 Details" }))
+    expect(screen.getByRole("button", { name: "3 Details" })).toHaveAttribute("aria-expanded", "true")
+    expect(screen.getByText("3 cm")).toBeInTheDocument()
+    expect(screen.getAllByText("Nein").length).toBeGreaterThan(0)
+  })
+
+  it("lists each source's value when sources disagree", () => {
+    renderSheet(makePlace({
+      accessibility: {
+        entrance: { value: "yes", confidence: 0.6, conflict: true, sources: [
+          { sourceId: "osm", value: "yes", rawValue: "yes", reliabilityWeight: 0.75 },
+          { sourceId: "google_places", value: "no", rawValue: "false", reliabilityWeight: 0.35 },
+        ], details: {} },
+        toilet:   { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
+        parking:  { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
+      },
+    }))
+    expect(screen.getByRole("img", { name: "Quellen widersprechen sich" })).toBeInTheDocument()
+    expect(screen.getByText(/Google Places:/)).toBeInTheDocument()
+  })
+})
+
+describe("PlaceDebugSheet offer card", () => {
+  it("shows diet and dog facts as chips", () => {
+    renderSheet(makePlace({ isVeganFriendly: true, allowsDogs: true }))
+    expect(screen.getByRole("heading", { name: "Angebot" })).toBeInTheDocument()
+    expect(screen.getByText("vegan", { exact: false })).toBeInTheDocument()
   })
 })
 
@@ -440,5 +500,24 @@ describe("PlaceDebugSheet judgement line", () => {
     render(<PlaceDebugSheet place={makePlace()} onClose={vi.fn()} filters={FILTERS} />)
     expect(screen.queryByRole("button", { name: "Aktive Kriterien anzeigen" })).not.toBeInTheDocument()
     expect(screen.getByText("deine 2 Kriterien")).toBeInTheDocument()
+  })
+})
+
+// ─── External-link marker (↗) ───────────────────────────────────────────────
+// Every link that opens a website carries ExternalMark (arrow + screen-reader
+// suffix); tel: and mailto: links deliberately don't.
+describe("PlaceDebugSheet external-link marker", () => {
+  it("marks website and platform links as opening in the browser", () => {
+    renderSheet(makePlace({ website: "https://example.com", gintoUrl: "https://ginto.guide/x" }))
+    for (const name of ["Website (öffnet im Browser)", "example.com (öffnet im Browser)", "OpenStreetMap (öffnet im Browser)", "Wheelmap.org (öffnet im Browser)", "Ginto.guide (öffnet im Browser)", "Google Maps (öffnet im Browser)"]) {
+      expect(screen.getByRole("link", { name })).toBeInTheDocument()
+    }
+  })
+
+  it("does not mark phone or e-mail links", () => {
+    renderSheet(makePlace({ phone: "+49 30 12345" }))
+    const tel = screen.getByRole("link", { name: "+49 30 12345" })
+    expect(tel.querySelector("svg")).toBeNull()
+    expect(screen.getByRole("link", { name: "Anrufen" })).toBeInTheDocument()
   })
 })

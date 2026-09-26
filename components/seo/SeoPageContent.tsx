@@ -5,6 +5,7 @@ import { CITIES, SEO_CATEGORY_LABEL, SEO_CATEGORY_SLUGS, type City } from "@/lib
 import { criterionTier } from "@/lib/reliability"
 import { hasData } from "@/lib/seo-validity"
 import NavigationProgress from "@/components/seo/NavigationProgress"
+import ExternalMark from "@/components/ui/external-mark"
 
 const BASE = "https://accessible-places.org"
 
@@ -354,32 +355,35 @@ function SeoPlaceCard({ place, locale, searchBaseUrl }: { place: Place; locale: 
           href={wheelmapUrl}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label={locale === "de" ? "Auf Wheelmap.org prüfen" : "Check on Wheelmap.org"}
+          aria-label={locale === "de" ? "Auf Wheelmap.org prüfen (öffnet im Browser)" : "Check on Wheelmap.org (opens in browser)"}
           title={locale === "de" ? "Auf Wheelmap.org prüfen" : "Check on Wheelmap.org"}
-          className="p-1 -m-1 text-gray-400 hover:text-gray-700 transition-colors"
+          className="relative p-1 -m-1 text-gray-400 hover:text-gray-700 transition-colors"
         >
           <Accessibility className="w-[1.1rem] h-[1.1rem]" />
+          <ExternalMark badge className="-top-0.5 -right-1" />
         </a>
         <a
           href={gmapsUrl}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label={locale === "de" ? "In Google Maps öffnen" : "Open in Google Maps"}
+          aria-label={locale === "de" ? "In Google Maps öffnen (öffnet im Browser)" : "Open in Google Maps (opens in browser)"}
           title={locale === "de" ? "In Google Maps öffnen" : "Open in Google Maps"}
-          className="p-1 -m-1 text-gray-400 hover:text-gray-700 transition-colors"
+          className="relative p-1 -m-1 text-gray-400 hover:text-gray-700 transition-colors"
         >
           <Map className="w-[1.1rem] h-[1.1rem]" />
+          <ExternalMark badge className="-top-0.5 -right-1" />
         </a>
         {place.website && /^https?:\/\//i.test(place.website) && (
           <a
             href={place.website}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={locale === "de" ? "Website besuchen" : "Visit website"}
+            aria-label={locale === "de" ? "Website besuchen (öffnet im Browser)" : "Visit website (opens in browser)"}
             title={locale === "de" ? "Website besuchen" : "Visit website"}
-            className="p-1 -m-1 text-gray-400 hover:text-gray-700 transition-colors"
+            className="relative p-1 -m-1 text-gray-400 hover:text-gray-700 transition-colors"
           >
             <Globe className="w-[1.1rem] h-[1.1rem]" />
+            <ExternalMark badge className="-top-0.5 -right-1" />
           </a>
         )}
         <Link

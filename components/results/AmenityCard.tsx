@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
-import { MapPin, Map, Accessibility, Flag } from "lucide-react"
+import { MapPin, Map, Accessibility } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { NativeLink } from "@/components/ui/native-link"
 import NavigateButton from "@/components/ui/navigate-button"
+import ExternalMark from "@/components/ui/external-mark"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import AmenityBadgeIcon from "@/components/results/AmenityBadgeIcon"
@@ -35,7 +35,6 @@ interface Props {
 // has no entrance/toilet/seating, just what OSM tags on the node itself).
 export default function AmenityCard({ spot, amenityType, isSelected, onClick, distanceM, openingStatus }: Props) {
   const t = useTranslations()
-  const [reportState, setReportState] = useState<"idle" | "sending" | "done" | "error">("idle")
 
   const isParking = amenityType === "parking"
   const tier = spot.tier === "weak" ? "weak" : "strong"
@@ -93,17 +92,6 @@ export default function AmenityCard({ spot, amenityType, isSelected, onClick, di
   const osmNodeId   = spot.osmId?.startsWith("node/") ? spot.osmId.slice(5) : undefined
   const wheelmapUrl = osmNodeId ? `https://wheelmap.org/nodes/${osmNodeId}` : undefined
   const googleMapsHref = `https://www.google.com/maps?q=${spot.lat},${spot.lon}`
-
-  function reportWeakParking() {
-    setReportState("sending")
-    fetch("/api/report-parking", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ lat: spot.lat, lon: spot.lon, osmId: spot.osmId }),
-    })
-      .then((r) => setReportState(r.ok ? "done" : "error"))
-      .catch(() => setReportState("error"))
-  }
 
   return (
     <Card
@@ -179,38 +167,29 @@ export default function AmenityCard({ spot, amenityType, isSelected, onClick, di
           <div className="flex items-center gap-3">
             <NativeLink
               href={googleMapsHref}
-              aria-label={t.results.googleMapsLink}
+              aria-label={`${t.results.googleMapsLink} ${t.place.opensInBrowser}`}
               title={t.results.googleMapsLink}
               onClick={(e) => e.stopPropagation()}
-              className="p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
+              className="relative p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
             >
               <Map className="w-[1.1rem] h-[1.1rem]" />
+              <ExternalMark badge className="-top-0.5 -right-1" />
             </NativeLink>
             {wheelmapUrl && (
               <NativeLink
                 href={wheelmapUrl}
-                aria-label={t.results.wheelmapLink}
+                aria-label={`${t.results.wheelmapLink} ${t.place.opensInBrowser}`}
                 title={t.results.wheelmapLink}
                 onClick={(e) => e.stopPropagation()}
-                className="p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
+                className="relative p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Accessibility className="w-[1.1rem] h-[1.1rem]" />
+                <ExternalMark badge className="-top-0.5 -right-1" />
               </NativeLink>
             )}
-            {isParking && tier === "weak" && (
-              <button
-                onClick={(e) => { e.stopPropagation(); if (reportState === "idle") reportWeakParking() }}
-                disabled={reportState !== "idle"}
-                aria-live="polite"
-                className="flex items-center gap-1 text-xs text-amber-700 hover:underline disabled:no-underline disabled:opacity-70"
-              >
-                <Flag className="w-[1.1rem] h-[1.1rem] shrink-0" />
-                {reportState === "idle"    ? t.map.parkingReportButton
-                  : reportState === "sending" ? t.map.parkingReportButton
-                  : reportState === "done"    ? t.map.parkingReportDone
-                  : t.map.parkingReportError}
-              </button>
-            )}
+            {/* The weak-tier "Als Behindertenparkplatz melden" report lives only in
+                the parking marker's map popup — on this card its long label
+                crowded out the Route / Zur Karte actions. */}
           </div>
 
           <div className="flex items-center gap-2">

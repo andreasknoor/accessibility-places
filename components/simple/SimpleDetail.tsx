@@ -1,17 +1,11 @@
 "use client"
 
-import { ChevronLeft, Globe, Phone, Settings as SettingsIcon } from "lucide-react"
-import { NativeLink } from "@/components/ui/native-link"
+import { ChevronLeft, Settings as SettingsIcon } from "lucide-react"
 import ModeSwitcher from "@/components/ModeSwitcher"
-import NavigateButton from "@/components/ui/navigate-button"
-import CriterionIcon from "@/components/simple/CriterionIcon"
-import OpeningStatusChip from "@/components/results/OpeningStatusChip"
-import { CATEGORY_ICONS } from "@/lib/category-icons"
-import { useOpeningStatus } from "@/lib/opening-hours"
+import PlaceDetailView from "@/components/place/PlaceDetailView"
+import { HERO_ICON, HERO_ICON_SHELL, HERO_PILL } from "@/components/place/action-styles"
 import { useTranslations } from "@/lib/i18n"
-import { evaluatePlaceJudgment, type JudgmentFilters } from "@/lib/reliability"
-import { criterionSentence, SIMPLE_TOILET_REQUIRED_CATEGORIES } from "@/lib/simple-view"
-import type { A11yValue, Place } from "@/lib/types"
+import type { Place } from "@/lib/types"
 
 interface Props {
   place:      Place
@@ -21,144 +15,38 @@ interface Props {
   // from every screen, not just the start screen — see SimpleLayout's Header.
   onOpenSettings: () => void
   // Same one-tap mode switcher as SimpleLayout's shared Header — this screen
-  // has its own separate top row (not that shared component), so it needs
-  // its own wiring rather than inheriting it for free.
+  // has its own top row (floating on the hero), so it needs its own wiring.
   onSwitchToExpert: () => void
 }
 
-function CriterionRow({ label, value }: { label: string; value: A11yValue }) {
-  return (
-    <div className="flex items-center gap-3 py-2.5 border-b border-border last:border-b-0">
-      <CriterionIcon value={value} className="w-5 h-5" />
-      <span className="text-sm">{label}</span>
-    </div>
-  )
-}
-
-// Reduced detail screen for Simple View (Variante B) — a full screen (not a
-// portal sheet like PlaceDebugSheet), reached by tapping a SimplePlaceCard.
-// Deliberately omits: quellenliste, score-formel, rohdaten, link kopieren,
-// verified/dog/veggie badges — see the Rein/Raus table in the plan. Kept:
-// name, distance, address, the 3 core criteria as plain sentences, call,
-// website, "Hinbringen".
+// Quickstart detail screen: a full screen (not a portal sheet like
+// PlaceDebugSheet) around the shared PlaceDetailView in "quickstart" mode —
+// the same layout Expert Mode's sheet uses, minus the Expert-only cards
+// (unified place UI, see CLAUDE.md).
 export default function SimpleDetail({ place, distanceM, onBack, onOpenSettings, onSwitchToExpert }: Props) {
   const t = useTranslations()
-  const openingStatus = useOpeningStatus(place)
-  const addr = [place.address.street, place.address.houseNumber, place.address.city]
-    .filter(Boolean).join(" ")
-
-  // Quickstart's actual fixed preset (mirrors SIMPLE_FILTERS_OVERRIDE +
-  // HomeClient's client-side toilet post-filter): entrance always required,
-  // toilet strictly "yes" only for the three categories where Quickstart
-  // enforces it. Almost always "pass"/"pass_limited" since the place already
-  // survived that preset — except a deep-linked place, which can legitimately
-  // fail it (docs/plans/quickstart-mode-default.md: a linked place must still
-  // open even if it fails Quickstart's own filter).
-  const quickstartFilters: JudgmentFilters = {
-    entrance: true,
-    toilet:   SIMPLE_TOILET_REQUIRED_CATEGORIES.has(place.category),
-    parking:  false,
-    seating:  false,
-    acceptUnknown: false,
-  }
-  const judgment = evaluatePlaceJudgment(place, quickstartFilters)
-  // Deliberately NOT results.judgmentFail/judgmentUnverified for the fail/
-  // unverified fallback — those say "deine Kriterien", but Quickstart's
-  // preset isn't user-chosen, so that possessive phrasing would mislead here.
-  const headline = judgment.status === "pass"
-    ? t.simple.accessibleHeadline
-    : judgment.status === "pass_limited"
-      ? t.simple.accessibleHeadlineCaveat
-      : judgment.status === "fail"
-        ? t.simple.notAccessibleHeadline
-        : t.simple.unverifiedHeadline
-  const headlineColor = judgment.status === "pass" || judgment.status === "pass_limited"
-    ? "text-green-700"
-    : judgment.status === "fail" ? "text-red-700" : "text-amber-700"
-
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
-      {/* pt-safe-3, not pt-3 — same notch/status-bar clipping fix as
-          SimpleLayout's shared Header (this screen has its own separate top
-          row instead of reusing that component). */}
-      <div className="flex items-center gap-1 px-3 pt-safe-3 pb-1 shrink-0">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1 text-sm font-medium text-primary py-1.5 pr-2 -ml-1"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          {t.simple.back}
-        </button>
-        <span className="flex-1" />
-        <ModeSwitcher mode="quickstart" onSwitch={onSwitchToExpert} />
-        <button
-          onClick={onOpenSettings}
-          aria-label={t.settings.title}
-          className="p-1.5 -mr-1.5 text-muted-foreground hover:text-foreground transition-colors rounded-md"
-        >
-          <SettingsIcon className="w-4 h-4" />
-        </button>
-      </div>
-
-      <div className="px-4 pb-6 flex flex-col gap-4">
-        <div className="flex items-start gap-2.5">
-          <span className="text-2xl shrink-0" aria-hidden>{CATEGORY_ICONS[place.category] ?? "📍"}</span>
-          <div className="min-w-0">
-            <h1 className="text-lg font-bold leading-snug break-words">{place.name}</h1>
-            {/* The emoji above is aria-hidden and ambiguous on its own, so the
-                place type is also spelled out — right after the h1, so a
-                screen reader reads it straight after the name. */}
-            <p className="text-sm font-medium mt-0.5">{t.categories[place.category]}</p>
-            {addr && <p className="text-sm text-muted-foreground mt-0.5">{addr}</p>}
-            {distanceM !== undefined && (
-              <p className="text-sm text-muted-foreground">{t.results.distanceFromHere(Math.round(distanceM))}</p>
-            )}
-            {/* Opening status (issue #14). Quickstart shows it only here, on
-                the detail screen — not on the result cards, which deliberately
-                carry one accessibility sentence each and nothing else. Renders
-                nothing at all when no status is computable. */}
-            <OpeningStatusChip status={openingStatus} size="sm" className="mt-1 text-sm font-medium" />
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-border px-3">
-          <CriterionRow label={criterionSentence(t, "entrance", place.accessibility.entrance.value)} value={place.accessibility.entrance.value} />
-          <CriterionRow label={criterionSentence(t, "toilet", place.accessibility.toilet.value)} value={place.accessibility.toilet.value} />
-          <CriterionRow label={criterionSentence(t, "parking", place.accessibility.parking.value)} value={place.accessibility.parking.value} />
-        </div>
-
-        {/* Fixed, absolute headline (decision 7, v13) — Quickstart's preset is
-            fixed by app design, unlike Expert Mode's user-chosen filters, so this
-            can state the judgement outright rather than naming "your
-            criteria". No reliability tier/percentage here, matching this
-            screen's existing "no score formula" scope cut — see the
-            component comment above. */}
-        <p className={`self-start text-sm font-semibold ${headlineColor}`}>{headline}</p>
-
-        <div className="flex flex-col gap-2">
-          <NavigateButton coords={place.coordinates} variant="sticky" />
-          <div className="flex gap-2">
-            {place.phone && (
-              <a
-                href={`tel:${place.phone}`}
-                className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors"
-              >
-                <Phone className="w-4 h-4 shrink-0" aria-hidden />
-                {t.simple.call}
-              </a>
-            )}
-            {place.website && (
-              <NativeLink
-                href={place.website}
-                className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors"
-              >
-                <Globe className="w-4 h-4 shrink-0" aria-hidden />
-                {t.results.websiteLink}
-              </NativeLink>
-            )}
-          </div>
-        </div>
-      </div>
+    <div className="flex flex-col h-full overflow-y-auto bg-canvas">
+      <PlaceDetailView
+        place={place}
+        mode="quickstart"
+        headingLevel={1}
+        distanceM={distanceM}
+        topStart={
+          <button type="button" onClick={onBack} className={HERO_PILL}>
+            <ChevronLeft className="w-4 h-4" aria-hidden />
+            {t.simple.back}
+          </button>
+        }
+        topEnd={
+          <>
+            <ModeSwitcher mode="quickstart" onSwitch={onSwitchToExpert} className={HERO_ICON_SHELL} />
+            <button type="button" onClick={onOpenSettings} aria-label={t.settings.title} className={HERO_ICON}>
+              <SettingsIcon className="w-4 h-4" aria-hidden />
+            </button>
+          </>
+        }
+      />
     </div>
   )
 }

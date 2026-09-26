@@ -41,14 +41,38 @@ describe("SimpleDetail", () => {
   it("renders name, address, and distance", () => {
     renderWithProvider(<SimpleDetail place={makePlace()} distanceM={410} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToExpert={vi.fn()} />)
     expect(screen.getByText("Restaurant Zur Post")).toBeInTheDocument()
-    expect(screen.getByText(/Hohenzollernring 8 Köln/)).toBeInTheDocument()
+    expect(screen.getByText(/Hohenzollernring 8, 50672 Köln/)).toBeInTheDocument()
+    expect(screen.getByText("410 m")).toBeInTheDocument()
     expect(screen.getByText("410 m entfernt")).toBeInTheDocument()
   })
 
-  it("spells out the place type as text right after the name — the emoji alone is aria-hidden", () => {
+  it("spells out the place type as text in the line right after the name — the emoji alone is aria-hidden", () => {
     renderWithProvider(<SimpleDetail place={makePlace({ category: "doctors", name: "Dr. Weber" })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToExpert={vi.fn()} />)
-    const label = screen.getByText("Arztpraxis")
-    expect(screen.getByRole("heading", { level: 1 }).nextElementSibling).toBe(label)
+    const heading = screen.getByRole("heading", { level: 1, name: "Dr. Weber" })
+    expect(heading.nextElementSibling).toHaveTextContent("Arztpraxis")
+  })
+
+  // Unified place UI detail view (see CLAUDE.md).
+  it("offers the same four actions as the Expert sheet, none of them emphasised", () => {
+    renderWithProvider(<SimpleDetail place={makePlace({ phone: "+49123", website: "https://example.com" })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToExpert={vi.fn()} />)
+    const route = screen.getByRole("button", { name: "Route (öffnet eine andere App)" })
+    const share = screen.getByRole("button", { name: "Teilen" })
+    for (const el of [route, share, screen.getByText("Anrufen").closest("a")!, screen.getByText("Website").closest("a")!]) {
+      expect(el.className).not.toMatch(/(^|\s)bg-primary(\s|$)/)
+    }
+  })
+
+  it("shows the photo when OSM carries an image tag, with a descriptive alt text", () => {
+    const place = makePlace({ sourceRecords: [{ sourceId: "osm", externalId: "node/2", fetchedAt: "", metadata: { image: "https://example.com/p.jpg" } }] })
+    renderWithProvider(<SimpleDetail place={place} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToExpert={vi.fn()} />)
+    expect(screen.getByRole("img", { name: "Foto von Restaurant Zur Post" })).toHaveAttribute("src", "https://example.com/p.jpg")
+  })
+
+  it("does not show the Expert-only cards (sources, raw data, report)", () => {
+    renderWithProvider(<SimpleDetail place={makePlace()} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToExpert={vi.fn()} />)
+    expect(screen.queryByText("Quellen & andere Plattformen")).not.toBeInTheDocument()
+    expect(screen.queryByText("Rohdaten anzeigen")).not.toBeInTheDocument()
+    expect(screen.queryByText(/Datenfehler melden|Info ergänzen/)).not.toBeInTheDocument()
   })
 
   it("renders all three criteria as plain sentences matching their values", () => {
@@ -58,9 +82,9 @@ describe("SimpleDetail", () => {
     expect(screen.getByText("Kein barrierefreier Parkplatz")).toBeInTheDocument()
   })
 
-  it("shows a call link only when a phone number is present", () => {
+  it("links the call action only when a phone number is present (disabled otherwise)", () => {
     const { rerender } = renderWithProvider(<SimpleDetail place={makePlace()} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToExpert={vi.fn()} />)
-    expect(screen.queryByText("Anrufen")).not.toBeInTheDocument()
+    expect(screen.getByText("Anrufen").closest("button")).toBeDisabled()
     rerender(
       <LocaleProvider initialLocale="de">
         <SimpleDetail place={makePlace({ phone: "+49123456789" })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToExpert={vi.fn()} />
@@ -70,9 +94,9 @@ describe("SimpleDetail", () => {
     expect(callLink).toHaveAttribute("href", "tel:+49123456789")
   })
 
-  it("shows a website link only when a website is present", () => {
+  it("links the website action when a website is present", () => {
     renderWithProvider(<SimpleDetail place={makePlace({ website: "https://example.com" })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToExpert={vi.fn()} />)
-    const websiteLink = screen.getByText("Website besuchen").closest("a")
+    const websiteLink = screen.getByText("Website").closest("a")
     expect(websiteLink).toHaveAttribute("href", "https://example.com")
   })
 

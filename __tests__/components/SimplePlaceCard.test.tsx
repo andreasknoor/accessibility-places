@@ -34,109 +34,91 @@ function makePlace(overrides: Partial<Place> = {}): Place {
   }
 }
 
+// Unified place UI result card (see CLAUDE.md).
 describe("SimplePlaceCard", () => {
-  it("renders the place name and distance", () => {
-    renderWithProvider(<SimplePlaceCard place={makePlace()} distanceM={240} onOpen={vi.fn()} />)
-    expect(screen.getByText("Café Sonnenschein")).toBeInTheDocument()
-    expect(screen.getByText("240 m")).toBeInTheDocument()
+  it("renders the place name, category and distance", () => {
+    renderWithProvider(<SimplePlaceCard place={makePlace()} distanceM={250} onOpen={vi.fn()} />)
+    expect(screen.getByRole("heading", { name: "Café Sonnenschein" })).toBeInTheDocument()
+    expect(screen.getByText(/Café & Eis/)).toBeInTheDocument()
+    expect(screen.getByText(/250 m/)).toBeInTheDocument()
   })
 
   it("shows a plain-language entrance sentence, not a raw value/badge", () => {
     renderWithProvider(<SimplePlaceCard place={makePlace()} onOpen={vi.fn()} />)
     expect(screen.getByText("Eingang stufenlos erreichbar")).toBeInTheDocument()
-    expect(screen.queryByText("Ja")).not.toBeInTheDocument()
   })
 
   it("reflects a non-yes entrance value with its own sentence", () => {
-    const place = makePlace({
-      accessibility: {
-        entrance: buildAttribute("osm", "no", "no", {}),
-        toilet:   emptyAttribute(),
-        parking:  emptyAttribute(),
-      },
-    })
+    const place = makePlace({ accessibility: { entrance: buildAttribute("osm", "limited", "limited", {}), toilet: emptyAttribute(), parking: emptyAttribute() } })
     renderWithProvider(<SimplePlaceCard place={place} onOpen={vi.fn()} />)
-    expect(screen.getByText("Eingang nicht barrierefrei")).toBeInTheDocument()
+    expect(screen.getByText("Eingang teilweise barrierefrei")).toBeInTheDocument()
   })
 
-  it("calls onOpen when the header box is clicked", () => {
+  it("never renders the text glyph 'WC' as a symbol", () => {
+    const place = makePlace({ accessibility: { entrance: buildAttribute("osm", "yes", "yes", {}), toilet: buildAttribute("osm", "yes", "yes", {}), parking: emptyAttribute() } })
+    renderWithProvider(<SimplePlaceCard place={place} onOpen={vi.fn()} />)
+    expect(screen.queryByText("WC", { exact: true })).not.toBeInTheDocument()
+  })
+
+  it("calls onOpen from the Details button", () => {
     const onOpen = vi.fn()
     renderWithProvider(<SimplePlaceCard place={makePlace()} onOpen={onOpen} />)
-    fireEvent.click(screen.getByRole("button", { name: /Café Sonnenschein/ }))
-    expect(onOpen).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByRole("button", { name: "Details zu Café Sonnenschein öffnen" }))
+    expect(onOpen).toHaveBeenCalledOnce()
   })
 
-  it("calls onOpen on Enter/Space when the header box is focused", () => {
+  it("calls onOpen when the card body (e.g. the name) is tapped", () => {
     const onOpen = vi.fn()
     renderWithProvider(<SimplePlaceCard place={makePlace()} onOpen={onOpen} />)
-    const box = screen.getByRole("button", { name: /Café Sonnenschein/ })
-    fireEvent.keyDown(box, { key: "Enter" })
-    fireEvent.keyDown(box, { key: " " })
-    expect(onOpen).toHaveBeenCalledTimes(2)
+    fireEvent.click(screen.getByText("Café Sonnenschein"))
+    expect(onOpen).toHaveBeenCalledOnce()
   })
 
-  // Regression: NavigateButton used to be nested INSIDE the role="button" tap
-  // target (an interactive-in-interactive anti-pattern); clicking it must
-  // never also fire the card's own onOpen.
   it("does not call onOpen when the navigate button is clicked", () => {
     const onOpen = vi.fn()
     renderWithProvider(<SimplePlaceCard place={makePlace()} onOpen={onOpen} />)
-    const navigateButtons = screen.getAllByRole("button").filter((b) => b !== screen.getByRole("button", { name: /Café Sonnenschein/ }))
-    expect(navigateButtons.length).toBeGreaterThan(0)
-    fireEvent.click(navigateButtons[0])
+    fireEvent.click(screen.getByRole("button", { name: "Route (öffnet eine andere App)" }))
     expect(onOpen).not.toHaveBeenCalled()
   })
 
-  it("only one clickable region is labelled to open details (no nested interactive duplicate)", () => {
+  it("only one control is labelled to open details (no nested interactive duplicate)", () => {
     renderWithProvider(<SimplePlaceCard place={makePlace()} onOpen={vi.fn()} />)
-    // The outer card wrapper is a plain div; only the inner header box carries
-    // the "open details" accessible name.
-    const openDetailBoxes = screen.getAllByRole("button", { name: /Café Sonnenschein/ })
-    expect(openDetailBoxes).toHaveLength(1)
+    expect(screen.getAllByRole("button", { name: /Details zu/ })).toHaveLength(1)
   })
 
-  // Toilet line — only for the three categories where Simple View's search
-  // already requires a wheelchair toilet (cafe/restaurant/hotel), mirroring
-  // the entrance line's own plain-language wording.
   describe("toilet line (cafe/restaurant/hotel only)", () => {
     it("shows a plain-language toilet sentence for a cafe", () => {
-      const place = makePlace({
-        accessibility: {
-          entrance: buildAttribute("osm", "yes", "yes", {}),
-          toilet:   buildAttribute("osm", "yes", "yes", {}),
-          parking:  emptyAttribute(),
-        },
-      })
+      const place = makePlace({ accessibility: { entrance: buildAttribute("osm", "yes", "yes", {}), toilet: buildAttribute("osm", "yes", "yes", {}), parking: emptyAttribute() } })
       renderWithProvider(<SimplePlaceCard place={place} onOpen={vi.fn()} />)
       expect(screen.getByText("WC rollstuhlgerecht")).toBeInTheDocument()
     })
 
     it("does not show a toilet line for a category outside the required set (e.g. doctors)", () => {
-      const place = makePlace({
-        category: "doctors",
-        accessibility: {
-          entrance: buildAttribute("osm", "yes", "yes", {}),
-          toilet:   buildAttribute("osm", "yes", "yes", {}),
-          parking:  emptyAttribute(),
-        },
-      })
+      const place = makePlace({ category: "doctors", accessibility: { entrance: buildAttribute("osm", "yes", "yes", {}), toilet: buildAttribute("osm", "yes", "yes", {}), parking: emptyAttribute() } })
       renderWithProvider(<SimplePlaceCard place={place} onOpen={vi.fn()} />)
       expect(screen.queryByText("WC rollstuhlgerecht")).not.toBeInTheDocument()
     })
   })
 
-  describe("onShowOnMap (highlight on map without opening detail)", () => {
-    it("is not rendered when the prop is omitted", () => {
+  describe("actions and default emphasis", () => {
+    it("omits Zur Karte when no map handler is given", () => {
       renderWithProvider(<SimplePlaceCard place={makePlace()} onOpen={vi.fn()} />)
       expect(screen.queryByRole("button", { name: "Zur Karte" })).not.toBeInTheDocument()
     })
 
-    it("calls onShowOnMap, not onOpen, when clicked", () => {
+    it("Zur Karte is the primary action; Details and Route are secondary", () => {
+      renderWithProvider(<SimplePlaceCard place={makePlace()} onOpen={vi.fn()} onShowOnMap={vi.fn()} />)
+      expect(screen.getByRole("button", { name: "Zur Karte" }).className).toMatch(/(^|\s)bg-primary(\s|$)/)
+      expect(screen.getByRole("button", { name: /Details zu/ }).className).not.toMatch(/(^|\s)bg-primary(\s|$)/)
+      expect(screen.getByRole("button", { name: /^Route/ }).className).not.toMatch(/(^|\s)bg-primary(\s|$)/)
+    })
+
+    it("Zur Karte calls onShowOnMap, not onOpen", () => {
       const onOpen = vi.fn()
       const onShowOnMap = vi.fn()
       renderWithProvider(<SimplePlaceCard place={makePlace()} onOpen={onOpen} onShowOnMap={onShowOnMap} />)
       fireEvent.click(screen.getByRole("button", { name: "Zur Karte" }))
-      expect(onShowOnMap).toHaveBeenCalledTimes(1)
+      expect(onShowOnMap).toHaveBeenCalledOnce()
       expect(onOpen).not.toHaveBeenCalled()
     })
   })

@@ -12,6 +12,10 @@ export interface MapViewProps {
   // (e.g. during an amenity search, where `places` is empty anyway) degrades
   // to "no active criteria" — every shown pin renders as a neutral pass.
   filters?:      SearchFilters
+  // Quickstart Mode's map: venue popups judge against Quickstart's fixed
+  // per-category preset and use its verdict wording, like its result cards
+  // and detail screen (lib/simple-view.ts). Pins still follow `filters`.
+  quickstart?:   boolean
   parkingSpots?: ParkingSpot[]
   toiletSpots?:  AmenityFeature[]
   // Keyed by amenitySpotKey (lib/search-ui.ts). Populated by the caller ONLY

@@ -12,10 +12,11 @@
 // almost exactly what this headline already says, just a second time in a
 // second element. See docs/plans/reliability-tiers.md's warning-box section.
 
-import { CheckCircle2, HelpCircle, Pencil, XCircle } from "lucide-react"
+import { CheckCircle2, Pencil } from "lucide-react"
 import { Popover, PopoverTrigger, PopoverContent, PopoverClose } from "@/components/ui/popover"
 import { useTranslations } from "@/lib/i18n"
 import { evaluatePlaceJudgment, activeCriteriaCount, CRITERION_KEYS, type JudgmentFilters, type CriterionKey } from "@/lib/reliability"
+import CriterionIcon from "@/components/simple/CriterionIcon"
 import { cn } from "@/lib/utils"
 import type { Place } from "@/lib/types"
 
@@ -39,9 +40,16 @@ interface Props {
   // keyboard/screen-reader users. The card shows the same count as plain
   // text; the sheet is where the popover lives.
   onOpenFilters?: () => void
+  // "md" — result card line; "lg" — the detail view's verdict card (larger
+  // status disc and headline). Same wording either way.
+  size?: "md" | "lg"
+  // The pass note ("Alle geprüften Kriterien uneingeschränkt.") only repeats
+  // the headline — the result card drops it and keeps the note for the
+  // cases where it adds information (caveat / unknown / fail).
+  hideNoteOnPass?: boolean
 }
 
-export default function JudgmentLine({ place, filters, className, onOpenFilters }: Props) {
+export default function JudgmentLine({ place, filters, className, onOpenFilters, size = "md", hideNoteOnPass }: Props) {
   const t = useTranslations()
   const judgment = evaluatePlaceJudgment(place, filters)
   const label = (k: CriterionKey) => t.criteria[k]
@@ -55,13 +63,16 @@ export default function JudgmentLine({ place, filters, className, onOpenFilters 
     )
   }
 
-  const ICONS: Record<Exclude<typeof judgment.status, "none">, { icon: typeof CheckCircle2; color: string }> = {
-    pass:         { icon: CheckCircle2, color: "text-green-700" },
-    pass_limited: { icon: CheckCircle2, color: "text-green-700" },
-    unverified:   { icon: HelpCircle,   color: "text-amber-700" },
-    fail:         { icon: XCircle,      color: "text-red-700"   },
+  // Same filled status disc (✓ ? ✕) as the criterion badges — one status
+  // vocabulary across verdict, criteria and map popup.
+  const ICONS: Record<Exclude<typeof judgment.status, "none">, { value: "yes" | "unknown" | "no"; color: string }> = {
+    pass:         { value: "yes",     color: "text-green-700" },
+    pass_limited: { value: "yes",     color: "text-green-700" },
+    unverified:   { value: "unknown", color: "text-amber-700" },
+    fail:         { value: "no",      color: "text-red-700"   },
   }
-  const { icon: Icon, color } = ICONS[judgment.status]
+  const { value: iconValue, color } = ICONS[judgment.status]
+  const lg = size === "lg"
 
   // pass/pass_limited/fail carry the criteria count and an optional link;
   // unverified's headline ("Nicht gesichert") doesn't reference "Kriterien"
@@ -85,9 +96,10 @@ export default function JudgmentLine({ place, filters, className, onOpenFilters 
           ]))
 
   return (
-    <div className={cn("flex flex-col gap-0.5", className)}>
-      <p className={cn("flex items-center gap-1.5 text-sm font-semibold", color)}>
-        <Icon className="w-4 h-4 shrink-0" aria-hidden />
+    <div className={cn("flex items-start", lg ? "gap-3" : "gap-2", className)}>
+      <CriterionIcon value={iconValue} filled className={cn(lg ? "w-8 h-8" : "w-5 h-5", "mt-px")} />
+      <div className="flex flex-col gap-0.5 min-w-0">
+      <p className={cn(lg ? "text-base font-bold" : "text-sm font-semibold", "leading-snug", color)}>
         <span>
           {headlineParts.pre}
           {headlineParts.criteria && (
@@ -150,7 +162,10 @@ export default function JudgmentLine({ place, filters, className, onOpenFilters 
           {headlineParts.post}
         </span>
       </p>
-      <p className="text-xs text-muted-foreground pl-[1.375rem]">{why}</p>
+      {!(hideNoteOnPass && judgment.status === "pass") && (
+        <p className={cn("text-muted-foreground", lg ? "text-sm" : "text-xs")}>{why}</p>
+      )}
+      </div>
     </div>
   )
 }
