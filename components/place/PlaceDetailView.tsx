@@ -40,6 +40,8 @@ function getMeta(place: Place, sourceId: SourceId): Record<string, any> | null {
   return (rec.metadata ?? rec.raw ?? null) as Record<string, any> | null // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+
 function str(v: unknown): string | null {
   if (v == null || v === "" || v === "unknown") return null
   return String(v)
@@ -147,7 +149,7 @@ function CriterionDetailRow({ kind, attr, filtered }: { kind: CriterionKind; att
           <p className="text-xs text-muted-foreground mt-0.5">
             {attr.value === "unknown"
               ? t.place.noSource
-              : <>{t.place.reliabilityShort(t.results.tier[tier])}{sources && ` · ${sources}`}{verified && ` · ${verified}`}</>}
+              : <>{capitalize(t.results.tier[tier])}{sources && ` · ${sources}`}{verified && ` · ${verified}`}</>}
           </p>
           {attr.conflict && (
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -182,10 +184,9 @@ function CriterionDetailRow({ kind, attr, filtered }: { kind: CriterionKind; att
           )}
         </div>
         {attr.value !== "unknown" && tier !== "keine" && (
-          <span className="flex flex-col items-end gap-1 pt-1 text-[11px] text-muted-foreground shrink-0" aria-hidden>
-            <ReliabilityDots tier={tier} />
-            {t.results.tier[tier]}
-          </span>
+          // The tier word already leads the line under the value; the dots
+          // are its at-a-glance visual.
+          <ReliabilityDots tier={tier} className="pt-1.5 shrink-0" />
         )}
       </div>
     </div>

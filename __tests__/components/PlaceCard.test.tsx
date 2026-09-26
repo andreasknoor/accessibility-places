@@ -102,14 +102,13 @@ describe("PlaceCard — content", () => {
     expect(screen.getByText("Nein")).toBeInTheDocument()
   })
 
-  it("adds the seating criterion only when the place has one", () => {
-    const { unmount } = renderWithProvider(<PlaceCard place={makePlace()} />)
-    expect(screen.queryByText("Sitzplätze")).not.toBeInTheDocument()
-    unmount()
+  // Seating only ever comes from Google Places (always "unsicher") — it lives
+  // in the detail view, the card always lists entrance, toilet, parking.
+  it("never lists seating on the card, even when the place has it", () => {
     const place = makePlace()
-    place.accessibility.seating = buildAttribute("osm", "yes", "yes", {})
+    place.accessibility.seating = buildAttribute("google_places", "yes", "yes", {})
     renderWithProvider(<PlaceCard place={place} />)
-    expect(screen.getByText("Sitzplätze")).toBeInTheDocument()
+    expect(screen.queryByText("Rollstuhl-Sitzplatz")).not.toBeInTheDocument()
   })
 
   it("marks a criterion whose sources disagree", () => {
@@ -120,10 +119,10 @@ describe("PlaceCard — content", () => {
     expect(screen.getByRole("img", { name: "Quellen widersprechen sich" })).toBeInTheDocument()
   })
 
-  it("flags a weak ('gering') reliability tier as an exception", () => {
+  it("flags a weak ('unsicher') reliability tier as an exception", () => {
     const place = makePlace({ accessibility: { entrance: buildAttribute("osm", "yes", "yes", {}), toilet: buildAttribute("google_places", "yes", "yes", {}), parking: emptyAttribute() } })
     renderWithProvider(<PlaceCard place={place} />)
-    expect(screen.getAllByText("Verlässlichkeit gering")).toHaveLength(1)
+    expect(screen.getAllByText("Angabe unsicher")).toHaveLength(1)
   })
 
   it("words nearby-only parking with its distance", () => {

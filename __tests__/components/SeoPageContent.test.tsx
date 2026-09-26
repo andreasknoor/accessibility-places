@@ -51,7 +51,7 @@ describe("SeoPageContent — judgement badge + reliability Nachsatz", () => {
   it("shows the reliability Nachsatz per criterion, based on its own tier", () => {
     // entrance: osm alone (0.75) → "gut"; toilet: osm alone (0.75) → "gut" too.
     render(<SeoPageContent locale="de" city={BERLIN} categorySlug="restaurant" places={[makePlace()]} />)
-    expect(screen.getAllByText("aus verlässlicher Quelle").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("Wahrscheinlich").length).toBeGreaterThan(0)
   })
 
   it("shows the gering Nachsatz for a criterion resting on a single weak source", () => {
@@ -63,7 +63,7 @@ describe("SeoPageContent — judgement badge + reliability Nachsatz", () => {
       },
     })
     render(<SeoPageContent locale="de" city={BERLIN} categorySlug="restaurant" places={[place]} />)
-    expect(screen.getByText("nur eine schwache Angabe")).toBeInTheDocument()
+    expect(screen.getByText("Unsicher")).toBeInTheDocument()
   })
 })
 

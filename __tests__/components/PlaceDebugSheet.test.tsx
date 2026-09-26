@@ -187,9 +187,25 @@ describe("PlaceDebugSheet accessibility section", () => {
         parking:  { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
       },
     }))
-    expect(screen.getByText(/Verlässlichkeit gut · OpenStreetMap/)).toBeInTheDocument()
-    expect(screen.getByText(/Verlässlichkeit gering · Google Places/)).toBeInTheDocument()
+    expect(screen.getByText(/Wahrscheinlich · OpenStreetMap/)).toBeInTheDocument()
+    expect(screen.getByText(/Unsicher · Google Places/)).toBeInTheDocument()
     expect(screen.getByText("Keine Quelle hat eine Angabe")).toBeInTheDocument()
+  })
+
+  // Tier words (2026-09-26): bestätigt · wahrscheinlich · unsicher — two
+  // agreeing independent sources (OSM 0.75 + Google 0.35 ≥ 1.0) are "bestätigt".
+  it("words two agreeing independent sources as 'Bestätigt'", () => {
+    renderSheet(makePlace({
+      accessibility: {
+        entrance: { value: "yes", confidence: 1.1, conflict: false, sources: [
+          { sourceId: "osm", value: "yes", rawValue: "yes", reliabilityWeight: 0.75 },
+          { sourceId: "google_places", value: "yes", rawValue: "true", reliabilityWeight: 0.35 },
+        ], details: {} },
+        toilet:   { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
+        parking:  { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
+      },
+    }))
+    expect(screen.getByText(/Bestätigt · OpenStreetMap, Google Places/)).toBeInTheDocument()
   })
 
   it("shows no reliability tier when every criterion is unknown", () => {
@@ -200,7 +216,7 @@ describe("PlaceDebugSheet accessibility section", () => {
         parking:  { value: "unknown", confidence: 0, conflict: false, sources: [], details: {} },
       },
     }))
-    expect(screen.queryByText(/Verlässlichkeit/)).toBeNull()
+    expect(screen.queryByText(/Bestätigt|Wahrscheinlich|Unsicher/)).toBeNull()
     expect(screen.getAllByText("Keine Quelle hat eine Angabe")).toHaveLength(3)
   })
 
@@ -227,7 +243,7 @@ describe("PlaceDebugSheet accessibility section", () => {
 
   it("shows seating row only when seating data is present", () => {
     renderSheet()
-    expect(screen.queryByText("Sitzplätze")).toBeNull()
+    expect(screen.queryByText("Rollstuhl-Sitzplatz")).toBeNull()
 
     renderSheet(makePlace({
       accessibility: {
@@ -237,7 +253,7 @@ describe("PlaceDebugSheet accessibility section", () => {
         seating:  { value: "yes", confidence: 0.75, conflict: false, sources: [], details: {} },
       },
     }))
-    expect(screen.getAllByText("Sitzplätze")[0]).toBeInTheDocument()
+    expect(screen.getAllByText("Rollstuhl-Sitzplatz")[0]).toBeInTheDocument()
   })
 })
 

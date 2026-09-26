@@ -43,12 +43,13 @@ export function ReliabilityDots({ tier, className }: { tier: "sehr_hoch" | "gut"
 interface Props {
   kind: CriterionKind
   attr: AccessibilityAttribute
-  // "compact"  — glyph + criterion name + coloured value word below (Expert
-  //              result card grid). A weak ("gering") reliability tier shows
-  //              as an exception marker; better tiers stay silent here.
+  // "row"      — one line per criterion: glyph + name on the left, coloured
+  //              value word right-aligned (Expert result card list). A weak
+  //              ("unsicher") reliability tier shows as an exception marker
+  //              after the name; better tiers stay silent here.
   // "sentence" — glyph + plain-language sentence (Quickstart result card),
   //              which already names the outcome.
-  variant: "compact" | "sentence"
+  variant: "row" | "sentence"
   className?: string
 }
 
@@ -71,24 +72,22 @@ export default function CriterionItem({ kind, attr, variant, className }: Props)
   const value = criterionValueLabel(t, kind, attr)
   const weak = attr.value !== "unknown" && criterionTier(attr) === "gering"
   return (
-    <div className={cn("flex items-center gap-2.5 min-w-0", className)}>
+    <div className={cn("flex items-center gap-2.5 min-w-0 py-1.5", className)}>
       <CriterionGlyph kind={kind} value={attr.value} />
-      <span className="flex flex-col min-w-0 leading-tight">
-        <span className="flex items-center gap-1 text-[13px] text-foreground min-w-0">
-          <span className="truncate">{name}</span>
-          {/* Sources disagree on this criterion — the per-source values are
-              listed in the detail view. */}
-          {attr.conflict && <AlertTriangle className="w-3 h-3 shrink-0 text-amber-600" role="img" aria-label={t.results.conflict} />}
-        </span>
-        <span className={cn("text-xs font-semibold truncate", VALUE_TEXT[attr.value])}>{value}</span>
+      <span className="flex flex-1 items-center gap-1.5 flex-wrap min-w-0 text-[13px] text-foreground">
+        <span>{name}</span>
+        {/* Sources disagree on this criterion — the per-source values are
+            listed in the detail view. */}
+        {attr.conflict && <AlertTriangle className="w-3 h-3 shrink-0 text-amber-600" role="img" aria-label={t.results.conflict} />}
         {weak && (
-          <span className="flex items-center gap-1 text-[11px] text-amber-700">
+          <span className="inline-flex items-center gap-1 text-[11px] text-amber-700">
             <ReliabilityDots tier="gering" />
             <span aria-hidden>{t.results.tier.gering}</span>
             <span className="sr-only">{t.place.reliabilityShort(t.results.tier.gering)}</span>
           </span>
         )}
       </span>
+      <span className={cn("text-[13px] font-semibold text-right shrink-0 max-w-[55%]", VALUE_TEXT[attr.value])}>{value}</span>
     </div>
   )
 }

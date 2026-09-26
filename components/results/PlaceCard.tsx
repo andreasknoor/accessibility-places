@@ -37,7 +37,7 @@ interface Props {
 // Expert Mode result card — "V1+" of the unified place UI
 // (see CLAUDE.md): name, category ·
 // opening status · distance, the judgement against the active filters, a
-// compact criteria grid (glyph + name + value word) and an action row.
+// criteria list (glyph + name, value right-aligned) and an action row.
 //
 // Deliberately NOT on the card any more (all of it is in PlaceDebugSheet):
 // best-source row, dog/diet badges, website/phone/Wheelmap/Google-Maps/Ginto
@@ -91,13 +91,14 @@ export default function PlaceCard({ place, isSelected, onClick, distanceM, filte
           </p>
         )}
         <JudgmentLine place={place} filters={judgmentFilters} hideNoteOnPass className="mt-2" />
-        <div className="grid grid-cols-2 gap-x-3 gap-y-2.5 mt-3">
-          <CriterionItem kind="entrance" attr={place.accessibility.entrance} variant="compact" />
-          <CriterionItem kind="toilet"   attr={place.accessibility.toilet}   variant="compact" />
-          <CriterionItem kind="parking"  attr={place.accessibility.parking}  variant="compact" />
-          {place.accessibility.seating && (
-            <CriterionItem kind="seating" attr={place.accessibility.seating} variant="compact" />
-          )}
+        {/* One line per criterion (name left, value right) — no gaps, room
+            for long values. Seating is deliberately not on the card: it only
+            ever comes from Google Places (always "unsicher") and lives in the
+            detail view. */}
+        <div className="mt-2.5 divide-y divide-border/70 border-y border-border/70">
+          <CriterionItem kind="entrance" attr={place.accessibility.entrance} variant="row" />
+          <CriterionItem kind="toilet"   attr={place.accessibility.toilet}   variant="row" />
+          <CriterionItem kind="parking"  attr={place.accessibility.parking}  variant="row" />
         </div>
       </div>
       <div className="flex gap-2 px-3.5 pb-3">

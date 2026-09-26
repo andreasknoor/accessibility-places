@@ -104,29 +104,17 @@ const en: Translations = {
     resultsAnnounce: (n: number) => `${n} place${n !== 1 ? "s" : ""} found`,
     parkingCount: (n: number) => `(${n}x parking)`,
     showMap: "Map",
-    // Reliability tiers (v13, docs/plans/reliability-tiers.md) — describe how
-    // well-corroborated a KNOWN value is, never a place-wide colour/percentage.
-    // Rendered as a per-criterion Nachsatz (reliabilityNote below), and as the
-    // info-sheet section-title word (PlaceDebugSheet).
+    // Reliability tier word per criterion (docs/plans/reliability-tiers.md,
+    // renamed 2026-09-26): how well-corroborated a KNOWN value is — several
+    // agreeing or certified/audited sources, one reliable source, or only a
+    // weak one. Worded to describe the value itself, so it also reads on its
+    // own next to "Ja" on the result card ("Ja · unsicher"), unlike the former
+    // "sehr hoch / gut / gering", which needed the "Verlässlichkeit" prefix.
     tier: {
-      sehr_hoch: "very high",
-      gut:       "good",
-      gering:    "low",
+      sehr_hoch: "confirmed",
+      gut:       "likely",
+      gering:    "uncertain",
       keine:     "no data",
-    },
-    // Plain-language note shown under a single criterion's own value row.
-    // verifiedLabel, if given, is a ready-made sentence (see verifiedAt below)
-    // appended as its own clause — this is where the old, separate "verified
-    // on-site" badge (decision 8) now lives.
-    reliabilityNote: (tier: "sehr_hoch" | "gut" | "gering" | "keine", verifiedLabel?: string) => {
-      const base = {
-        sehr_hoch: "Especially well documented",
-        gut:       "From a reliable source",
-        gering:    "Only one weak source",
-        keine:     "",
-      }[tier]
-      if (!base) return verifiedLabel ?? ""
-      return verifiedLabel ? `${base} · ${verifiedLabel}` : base
     },
     // Joins criterion labels for the judgement-line "why" clause: "X and Y".
     joinCriteria: (labels: string[]) => {
@@ -244,7 +232,7 @@ const en: Translations = {
     entrance: "Entrance",
     toilet:   "Toilet",
     parking:  "Parking",
-    seating:  "Seating",
+    seating:  "Wheelchair seating",
     verifiedOnly: "Verification",
   },
   details: {
@@ -580,7 +568,7 @@ const en: Translations = {
     details:          "Details",
     website:          "Website",
     criterionValue:   (name: string, value: string) => `${name}: ${value}`,
-    reliabilityShort: (tier: string) => `Reliability ${tier}`,
+    reliabilityShort: (tier: string) => `Information ${tier}`,
     detailsCount:     (n: number) => n === 1 ? "1 detail" : `${n} details`,
     filterTag:        "Filter",
     filterTagLabel:   "Part of your filters",

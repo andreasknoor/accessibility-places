@@ -254,13 +254,13 @@ const SEO_JUDGMENT_LABEL: Record<Locale, string> = {
 }
 const SEO_JUDGMENT_CLASS = "bg-green-100 text-green-800 border border-green-200"
 
-// Per-criterion reliability tier Nachsatz — same neutral vocabulary as the
-// app's ReliabilityPill/A11yAttribute, inlined bilingually to match this
+// Per-criterion reliability tier — same words as the app's result card and
+// detail view (t.results.tier), inlined bilingually to match this
 // file's existing convention (no lib/i18n hook in server components).
 const TIER_LABEL: Record<"sehr_hoch" | "gut" | "gering" | "keine", { de: string; en: string }> = {
-  sehr_hoch: { de: "von mehreren Quellen bestätigt", en: "confirmed by multiple sources" },
-  gut:       { de: "aus verlässlicher Quelle",       en: "from a reliable source" },
-  gering:    { de: "nur eine schwache Angabe",       en: "only one weak source" },
+  sehr_hoch: { de: "Bestätigt",      en: "Confirmed" },
+  gut:       { de: "Wahrscheinlich", en: "Likely" },
+  gering:    { de: "Unsicher",       en: "Uncertain" },
   keine:     { de: "",                               en: "" },
 }
 

@@ -100,7 +100,7 @@ describe("a11y baseline — unified place building blocks", () => {
     const place = makePlace()
     const { container } = renderSimple(
       <div>
-        <CriterionItem kind="entrance" attr={place.accessibility.entrance} variant="compact" />
+        <CriterionItem kind="entrance" attr={place.accessibility.entrance} variant="row" />
         <CriterionItem kind="toilet" attr={place.accessibility.toilet} variant="sentence" />
         <QuickstartVerdict place={place} />
         <NavigateButton coords={place.coordinates} variant="action" />

@@ -118,7 +118,6 @@ export interface Translations {
       gering:    string
       keine:     string
     }
-    reliabilityNote: (tier: "sehr_hoch" | "gut" | "gering" | "keine", verifiedLabel?: string) => string
     joinCriteria:    (labels: string[]) => string
     // Split into pre/criteria/post (rather than one string) so the caller
     // (JudgmentLine) can render "criteria" as a separate, optionally

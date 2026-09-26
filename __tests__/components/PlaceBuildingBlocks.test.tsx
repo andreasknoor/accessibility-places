@@ -68,34 +68,35 @@ describe("glyphSvgString", () => {
 })
 
 describe("CriterionItem", () => {
-  it("compact: shows the criterion name with the value word below — no 'WC = WC' duplication", () => {
+  it("row: shows the criterion name with the value word below — no 'WC = WC' duplication", () => {
     const attr = buildAttribute("osm", "yes", "yes", {})
-    r(<CriterionItem kind="toilet" attr={attr} variant="compact" />)
+    r(<CriterionItem kind="toilet" attr={attr} variant="row" />)
     expect(screen.getByText("Toilette")).toBeInTheDocument()
     expect(screen.getByText("Ja")).toBeInTheDocument()
     expect(screen.queryByText("WC")).not.toBeInTheDocument()
   })
 
-  it("compact: uses the English criterion name in English", () => {
+  it("row: uses the English criterion name in English", () => {
     const attr = buildAttribute("osm", "limited", "limited", {})
-    r(<CriterionItem kind="toilet" attr={attr} variant="compact" />, "en")
+    r(<CriterionItem kind="toilet" attr={attr} variant="row" />, "en")
     expect(screen.getByText("Toilet")).toBeInTheDocument()
     expect(screen.getByText("Limited")).toBeInTheDocument()
   })
 
-  it("compact: words nearby-only parking with its distance", () => {
+  it("row: words nearby-only parking with its distance", () => {
     const attr = buildAttribute("osm", "yes", "yes", { nearbyOnly: true, nearbyParkingDistanceM: 120 })
-    r(<CriterionItem kind="parking" attr={attr} variant="compact" />)
+    r(<CriterionItem kind="parking" attr={attr} variant="row" />)
     expect(screen.getByText("Ja, in der Nähe (120 m)")).toBeInTheDocument()
   })
 
-  it("compact: flags a weak ('gering') reliability tier, stays silent otherwise", () => {
+  it("row: flags a weak ('unsicher') reliability tier, stays silent otherwise", () => {
     const weak = buildAttribute("google_places", "yes", "yes", {})
-    const { unmount } = r(<CriterionItem kind="toilet" attr={weak} variant="compact" />)
-    expect(screen.getByText("Verlässlichkeit gering")).toBeInTheDocument()
+    const { unmount } = r(<CriterionItem kind="toilet" attr={weak} variant="row" />)
+    expect(screen.getByText("unsicher")).toBeInTheDocument()
+    expect(screen.getByText("Angabe unsicher")).toBeInTheDocument()
     unmount()
-    r(<CriterionItem kind="toilet" attr={buildAttribute("osm", "yes", "yes", {})} variant="compact" />)
-    expect(screen.queryByText(/Verlässlichkeit/)).not.toBeInTheDocument()
+    r(<CriterionItem kind="toilet" attr={buildAttribute("osm", "yes", "yes", {})} variant="row" />)
+    expect(screen.queryByText(/unsicher/)).not.toBeInTheDocument()
   })
 
   it("sentence: renders the Quickstart plain-language sentence", () => {
