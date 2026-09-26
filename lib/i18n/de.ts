@@ -170,7 +170,6 @@ const de: Translations = {
     wheelmapLink:   "Auf Wheelmap.org prüfen",
     acceslibreLink: "Auf AccèsLibre prüfen",
     googleMapsLink: "In Google Maps öffnen",
-    navigateHere:      "Navigation starten",
     navigateWith:      "Navigieren mit",
     navigateGoogleMaps: "Google Maps",
     navigateOtherApp:  "Andere Navigations-App",

@@ -406,7 +406,7 @@ describe("PlaceDebugSheet navigate button", () => {
   it("renders 'Route' as a secondary action-bar tile that starts navigation", async () => {
     const { startDefaultNavigation } = await import("@/lib/native/navigation")
     renderSheet()
-    const navigateBtn = screen.getByRole("button", { name: "Navigation starten (öffnet eine andere App)" })
+    const navigateBtn = screen.getByRole("button", { name: "Route (öffnet eine andere App)" })
     expect(navigateBtn).toBeInTheDocument()
     fireEvent.click(navigateBtn)
     expect(startDefaultNavigation).toHaveBeenCalledWith({ lat: 52.52, lon: 13.405 })

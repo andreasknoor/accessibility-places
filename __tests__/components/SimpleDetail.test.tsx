@@ -55,7 +55,7 @@ describe("SimpleDetail", () => {
   // Unified place UI "Detail V2" (docs/plans/unified-results-detail-popup-redesign.md).
   it("offers the same four actions as the Expert sheet, none of them emphasised", () => {
     renderWithProvider(<SimpleDetail place={makePlace({ phone: "+49123", website: "https://example.com" })} onBack={vi.fn()} onOpenSettings={vi.fn()} onSwitchToExpert={vi.fn()} />)
-    const route = screen.getByRole("button", { name: "Navigation starten (öffnet eine andere App)" })
+    const route = screen.getByRole("button", { name: "Route (öffnet eine andere App)" })
     const share = screen.getByRole("button", { name: "Teilen" })
     for (const el of [route, share, screen.getByText("Anrufen").closest("a")!, screen.getByText("Website").closest("a")!]) {
       expect(el.className).not.toMatch(/(^|\s)bg-primary(\s|$)/)

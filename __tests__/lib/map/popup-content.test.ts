@@ -125,7 +125,7 @@ describe("buildVenuePopupHtml — criteria and actions", () => {
     expect(primary).toHaveLength(1)
     expect(primary[0].textContent).toContain("Details")
     const route = doc(html).querySelector("[data-navigate]")!
-    expect(route.getAttribute("aria-label")).toBe("Navigation starten (öffnet eine andere App)")
+    expect(route.getAttribute("aria-label")).toBe("Route (öffnet eine andere App)")
     expect(route.querySelectorAll("svg")).toHaveLength(2) // compass + ↗
   })
 

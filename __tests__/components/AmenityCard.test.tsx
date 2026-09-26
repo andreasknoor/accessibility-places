@@ -32,9 +32,9 @@ function makeSpot(overrides: Partial<AmenityFeature> = {}): AmenityFeature {
 }
 
 describe("AmenityCard — navigate button (docs/plans/native-navigate-here.md, 'AmenityCard (list) placement')", () => {
-  it("renders a labelled 'Navigation starten' button in the footer (no detail sheet exists to host a sticky button instead)", () => {
+  it("renders a labelled 'Route' button in the footer (no detail sheet exists to host one instead)", () => {
     renderWithProvider(<AmenityCard spot={makeSpot()} amenityType="parking" />)
-    expect(screen.getByRole("button", { name: "Navigation starten (öffnet eine andere App)" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Route (öffnet eine andere App)" })).toBeInTheDocument()
   })
 
   // Unified place UI: Route stays this card's default (filled) action — a
@@ -42,14 +42,14 @@ describe("AmenityCard — navigate button (docs/plans/native-navigate-here.md, '
   // carries the ↗ "opens another app" arrow like every other Route trigger.
   it("keeps Route as the filled default action, with the external-app arrow", () => {
     renderWithProvider(<AmenityCard spot={makeSpot()} amenityType="parking" />)
-    const btn = screen.getByRole("button", { name: "Navigation starten (öffnet eine andere App)" })
+    const btn = screen.getByRole("button", { name: "Route (öffnet eine andere App)" })
     expect(btn.className).toMatch(/(^|\s)bg-primary(\s|$)/)
     expect(btn.querySelectorAll("svg")).toHaveLength(2)
   })
 
   it("clicking it starts navigation at the amenity spot's own lat/lon, not any nearby venue's coordinates", () => {
     renderWithProvider(<AmenityCard spot={makeSpot({ lat: 48.137, lon: 11.576 })} amenityType="parking" />)
-    fireEvent.click(screen.getByRole("button", { name: "Navigation starten (öffnet eine andere App)" }))
+    fireEvent.click(screen.getByRole("button", { name: "Route (öffnet eine andere App)" }))
     expect(startDefaultNavigation).toHaveBeenCalledWith({ lat: 48.137, lon: 11.576 })
   })
 
@@ -62,14 +62,14 @@ describe("AmenityCard — navigate button (docs/plans/native-navigate-here.md, '
       host: { kind: "venue", name: "Café Solidarität" },
     })
     renderWithProvider(<AmenityCard spot={spot} amenityType="toilet" />)
-    fireEvent.click(screen.getByRole("button", { name: "Navigation starten (öffnet eine andere App)" }))
+    fireEvent.click(screen.getByRole("button", { name: "Route (öffnet eine andere App)" }))
     expect(startDefaultNavigation).toHaveBeenCalledWith({ lat: 52.5301, lon: 13.4102 })
   })
 
   it("does not trigger the card's onClick ('Zur Karte' selection) when the navigate button is clicked", () => {
     const onClick = vi.fn()
     renderWithProvider(<AmenityCard spot={makeSpot()} amenityType="parking" onClick={onClick} />)
-    fireEvent.click(screen.getByRole("button", { name: "Navigation starten (öffnet eine andere App)" }))
+    fireEvent.click(screen.getByRole("button", { name: "Route (öffnet eine andere App)" }))
     expect(onClick).not.toHaveBeenCalled()
   })
 })
@@ -116,5 +116,15 @@ describe("AmenityCard — opening status", () => {
       />,
     )
     expect(screen.queryByText("Geöffnet")).not.toBeInTheDocument()
+  })
+})
+
+// The weak-tier report action lives only in the parking marker's map popup
+// (lib/map/popup-content.ts) — on the card its long label crowded out the
+// Route / Zur Karte actions.
+describe("AmenityCard — no report action on the card", () => {
+  it("does not offer 'Als Behindertenparkplatz melden', even for a weak-tier spot", () => {
+    renderWithProvider(<AmenityCard spot={makeSpot({ tier: "weak" })} amenityType="parking" />)
+    expect(screen.queryByText("Als Behindertenparkplatz melden")).not.toBeInTheDocument()
   })
 })

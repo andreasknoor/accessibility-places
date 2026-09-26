@@ -77,7 +77,7 @@ describe("SimplePlaceCard", () => {
   it("does not call onOpen when the navigate button is clicked", () => {
     const onOpen = vi.fn()
     renderWithProvider(<SimplePlaceCard place={makePlace()} onOpen={onOpen} />)
-    fireEvent.click(screen.getByRole("button", { name: "Navigation starten (öffnet eine andere App)" }))
+    fireEvent.click(screen.getByRole("button", { name: "Route (öffnet eine andere App)" }))
     expect(onOpen).not.toHaveBeenCalled()
   })
 
@@ -110,7 +110,7 @@ describe("SimplePlaceCard", () => {
       renderWithProvider(<SimplePlaceCard place={makePlace()} onOpen={vi.fn()} onShowOnMap={vi.fn()} />)
       expect(screen.getByRole("button", { name: "Zur Karte" }).className).toMatch(/(^|\s)bg-primary(\s|$)/)
       expect(screen.getByRole("button", { name: /Details zu/ }).className).not.toMatch(/(^|\s)bg-primary(\s|$)/)
-      expect(screen.getByRole("button", { name: /Navigation starten/ }).className).not.toMatch(/(^|\s)bg-primary(\s|$)/)
+      expect(screen.getByRole("button", { name: /^Route/ }).className).not.toMatch(/(^|\s)bg-primary(\s|$)/)
     })
 
     it("Zur Karte calls onShowOnMap, not onOpen", () => {

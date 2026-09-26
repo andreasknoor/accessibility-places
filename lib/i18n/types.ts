@@ -156,7 +156,6 @@ export interface Translations {
     wheelmapLink:      string
     acceslibreLink:    string
     googleMapsLink:    string
-    navigateHere:       string
     navigateWith:       string
     navigateGoogleMaps: string
     navigateOtherApp:   string

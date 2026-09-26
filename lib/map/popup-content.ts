@@ -94,7 +94,7 @@ function routeButton(t: T, primary: boolean): string {
     html: `${SVG_NAV}${esc(t.place.route)}${SVG_ARROW}`,
     dataAttr: "data-navigate",
     primary,
-    ariaLabel: `${t.results.navigateHere} (${t.place.opensExternalApp})`,
+    ariaLabel: `${t.place.route} (${t.place.opensExternalApp})`,
   })
 }
 

@@ -230,15 +230,21 @@ stay reachable without enumerating installed apps ourselves.
 **UI:** `components/ui/navigate-button.tsx` (`NavigateButton`) is the single
 shared trigger + popover, in three variants — always the lucide `Navigation`
 compass glyph (never a map/pin shape, which reads as "show on map"), always
-followed by a small ↗ (`ArrowUpRight`), and always with the accessible name
-"Navigation starten (öffnet eine andere App)", because it leaves the app:
-- `"action"` — result-card action row ("Route"), secondary by default
+followed by a small ↗ (`ArrowUpRight`), always labelled **"Route"** (one
+name on every surface, map popups included — no "Navigation starten" any
+more), and always with the accessible name "Route (öffnet eine andere App)":
+it starts with the visible label (WCAG 2.5.3, speech input) and says that
+the action leaves the app:
+- `"action"` — result-card action row, secondary by default
   (`emphasis="primary"` exists but no in-app surface uses it: Route is never
   a default action — see the unified place UI paragraph above).
 - `"tile"` — one of the four equal tiles in `PlaceDetailView`'s action bar.
-- `"labeled"` — filled pill with the full label, `AmenityCard`'s footer (the
-  🅿/🚻 quick-search results) — the one list surface where Route stays the
-  default, since the card has no detail view and getting there is its point.
+- `"labeled"` — filled pill, `AmenityCard`'s footer (the 🅿/🚻 quick-search
+  results) — the one list surface where Route stays the default, since the
+  card has no detail view and getting there is its point. The weak-parking
+  "Als Behindertenparkplatz melden" report is deliberately **not** on this
+  card (its long label crowded out Route/Zur Karte) — only in the parking
+  marker's map popup.
 
 The map popups (`lib/map/popup-content.ts`'s hand-built HTML, wired up via
 plain `addEventListener` in `MapViewGL.tsx` — **not** React, `NavigateButton`

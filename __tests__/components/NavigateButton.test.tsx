@@ -35,7 +35,7 @@ describe("NavigateButton — non-Android platforms (no chooser)", () => {
   it("fires startDefaultNavigation directly on web, no popover", () => {
     mockGetPlatform.mockReturnValue("web")
     renderButton()
-    fireEvent.click(screen.getByRole("button", { name: /Navigation starten/ }))
+    fireEvent.click(screen.getByRole("button", { name: /^Route/ }))
     expect(startDefaultNavigation).toHaveBeenCalledWith({ lat: 52.52, lon: 13.405 })
     expect(screen.queryByText("Navigieren mit")).not.toBeInTheDocument()
   })
@@ -43,7 +43,7 @@ describe("NavigateButton — non-Android platforms (no chooser)", () => {
   it("fires startDefaultNavigation directly on iOS, no popover", () => {
     mockGetPlatform.mockReturnValue("ios")
     renderButton()
-    fireEvent.click(screen.getByRole("button", { name: /Navigation starten/ }))
+    fireEvent.click(screen.getByRole("button", { name: /^Route/ }))
     expect(startDefaultNavigation).toHaveBeenCalledWith({ lat: 52.52, lon: 13.405 })
     expect(screen.queryByText("Navigieren mit")).not.toBeInTheDocument()
   })
@@ -54,7 +54,7 @@ describe("NavigateButton — Android (reduced-scope chooser)", () => {
 
   it("opens a chooser popover instead of navigating immediately", () => {
     renderButton()
-    fireEvent.click(screen.getByRole("button", { name: /Navigation starten/ }))
+    fireEvent.click(screen.getByRole("button", { name: /^Route/ }))
     expect(startDefaultNavigation).not.toHaveBeenCalled()
     expect(screen.getByText("Navigieren mit")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Google Maps" })).toBeInTheDocument()
@@ -63,38 +63,35 @@ describe("NavigateButton — Android (reduced-scope chooser)", () => {
 
   it("'Google Maps' option fires startNavigationWithApp('google', coords)", () => {
     renderButton()
-    fireEvent.click(screen.getByRole("button", { name: /Navigation starten/ }))
+    fireEvent.click(screen.getByRole("button", { name: /^Route/ }))
     fireEvent.click(screen.getByRole("button", { name: "Google Maps" }))
     expect(startNavigationWithApp).toHaveBeenCalledWith("google", { lat: 52.52, lon: 13.405 })
   })
 
   it("'Andere Navigations-App' option fires startNavigationWithApp('geo', coords)", () => {
     renderButton()
-    fireEvent.click(screen.getByRole("button", { name: /Navigation starten/ }))
+    fireEvent.click(screen.getByRole("button", { name: /^Route/ }))
     fireEvent.click(screen.getByRole("button", { name: "Andere Navigations-App" }))
     expect(startNavigationWithApp).toHaveBeenCalledWith("geo", { lat: 52.52, lon: 13.405 })
   })
 })
 
 describe("NavigateButton — variants", () => {
-  it("'labeled' variant shows the full label plus the external-app arrow", () => {
-    renderButton("labeled")
-    expect(screen.getByText("Navigation starten")).toBeInTheDocument()
-    expect(screen.getByRole("button").querySelectorAll("svg")).toHaveLength(2) // compass + ↗
+  it("every variant shows the same short label 'Route' plus the external-app arrow", () => {
+    for (const v of ["labeled", "action", "tile"] as const) {
+      const { unmount } = renderButton(v)
+      expect(screen.getByText("Route")).toBeInTheDocument()
+      expect(screen.getByRole("button").querySelectorAll("svg")).toHaveLength(2) // compass + ↗
+      unmount()
+    }
   })
 
-  it("'action' and 'tile' variants use the short 'Route' label", () => {
-    const { unmount } = renderButton("action")
-    expect(screen.getByText("Route")).toBeInTheDocument()
-    unmount()
-    renderButton("tile")
-    expect(screen.getByText("Route")).toBeInTheDocument()
-  })
-
+  // WCAG 2.5.3 (label in name): the accessible name starts with the visible
+  // label, so speech-input users can say "Route".
   it("every variant's accessible name says it opens another app", () => {
     for (const v of ["labeled", "action", "tile"] as const) {
       const { unmount } = renderButton(v)
-      expect(screen.getByRole("button", { name: "Navigation starten (öffnet eine andere App)" })).toBeInTheDocument()
+      expect(screen.getByRole("button", { name: "Route (öffnet eine andere App)" })).toBeInTheDocument()
       unmount()
     }
   })
@@ -118,7 +115,7 @@ describe("NavigateButton — click does not bubble to an ancestor's own click ha
         </div>
       </LocaleProvider>,
     )
-    fireEvent.click(screen.getByRole("button", { name: /Navigation starten/ }))
+    fireEvent.click(screen.getByRole("button", { name: /^Route/ }))
     expect(outerClick).not.toHaveBeenCalled()
     expect(startDefaultNavigation).toHaveBeenCalled()
   })

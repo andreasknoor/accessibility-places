@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 
 interface Props {
   coords: NavCoords
-  // "labeled" — filled pill with icon + full text (AmenityCard footer: the
+  // "labeled" — filled pill with icon + text (AmenityCard footer: the
   //             parking/WC result card's default action — getting there is
   //             its whole purpose).
   // "action"  — result-card action row button ("Route"), styled by `emphasis`.
@@ -64,11 +64,12 @@ export default function NavigateButton({ coords, variant, emphasis = "secondary"
   // navigation directly, the chooser path only needs to stop the click from
   // bubbling to an ancestor's own handler (e.g. PlaceCard's "open details")
   // — Radix's Popover already handles the actual open-toggle.
-  // Short "Route" where space is tight (card row, action tile), the full
-  // "Navigation starten" elsewhere. Every variant carries the ↗ "opens
-  // another app" indicator, and its accessible name says so in words.
-  const short = variant === "action" || variant === "tile"
-  const label = short ? t.place.route : t.results.navigateHere
+  // "Route" everywhere (result cards, detail tiles, map popups) — one name
+  // for the same action. Every variant carries the ↗ "opens another app"
+  // indicator, and its accessible name says so in words while starting with
+  // the visible label (WCAG 2.5.3 label in name — speech-input users say
+  // "Route").
+  const label = t.place.route
   const triggerClass = variant === "action"
     ? (emphasis === "primary" ? ACTION_PRIMARY : ACTION_SECONDARY)
     : TRIGGER_CLASS[variant]
@@ -76,7 +77,7 @@ export default function NavigateButton({ coords, variant, emphasis = "secondary"
     <button
       type="button"
       onClick={showChooser ? (e) => e.stopPropagation() : fireDefault}
-      aria-label={`${t.results.navigateHere} (${t.place.opensExternalApp})`}
+      aria-label={`${label} (${t.place.opensExternalApp})`}
       className={cn(triggerClass, className)}
     >
       <Navigation className={ICON_CLASS[variant]} aria-hidden />

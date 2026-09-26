@@ -154,7 +154,7 @@ describe("PlaceCard — actions", () => {
     renderWithProvider(<PlaceCard place={makePlace()} onClick={vi.fn()} />)
     const map = screen.getByRole("button", { name: "Zur Karte" })
     const details = screen.getByRole("button", { name: "Details zu Café Barrierefrei öffnen" })
-    const route = screen.getByRole("button", { name: "Navigation starten (öffnet eine andere App)" })
+    const route = screen.getByRole("button", { name: "Route (öffnet eine andere App)" })
     expect(map.className).toMatch(/(^|\s)bg-primary(\s|$)/)
     expect(details.className).not.toMatch(/(^|\s)bg-primary(\s|$)/)
     expect(route.className).not.toMatch(/(^|\s)bg-primary(\s|$)/)
@@ -192,7 +192,7 @@ describe("PlaceCard — actions", () => {
 
   it("Route starts navigation at the place's coordinates and does not open the sheet", () => {
     renderWithProvider(<PlaceCard place={makePlace()} onClick={vi.fn()} />)
-    fireEvent.click(screen.getByRole("button", { name: "Navigation starten (öffnet eine andere App)" }))
+    fireEvent.click(screen.getByRole("button", { name: "Route (öffnet eine andere App)" }))
     expect(startDefaultNavigation).toHaveBeenCalledWith({ lat: 52.52, lon: 13.405 })
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
