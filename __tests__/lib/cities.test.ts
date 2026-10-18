@@ -6,6 +6,7 @@ import {
   SEO_CATEGORY_SLUGS,
   SEO_CATEGORY_TO_SLUG,
   SEO_CATEGORY_LABEL,
+  resolveSeoRoute,
 } from "@/lib/cities"
 
 describe("CITIES", () => {
@@ -42,6 +43,26 @@ describe("SEO_CATEGORY_LABEL", () => {
       expect(typeof labels.en, `${slug}.en`).toBe("string")
       expect(labels.de.length, `${slug}.de non-empty`).toBeGreaterThan(0)
       expect(labels.en.length, `${slug}.en non-empty`).toBeGreaterThan(0)
+    }
+  })
+})
+
+describe("resolveSeoRoute", () => {
+  it("resolves a known city and category", () => {
+    const route = resolveSeoRoute("berlin", "cafe")
+    expect(route?.city.slug).toBe("berlin")
+    expect(route?.category).toBe("cafe")
+  })
+
+  it("rejects unknown slugs", () => {
+    expect(resolveSeoRoute("berlin", "doesnotexist")).toBeNull()
+    expect(resolveSeoRoute("atlantis", "cafe")).toBeNull()
+    expect(resolveSeoRoute("en", "cafe")).toBeNull()
+  })
+
+  it("rejects inherited Object.prototype keys", () => {
+    for (const key of ["constructor", "toString", "__proto__", "hasOwnProperty"]) {
+      expect(resolveSeoRoute("berlin", key)).toBeNull()
     }
   })
 })

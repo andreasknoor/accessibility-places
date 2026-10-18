@@ -1,6 +1,6 @@
 import { notFound }      from "next/navigation"
 import type { Metadata } from "next"
-import { CITY_MAP, SEO_CATEGORY_SLUGS, SEO_CATEGORY_LABEL, type CitySlug } from "@/lib/cities"
+import { resolveSeoRoute, SEO_CATEGORY_SLUGS, SEO_CATEGORY_LABEL } from "@/lib/cities"
 import { fetchPlacesForSeoPage } from "@/lib/seo-search"
 import { hasData }               from "@/lib/seo-validity"
 import SeoPageContent            from "@/components/seo/SeoPageContent"
@@ -15,9 +15,8 @@ export function generateStaticParams() { return [] }
 type Params = { city: string; category: string }
 
 function resolve(params: Params) {
-  const city     = CITY_MAP.get(params.city as CitySlug)
-  const category = SEO_CATEGORY_SLUGS[params.category]
-  return { city, category }
+  const route = resolveSeoRoute(params.city, params.category)
+  return { city: route?.city, category: route?.category }
 }
 
 const BASE = "https://accessible-places.org"

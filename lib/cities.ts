@@ -71,6 +71,19 @@ export const SEO_CATEGORY_SLUGS: Record<string, Category> = {
   attraction: "attraction",
 }
 
+// Resolves the two SEO route segments, or returns null for an unknown city or
+// category slug. Uses Object.hasOwn — a bare bracket lookup would resolve
+// inherited keys ("constructor", "toString", "__proto__") to truthy values and
+// let them through to a live data fetch.
+export function resolveSeoRoute(
+  citySlug: string,
+  categorySlug: string,
+): { city: City; category: Category } | null {
+  const city = CITY_MAP.get(citySlug as CitySlug)
+  if (!city || !Object.hasOwn(SEO_CATEGORY_SLUGS, categorySlug)) return null
+  return { city, category: SEO_CATEGORY_SLUGS[categorySlug] }
+}
+
 // Internal Category value → URL slug
 export const SEO_CATEGORY_TO_SLUG: Partial<Record<Category, string>> = Object.fromEntries(
   Object.entries(SEO_CATEGORY_SLUGS).map(([slug, cat]) => [cat, slug]),
