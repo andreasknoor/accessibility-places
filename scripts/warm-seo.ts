@@ -8,6 +8,9 @@
  *
  * Each page is fetched once — Vercel renders and caches it. Subsequent visitors
  * get the cached version for up to 5 days (DE) / 5.5 days (EN).
+ *
+ * Exits with code 1 when more than MAX_FAIL_RATE of the pages fail, so a broken
+ * production site turns the scheduled workflow red instead of passing silently.
  */
 
 import { readFileSync } from "fs"
@@ -16,14 +19,16 @@ import { join }         from "path"
 const BASE_URL   = process.env.BASE_URL ?? "https://accessible-places.org"
 const DELAY_MS   = 300   // ms between requests — gentle on Vercel's concurrency limits
 const TIMEOUT_MS = 30_000
+const MAX_FAIL_RATE = 0.1
 
 async function main() {
   const validity = JSON.parse(
     readFileSync(join(process.cwd(), "lib/generated/seo-validity.json"), "utf-8"),
-  ) as Record<string, boolean>
+  ) as Record<string, unknown>
 
+  // Skip meta fields (keys prefixed with "_", e.g. _generatedAt) — they are not paths.
   const validPaths = Object.entries(validity)
-    .filter(([, v]) => v)
+    .filter(([k, v]) => !k.startsWith("_") && v === true)
     .map(([k]) => k)
 
   // DE + EN for each valid path
@@ -69,6 +74,11 @@ async function main() {
   }
 
   console.log(`\nDone — ${ok} warmed, ${failed} failed`)
+
+  if (failed > urls.length * MAX_FAIL_RATE) {
+    console.error(`Abort: ${failed}/${urls.length} pages failed (> ${MAX_FAIL_RATE * 100}%).`)
+    process.exit(1)
+  }
 }
 
 main().catch((err) => { console.error(err); process.exit(1) })
