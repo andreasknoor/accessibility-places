@@ -1,5 +1,5 @@
 {
-  "_generatedAt": "2026-10-18T05:39:42.419Z",
+  "_generatedAt": "2026-10-26T08:28:14.500Z",
   "berlin/cafe": true,
   "berlin/restaurant": true,
   "berlin/bar": true,
@@ -89,7 +89,7 @@
   "dresden/museum": true,
   "dresden/theater": true,
   "dresden/cinema": true,
-  "dresden/attraction": true,
+  "dresden/attraction": false,
   "hannover/cafe": true,
   "hannover/restaurant": true,
   "hannover/bar": true,
