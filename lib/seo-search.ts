@@ -1,10 +1,7 @@
 import type { Place, SearchParams, SearchFilters, Category } from "./types"
 import { SEO_CATEGORY_SLUGS } from "./cities"
-import { fetchAllSources }                                   from "./adapters"
-import { fetchOsmDisabledParking, type NearbyParkingFeature } from "./adapters/osm"
-import { findMatch }                                         from "./matching/match"
-import { mergePlaces, finalisePlaceConfidence, computeFilteredConfidence, passesFilters } from "./matching/merge"
-import { enrichWithNearbyParking }                           from "./matching/nearby-parking"
+import { fetchAndMerge }                                     from "./place-pipeline"
+import { computeFilteredConfidence, passesFilters }          from "./matching/merge"
 
 // Fetch without any filter so all sources return their full result set.
 const FETCH_FILTERS: SearchFilters = {
@@ -57,30 +54,9 @@ export async function fetchPlacesForSeoPage(
     signal:     AbortSignal.timeout(30_000),
   }
 
-  // Kick off nearby-parking fetch in parallel with the adapter fetches.
-  // Non-fatal: failure leaves parking values as the adapters reported them.
-  // SKIP_NEARBY_ENRICHMENT=1 is set by scripts/check-seo-validity.ts to avoid
-  // doubling Overpass load during bulk validity checks (not a user-facing toggle).
-  const nearbyParkingPromise = process.env.SKIP_NEARBY_ENRICHMENT === "1"
-    ? Promise.resolve([] as NearbyParkingFeature[])
-    : fetchOsmDisabledParking({ lat, lon }, radiusKm, AbortSignal.timeout(20_000))
-        .then(r => r.features)
-        .catch(() => [])
+  const { places: canonical } = await fetchAndMerge(params)
 
-  const results = await fetchAllSources(params)
-
-  const canonical: Place[] = []
-  for (const { places } of results) {
-    for (const incoming of places) {
-      const idx = findMatch(canonical, incoming)
-      if (idx >= 0) canonical[idx] = mergePlaces(canonical[idx], incoming)
-      else          canonical.push(finalisePlaceConfidence(incoming))
-    }
-  }
-
-  enrichWithNearbyParking(canonical, await nearbyParkingPromise)
-
-  const base = canonical.filter((p) => !p.dogPolicyOnly && p.category === category)
+  const base = canonical.filter((p) => p.category === category)
   const filtered = base.filter((p) => passesFilters(p, FILTERS_STRICT))
 
   return filtered

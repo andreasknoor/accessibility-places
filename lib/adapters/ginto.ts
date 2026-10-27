@@ -162,6 +162,7 @@ const GQL_QUERY = `
         publication { linkUrl }
         updatedAt
         qualityInfo { detailLevels approvalLevels }
+        licenseInfo { license isOpenData attribution }
       }
     }
   }
@@ -176,6 +177,9 @@ interface GintoNode {
   publication:     { linkUrl?: string }
   updatedAt:       string
   qualityInfo:     { detailLevels: string[]; approvalLevels: string[] } | null
+  // Per-entry licence. The Ginto database as a whole is ODbL; the public API
+  // (lib/public-api/) only republishes entries flagged isOpenData.
+  licenseInfo?:    { license: string; isOpenData: boolean; attribution: string } | null
 }
 
 async function fetchPage(
@@ -321,6 +325,9 @@ function nodeToPlace(node: GintoNode): Place {
         detailLevels:   node.qualityInfo?.detailLevels,
         approvalLevels: node.qualityInfo?.approvalLevels,
         updatedAt:      node.updatedAt,
+        isOpenData:     node.licenseInfo?.isOpenData,
+        license:        node.licenseInfo?.license || undefined,
+        attribution:    node.licenseInfo?.attribution || undefined,
       },
       raw: node,
     }],

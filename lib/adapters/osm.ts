@@ -349,7 +349,7 @@ export function isRecentlyVerified(checkDate: string | undefined, now: number = 
 // ─── Parse Overpass element → Place ───────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function elementToPlace(el: any): Place | null {
+export function elementToPlace(el: any): Place | null {
   const tags: Record<string, string> = el.tags ?? {}
   const name = tags["name"] ?? tags["brand"] ?? ""
   if (!name) return null
@@ -427,23 +427,58 @@ export async function fetchOsm(params: SearchParams): Promise<{ places: Place[];
   const query = buildOverpassQuery(params)
   if (!query) return { places: [], winnerEndpoint: "" }
 
+  const { json, winner } = await raceOverpass(query, params.location, {
+    signal:        params.signal,
+    international: params.international,
+  })
+  const places: Place[] = []
+  for (const el of json.elements ?? []) {
+    const place = elementToPlace(el)
+    if (place) places.push(place)
+  }
+  return { places, winnerEndpoint: winner }
+}
+
+// Run an arbitrary venue query (e.g. the public API's extra categories or an
+// element-by-id lookup) through the same race + element mapping as fetchOsm.
+export async function fetchOsmPlacesByQuery(
+  query: string,
+  location: { lat: number; lon: number },
+  signal?: AbortSignal,
+): Promise<Place[]> {
+  const { json } = await raceOverpass(query, location, { signal })
+  const places: Place[] = []
+  for (const el of json.elements ?? []) {
+    const place = elementToPlace(el)
+    if (place) places.push(place)
+  }
+  return places
+}
+
+/** Race one Overpass query across the region's endpoints; first success wins. */
+export async function raceOverpass(
+  query: string,
+  location: { lat: number; lon: number },
+  opts: { signal?: AbortSignal; international?: boolean; timeoutMs?: number } = {},
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<{ json: { elements?: any[] }; winner: string }> {
   const body = `data=${encodeURIComponent(query)}`
+  const timeoutMs = opts.timeoutMs ?? 20_000
 
   // Race all endpoints in parallel — the first successful response wins and
   // the rest are aborted. This removes the sequential worst-case latency
   // (28 s × 3 = 84 s) and naturally deprioritises slow mirrors at runtime.
   const cancelRace = new AbortController()
-  const t0 = Date.now()
   // Region-aware endpoint set: outside DACH in international mode the DACH-only
   // private server is dropped so it cannot win the race with an empty response.
-  const endpoints = endpointsForCoordinates(params.location.lat, params.location.lon, params.international ?? false)
+  const endpoints = endpointsForCoordinates(location.lat, location.lon, opts.international ?? false)
 
   try {
     const { json, winner } = await Promise.any(
       endpoints.map(async (endpoint) => {
-        const signal = params.signal
-          ? AbortSignal.any([params.signal, cancelRace.signal, AbortSignal.timeout(20_000)])
-          : AbortSignal.any([cancelRace.signal, AbortSignal.timeout(20_000)])
+        const signal = opts.signal
+          ? AbortSignal.any([opts.signal, cancelRace.signal, AbortSignal.timeout(timeoutMs)])
+          : AbortSignal.any([cancelRace.signal, AbortSignal.timeout(timeoutMs)])
 
         const res = await fetch(endpoint, { method: "POST", body, headers: overpassHeaders(endpoint), signal })
 
@@ -467,13 +502,7 @@ export async function fetchOsm(params: SearchParams): Promise<{ places: Place[];
     )
 
     cancelRace.abort() // cancel any still-running fetches
-
-    const places: Place[] = []
-    for (const el of json.elements ?? []) {
-      const place = elementToPlace(el)
-      if (place) places.push(place)
-    }
-    return { places, winnerEndpoint: winner }
+    return { json, winner }
   } catch (err) {
     cancelRace.abort()
     // Unwrap AggregateError so the first underlying error (e.g. "returned 429",
@@ -719,9 +748,11 @@ export async function fetchOsmAccessibleAmenities(
         // was checked live against Berlin OSM data and found unused (0 hits
         // across 2062 tagged venue WCs) — not worth a second extraction path.
         const openingHours            = tags["opening_hours"] || undefined
+        const fee                     = tags["fee"] || undefined
 
         out.push({ amenityType: "toilet", lat: featLat, lon: featLon, tier, access, osmId,
           ...(euroKey       ? { euroKey }       : {}),
+          ...(fee           ? { fee }           : {}),
           ...(changingTable ? { changingTable } : {}),
           ...(openingHours  ? { openingHours }  : {}),
           host,

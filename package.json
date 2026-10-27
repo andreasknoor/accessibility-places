@@ -50,7 +50,8 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "serwist": "^9.5.10",
-    "tailwind-merge": "^3.5.0"
+    "tailwind-merge": "^3.5.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
