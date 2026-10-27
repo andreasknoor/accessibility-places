@@ -25,7 +25,9 @@ const serwist = new Serwist({
         sameOrigin && (
           pathname === "/api/nearby-parking" ||
           pathname === "/api/search" ||
-          pathname === "/api/raw"
+          pathname === "/api/raw" ||
+          // Public API: never cached by the SW (the CDN caches it instead).
+          pathname.startsWith("/api/v1/")
         ),
       handler: new NetworkOnly(),
     },

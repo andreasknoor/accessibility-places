@@ -45,6 +45,7 @@ Built with **Next.js 16 (Turbopack)**, **React 19**, **Tailwind v4**, and **MapL
 - [PWA / service worker](#pwa--service-worker)
 - [Infrastructure](#infrastructure)
 - [API routes](#api-routes)
+- [Public API](#public-api)
 - [Deployment to Vercel](#deployment-to-vercel)
 - [Testing](#testing)
 - [Versioning](#versioning)
@@ -143,6 +144,7 @@ Create a `.env.local` in the project root. None of these are exposed to the brow
 | `NOMINATIM_ENDPOINT` | optional | Base URL of a private Nominatim instance |
 | `HEALTH_CHECK_SECRET` | optional | Activates `GET /api/health` and `GET /api/stats` (401 without a matching `?token=`) |
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` | optional | Upstash Redis credentials for adapter usage stats |
+| `PUBLIC_API_TOKENS` | optional | Comma-separated access tokens (≥ 16 chars) for the public `/api/v1` API; unset → it answers 503 |
 
 The DACH restriction is enforced by `countrycodes=de,at,ch` in Nominatim calls and a bounding box in the Photon proxies — both must be updated when expanding beyond DACH.
 
@@ -372,6 +374,28 @@ In production the search pipeline races a **self-hosted Overpass server** (DACH-
 | `GET /api/health` | Token-protected E2E health check (live + `?mock=1`) |
 | `GET /api/stats` | Token-protected adapter usage stats |
 | `POST /api/report-parking` | User reports a weak-tier parking marker as a likely disabled spot → GitHub issue |
+
+## Public API
+
+A read-only JSON API under `/api/v1`, built so automated agents can check a venue's wheelchair accessibility with plain HTTPS GET requests. It needs an access token in the query string (`?token=…`, set via `PUBLIC_API_TOKENS`). Headers are deliberately not accepted, because the CDN caches by URL.
+
+| Route | Purpose |
+|---|---|
+| `GET /api/v1/places/lookup?name=&city=&address=&lat=&lon=&limit=` | Find a venue by name; best matches with `match_score` |
+| `GET /api/v1/places/nearby?lat=&lon=&radius=&category=&wheelchair=&limit=` | Venues around a point, nearest first |
+| `GET /api/v1/toilets/nearby?lat=&lon=&radius=` | Wheelchair toilets (default 100 m), with distance, EURO key, fee and opening hours |
+| `GET /api/v1/places/{id}` | One venue by OSM id (`osm:way:31622818`) |
+| `GET /api/v1/openapi.json` · `GET /api/v1/docs` | OpenAPI 3.1 spec and a plain-text guide for LLM agents (no token) |
+
+Examples:
+
+```
+https://accessible-places.org/api/v1/places/lookup?name=Deutsches%20Technikmuseum&city=Berlin&token=TOKEN
+https://accessible-places.org/api/v1/places/nearby?lat=52.5096&lon=13.3700&radius=800&category=museum,concert_hall&token=TOKEN
+https://accessible-places.org/api/v1/toilets/nearby?lat=52.5096&lon=13.3700&radius=100&token=TOKEN
+```
+
+The API only uses **OpenStreetMap and Ginto** (open-data entries), so every response is licensed under ODbL 1.0 and carries `license` and `attribution`. accessibility.cloud, Google Places and Reisen für Alle are left out because their terms don't allow republishing the data, or haven't been confirmed to. Each accessibility field names its source and is never guessed (`"unknown"`/`null` when there's no data). When sources disagree, the API returns the most conservative value and lists the disagreement in `conflicts`. Complete answers are cached 24 h at the CDN, and answers with `warnings` (a source timed out) for 5 min. Rate limit: 60 requests per minute per IP. Coverage is Germany, Austria and Switzerland. Details and licensing decisions: [docs/public-api.md](docs/public-api.md).
 
 ---
 
