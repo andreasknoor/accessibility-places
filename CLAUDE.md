@@ -37,7 +37,7 @@ A pre-commit hook (`.githooks/pre-commit`, installed via `npm run prepare`) runs
 
 ## Next.js version note
 
-This project uses **Next.js 16.2.6**, which contains breaking changes from prior versions. APIs, conventions, and file structure may differ from training-data knowledge. Before writing Next.js-specific code, read the relevant guide in `node_modules/next/dist/docs/` and heed any deprecation notices in the build output.
+This project uses **Next.js 16.4.3**, which contains breaking changes from prior versions. APIs, conventions, and file structure may differ from training-data knowledge. Before writing Next.js-specific code, read the relevant guide in `node_modules/next/dist/docs/` and heed any deprecation notices in the build output.
 
 ## Tailwind v4 note
 
