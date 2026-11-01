@@ -7,6 +7,7 @@
 // runtimes here — we keep no runtime-specific integrations. See
 // instrumentation-client.ts for why no `withSentryConfig` wrapper is used.
 import * as Sentry from "@sentry/nextjs"
+import { scrubBreadcrumb, scrubEvent } from "./lib/sentry-scrub"
 
 export async function register() {
   Sentry.init({
@@ -14,6 +15,9 @@ export async function register() {
     enabled: !!process.env.NEXT_PUBLIC_SENTRY_DSN && process.env.NODE_ENV === "production",
     tracesSampleRate: 0,
     maxBreadcrumbs: 50,
+    // Redact API keys / tokens from fetch-breadcrumb URLs and request URLs.
+    beforeBreadcrumb: scrubBreadcrumb,
+    beforeSend:       scrubEvent,
   })
 }
 

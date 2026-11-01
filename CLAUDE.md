@@ -279,6 +279,10 @@ Proxy routes forward to external geocoding services (all restricted to DACH):
 
 **Photon availability history** — the public `photon.komoot.io` has no status page, so every Photon call (unified-suggest, the public API's lookup, `/api/health?photon=1`) reports through `lib/photon-monitor.ts`: Upstash stats under the stats-only source `photon` (calls/errors/latency per hour, a row in `/api/stats`) plus a GlitchTip warning tagged `area: "photon"`, throttled to one per instance per 5 min since suggest fires per keystroke. Suggest still degrades to `[]` with HTTP 200 on failure — the stats are the only trace. Never call it from ISR code.
 
+**Suggest CDN cache** — `unified-suggest` answers carry `public, s-maxage=86400, stale-while-revalidate=604800`, so repeated prefixes never reach Photon; any failed Photon call in a request makes that response `no-store`. `ChatPanel` rounds the bias `lat`/`lon` to 2 decimals (~1 km) so nearby users share cache keys — keep that rounding if you touch the suggest fetch.
+
+**GlitchTip secret scrubbing** — `lib/sentry-scrub.ts` (`beforeBreadcrumb` + `beforeSend` in both `instrumentation.ts` and `instrumentation-client.ts`) redacts secret-looking query params (`appToken`, `token`, `key`, `api_key`, `uid`, …) from fetch-breadcrumb URLs and request URLs. A new upstream that takes a key in the URL needs its param name matched by `SECRET_PARAM` there.
+
 The `countrycodes=de,at,ch` constraint in Nominatim calls and the Photon bounding box must both be updated when expanding beyond DACH.
 
 ### Rate limiting & production details

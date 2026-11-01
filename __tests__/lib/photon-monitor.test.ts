@@ -68,12 +68,23 @@ describe("call sites", () => {
     expect(Sentry.captureMessage).toHaveBeenCalledTimes(1)
   })
 
-  it("unified-suggest records success", async () => {
+  it("unified-suggest records success and lets the CDN cache the answer", async () => {
     vi.stubGlobal("fetch", vi.fn().mockImplementation(async () =>
       new Response(JSON.stringify({ features: [] }), { status: 200, headers: { "Content-Type": "application/json" } })))
-    await suggestGET(suggestReq("Berlin"))
+    const res = await suggestGET(suggestReq("Berlin"))
     expect(vi.mocked(trackCall).mock.calls.filter(([s]) => s === "photon")).toHaveLength(2)
     expect(trackError).not.toHaveBeenCalled()
+    expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=86400, stale-while-revalidate=604800")
+  })
+
+  it("unified-suggest never caches an answer with a failed Photon call", async () => {
+    let n = 0
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => (++n === 1
+      ? new Response(JSON.stringify({ features: [] }), { status: 200, headers: { "Content-Type": "application/json" } })
+      : new Response("timeout", { status: 504 }))))
+    const res = await suggestGET(suggestReq("Berlin"))
+    expect(res.status).toBe(200)
+    expect(res.headers.get("Cache-Control")).toBe("no-store")
   })
 
   it("public API photonSearch records the failure and still throws", async () => {

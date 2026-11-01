@@ -17,6 +17,9 @@ const AREA_OSM_KEYS = new Set(["place", "boundary"])
 // entities, which would defeat the point of a precision-focused second call.
 const AREA_LAYERS = ["city", "district", "county", "state", "country"]
 
+// Place names change rarely; a day fresh plus a week stale-while-revalidate.
+const SUGGEST_CACHE_CONTROL = "public, s-maxage=86400, stale-while-revalidate=604800"
+
 const MAX_AREAS  = 3
 const MAX_VENUES = 5
 // Fetch a few more than MAX_AREAS on the dedicated call so dedupe/cc-filtering
@@ -95,7 +98,9 @@ export async function GET(req: NextRequest) {
     AREA_LAYERS.map((l) => `&layer=${l}`).join("")
 
   // A failure still degrades to an empty list (the dropdown's freetext row
-  // keeps search usable), but is now recorded — see lib/photon-monitor.ts.
+  // keeps search usable), but is recorded (lib/photon-monitor.ts) and makes
+  // the response uncacheable.
+  let photonFailed = false
   const fetchPhoton = async (url: string) => {
     const t0 = Date.now()
     try {
@@ -105,6 +110,7 @@ export async function GET(req: NextRequest) {
       })
       if (!res.ok) {
         recordPhotonFailure("suggest", `HTTP ${res.status}`, Date.now() - t0)
+        photonFailed = true
         return []
       }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -113,6 +119,7 @@ export async function GET(req: NextRequest) {
       return data.features ?? []
     } catch (err) {
       recordPhotonFailure("suggest", err instanceof Error ? err.message : String(err), Date.now() - t0)
+      photonFailed = true
       return []
     }
   }
@@ -185,5 +192,14 @@ export async function GET(req: NextRequest) {
 
   // Areas first — they are fewer, higher-precision matches, and the grouped
   // dropdown renders them as the top section.
-  return NextResponse.json([...areas, ...venues])
+  // CDN-cache complete answers: popular prefixes ("Ber", "Berl", "Berlin")
+  // repeat across users, and every cache hit is one Photon call (and one
+  // chance of a Photon timeout) saved. The client rounds the bias coordinates
+  // to ~1 km so nearby users share cache keys. A response with a failed
+  // Photon call is never cached — it may be missing results.
+  return NextResponse.json([...areas, ...venues], {
+    headers: {
+      "Cache-Control": photonFailed ? "no-store" : SUGGEST_CACHE_CONTROL,
+    },
+  })
 }

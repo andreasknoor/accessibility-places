@@ -7,6 +7,7 @@
 //
 // GlitchTip is error-only: performance tracing and session replay are off.
 import * as Sentry from "@sentry/nextjs"
+import { scrubBreadcrumb, scrubEvent } from "./lib/sentry-scrub"
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -15,6 +16,8 @@ Sentry.init({
   enabled: !!process.env.NEXT_PUBLIC_SENTRY_DSN && process.env.NODE_ENV === "production",
   tracesSampleRate: 0,          // no performance transactions → less volume
   maxBreadcrumbs: 50,           // context depth attached to each error (default 100)
+  beforeBreadcrumb: scrubBreadcrumb, // redact API keys / tokens in recorded URLs
+  beforeSend:       scrubEvent,
   ignoreErrors: [
     "ResizeObserver loop limit exceeded",
     "ResizeObserver loop completed with undelivered notifications.",
