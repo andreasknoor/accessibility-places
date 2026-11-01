@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { ipFromRequest, isRateLimited, rateLimitResponse } from "@/lib/rate-limit"
 import { DACH_BBOX_STR, DACH_CODES, SUPPORTED_COUNTRY_CODES } from "@/lib/config"
+import { recordPhotonFailure, recordPhotonSuccess } from "@/lib/photon-monitor"
 
 const PHOTON_URL = "https://photon.komoot.io/api/"
 const DACH_CODE_SET      = new Set<string>(DACH_CODES)
@@ -93,17 +94,25 @@ export async function GET(req: NextRequest) {
     `${PHOTON_URL}?q=${encodeURIComponent(q)}&limit=${AREA_QUERY_LIMIT}&${sharedParams}` +
     AREA_LAYERS.map((l) => `&layer=${l}`).join("")
 
+  // A failure still degrades to an empty list (the dropdown's freetext row
+  // keeps search usable), but is now recorded — see lib/photon-monitor.ts.
   const fetchPhoton = async (url: string) => {
+    const t0 = Date.now()
     try {
       const res = await fetch(url, {
         headers: { "User-Agent": "AccessiblePlaces/1.0 (contact@accessible-places.org)" },
         signal:  AbortSignal.timeout(3_000),
       })
-      if (!res.ok) return []
+      if (!res.ok) {
+        recordPhotonFailure("suggest", `HTTP ${res.status}`, Date.now() - t0)
+        return []
+      }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const data: { features?: any[] } = await res.json()
+      recordPhotonSuccess(Date.now() - t0)
       return data.features ?? []
-    } catch {
+    } catch (err) {
+      recordPhotonFailure("suggest", err instanceof Error ? err.message : String(err), Date.now() - t0)
       return []
     }
   }

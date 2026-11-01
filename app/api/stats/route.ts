@@ -19,9 +19,10 @@ const SOURCE_LABELS: Record<string, string> = {
   accessibility_cloud: "Accessibility Cloud",
   ginto:               "Ginto",
   google_places:       "Google Places",
+  photon:              "Photon (geocoder)",
 }
 
-const SOURCE_ORDER = ["osm_private", "osm_parking_private", "osm_public", "osm_parking_public", "accessibility_cloud", "ginto", "google_places"]
+const SOURCE_ORDER = ["osm_private", "osm_parking_private", "osm_public", "osm_parking_public", "accessibility_cloud", "ginto", "google_places", "photon"]
 
 function fmt(n: number): string {
   return n.toLocaleString("de-DE")

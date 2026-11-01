@@ -19,6 +19,7 @@ export type SourceId =
   | "osm_parking_private"
   | "osm_parking_public"
   | "nominatim"
+  | "photon"
 
 export type Category =
   | "cafe" | "restaurant" | "bar" | "pub" | "biergarten" | "fast_food"

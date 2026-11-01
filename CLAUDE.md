@@ -277,6 +277,8 @@ Proxy routes forward to external geocoding services (all restricted to DACH):
 - `GET /api/geocode/suggest?q=&lang=` and `GET /api/geocode/place-suggest?q=&lang=` — the legacy area-only / POI-only autocomplete routes, superseded by `unified-suggest` (kept live for one release, no longer called by the UI).
 - `GET /api/geocode/reverse?lat=&lon=` — Nominatim reverse geocoding; returns `{ district }` for the "Nearby" label.
 
+**Photon availability history** — the public `photon.komoot.io` has no status page, so every Photon call (unified-suggest, the public API's lookup, `/api/health?photon=1`) reports through `lib/photon-monitor.ts`: Upstash stats under the stats-only source `photon` (calls/errors/latency per hour, a row in `/api/stats`) plus a GlitchTip warning tagged `area: "photon"`, throttled to one per instance per 5 min since suggest fires per keystroke. Suggest still degrades to `[]` with HTTP 200 on failure — the stats are the only trace. Never call it from ISR code.
+
 The `countrycodes=de,at,ch` constraint in Nominatim calls and the Photon bounding box must both be updated when expanding beyond DACH.
 
 ### Rate limiting & production details

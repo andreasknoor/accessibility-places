@@ -87,7 +87,7 @@ const ALL_SOURCES: SourceId[] = [
   "search_total", "search_total_allcats", "search_total_filtered", "search_total_quickstart", "search_total_expert",
   "osm", "osm_private", "osm_public",
   "accessibility_cloud", "reisen_fuer_alle", "ginto", "google_places",
-  "osm_parking", "osm_parking_private", "osm_parking_public", "nominatim",
+  "osm_parking", "osm_parking_private", "osm_parking_public", "nominatim", "photon",
 ]
 
 // Upstash's SCAN cursor is an unsigned 64-bit integer serialised as a string —

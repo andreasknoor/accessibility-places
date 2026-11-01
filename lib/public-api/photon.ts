@@ -1,5 +1,6 @@
 import { DACH_BBOX_STR, DACH_CODES } from "../config"
 import { UPSTREAM_TIMEOUT_MS } from "./constants"
+import { recordPhotonFailure, recordPhotonSuccess } from "../photon-monitor"
 
 // Photon (the same komoot instance /api/geocode/unified-suggest uses) turns
 // "<name> <address> <city>" into candidate venue coordinates for /places/lookup.
@@ -27,13 +28,22 @@ export async function photonSearch(
   if (opts.bias) url += `&lat=${opts.bias.lat}&lon=${opts.bias.lon}`
   if (opts.areasOnly) url += ["city", "district", "county"].map((l) => `&layer=${l}`).join("")
 
-  const res = await fetch(url, {
-    headers: { "User-Agent": "AccessiblePlaces/1.0 (contact@accessible-places.org)" },
-    signal:  AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
-  })
-  if (!res.ok) throw new Error(`Photon returned ${res.status}`)
+  const t0 = Date.now()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const data: { features?: any[] } = await res.json()
+  let data: { features?: any[] }
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "AccessiblePlaces/1.0 (contact@accessible-places.org)" },
+      signal:  AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    data = await res.json()
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    recordPhotonFailure("public-api", msg, Date.now() - t0)
+    throw new Error(`Photon failed: ${msg}`)
+  }
+  recordPhotonSuccess(Date.now() - t0)
 
   const hits: PhotonHit[] = []
   for (const f of data.features ?? []) {

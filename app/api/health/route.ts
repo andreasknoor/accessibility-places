@@ -3,6 +3,7 @@ import type { Place, SearchParams, SourceId } from "@/lib/types"
 import { OVERPASS_ENDPOINTS, PUBLIC_OVERPASS_ENDPOINTS } from "@/lib/config"
 import { startAdapterTasks } from "@/lib/adapters"
 import { overpassHeaders } from "@/lib/adapters/osm"
+import { recordPhotonFailure, recordPhotonSuccess } from "@/lib/photon-monitor"
 import { findMatch } from "@/lib/matching/match"
 import {
   mergePlaces,
@@ -129,12 +130,17 @@ async function checkPhoton(): Promise<PhotonReport> {
     })
     const durationMs = Date.now() - t0
     if (!res.ok) {
-      return { status: "error", httpStatus: res.status, error: res.statusText || `HTTP ${res.status}`, durationMs }
+      const error = res.statusText || `HTTP ${res.status}`
+      recordPhotonFailure("health", error, durationMs)
+      return { status: "error", httpStatus: res.status, error, durationMs }
     }
     const data = await res.json() as { features?: unknown[] }
+    recordPhotonSuccess(durationMs)
     return { status: "ok", featureCount: data.features?.length ?? 0, durationMs }
   } catch (err) {
-    return { status: "error", error: String(err), durationMs: Date.now() - t0 }
+    const durationMs = Date.now() - t0
+    recordPhotonFailure("health", String(err), durationMs)
+    return { status: "error", error: String(err), durationMs }
   }
 }
 
