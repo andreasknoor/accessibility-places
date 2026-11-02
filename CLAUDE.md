@@ -31,6 +31,8 @@ node scripts/compare-overpass-parking.mjs
 
 A pre-commit hook (`.githooks/pre-commit`, installed via `npm run prepare`) runs `npm test` automatically on every commit — expect commits to take ~10–20 s while tests execute.
 
+**Install scripts are allowlisted** (npm 11): `package.json` `allowScripts` explicitly denies the four dependency install scripts the app doesn't need (`@sentry/cli` binary download — no source-map upload; `esbuild`, `unrs-resolver` — test/lint tooling; `fsevents` — macOS-only, ships its binary). A new dependency with an install script shows up in `npm install-scripts ls`; decide with `npm install-scripts approve|deny <pkg>`. `@capacitor/assets` (icon/splash generator) is intentionally not a dependency — run it via `npx @capacitor/assets@3 generate`.
+
 **Always run `npm test` before committing or pushing.** No check-ins without a full test run.
 
 **Also run `npx tsc --noEmit` before pushing** when adding fields to `ActiveSources`, `SearchFilters`, or any other interface that appears in test fixtures. `vitest` strips types at runtime so missing required fields only surface in `next build` (which runs `tsc`) — catching them locally avoids a failed Vercel deploy. The `__tests__/` directory is excluded from the production `tsc` config but included when running `npx tsc --noEmit` directly.

@@ -87,8 +87,9 @@ Phase 9 once Capacitor is validated.
 npm install @capacitor/core @capacitor/cli @capacitor/android
 # Plugins: geolocation (the feature) + shell essentials
 npm install @capacitor/geolocation @capacitor/app @capacitor/splash-screen @capacitor/status-bar
-# Dev-only: icon/splash generator
-npm install -D @capacitor/assets
+# Icon/splash generator: deliberately NOT a devDependency (removed in v12.52 —
+# it pulled outdated tar/glob/uuid into every Vercel build). Run it on demand
+# via npx instead, see "Icons & splash" below.
 
 # Minimal offline fallback shell (shown only if the remote site is unreachable)
 mkdir -p capacitor-shell
@@ -240,7 +241,7 @@ This is a **normal change to the Next.js app**, deployed via Vercel. It makes th
 # Source assets: a 1024×1024 icon and a splash source (reuse the PWA icon)
 mkdir -p assets
 cp public/icons/icon-512.png assets/icon.png      # ideally supply a 1024px master
-npx @capacitor/assets generate --android          # generates launcher icons + splash
+npx @capacitor/assets@3 generate --android        # on demand, not installed; generates launcher icons + splash
 npx cap sync android
 ```
 
