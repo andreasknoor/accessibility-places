@@ -643,7 +643,9 @@ export default function ChatPanel({ onSearch, onPlaceSearch, isLoading, onModeCh
       const ac = new AbortController()
       suggestAbortRef.current = ac
       try {
-        const bias = biasCoords ? `&lat=${biasCoords.lat}&lon=${biasCoords.lon}` : ""
+        // Rounded to 2 decimals (~1 km): enough for Photon's proximity bias,
+        // and lets nearby users share the route's CDN cache entries.
+        const bias = biasCoords ? `&lat=${biasCoords.lat.toFixed(2)}&lon=${biasCoords.lon.toFixed(2)}` : ""
         const intlParam = international ? "&intl=1" : ""
         const res = await fetch(`/api/geocode/unified-suggest?q=${encodeURIComponent(query)}&lang=${locale}${bias}${intlParam}`, { signal: ac.signal })
         if (!res.ok) return
