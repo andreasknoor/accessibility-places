@@ -27,6 +27,7 @@ E.g. after config change:
 ```bash
 docker stop overpass && docker rm overpass
 docker run -d --name overpass --restart always -p 8080:80 \
+  --log-opt max-size=50m --log-opt max-file=3 \
   -v /overpass-data:/db \
   -e OVERPASS_META=yes \
   -e OVERPASS_MODE=clone \
@@ -44,6 +45,16 @@ docker run -d --name overpass --restart always -p 8080:80 \
 ```
 
 (`${NODE_ID}` stays literal — the in-container healthcheck script sets it; single-quote the `-e` arg so the host shell doesn't expand it. A ready-to-run copy of this exact command lives at `/root/restart-overpass.sh` on the server.)
+
+## Disk space
+
+The 75 GB disk is shared by Overpass (`/overpass-data`, ~31 GB in 2026-11, growing with the daily DACH diffs), GlitchTip and a 4 GB swap file. It reached 93 % in 2026-11 — not from Overpass but from unbounded logs plus leftover import files. Cleanup on 2026-11-05 (93 % → 55 %):
+
+- **Import files deleted.** `/osm-data/dach-latest.osm.{bz2,pbf}` (15 GB) were only needed for the initial import; the container never mounts them. Re-download from Geofabrik if a fresh import is ever needed.
+- **Docker logs capped.** The default `json-file` driver had no size limit: the GlitchTip worker logs a line per scheduled task (5 GB in 5 months), Overpass logs every minutely update run (3.8 GB). `/etc/docker/daemon.json` now sets `max-size: 50m, max-file: 3` — it only applies to containers created after the next `dockerd` restart. GlitchTip's `docker-compose.yml` sets the same cap per service (`x-logging` anchor), and the restart command above passes `--log-opt`. Until the Overpass container is next recreated it still runs uncapped, so `/etc/cron.d/overpass-log-truncate` empties its log every Sunday 04:00.
+- **journald capped** at 500 MB (`/etc/systemd/journald.conf.d/size.conf`; it had grown to 3.9 GB).
+
+Check with `df -h /`, `docker system df`, `du -sh /var/lib/docker/containers/*/` and `journalctl --disk-usage`. A self-hosted Photon (geocoder) would need ~150 GB extra for the Europe dump — it does not fit here; it needs its own box.
 
 ## Healthcheck note
 
