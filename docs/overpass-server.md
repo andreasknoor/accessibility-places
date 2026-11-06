@@ -4,7 +4,7 @@ Self-hosted Overpass API for DACH at `overpass.accessible-places.org` (Caddy →
 
 **Server:** `65.109.1.63` — `ssh root@overpass.accessible-places.org`
 
-**Docker container:** `overpass` — image `wiktorn/overpass-api`, data at `/overpass-data:/db`, port 8080 → Caddy → HTTPS.
+**Docker container:** `overpass` — image `wiktorn/overpass-api`, data at `/overpass-data:/db`, port `127.0.0.1:8080` (localhost only) → Caddy → HTTPS.
 
 The server is shared with the self-hosted GlitchTip instance (`logs.accessible-places.org`, see `docs/glitchtip-setup.md`).
 
@@ -26,7 +26,8 @@ E.g. after config change:
 
 ```bash
 docker stop overpass && docker rm overpass
-docker run -d --name overpass --restart always -p 8080:80 \
+docker run -d --name overpass --restart always -p 127.0.0.1:8080:80 \
+  --log-opt max-size=50m --log-opt max-file=3 \
   -v /overpass-data:/db \
   -e OVERPASS_META=yes \
   -e OVERPASS_MODE=clone \
@@ -44,6 +45,27 @@ docker run -d --name overpass --restart always -p 8080:80 \
 ```
 
 (`${NODE_ID}` stays literal — the in-container healthcheck script sets it; single-quote the `-e` arg so the host shell doesn't expand it. A ready-to-run copy of this exact command lives at `/root/restart-overpass.sh` on the server.)
+
+## Disk space
+
+The 75 GB disk is shared by Overpass (`/overpass-data`, ~31 GB in 2026-11, growing with the daily DACH diffs), GlitchTip and a 4 GB swap file. It reached 93 % in 2026-11 — not from Overpass but from unbounded logs plus leftover import files. Cleanup on 2026-11-05 (93 % → 55 %):
+
+- **Import files deleted.** `/osm-data/dach-latest.osm.{bz2,pbf}` (15 GB) were only needed for the initial import; the container never mounts them. Re-download from Geofabrik if a fresh import is ever needed.
+- **Docker logs capped.** The default `json-file` driver had no size limit: the GlitchTip worker logs a line per scheduled task (5 GB in 5 months), Overpass logs every minutely update run (3.8 GB). `/etc/docker/daemon.json` now sets `max-size: 50m, max-file: 3` — it only applies to containers created after the next `dockerd` restart. GlitchTip's `docker-compose.yml` sets the same cap per service (`x-logging` anchor), and the restart command above passes `--log-opt`. The Overpass container was recreated with the cap on 2026-11-06.
+- **journald capped** at 500 MB (`/etc/systemd/journald.conf.d/size.conf`; it had grown to 3.9 GB).
+
+Check with `df -h /`, `docker system df`, `du -sh /var/lib/docker/containers/*/` and `journalctl --disk-usage`. A self-hosted Photon (geocoder) would need ~150 GB extra for the Europe dump — it does not fit here; it needs its own box.
+
+### Disk alert
+
+`/usr/local/bin/disk-alert.sh` runs hourly (`/etc/cron.d/disk-alert`, minute 17). Above 85 % on `/` it posts a `warning` event to GlitchTip (tag `area: server-disk`, project 1 via its store endpoint) and, if configured, sends an e-mail — at most once per 24 h while the disk stays full (stamp `/var/lib/disk-alert.last`). Config lives in `/etc/disk-alert.env` (root-only, `chmod 600`): `GT_URL`/`GT_KEY`, plus optional `SMTP_URL`, `SMTP_USER`, `SMTP_PASS`, `MAIL_TO`. Mail is sent with `curl` directly over SMTP, independent of GlitchTip (whose `EMAIL_URL` is `consolemail`, i.e. it sends no mail). Test without waiting for a full disk: `THRESHOLD=1 FORCE=1 /usr/local/bin/disk-alert.sh; journalctl -t disk-alert -n 5`, then `rm /var/lib/disk-alert.last`.
+
+## Security hardening (2026-11-06)
+
+- **SSH:** key-only. `/etc/ssh/sshd_config.d/00-hardening.conf` sets `PasswordAuthentication no`, `KbdInteractiveAuthentication no`, `PermitRootLogin prohibit-password`, `MaxAuthTries 3` (the `00-` prefix wins over cloud-init's drop-in — first match counts). One authorised key for root; the private key is backed up in the owner's password manager. If locked out: Hetzner Cloud console → rescue system.
+- **fail2ban:** `sshd` jail via the systemd journal, `/etc/fail2ban/jail.d/local.conf` (5 tries / 10 min → 1 h ban, doubling up to 1 week). `fail2ban-client status sshd`.
+- **Host firewall (ufw):** deny incoming except 22, 80, 443 (tcp + udp for HTTP/3). The Hetzner Cloud Firewall stays in front of it. Docker-published ports bypass ufw, which is why Overpass is published on `127.0.0.1:8080` only — Caddy is the only public entry point.
+- Before changing SSH or firewall rules remotely, arm a rollback first, e.g. `systemd-run --on-active=15min /root/rollback.sh`, and stop the timer once a fresh login works.
 
 ## Healthcheck note
 
