@@ -472,8 +472,10 @@ unexpected centrally, you can also gate in the server `beforeSend` (in
   add a periodic `pg_dump` to your backup routine.
 - **Updates:** `cd /opt/glitchtip && docker compose pull && docker compose up -d`
   — re-run `migrate` if a release needs it.
-- **Disk watch:** 27 GB free is shared with Overpass's growing DACH diffs. The
+- **Disk watch:** the disk is shared with Overpass's growing DACH diffs. The
   `GLITCHTIP_MAX_EVENT_LIFE_DAYS=90` retention keeps Postgres bounded; lower it
-  if disk gets tight.
+  if disk gets tight. Container logs are capped at 3 × 50 MB per service via an
+  `x-logging` anchor in `docker-compose.yml` (added 2026-11-05 — the worker had
+  written 5 GB of uncapped logs); see "Disk space" in `docs/overpass-server.md`.
 - **If Overpass slows down** after rollout, lower GlitchTip `mem_limit`s further
   or move the stack to a dedicated box.
