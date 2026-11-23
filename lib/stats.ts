@@ -28,44 +28,107 @@ export function getRedis(): Redis | null {
   return _redis
 }
 
-async function increment(prefix: "calls" | "errors", source: SourceId): Promise<void> {
+// ─── Write path: coalesced, one Lua EVAL per source and hour ─────────────────
+//
+// Upstash's free tier meters *commands*, and the old write path spent 2 per
+// counter (INCR + EXPIRE) and 8 per duration sample — ~70 commands for one
+// ordinary search, ~97% of all Redis traffic. Two changes bring that to ~10:
+//
+//  1. Everything one source records in the same tick (trackCall + trackDuration
+//     [+ trackError]) is coalesced in `pending` and flushed in a microtask.
+//  2. The flush is a single EVAL that applies all counters and duration samples
+//     at once, instead of a pipeline with one command per INCR/EXPIRE/ZADD.
+//
+// The key layout is unchanged (`stats:h:{calls|errors}:<src>:<hour>`,
+// `stats:h:dur:{sum|cnt|min|max}:<src>:<hour>`), so getStats() and old data are
+// unaffected. min/max keep their sorted-set form (ZADD LT / GT, member "v").
+// An EVAL is counted by Upstash as one command (same as the rate limiter's).
+
+interface PendingStats { calls: number; errors: number; durations: number[] }
+const pending = new Map<string, PendingStats>()
+
+const TRACK_SCRIPT = `
+local ttl = tonumber(ARGV[1])
+local calls = tonumber(ARGV[2])
+local errors = tonumber(ARGV[3])
+if calls > 0 then
+  redis.call('INCRBY', KEYS[1], calls)
+  redis.call('EXPIRE', KEYS[1], ttl)
+end
+if errors > 0 then
+  redis.call('INCRBY', KEYS[2], errors)
+  redis.call('EXPIRE', KEYS[2], ttl)
+end
+if #ARGV >= 4 then
+  local sum, n = 0, 0
+  local mn, mx = nil, nil
+  for i = 4, #ARGV do
+    local v = tonumber(ARGV[i])
+    sum = sum + v
+    n = n + 1
+    if mn == nil or v < mn then mn = v end
+    if mx == nil or v > mx then mx = v end
+  end
+  redis.call('INCRBY', KEYS[3], sum)
+  redis.call('EXPIRE', KEYS[3], ttl)
+  redis.call('INCRBY', KEYS[4], n)
+  redis.call('EXPIRE', KEYS[4], ttl)
+  redis.call('ZADD', KEYS[5], 'LT', mn, 'v')
+  redis.call('EXPIRE', KEYS[5], ttl)
+  redis.call('ZADD', KEYS[6], 'GT', mx, 'v')
+  redis.call('EXPIRE', KEYS[6], ttl)
+end
+return 1
+`
+
+async function flushOne(redis: Redis, source: SourceId, hour: string, p: PendingStats): Promise<void> {
+  const keys = [
+    `stats:h:calls:${source}:${hour}`,
+    `stats:h:errors:${source}:${hour}`,
+    `stats:h:dur:sum:${source}:${hour}`,
+    `stats:h:dur:cnt:${source}:${hour}`,
+    `stats:h:dur:min:${source}:${hour}`,
+    `stats:h:dur:max:${source}:${hour}`,
+  ]
+  await redis.eval(TRACK_SCRIPT, keys, [TTL_SECONDS, p.calls, p.errors, ...p.durations])
+}
+
+function flushPending(): void {
   const redis = getRedis()
+  const batch = [...pending.entries()]
+  pending.clear()
   if (!redis) return
-  const key = `stats:h:${prefix}:${source}:${currentHour()}`
-  await redis.pipeline().incr(key).expire(key, TTL_SECONDS).exec()
+  for (const [id, p] of batch) {
+    const sep = id.indexOf("|")
+    flushOne(redis, id.slice(0, sep) as SourceId, id.slice(sep + 1), p)
+      .catch(() => {/* non-fatal */})
+  }
+}
+
+function record(source: SourceId, patch: { call?: boolean; error?: boolean; ms?: number }): void {
+  if (!getRedis()) return
+  const id = `${source}|${currentHour()}`
+  let p = pending.get(id)
+  if (!p) {
+    if (pending.size === 0) queueMicrotask(flushPending)
+    p = { calls: 0, errors: 0, durations: [] }
+    pending.set(id, p)
+  }
+  if (patch.call)  p.calls++
+  if (patch.error) p.errors++
+  if (patch.ms !== undefined) p.durations.push(Math.round(patch.ms))
 }
 
 export function trackCall(source: SourceId): void {
-  increment("calls", source).catch(() => {/* non-fatal */})
+  record(source, { call: true })
 }
 
 export function trackError(source: SourceId): void {
-  increment("errors", source).catch(() => {/* non-fatal */})
-}
-
-// Track response time using per-hour sorted sets.
-// min key: ZADD LT — new score replaces existing only when lower (running minimum).
-// max key: ZADD GT — new score replaces existing only when higher (running maximum).
-// sum/cnt keys: simple INCRBY/INCR for computing the average across all hours.
-// LT/GT without NX adds the member on first write, then conditionally updates — no race.
-async function trackDurationInternal(source: SourceId, ms: number): Promise<void> {
-  const redis = getRedis()
-  if (!redis) return
-  const hour   = currentHour()
-  const sumKey = `stats:h:dur:sum:${source}:${hour}`
-  const cntKey = `stats:h:dur:cnt:${source}:${hour}`
-  const minKey = `stats:h:dur:min:${source}:${hour}`
-  const maxKey = `stats:h:dur:max:${source}:${hour}`
-  await redis.pipeline()
-    .incrby(sumKey, ms).expire(sumKey, TTL_SECONDS)
-    .incr(cntKey).expire(cntKey, TTL_SECONDS)
-    .zadd(minKey, { lt: true }, { score: ms, member: "v" }).expire(minKey, TTL_SECONDS)
-    .zadd(maxKey, { gt: true }, { score: ms, member: "v" }).expire(maxKey, TTL_SECONDS)
-    .exec()
+  record(source, { error: true })
 }
 
 export function trackDuration(source: SourceId, ms: number): void {
-  trackDurationInternal(source, ms).catch(() => {/* non-fatal */})
+  record(source, { ms })
 }
 
 // ─── Stats read ──────────────────────────────────────────────────────────────
